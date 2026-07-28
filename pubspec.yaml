@@ -1,0 +1,53 @@
+name: imperium_detailing
+description: "Sistema de gestão da Imperium Detailing"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Banco de dados
+  sqflite: ^2.4.3
+  path: ^1.9.1
+
+  # Fotos
+  image_picker: ^1.2.0
+  path_provider: ^2.1.5
+  photo_view: ^0.15.0
+
+  # PDF
+  pdf: ^3.11.3
+  printing: ^5.14.2
+
+  # Compartilhamento
+  share_plus: ^12.0.0
+
+  # Formatação brasileira
+  intl: ^0.20.2
+
+  # Dashboard
+  fl_chart: ^1.1.1
+
+  # Abrir WhatsApp
+  url_launcher: ^6.3.2
+
+  # Notificações e fuso horário
+  flutter_local_notifications: ^22.0.1
+  timezone: ^0.11.1
+  flutter_timezone: ^5.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
