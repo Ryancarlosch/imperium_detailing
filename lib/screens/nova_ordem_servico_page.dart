@@ -106,7 +106,7 @@ class _NovaOrdemServicoPageState
 
       if (widget.orcamentoId != null) {
         orcamento =
-            await _orcamentoRepository.buscarOrcamentoComDetalhes(
+        await _orcamentoRepository.buscarOrcamentoComDetalhes(
           widget.orcamentoId!,
         );
 
@@ -175,7 +175,7 @@ class _NovaOrdemServicoPageState
                 aoAlterar: _atualizarTela,
                 nome: (mapa['servico'] ?? '').toString(),
                 descricao:
-                    (mapa['descricao'] ?? '').toString(),
+                (mapa['descricao'] ?? '').toString(),
                 quantidade: _formatarNumeroCampo(
                   _converterNumero(
                     mapa['quantidade'],
@@ -249,9 +249,9 @@ class _NovaOrdemServicoPageState
   }
 
   double _converterNumero(
-    dynamic valor, {
-    double padrao = 0,
-  }) {
+      dynamic valor, {
+        double padrao = 0,
+      }) {
     if (valor is num) {
       return valor.toDouble();
     }
@@ -1185,8 +1185,8 @@ class _ServicoFormulario {
     String quantidade = '1',
     String valor = '0,00',
   })  : nomeController = TextEditingController(
-          text: nome,
-        ),
+    text: nome,
+  ),
         descricaoController = TextEditingController(
           text: descricao,
         ),

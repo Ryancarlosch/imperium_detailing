@@ -27,7 +27,7 @@ class AppDatabase {
 
     return openDatabase(
       caminho,
-      version: 9,
+      version: 10,
       onConfigure: (database) async {
         await database.execute(
           'PRAGMA foreign_keys = ON',
@@ -81,6 +81,13 @@ class AppDatabase {
           await _criarTabelaConfiguracoes(database);
           await _inserirConfiguracaoPadrao(database);
         }
+
+        if (versaoAntiga < 10) {
+          await _criarTabelaItensEstoque(database);
+          await _criarTabelaMovimentacoesEstoque(database);
+          await _criarTabelaConfiguracoesEstoque(database);
+          await _inserirConfiguracaoEstoquePadrao(database);
+        }
       },
     );
   }
@@ -104,6 +111,10 @@ class AppDatabase {
     await _criarTabelaProdutosOrdemServico(database);
     await _criarTabelaConfiguracoes(database);
     await _inserirConfiguracaoPadrao(database);
+    await _criarTabelaItensEstoque(database);
+    await _criarTabelaMovimentacoesEstoque(database);
+    await _criarTabelaConfiguracoesEstoque(database);
+    await _inserirConfiguracaoEstoquePadrao(database);
   }
 
   Future<void> _criarTabelaClientes(
@@ -574,6 +585,119 @@ class AppDatabase {
     ''');
   }
 
+
+  Future<void> _criarTabelaItensEstoque(
+      Database database,
+      ) async {
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS itens_estoque (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        categoria TEXT NOT NULL DEFAULT '',
+        quantidade REAL NOT NULL DEFAULT 0,
+        quantidade_minima REAL NOT NULL DEFAULT 0,
+        unidade TEXT NOT NULL DEFAULT 'un',
+        custo_unitario REAL NOT NULL DEFAULT 0,
+        fornecedor TEXT NOT NULL DEFAULT '',
+        observacoes TEXT NOT NULL DEFAULT '',
+        atualizado_em TEXT NOT NULL
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS
+      idx_itens_estoque_nome
+      ON itens_estoque (nome)
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS
+      idx_itens_estoque_categoria
+      ON itens_estoque (categoria)
+    ''');
+  }
+
+  Future<void> _criarTabelaMovimentacoesEstoque(
+      Database database,
+      ) async {
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS movimentacoes_estoque (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_estoque_id INTEGER NOT NULL,
+        tipo TEXT NOT NULL,
+        quantidade REAL NOT NULL DEFAULT 0,
+        quantidade_anterior REAL NOT NULL DEFAULT 0,
+        quantidade_posterior REAL NOT NULL DEFAULT 0,
+        custo_unitario REAL NOT NULL DEFAULT 0,
+        observacoes TEXT NOT NULL DEFAULT '',
+        origem TEXT NOT NULL DEFAULT 'Manual',
+        ordem_servico_id INTEGER,
+        data TEXT NOT NULL,
+        FOREIGN KEY (item_estoque_id)
+          REFERENCES itens_estoque (id)
+          ON DELETE CASCADE,
+        FOREIGN KEY (ordem_servico_id)
+          REFERENCES ordens_servico (id)
+          ON DELETE SET NULL
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS
+      idx_movimentacoes_estoque_item_id
+      ON movimentacoes_estoque (item_estoque_id)
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS
+      idx_movimentacoes_estoque_data
+      ON movimentacoes_estoque (data)
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS
+      idx_movimentacoes_estoque_tipo
+      ON movimentacoes_estoque (tipo)
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS
+      idx_movimentacoes_estoque_os_id
+      ON movimentacoes_estoque (ordem_servico_id)
+    ''');
+  }
+
+  Future<void> _criarTabelaConfiguracoesEstoque(
+      Database database,
+      ) async {
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS configuracoes_estoque (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        controlar_produtos_os INTEGER NOT NULL DEFAULT 0,
+        baixar_automaticamente INTEGER NOT NULL DEFAULT 0,
+        exigir_quantidade INTEGER NOT NULL DEFAULT 0,
+        alertar_estoque_baixo INTEGER NOT NULL DEFAULT 1,
+        atualizado_em TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _inserirConfiguracaoEstoquePadrao(
+      Database database,
+      ) async {
+    await database.insert(
+      'configuracoes_estoque',
+      {
+        'id': 1,
+        'controlar_produtos_os': 0,
+        'baixar_automaticamente': 0,
+        'exigir_quantidade': 0,
+        'alertar_estoque_baixo': 1,
+        'atualizado_em': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
 
   Future<void> _criarTabelaConfiguracoes(
       Database database,

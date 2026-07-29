@@ -10,6 +10,7 @@ import 'orcamentos_page.dart';
 import 'veiculos_page.dart';
 import 'ordens_servico_page.dart';
 import 'configuracoes_page.dart';
+import 'estoque_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -459,8 +460,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   icone:
                   Icons.inventory_2_outlined,
                   onTap: () {
-                    _mostrarEmDesenvolvimento(
-                      'Estoque',
+                    _abrirPagina(
+                      const EstoquePage(),
                     );
                   },
                 ),
