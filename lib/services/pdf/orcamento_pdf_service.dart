@@ -12,12 +12,12 @@ class OrcamentoPdfService {
   );
 
   final DateFormat _data =
-      DateFormat('dd/MM/yyyy');
+  DateFormat('dd/MM/yyyy');
 
   Future<Uint8List> gerarPdf(
-    Map<String, dynamic> dados, {
-    required bool recibo,
-  }) async {
+      Map<String, dynamic> dados, {
+        required bool recibo,
+      }) async {
     final documento = pw.Document();
 
     final emissao = DateTime.tryParse(
@@ -38,9 +38,9 @@ class OrcamentoPdfService {
     ]
         .where(
           (valor) =>
-              valor != null &&
-              valor.toString().trim().isNotEmpty,
-        )
+      valor != null &&
+          valor.toString().trim().isNotEmpty,
+    )
         .join(' • ');
 
     documento.addPage(
@@ -54,16 +54,16 @@ class OrcamentoPdfService {
               decoration: pw.BoxDecoration(
                 color: PdfColors.grey900,
                 borderRadius:
-                    pw.BorderRadius.circular(8),
+                pw.BorderRadius.circular(8),
               ),
               child: pw.Row(
                 mainAxisAlignment:
-                    pw.MainAxisAlignment
-                        .spaceBetween,
+                pw.MainAxisAlignment
+                    .spaceBetween,
                 children: [
                   pw.Column(
                     crossAxisAlignment:
-                        pw.CrossAxisAlignment.start,
+                    pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
                         'IMPERIUM',
@@ -71,7 +71,7 @@ class OrcamentoPdfService {
                           color: PdfColors.amber700,
                           fontSize: 24,
                           fontWeight:
-                              pw.FontWeight.bold,
+                          pw.FontWeight.bold,
                           letterSpacing: 2,
                         ),
                       ),
@@ -155,7 +155,7 @@ class OrcamentoPdfService {
                       'Valor',
                       cabecalho: true,
                       alinhamento:
-                          pw.TextAlign.right,
+                      pw.TextAlign.right,
                     ),
                   ],
                 ),
@@ -168,7 +168,7 @@ class OrcamentoPdfService {
                     _celula(
                       _moeda.format(valor),
                       alinhamento:
-                          pw.TextAlign.right,
+                      pw.TextAlign.right,
                     ),
                   ],
                 ),
@@ -218,8 +218,8 @@ class OrcamentoPdfService {
               ),
               child: pw.Row(
                 mainAxisAlignment:
-                    pw.MainAxisAlignment
-                        .spaceBetween,
+                pw.MainAxisAlignment
+                    .spaceBetween,
                 children: [
                   pw.Text(
                     recibo
@@ -244,7 +244,7 @@ class OrcamentoPdfService {
               recibo
                   ? 'Data do recibo: ${_data.format(DateTime.now())}'
                   : 'Emissão: ${emissao == null ? '-' : _data.format(emissao)}'
-                      '   •   Validade: ${validade == null ? '-' : _data.format(validade)}',
+                  '   •   Validade: ${validade == null ? '-' : _data.format(validade)}',
               style: const pw.TextStyle(
                 fontSize: 10,
                 color: PdfColors.grey700,
@@ -296,11 +296,11 @@ class OrcamentoPdfService {
   }
 
   pw.Widget _celula(
-    String texto, {
-    bool cabecalho = false,
-    pw.TextAlign alinhamento =
-        pw.TextAlign.left,
-  }) {
+      String texto, {
+        bool cabecalho = false,
+        pw.TextAlign alinhamento =
+            pw.TextAlign.left,
+      }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(10),
       child: pw.Text(
@@ -316,16 +316,16 @@ class OrcamentoPdfService {
   }
 
   Future<void> compartilhar(
-    Map<String, dynamic> dados, {
-    required bool recibo,
-  }) async {
+      Map<String, dynamic> dados, {
+        required bool recibo,
+      }) async {
     final bytes = await gerarPdf(
       dados,
       recibo: recibo,
     );
 
     final numero =
-        (dados['id'] ?? '').toString();
+    (dados['id'] ?? '').toString();
 
     await Printing.sharePdf(
       bytes: bytes,
@@ -336,9 +336,9 @@ class OrcamentoPdfService {
   }
 
   Future<void> visualizar(
-    Map<String, dynamic> dados, {
-    required bool recibo,
-  }) async {
+      Map<String, dynamic> dados, {
+        required bool recibo,
+      }) async {
     final bytes = await gerarPdf(
       dados,
       recibo: recibo,

@@ -6,6 +6,10 @@ import 'agenda_page.dart';
 import 'clientes_page.dart';
 import 'financeiro_page.dart';
 import 'fotos_page.dart';
+import 'orcamentos_page.dart';
+import 'veiculos_page.dart';
+import 'ordens_servico_page.dart';
+import 'configuracoes_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -171,8 +175,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   int _lerInteiro(
-    List<Map<String, Object?>> resultado,
-  ) {
+      List<Map<String, Object?>> resultado,
+      ) {
     if (resultado.isEmpty) {
       return 0;
     }
@@ -188,14 +192,14 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     return int.tryParse(
-          valor?.toString() ?? '',
-        ) ??
+      valor?.toString() ?? '',
+    ) ??
         0;
   }
 
   double _lerDouble(
-    List<Map<String, Object?>> resultado,
-  ) {
+      List<Map<String, Object?>> resultado,
+      ) {
     if (resultado.isEmpty) {
       return 0;
     }
@@ -207,14 +211,14 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     return double.tryParse(
-          valor?.toString() ?? '',
-        ) ??
+      valor?.toString() ?? '',
+    ) ??
         0;
   }
 
   Future<void> _abrirPagina(
-    Widget pagina,
-  ) async {
+      Widget pagina,
+      ) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -226,8 +230,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _mostrarEmDesenvolvimento(
-    String modulo,
-  ) {
+      String modulo,
+      ) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -270,7 +274,7 @@ class _DashboardPageState extends State<DashboardPage> {
         actions: [
           IconButton(
             onPressed:
-                _carregando ? null : _carregarResumo,
+            _carregando ? null : _carregarResumo,
             tooltip: 'Atualizar',
             icon: const Icon(
               Icons.refresh_rounded,
@@ -293,208 +297,216 @@ class _DashboardPageState extends State<DashboardPage> {
         onRefresh: _carregarResumo,
         child: _carregando
             ? const Center(
-                child: CircularProgressIndicator(),
-              )
+          child: CircularProgressIndicator(),
+        )
             : ListView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  16,
-                  18,
-                  16,
-                  30,
-                ),
-                children: [
-                  const Text(
-                    'Olá, Ryan!',
-                    style: TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Veja o resumo da Imperium Detailing',
-                    style: TextStyle(
-                      color: Colors.white60,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  _SaldoPrincipalCard(
-                    saldo: _saldo,
-                    lucroMes: lucroMes,
-                    formatoMoeda: _formatoMoeda,
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ResumoCard(
-                          titulo: 'Entradas do mês',
-                          valor: _formatoMoeda.format(
-                            _entradasMes,
-                          ),
-                          icone:
-                              Icons.south_west_rounded,
-                          cor: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ResumoCard(
-                          titulo: 'Saídas do mês',
-                          valor: _formatoMoeda.format(
-                            _saidasMes,
-                          ),
-                          icone:
-                              Icons.north_east_rounded,
-                          cor: Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'Visão geral',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics:
-                        const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.55,
-                    children: [
-                      _IndicadorCard(
-                        titulo: 'Clientes',
-                        valor: '$_totalClientes',
-                        icone: Icons.people_alt_outlined,
-                      ),
-                      _IndicadorCard(
-                        titulo: 'Veículos',
-                        valor: '$_totalVeiculos',
-                        icone:
-                            Icons.directions_car_outlined,
-                      ),
-                      _IndicadorCard(
-                        titulo: 'Agendamentos',
-                        valor: '$_totalAgendamentos',
-                        icone: Icons.calendar_month,
-                      ),
-                      _IndicadorCard(
-                        titulo: 'Hoje',
-                        valor: '$_agendamentosHoje',
-                        icone: Icons.today_rounded,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Acesso rápido',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics:
-                        const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.25,
-                    children: [
-                      _MenuCard(
-                        titulo: 'Agenda',
-                        icone: Icons.calendar_month,
-                        onTap: () {
-                          _abrirPagina(
-                            const AgendaPage(),
-                          );
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Clientes',
-                        icone:
-                            Icons.people_alt_outlined,
-                        onTap: () {
-                          _abrirPagina(
-                            const ClientesPage(),
-                          );
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Veículos',
-                        icone:
-                            Icons.directions_car_outlined,
-                        onTap: () {
-                          _mostrarEmDesenvolvimento(
-                            'Veículos',
-                          );
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Financeiro',
-                        icone: Icons
-                            .account_balance_wallet_outlined,
-                        onTap: () {
-                          _abrirPagina(
-                            const FinanceiroPage(),
-                          );
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Estoque',
-                        icone:
-                            Icons.inventory_2_outlined,
-                        onTap: () {
-                          _mostrarEmDesenvolvimento(
-                            'Estoque',
-                          );
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Fotos',
-                        icone:
-                            Icons.photo_camera_outlined,
-                        onTap: () {
-                          _abrirPagina(
-                            const FotosPage(),
-                          );
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Orçamentos',
-                        icone:
-                            Icons.description_outlined,
-                        onTap: () {
-                          _mostrarEmDesenvolvimento(
-                            'Orçamentos',
-                          );
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Configurações',
-                        icone:
-                            Icons.settings_outlined,
-                        onTap: () {
-                          _mostrarEmDesenvolvimento(
-                            'Configurações',
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+          physics:
+          const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            18,
+            16,
+            30,
+          ),
+          children: [
+            const Text(
+              'Olá, Ryan!',
+              style: TextStyle(
+                fontSize: 27,
+                fontWeight: FontWeight.bold,
               ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Veja o resumo da Imperium Detailing',
+              style: TextStyle(
+                color: Colors.white60,
+              ),
+            ),
+            const SizedBox(height: 22),
+            _SaldoPrincipalCard(
+              saldo: _saldo,
+              lucroMes: lucroMes,
+              formatoMoeda: _formatoMoeda,
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _ResumoCard(
+                    titulo: 'Entradas do mês',
+                    valor: _formatoMoeda.format(
+                      _entradasMes,
+                    ),
+                    icone:
+                    Icons.south_west_rounded,
+                    cor: Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ResumoCard(
+                    titulo: 'Saídas do mês',
+                    valor: _formatoMoeda.format(
+                      _saidasMes,
+                    ),
+                    icone:
+                    Icons.north_east_rounded,
+                    cor: Colors.red,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'Visão geral',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics:
+              const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.55,
+              children: [
+                _IndicadorCard(
+                  titulo: 'Clientes',
+                  valor: '$_totalClientes',
+                  icone: Icons.people_alt_outlined,
+                ),
+                _IndicadorCard(
+                  titulo: 'Veículos',
+                  valor: '$_totalVeiculos',
+                  icone:
+                  Icons.directions_car_outlined,
+                ),
+                _IndicadorCard(
+                  titulo: 'Agendamentos',
+                  valor: '$_totalAgendamentos',
+                  icone: Icons.calendar_month,
+                ),
+                _IndicadorCard(
+                  titulo: 'Hoje',
+                  valor: '$_agendamentosHoje',
+                  icone: Icons.today_rounded,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Acesso rápido',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 14),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics:
+              const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.25,
+              children: [
+                _MenuCard(
+                  titulo: 'Agenda',
+                  icone: Icons.calendar_month,
+                  onTap: () {
+                    _abrirPagina(
+                      const AgendaPage(),
+                    );
+                  },
+                ),
+                _MenuCard(
+                  titulo: 'Clientes',
+                  icone:
+                  Icons.people_alt_outlined,
+                  onTap: () {
+                    _abrirPagina(
+                      const ClientesPage(),
+                    );
+                  },
+                ),
+                _MenuCard(
+                  titulo: 'Veículos',
+                  icone: Icons.directions_car_outlined,
+                  onTap: () {
+                    _abrirPagina(
+                      const VeiculosPage(),
+                    );
+                  },
+                ),
+                _MenuCard(
+                  titulo: 'Financeiro',
+                  icone: Icons
+                      .account_balance_wallet_outlined,
+                  onTap: () {
+                    _abrirPagina(
+                      const FinanceiroPage(),
+                    );
+                  },
+                ),
+                _MenuCard(
+                  titulo: 'Estoque',
+                  icone:
+                  Icons.inventory_2_outlined,
+                  onTap: () {
+                    _mostrarEmDesenvolvimento(
+                      'Estoque',
+                    );
+                  },
+                ),
+                _MenuCard(
+                  titulo: 'Fotos',
+                  icone:
+                  Icons.photo_camera_outlined,
+                  onTap: () {
+                    _abrirPagina(
+                      const FotosPage(),
+                    );
+                  },
+                ),
+                _MenuCard(
+                  titulo: 'Orçamentos',
+                  icone:
+                  Icons.description_outlined,
+                  onTap: () {
+                    _abrirPagina(
+                      const OrcamentosPage(),
+                    );
+                  },
+                ),
+                _MenuCard(
+                  titulo: 'Ordens de Serviço',
+                  icone: Icons.build_circle_outlined,
+                  onTap: () {
+                    _abrirPagina(
+                      const OrdensServicoPage(),
+                    );
+                  },
+                ),
+                _MenuCard(
+                  titulo: 'Configurações',
+                  icone:
+                  Icons.settings_outlined,
+                  onTap: () {
+                    _abrirPagina(
+                      const ConfiguracoesPage(),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -545,7 +557,7 @@ class _SaldoPrincipalCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment:
-            CrossAxisAlignment.start,
+        CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
@@ -583,15 +595,15 @@ class _SaldoPrincipalCard extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: (lucroPositivo
-                      ? Colors.green
-                      : Colors.red)
+                  ? Colors.green
+                  : Colors.red)
                   .withValues(alpha: 0.13),
               borderRadius:
-                  BorderRadius.circular(30),
+              BorderRadius.circular(30),
             ),
             child: Text(
               'Resultado do mês: '
-              '${formatoMoeda.format(lucroMes)}',
+                  '${formatoMoeda.format(lucroMes)}',
               style: TextStyle(
                 color: lucroPositivo
                     ? Colors.greenAccent.shade100
@@ -632,14 +644,14 @@ class _ResumoCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment:
-            CrossAxisAlignment.start,
+        CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: cor.withValues(alpha: 0.12),
               borderRadius:
-                  BorderRadius.circular(11),
+              BorderRadius.circular(11),
             ),
             child: Icon(
               icone,
@@ -699,7 +711,7 @@ class _IndicadorCard extends StatelessWidget {
               color: const Color(0xFFD6A84B)
                   .withValues(alpha: 0.12),
               borderRadius:
-                  BorderRadius.circular(13),
+              BorderRadius.circular(13),
             ),
             child: Icon(
               icone,
@@ -711,9 +723,9 @@ class _IndicadorCard extends StatelessWidget {
           Expanded(
             child: Column(
               mainAxisAlignment:
-                  MainAxisAlignment.center,
+              MainAxisAlignment.center,
               crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              CrossAxisAlignment.start,
               children: [
                 Text(
                   valor,
@@ -726,7 +738,7 @@ class _IndicadorCard extends StatelessWidget {
                   titulo,
                   maxLines: 1,
                   overflow:
-                      TextOverflow.ellipsis,
+                  TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white60,
                     fontSize: 12,
@@ -764,7 +776,7 @@ class _MenuCard extends StatelessWidget {
         ),
         child: Column(
           mainAxisAlignment:
-              MainAxisAlignment.center,
+          MainAxisAlignment.center,
           children: [
             Container(
               width: 54,
@@ -773,7 +785,7 @@ class _MenuCard extends StatelessWidget {
                 color: const Color(0xFFD6A84B)
                     .withValues(alpha: 0.11),
                 borderRadius:
-                    BorderRadius.circular(17),
+                BorderRadius.circular(17),
               ),
               child: Icon(
                 icone,

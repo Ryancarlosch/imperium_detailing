@@ -22,6 +22,9 @@ dependencies:
   path_provider: ^2.1.5
   photo_view: ^0.15.0
 
+  # Assinatura digital
+  signature: ^6.3.0
+
   # PDF
   pdf: ^3.11.3
   printing: ^5.14.2

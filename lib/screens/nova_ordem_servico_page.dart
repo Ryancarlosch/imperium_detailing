@@ -1,0 +1,1263 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+
+import '../models/cliente.dart';
+import '../models/ordem_servico.dart';
+import '../models/ordem_servico_item.dart';
+import '../models/veiculo.dart';
+import '../repositories/cliente_repository.dart';
+import '../repositories/orcamento_repository.dart';
+import '../repositories/ordem_servico_repository.dart';
+import '../repositories/veiculo_repository.dart';
+
+class NovaOrdemServicoPage extends StatefulWidget {
+  const NovaOrdemServicoPage({
+    super.key,
+    this.orcamentoId,
+  });
+
+  final int? orcamentoId;
+
+  @override
+  State<NovaOrdemServicoPage> createState() =>
+      _NovaOrdemServicoPageState();
+}
+
+class _NovaOrdemServicoPageState
+    extends State<NovaOrdemServicoPage> {
+  final GlobalKey<FormState> _formKey =
+  GlobalKey<FormState>();
+
+  final ClienteRepository _clienteRepository =
+  ClienteRepository();
+
+  final VeiculoRepository _veiculoRepository =
+  VeiculoRepository();
+
+  final OrdemServicoRepository _ordemRepository =
+  OrdemServicoRepository();
+
+  final OrcamentoRepository _orcamentoRepository =
+  OrcamentoRepository();
+
+  final TextEditingController _numeroController =
+  TextEditingController();
+
+  final TextEditingController _responsavelController =
+  TextEditingController();
+
+  final TextEditingController _descontoController =
+  TextEditingController(text: '0,00');
+
+  final TextEditingController _observacoesController =
+  TextEditingController();
+
+  final NumberFormat _moeda = NumberFormat.currency(
+    locale: 'pt_BR',
+    symbol: 'R\$',
+  );
+
+  List<Cliente> _clientes = [];
+  List<Veiculo> _veiculos = [];
+  final List<_ServicoFormulario> _servicos = [];
+
+  Cliente? _clienteSelecionado;
+  Veiculo? _veiculoSelecionado;
+
+  bool _carregando = true;
+  bool _carregandoVeiculos = false;
+  bool _salvando = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _adicionarServico();
+    _carregarDadosIniciais();
+  }
+
+  @override
+  void dispose() {
+    _numeroController.dispose();
+    _responsavelController.dispose();
+    _descontoController.dispose();
+    _observacoesController.dispose();
+
+    for (final servico in _servicos) {
+      servico.dispose();
+    }
+
+    super.dispose();
+  }
+
+  Future<void> _carregarDadosIniciais() async {
+    try {
+      final resultados = await Future.wait([
+        _clienteRepository.listarClientes(),
+        _ordemRepository.gerarProximoNumero(),
+      ]);
+
+      final clientes = resultados[0] as List<Cliente>;
+      final numero = resultados[1] as String;
+
+      Map<String, dynamic>? orcamento;
+      List<Veiculo> veiculos = [];
+
+      if (widget.orcamentoId != null) {
+        orcamento =
+            await _orcamentoRepository.buscarOrcamentoComDetalhes(
+          widget.orcamentoId!,
+        );
+
+        if (orcamento == null) {
+          throw Exception('Orçamento não encontrado.');
+        }
+
+        final clienteId = _converterInt(
+          orcamento['cliente_id'],
+        );
+
+        if (clienteId != null) {
+          veiculos = await _veiculoRepository
+              .listarVeiculosDoCliente(clienteId);
+        }
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      Cliente? clienteSelecionado;
+      Veiculo? veiculoSelecionado;
+
+      if (orcamento != null) {
+        final clienteId = _converterInt(
+          orcamento['cliente_id'],
+        );
+
+        final veiculoId = _converterInt(
+          orcamento['veiculo_id'],
+        );
+
+        for (final cliente in clientes) {
+          if (cliente.id == clienteId) {
+            clienteSelecionado = cliente;
+            break;
+          }
+        }
+
+        for (final veiculo in veiculos) {
+          if (veiculo.id == veiculoId) {
+            veiculoSelecionado = veiculo;
+            break;
+          }
+        }
+
+        for (final servico in _servicos) {
+          servico.dispose();
+        }
+
+        _servicos.clear();
+
+        final itens = orcamento['itens'];
+
+        if (itens is List) {
+          for (final item in itens) {
+            if (item is! Map) {
+              continue;
+            }
+
+            final mapa = Map<String, dynamic>.from(item);
+
+            _servicos.add(
+              _ServicoFormulario(
+                aoAlterar: _atualizarTela,
+                nome: (mapa['servico'] ?? '').toString(),
+                descricao:
+                    (mapa['descricao'] ?? '').toString(),
+                quantidade: _formatarNumeroCampo(
+                  _converterNumero(
+                    mapa['quantidade'],
+                    padrao: 1,
+                  ),
+                ),
+                valor: _formatarNumeroCampo(
+                  _converterNumero(
+                    mapa['valor_unitario'],
+                  ),
+                ),
+              ),
+            );
+          }
+        }
+
+        if (_servicos.isEmpty) {
+          _servicos.add(
+            _ServicoFormulario(
+              aoAlterar: _atualizarTela,
+            ),
+          );
+        }
+
+        _descontoController.text = _formatarNumeroCampo(
+          _converterNumero(
+            orcamento['desconto'],
+          ),
+        );
+
+        _observacoesController.text =
+            (orcamento['observacoes'] ?? '').toString();
+      }
+
+      setState(() {
+        _clientes = clientes;
+        _veiculos = veiculos;
+        _clienteSelecionado = clienteSelecionado;
+        _veiculoSelecionado = veiculoSelecionado;
+        _numeroController.text = numero;
+        _carregando = false;
+      });
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _carregando = false;
+      });
+
+      _mostrarMensagem(
+        'Não foi possível carregar os dados.\n$erro',
+        erro: true,
+      );
+    }
+  }
+
+  int? _converterInt(dynamic valor) {
+    if (valor is int) {
+      return valor;
+    }
+
+    if (valor is num) {
+      return valor.toInt();
+    }
+
+    return int.tryParse(
+      valor?.toString() ?? '',
+    );
+  }
+
+  double _converterNumero(
+    dynamic valor, {
+    double padrao = 0,
+  }) {
+    if (valor is num) {
+      return valor.toDouble();
+    }
+
+    final convertido = double.tryParse(
+      (valor ?? '').toString().replaceAll(',', '.'),
+    );
+
+    return convertido ?? padrao;
+  }
+
+  String _formatarNumeroCampo(double valor) {
+    return valor
+        .toStringAsFixed(2)
+        .replaceAll('.', ',');
+  }
+
+  Future<void> _selecionarCliente(
+      Cliente? cliente,
+      ) async {
+    setState(() {
+      _clienteSelecionado = cliente;
+      _veiculoSelecionado = null;
+      _veiculos = [];
+    });
+
+    final clienteId = cliente?.id;
+
+    if (clienteId == null) {
+      return;
+    }
+
+    setState(() {
+      _carregandoVeiculos = true;
+    });
+
+    try {
+      final veiculos = await _veiculoRepository
+          .listarVeiculosDoCliente(clienteId);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _veiculos = veiculos;
+        _carregandoVeiculos = false;
+
+        if (veiculos.length == 1) {
+          _veiculoSelecionado = veiculos.first;
+        }
+      });
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _carregandoVeiculos = false;
+      });
+
+      _mostrarMensagem(
+        'Não foi possível carregar os veículos.\n$erro',
+        erro: true,
+      );
+    }
+  }
+
+  void _adicionarServico() {
+    setState(() {
+      _servicos.add(
+        _ServicoFormulario(
+          aoAlterar: _atualizarTela,
+        ),
+      );
+    });
+  }
+
+  void _removerServico(int indice) {
+    if (_servicos.length == 1) {
+      _mostrarMensagem(
+        'A Ordem de Serviço precisa ter pelo menos um serviço.',
+        erro: true,
+      );
+
+      return;
+    }
+
+    final servico = _servicos.removeAt(indice);
+    servico.dispose();
+
+    setState(() {});
+  }
+
+  void _atualizarTela() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  double _converterValor(String texto) {
+    var valor = texto
+        .trim()
+        .replaceAll('R\$', '')
+        .replaceAll(' ', '');
+
+    if (valor.isEmpty) {
+      return 0;
+    }
+
+    if (valor.contains(',')) {
+      valor = valor
+          .replaceAll('.', '')
+          .replaceAll(',', '.');
+    }
+
+    return double.tryParse(valor) ?? 0;
+  }
+
+  double get _subtotal {
+    return _servicos.fold<double>(
+      0,
+          (total, servico) {
+        final quantidade = _converterValor(
+          servico.quantidadeController.text,
+        );
+
+        final valorUnitario = _converterValor(
+          servico.valorController.text,
+        );
+
+        return total + (quantidade * valorUnitario);
+      },
+    );
+  }
+
+  double get _desconto {
+    return _converterValor(
+      _descontoController.text,
+    );
+  }
+
+  double get _totalFinal {
+    final total = _subtotal - _desconto;
+
+    if (total < 0) {
+      return 0;
+    }
+
+    return total;
+  }
+
+  String _formatarDataBanco(DateTime data) {
+    final ano = data.year.toString().padLeft(4, '0');
+    final mes = data.month.toString().padLeft(2, '0');
+    final dia = data.day.toString().padLeft(2, '0');
+
+    return '$ano-$mes-$dia';
+  }
+
+  Future<void> _salvar() async {
+    FocusScope.of(context).unfocus();
+
+    if (_salvando) {
+      return;
+    }
+
+    final formularioValido =
+        _formKey.currentState?.validate() ?? false;
+
+    if (!formularioValido) {
+      return;
+    }
+
+    final cliente = _clienteSelecionado;
+
+    if (cliente?.id == null) {
+      _mostrarMensagem(
+        'Selecione um cliente.',
+        erro: true,
+      );
+
+      return;
+    }
+
+    final servicosValidos = _servicos.where(
+          (servico) =>
+      servico.nomeController.text.trim().isNotEmpty,
+    );
+
+    if (servicosValidos.isEmpty) {
+      _mostrarMensagem(
+        'Adicione pelo menos um serviço.',
+        erro: true,
+      );
+
+      return;
+    }
+
+    if (_desconto > _subtotal) {
+      _mostrarMensagem(
+        'O desconto não pode ser maior que o subtotal.',
+        erro: true,
+      );
+
+      return;
+    }
+
+    setState(() {
+      _salvando = true;
+    });
+
+    try {
+      final ordem = OrdemServico(
+        orcamentoId: widget.orcamentoId,
+        clienteId: cliente!.id!,
+        veiculoId: _veiculoSelecionado?.id,
+        numero: _numeroController.text.trim(),
+        status: 'Aberta',
+        dataAbertura: _formatarDataBanco(
+          DateTime.now(),
+        ),
+        funcionarioResponsavel:
+        _responsavelController.text.trim(),
+        observacoes:
+        _observacoesController.text.trim(),
+        valorTotal: _subtotal,
+        desconto: _desconto,
+      );
+
+      final itens = <OrdemServicoItem>[];
+
+      for (var indice = 0;
+      indice < _servicos.length;
+      indice++) {
+        final servico = _servicos[indice];
+        final nome =
+        servico.nomeController.text.trim();
+
+        if (nome.isEmpty) {
+          continue;
+        }
+
+        itens.add(
+          OrdemServicoItem(
+            ordemServicoId: 0,
+            servico: nome,
+            descricao:
+            servico.descricaoController.text.trim(),
+            quantidade: _converterValor(
+              servico.quantidadeController.text,
+            ),
+            valorUnitario: _converterValor(
+              servico.valorController.text,
+            ),
+            ordem: indice,
+          ),
+        );
+      }
+
+      await _ordemRepository.inserirOrdemServico(
+        ordem,
+        itens: itens,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Ordem de Serviço criada com sucesso.',
+          ),
+        ),
+      );
+
+      Navigator.of(context).pop(true);
+    } catch (erro) {
+      _mostrarMensagem(
+        'Não foi possível salvar a Ordem de Serviço.\n'
+            '$erro',
+        erro: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _salvando = false;
+        });
+      }
+    }
+  }
+
+  void _mostrarMensagem(
+      String mensagem, {
+        bool erro = false,
+      }) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor:
+        erro ? Colors.red.shade700 : null,
+      ),
+    );
+  }
+
+  String _nomeVeiculo(Veiculo veiculo) {
+    final nome =
+    '${veiculo.marca} ${veiculo.modelo}'.trim();
+
+    final detalhes = <String>[];
+
+    if (veiculo.placa.trim().isNotEmpty) {
+      detalhes.add(
+        veiculo.placa.trim().toUpperCase(),
+      );
+    }
+
+    if (veiculo.cor.trim().isNotEmpty) {
+      detalhes.add(veiculo.cor.trim());
+    }
+
+    if (detalhes.isEmpty) {
+      return nome.isEmpty
+          ? 'Veículo sem identificação'
+          : nome;
+    }
+
+    return '$nome — ${detalhes.join(' • ')}';
+  }
+
+  Widget _construirCabecalho() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.assignment_outlined),
+                SizedBox(width: 8),
+                Text(
+                  'Identificação',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _numeroController,
+              readOnly: true,
+              decoration: const InputDecoration(
+                labelText: 'Número da OS',
+                prefixIcon:
+                Icon(Icons.tag_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _responsavelController,
+              textCapitalization:
+              TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Responsável pelo serviço',
+                hintText: 'Exemplo: João',
+                prefixIcon:
+                Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirClienteVeiculo() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.person_search_outlined),
+                SizedBox(width: 8),
+                Text(
+                  'Cliente e veículo',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<Cliente>(
+              value: _clienteSelecionado,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Cliente *',
+                prefixIcon:
+                Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              items: _clientes.map(
+                    (cliente) {
+                  final telefone =
+                  cliente.telefone.trim();
+
+                  return DropdownMenuItem<Cliente>(
+                    value: cliente,
+                    child: Text(
+                      telefone.isEmpty
+                          ? cliente.nome
+                          : '${cliente.nome} — $telefone',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                },
+              ).toList(),
+              onChanged: _salvando
+                  ? null
+                  : _selecionarCliente,
+              validator: (valor) {
+                if (valor == null) {
+                  return 'Selecione o cliente';
+                }
+
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<Veiculo>(
+              value: _veiculoSelecionado,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Veículo',
+                prefixIcon:
+                const Icon(Icons.directions_car),
+                border: const OutlineInputBorder(),
+                suffixIcon: _carregandoVeiculos
+                    ? const Padding(
+                  padding: EdgeInsets.all(13),
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child:
+                    CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  ),
+                )
+                    : null,
+              ),
+              items: _veiculos.map(
+                    (veiculo) {
+                  return DropdownMenuItem<Veiculo>(
+                    value: veiculo,
+                    child: Text(
+                      _nomeVeiculo(veiculo),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                },
+              ).toList(),
+              onChanged: _clienteSelecionado == null ||
+                  _carregandoVeiculos ||
+                  _salvando
+                  ? null
+                  : (veiculo) {
+                setState(() {
+                  _veiculoSelecionado =
+                      veiculo;
+                });
+              },
+            ),
+            if (_clienteSelecionado != null &&
+                !_carregandoVeiculos &&
+                _veiculos.isEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Este cliente ainda não possui veículo cadastrado.',
+                style: TextStyle(
+                  color: Colors.orange.shade800,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirServicos() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.cleaning_services_outlined),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Serviços',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed:
+                  _salvando ? null : _adicionarServico,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...List.generate(
+              _servicos.length,
+                  (indice) {
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: indice ==
+                        _servicos.length - 1
+                        ? 0
+                        : 14,
+                  ),
+                  child: _construirServico(
+                    indice,
+                    _servicos[indice],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirServico(
+      int indice,
+      _ServicoFormulario servico,
+      ) {
+    final quantidade = _converterValor(
+      servico.quantidadeController.text,
+    );
+
+    final valorUnitario = _converterValor(
+      servico.valorController.text,
+    );
+
+    final subtotal =
+        quantidade * valorUnitario;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Colors.grey.shade300,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Serviço ${indice + 1}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Remover serviço',
+                onPressed: _salvando
+                    ? null
+                    : () => _removerServico(indice),
+                icon: const Icon(
+                  Icons.delete_outline,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: servico.nomeController,
+            textCapitalization:
+            TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Nome do serviço *',
+              hintText:
+              'Exemplo: Polimento técnico',
+              border: OutlineInputBorder(),
+            ),
+            validator: (valor) {
+              if (indice == 0 &&
+                  (valor == null ||
+                      valor.trim().isEmpty)) {
+                return 'Informe o serviço';
+              }
+
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller:
+            servico.descricaoController,
+            textCapitalization:
+            TextCapitalization.sentences,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: 'Descrição',
+              hintText:
+              'Detalhes opcionais do serviço',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller:
+                  servico.quantidadeController,
+                  keyboardType:
+                  const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'[0-9,.]'),
+                    ),
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: 'Quantidade',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (valor) {
+                    if (servico.nomeController.text
+                        .trim()
+                        .isEmpty &&
+                        (valor == null ||
+                            valor.trim().isEmpty)) {
+                      return null;
+                    }
+
+                    if (_converterValor(valor ?? '') <=
+                        0) {
+                      return 'Inválida';
+                    }
+
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: TextFormField(
+                  controller:
+                  servico.valorController,
+                  keyboardType:
+                  const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'[0-9,.]'),
+                    ),
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: 'Valor unitário',
+                    prefixText: 'R\$ ',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (valor) {
+                    if (servico.nomeController.text
+                        .trim()
+                        .isEmpty &&
+                        (valor == null ||
+                            valor.trim().isEmpty)) {
+                      return null;
+                    }
+
+                    if (_converterValor(valor ?? '') <
+                        0) {
+                      return 'Valor inválido';
+                    }
+
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'Subtotal: ${_moeda.format(subtotal)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirValores() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.payments_outlined),
+                SizedBox(width: 8),
+                Text(
+                  'Valores',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _descontoController,
+              keyboardType:
+              const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(
+                  RegExp(r'[0-9,.]'),
+                ),
+              ],
+              onChanged: (_) {
+                setState(() {});
+              },
+              decoration: const InputDecoration(
+                labelText: 'Desconto',
+                prefixText: 'R\$ ',
+                border: OutlineInputBorder(),
+              ),
+              validator: (valor) {
+                final desconto =
+                _converterValor(valor ?? '');
+
+                if (desconto < 0) {
+                  return 'Informe um desconto válido';
+                }
+
+                if (desconto > _subtotal) {
+                  return 'O desconto é maior que o subtotal';
+                }
+
+                return null;
+              },
+            ),
+            const SizedBox(height: 18),
+            _LinhaValor(
+              titulo: 'Subtotal',
+              valor: _moeda.format(_subtotal),
+            ),
+            const SizedBox(height: 8),
+            _LinhaValor(
+              titulo: 'Desconto',
+              valor: _moeda.format(_desconto),
+            ),
+            const Divider(height: 24),
+            _LinhaValor(
+              titulo: 'Total final',
+              valor: _moeda.format(_totalFinal),
+              destaque: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirObservacoes() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: TextFormField(
+          controller: _observacoesController,
+          textCapitalization:
+          TextCapitalization.sentences,
+          minLines: 3,
+          maxLines: 6,
+          decoration: const InputDecoration(
+            labelText: 'Observações',
+            hintText:
+            'Condições do veículo, orientações ou informações adicionais',
+            prefixIcon: Icon(Icons.notes_outlined),
+            border: OutlineInputBorder(),
+            alignLabelWithHint: true,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.orcamentoId == null
+              ? 'Nova Ordem de Serviço'
+              : 'Gerar Ordem de Serviço',
+        ),
+      ),
+      body: _carregando
+          ? const Center(
+        child: CircularProgressIndicator(),
+      )
+          : Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            14,
+            14,
+            14,
+            120,
+          ),
+          children: [
+            _construirCabecalho(),
+            const SizedBox(height: 12),
+            _construirClienteVeiculo(),
+            const SizedBox(height: 12),
+            _construirServicos(),
+            const SizedBox(height: 12),
+            _construirValores(),
+            const SizedBox(height: 12),
+            _construirObservacoes(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _carregando
+          ? null
+          : SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(
+            14,
+            10,
+            14,
+            12,
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context)
+                .scaffoldBackgroundColor,
+            border: Border(
+              top: BorderSide(
+                color: Colors.grey.shade300,
+              ),
+            ),
+          ),
+          child: FilledButton.icon(
+            onPressed:
+            _salvando ? null : _salvar,
+            icon: _salvando
+                ? const SizedBox(
+              width: 19,
+              height: 19,
+              child:
+              CircularProgressIndicator(
+                strokeWidth: 2,
+              ),
+            )
+                : const Icon(Icons.save_outlined),
+            label: Text(
+              _salvando
+                  ? 'Salvando...'
+                  : 'Salvar Ordem de Serviço',
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ServicoFormulario {
+  _ServicoFormulario({
+    required VoidCallback aoAlterar,
+    String nome = '',
+    String descricao = '',
+    String quantidade = '1',
+    String valor = '0,00',
+  })  : nomeController = TextEditingController(
+          text: nome,
+        ),
+        descricaoController = TextEditingController(
+          text: descricao,
+        ),
+        quantidadeController = TextEditingController(
+          text: quantidade,
+        ),
+        valorController = TextEditingController(
+          text: valor,
+        ) {
+    nomeController.addListener(aoAlterar);
+    quantidadeController.addListener(aoAlterar);
+    valorController.addListener(aoAlterar);
+
+    _aoAlterar = aoAlterar;
+  }
+
+  final TextEditingController nomeController;
+  final TextEditingController descricaoController;
+  final TextEditingController quantidadeController;
+  final TextEditingController valorController;
+
+  late final VoidCallback _aoAlterar;
+
+  void dispose() {
+    nomeController.removeListener(_aoAlterar);
+    quantidadeController.removeListener(_aoAlterar);
+    valorController.removeListener(_aoAlterar);
+
+    nomeController.dispose();
+    descricaoController.dispose();
+    quantidadeController.dispose();
+    valorController.dispose();
+  }
+}
+
+class _LinhaValor extends StatelessWidget {
+  const _LinhaValor({
+    required this.titulo,
+    required this.valor,
+    this.destaque = false,
+  });
+
+  final String titulo;
+  final String valor;
+  final bool destaque;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            titulo,
+            style: TextStyle(
+              fontSize: destaque ? 17 : 14,
+              fontWeight: destaque
+                  ? FontWeight.bold
+                  : FontWeight.normal,
+            ),
+          ),
+        ),
+        Text(
+          valor,
+          style: TextStyle(
+            fontSize: destaque ? 20 : 15,
+            fontWeight: destaque
+                ? FontWeight.bold
+                : FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}

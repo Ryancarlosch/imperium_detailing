@@ -19,31 +19,42 @@ class VeiculoDetalhesPage extends StatefulWidget {
 
 class _VeiculoDetalhesPageState
     extends State<VeiculoDetalhesPage> {
-  final VeiculoRepository _repository =
-      VeiculoRepository();
+  final VeiculoRepository _repository = VeiculoRepository();
 
-  Map<String, dynamic>? _dados;
+  Map<String, dynamic>? _veiculo;
   bool _carregando = true;
+  bool _executandoAcao = false;
 
   @override
   void initState() {
     super.initState();
-    _carregar();
+    _carregarVeiculo();
   }
 
-  Future<void> _carregar() async {
+  Future<void> _carregarVeiculo() async {
+    if (mounted) {
+      setState(() {
+        _carregando = true;
+      });
+    }
+
     try {
-      final dados =
-          await _repository.buscarVeiculoComClientePorId(
-        widget.veiculoId,
-      );
+      final veiculo = await _repository
+          .buscarVeiculoComClientePorId(widget.veiculoId);
 
       if (!mounted) return;
 
       setState(() {
-        _dados = dados;
+        _veiculo = veiculo;
         _carregando = false;
       });
+
+      if (veiculo == null) {
+        _mostrarMensagem(
+          'Veículo não encontrado.',
+          erro: true,
+        );
+      }
     } catch (erro) {
       if (!mounted) return;
 
@@ -51,19 +62,82 @@ class _VeiculoDetalhesPageState
         _carregando = false;
       });
 
-      _mensagem(
+      _mostrarMensagem(
         'Não foi possível carregar o veículo: $erro',
         erro: true,
       );
     }
   }
 
-  Future<void> _editar() async {
-    final dados = _dados;
+  String _obterTexto(
+    String campo, {
+    String padrao = '',
+  }) {
+    final valor = _veiculo?[campo];
 
-    if (dados == null) return;
+    if (valor == null) {
+      return padrao;
+    }
 
-    final veiculo = Veiculo.fromMap(dados);
+    final texto = valor.toString().trim();
+
+    if (texto.isEmpty) {
+      return padrao;
+    }
+
+    return texto;
+  }
+
+  int _obterInt(String campo) {
+    final valor = _veiculo?[campo];
+
+    if (valor is int) {
+      return valor;
+    }
+
+    if (valor is num) {
+      return valor.toInt();
+    }
+
+    return int.tryParse(valor?.toString() ?? '') ?? 0;
+  }
+
+  Veiculo? _montarVeiculoParaEdicao() {
+    if (_veiculo == null) {
+      return null;
+    }
+
+    final id = _obterInt('id');
+    final clienteId = _obterInt('cliente_id');
+
+    if (id <= 0 || clienteId <= 0) {
+      return null;
+    }
+
+    return Veiculo(
+      id: id,
+      clienteId: clienteId,
+      marca: _obterTexto('marca'),
+      modelo: _obterTexto('modelo'),
+      placa: _obterTexto('placa'),
+      cor: _obterTexto('cor'),
+      ano: _obterTexto('ano'),
+      observacoes: _obterTexto('observacoes'),
+    );
+  }
+
+  Future<void> _editarVeiculo() async {
+    if (_executandoAcao) return;
+
+    final veiculo = _montarVeiculoParaEdicao();
+
+    if (veiculo == null) {
+      _mostrarMensagem(
+        'Não foi possível preparar o veículo para edição.',
+        erro: true,
+      );
+      return;
+    }
 
     final alterou = await Navigator.push<bool>(
       context,
@@ -75,44 +149,42 @@ class _VeiculoDetalhesPageState
     );
 
     if (alterou == true) {
-      setState(() {
-        _carregando = true;
-      });
-
-      await _carregar();
+      await _carregarVeiculo();
 
       if (!mounted) return;
 
-      _mensagem(
+      _mostrarMensagem(
         'Veículo atualizado com sucesso.',
       );
     }
   }
 
-  Future<void> _excluir() async {
+  Future<void> _excluirVeiculo() async {
+    if (_executandoAcao) return;
+
     final confirmar = await showDialog<bool>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Excluir veículo?'),
+          title: const Text('Excluir veículo'),
           content: const Text(
-            'Esta ação não pode ser desfeita. '
-            'Agendamentos e fotos vinculados também '
-            'podem ser removidos.',
+            'Deseja excluir este veículo permanentemente?\n\n'
+            'Agendamentos, fotos e outros registros vinculados '
+            'também podem ser afetados.',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context, false);
+                Navigator.pop(dialogContext, false);
               },
               child: const Text('Cancelar'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Colors.red.shade700,
               ),
               onPressed: () {
-                Navigator.pop(context, true);
+                Navigator.pop(dialogContext, true);
               },
               child: const Text('Excluir'),
             ),
@@ -121,12 +193,16 @@ class _VeiculoDetalhesPageState
       },
     );
 
-    if (confirmar != true) return;
+    if (confirmar != true || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _executandoAcao = true;
+    });
 
     try {
-      await _repository.excluirVeiculo(
-        widget.veiculoId,
-      );
+      await _repository.excluirVeiculo(widget.veiculoId);
 
       if (!mounted) return;
 
@@ -134,14 +210,20 @@ class _VeiculoDetalhesPageState
     } catch (erro) {
       if (!mounted) return;
 
-      _mensagem(
+      _mostrarMensagem(
         'Não foi possível excluir o veículo: $erro',
         erro: true,
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _executandoAcao = false;
+        });
+      }
     }
   }
 
-  void _mensagem(
+  void _mostrarMensagem(
     String mensagem, {
     bool erro = false,
   }) {
@@ -156,16 +238,6 @@ class _VeiculoDetalhesPageState
       );
   }
 
-  String _texto(
-    String chave, {
-    String vazio = 'Não informado',
-  }) {
-    final valor =
-        (_dados?[chave] ?? '').toString().trim();
-
-    return valor.isEmpty ? vazio : valor;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -173,31 +245,31 @@ class _VeiculoDetalhesPageState
         title: const Text('Detalhes do veículo'),
         actions: [
           IconButton(
-            onPressed:
-                _carregando ? null : _editar,
-            tooltip: 'Editar',
+            onPressed: _carregando || _executandoAcao
+                ? null
+                : _editarVeiculo,
+            tooltip: 'Editar veículo',
             icon: const Icon(Icons.edit_outlined),
           ),
           PopupMenuButton<String>(
+            enabled: !_carregando && !_executandoAcao,
             onSelected: (valor) {
               if (valor == 'excluir') {
-                _excluir();
+                _excluirVeiculo();
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
+            itemBuilder: (_) => [
+              const PopupMenuItem<String>(
                 value: 'excluir',
-                child: ListTile(
-                  leading: Icon(
-                    Icons.delete_outline,
-                    color: Colors.red,
-                  ),
-                  title: Text(
-                    'Excluir',
-                    style: TextStyle(
-                      color: Colors.red,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline,
+                      color: Colors.redAccent,
                     ),
-                  ),
+                    SizedBox(width: 10),
+                    Text('Excluir veículo'),
+                  ],
                 ),
               ),
             ],
@@ -208,222 +280,370 @@ class _VeiculoDetalhesPageState
           ? const Center(
               child: CircularProgressIndicator(),
             )
-          : _dados == null
-              ? const Center(
-                  child: Text(
-                    'Veículo não encontrado.',
-                  ),
+          : _veiculo == null
+              ? _VeiculoNaoEncontrado(
+                  aoTentarNovamente: _carregarVeiculo,
                 )
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(22),
-                      decoration: BoxDecoration(
-                        color:
-                            const Color(0xFF1A1A1A),
-                        borderRadius:
-                            BorderRadius.circular(22),
-                        border: Border.all(
-                          color:
-                              const Color(0xFFD6A84B)
-                                  .withValues(
-                            alpha: 0.35,
-                          ),
+              : RefreshIndicator(
+                  onRefresh: _carregarVeiculo,
+                  child: ListView(
+                    physics:
+                        const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(
+                      16,
+                      16,
+                      16,
+                      32,
+                    ),
+                    children: [
+                      _CabecalhoVeiculo(
+                        marca: _obterTexto(
+                          'marca',
+                          padrao: 'Marca não informada',
+                        ),
+                        modelo: _obterTexto(
+                          'modelo',
+                          padrao: 'Modelo não informado',
+                        ),
+                        placa: _obterTexto(
+                          'placa',
+                          padrao: 'Sem placa',
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 82,
-                            height: 82,
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFD6A84B,
-                              ).withValues(
-                                alpha: 0.12,
-                              ),
-                              borderRadius:
-                                  BorderRadius.circular(
-                                24,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons
-                                  .directions_car_outlined,
-                              size: 46,
-                              color:
-                                  Color(0xFFD6A84B),
+                      const SizedBox(height: 16),
+                      _SecaoDetalhes(
+                        titulo: 'Proprietário',
+                        icone: Icons.person_outline,
+                        itens: [
+                          _ItemDetalhe(
+                            rotulo: 'Nome',
+                            valor: _obterTexto(
+                              'cliente_nome',
+                              padrao: 'Não informado',
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '${_texto('marca')} '
-                            '${_texto('modelo')}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight:
-                                  FontWeight.bold,
+                          _ItemDetalhe(
+                            rotulo: 'Telefone',
+                            valor: _obterTexto(
+                              'cliente_telefone',
+                              padrao: 'Não informado',
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _texto(
-                              'placa',
-                              vazio: 'Sem placa',
-                            ),
-                            style: const TextStyle(
-                              color:
-                                  Color(0xFFD6A84B),
-                              fontSize: 16,
-                              fontWeight:
-                                  FontWeight.w600,
-                              letterSpacing: 1.2,
+                          _ItemDetalhe(
+                            rotulo: 'E-mail',
+                            valor: _obterTexto(
+                              'cliente_email',
+                              padrao: 'Não informado',
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _Secao(
-                      titulo: 'Informações',
-                      filhos: [
-                        _Linha(
-                          icone:
-                              Icons.person_outline,
-                          titulo: 'Proprietário',
-                          valor:
-                              _texto('cliente_nome'),
-                        ),
-                        _Linha(
-                          icone:
-                              Icons.phone_outlined,
-                          titulo: 'Telefone',
-                          valor: _texto(
-                            'cliente_telefone',
+                      const SizedBox(height: 14),
+                      _SecaoDetalhes(
+                        titulo: 'Dados do veículo',
+                        icone: Icons.directions_car_outlined,
+                        itens: [
+                          _ItemDetalhe(
+                            rotulo: 'Marca',
+                            valor: _obterTexto(
+                              'marca',
+                              padrao: 'Não informada',
+                            ),
+                          ),
+                          _ItemDetalhe(
+                            rotulo: 'Modelo',
+                            valor: _obterTexto(
+                              'modelo',
+                              padrao: 'Não informado',
+                            ),
+                          ),
+                          _ItemDetalhe(
+                            rotulo: 'Placa',
+                            valor: _obterTexto(
+                              'placa',
+                              padrao: 'Não informada',
+                            ),
+                          ),
+                          _ItemDetalhe(
+                            rotulo: 'Cor',
+                            valor: _obterTexto(
+                              'cor',
+                              padrao: 'Não informada',
+                            ),
+                          ),
+                          _ItemDetalhe(
+                            rotulo: 'Ano',
+                            valor: _obterTexto(
+                              'ano',
+                              padrao: 'Não informado',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _SecaoDetalhes(
+                        titulo: 'Observações',
+                        icone: Icons.notes_outlined,
+                        itens: [
+                          _ItemDetalhe(
+                            rotulo: 'Informações',
+                            valor: _obterTexto(
+                              'observacoes',
+                              padrao: 'Nenhuma observação registrada.',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        onPressed: _executandoAcao
+                            ? null
+                            : _editarVeiculo,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Editar veículo'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _executandoAcao
+                            ? null
+                            : _excluirVeiculo,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.redAccent,
+                          side: const BorderSide(
+                            color: Colors.redAccent,
                           ),
                         ),
-                        _Linha(
-                          icone:
-                              Icons.palette_outlined,
-                          titulo: 'Cor',
-                          valor: _texto('cor'),
+                        icon: _executandoAcao
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.delete_outline),
+                        label: Text(
+                          _executandoAcao
+                              ? 'Excluindo...'
+                              : 'Excluir veículo',
                         ),
-                        _Linha(
-                          icone: Icons
-                              .calendar_today_outlined,
-                          titulo: 'Ano',
-                          valor: _texto('ano'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _Secao(
-                      titulo: 'Observações',
-                      filhos: [
-                        Text(
-                          _texto(
-                            'observacoes',
-                            vazio:
-                                'Nenhuma observação cadastrada.',
-                          ),
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
     );
   }
 }
 
-class _Secao extends StatelessWidget {
-  const _Secao({
-    required this.titulo,
-    required this.filhos,
+class _CabecalhoVeiculo extends StatelessWidget {
+  const _CabecalhoVeiculo({
+    required this.marca,
+    required this.modelo,
+    required this.placa,
   });
 
-  final String titulo;
-  final List<Widget> filhos;
+  final String marca;
+  final String modelo;
+  final String placa;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFD6A84B)
+              .withValues(alpha: 0.35),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          Text(
-            titulo,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...filhos,
-        ],
-      ),
-    );
-  }
-}
-
-class _Linha extends StatelessWidget {
-  const _Linha({
-    required this.icone,
-    required this.titulo,
-    required this.valor,
-  });
-
-  final IconData icone;
-  final String titulo;
-  final String valor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding:
-          const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(
-            icone,
-            color: const Color(0xFFD6A84B),
-            size: 22,
+          Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: const Color(0xFFD6A84B)
+                  .withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(
+              Icons.directions_car_outlined,
+              size: 36,
+              color: Color(0xFFD6A84B),
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  titulo,
+                  '$marca $modelo'.trim(),
                   style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  valor,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    placa,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SecaoDetalhes extends StatelessWidget {
+  const _SecaoDetalhes({
+    required this.titulo,
+    required this.icone,
+    required this.itens,
+  });
+
+  final String titulo;
+  final IconData icone;
+  final List<_ItemDetalhe> itens;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icone,
+                  color: const Color(0xFFD6A84B),
+                ),
+                const SizedBox(width: 9),
+                Text(
+                  titulo,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...itens.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: item,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemDetalhe extends StatelessWidget {
+  const _ItemDetalhe({
+    required this.rotulo,
+    required this.valor,
+  });
+
+  final String rotulo;
+  final String valor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          rotulo,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          valor,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _VeiculoNaoEncontrado extends StatelessWidget {
+  const _VeiculoNaoEncontrado({
+    required this.aoTentarNovamente,
+  });
+
+  final VoidCallback aoTentarNovamente;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.directions_car_filled_outlined,
+              size: 76,
+              color: Colors.white30,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Veículo não encontrado',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'O veículo pode ter sido excluído ou não está mais disponível.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white54,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: aoTentarNovamente,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
       ),
     );
   }
