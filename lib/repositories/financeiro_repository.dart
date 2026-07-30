@@ -151,7 +151,7 @@ class FinanceiroRepository {
       SELECT
         COALESCE(SUM(valor), 0) AS total
       FROM movimentos_financeiros
-      WHERE tipo = ?
+      WHERE LOWER(tipo) = ?
     ''';
 
     final argumentos = <dynamic>[
@@ -192,7 +192,7 @@ class FinanceiroRepository {
       SELECT
         COALESCE(SUM(valor), 0) AS total
       FROM movimentos_financeiros
-      WHERE tipo = ?
+      WHERE LOWER(tipo) = ?
     ''';
 
     final argumentos = <dynamic>[

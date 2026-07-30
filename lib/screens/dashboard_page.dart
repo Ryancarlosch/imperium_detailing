@@ -27,6 +27,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   bool _carregando = true;
 
+  double _receitaHoje = 0;
   double _entradasMes = 0;
   double _saidasMes = 0;
   double _saldo = 0;
@@ -107,6 +108,19 @@ class _DashboardPageState extends State<DashboardPage> {
             AND data < ?
           ''',
           [
+            inicioHoje,
+            inicioAmanha,
+          ],
+        ),
+        database.rawQuery(
+          '''
+          SELECT COALESCE(SUM(valor), 0) AS total
+          FROM movimentos_financeiros
+          WHERE LOWER(tipo) = 'entrada'
+            AND data >= ?
+            AND data < ?
+          ''',
+          [
             inicioMes,
             inicioProximoMes,
           ],
@@ -148,9 +162,10 @@ class _DashboardPageState extends State<DashboardPage> {
         _totalVeiculos = _lerInteiro(resultados[1]);
         _totalAgendamentos = _lerInteiro(resultados[2]);
         _agendamentosHoje = _lerInteiro(resultados[3]);
-        _entradasMes = _lerDouble(resultados[4]);
-        _saidasMes = _lerDouble(resultados[5]);
-        _saldo = _lerDouble(resultados[6]);
+        _receitaHoje = _lerDouble(resultados[4]);
+        _entradasMes = _lerDouble(resultados[5]);
+        _saidasMes = _lerDouble(resultados[6]);
+        _saldo = _lerDouble(resultados[7]);
         _carregando = false;
       });
     } catch (erro) {
@@ -244,6 +259,20 @@ class _DashboardPageState extends State<DashboardPage> {
       );
   }
 
+  String _saudacao() {
+    final hora = DateTime.now().hour;
+
+    if (hora < 12) {
+      return 'Bom dia';
+    }
+
+    if (hora < 18) {
+      return 'Boa tarde';
+    }
+
+    return 'Boa noite';
+  }
+
   @override
   Widget build(BuildContext context) {
     final lucroMes = _entradasMes - _saidasMes;
@@ -310,9 +339,9 @@ class _DashboardPageState extends State<DashboardPage> {
             30,
           ),
           children: [
-            const Text(
-              'Olá, Ryan!',
-              style: TextStyle(
+            Text(
+              '${_saudacao()}, Ryan!',
+              style: const TextStyle(
                 fontSize: 27,
                 fontWeight: FontWeight.bold,
               ),
@@ -329,6 +358,20 @@ class _DashboardPageState extends State<DashboardPage> {
               saldo: _saldo,
               lucroMes: lucroMes,
               formatoMoeda: _formatoMoeda,
+            ),
+            const SizedBox(height: 14),
+            _ResumoDiaCard(
+              receitaHoje: _receitaHoje,
+              agendamentosHoje: _agendamentosHoje,
+              lucroMes: lucroMes,
+              saldo: _saldo,
+              formatoMoeda: _formatoMoeda,
+              onAbrirAgenda: () {
+                _abrirPagina(const AgendaPage());
+              },
+              onAbrirFinanceiro: () {
+                _abrirPagina(const FinanceiroPage());
+              },
             ),
             const SizedBox(height: 14),
             Row(
@@ -357,6 +400,14 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 18),
+            _AtencaoCard(
+              agendamentosHoje: _agendamentosHoje,
+              lucroMes: lucroMes,
+              onAbrirAgenda: () {
+                _abrirPagina(const AgendaPage());
+              },
             ),
             const SizedBox(height: 22),
             const Text(
@@ -612,6 +663,272 @@ class _SaldoPrincipalCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResumoDiaCard extends StatelessWidget {
+  const _ResumoDiaCard({
+    required this.receitaHoje,
+    required this.agendamentosHoje,
+    required this.lucroMes,
+    required this.saldo,
+    required this.formatoMoeda,
+    required this.onAbrirAgenda,
+    required this.onAbrirFinanceiro,
+  });
+
+  final double receitaHoje;
+  final int agendamentosHoje;
+  final double lucroMes;
+  final double saldo;
+  final NumberFormat formatoMoeda;
+  final VoidCallback onAbrirAgenda;
+  final VoidCallback onAbrirFinanceiro;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFD6A84B).withValues(alpha: 0.22),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.today_rounded,
+                color: Color(0xFFD6A84B),
+              ),
+              SizedBox(width: 9),
+              Text(
+                'Resumo do dia',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _ResumoDiaItem(
+                  titulo: 'Receita hoje',
+                  valor: formatoMoeda.format(receitaHoje),
+                  icone: Icons.payments_outlined,
+                  onTap: onAbrirFinanceiro,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ResumoDiaItem(
+                  titulo: 'Agendamentos',
+                  valor: '$agendamentosHoje',
+                  icone: Icons.event_available_outlined,
+                  onTap: onAbrirAgenda,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _ResumoDiaItem(
+                  titulo: 'Lucro do mês',
+                  valor: formatoMoeda.format(lucroMes),
+                  icone: Icons.trending_up_rounded,
+                  onTap: onAbrirFinanceiro,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ResumoDiaItem(
+                  titulo: 'Saldo total',
+                  valor: formatoMoeda.format(saldo),
+                  icone: Icons.account_balance_wallet_outlined,
+                  onTap: onAbrirFinanceiro,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResumoDiaItem extends StatelessWidget {
+  const _ResumoDiaItem({
+    required this.titulo,
+    required this.valor,
+    required this.icone,
+    required this.onTap,
+  });
+
+  final String titulo;
+  final String valor;
+  final IconData icone;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF222222),
+      borderRadius: BorderRadius.circular(15),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.all(13),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                icone,
+                size: 21,
+                color: const Color(0xFFD6A84B),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                titulo,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                valor,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AtencaoCard extends StatelessWidget {
+  const _AtencaoCard({
+    required this.agendamentosHoje,
+    required this.lucroMes,
+    required this.onAbrirAgenda,
+  });
+
+  final int agendamentosHoje;
+  final double lucroMes;
+  final VoidCallback onAbrirAgenda;
+
+  @override
+  Widget build(BuildContext context) {
+    final mensagemAgenda = agendamentosHoje == 0
+        ? 'Nenhum agendamento marcado para hoje.'
+        : agendamentosHoje == 1
+        ? 'Você tem 1 agendamento para hoje.'
+        : 'Você tem $agendamentosHoje agendamentos para hoje.';
+
+    final resultadoPositivo = lucroMes >= 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: (resultadoPositivo ? Colors.green : Colors.orange)
+              .withValues(alpha: 0.22),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.notifications_active_outlined,
+                color: Color(0xFFD6A84B),
+              ),
+              SizedBox(width: 9),
+              Text(
+                'Atenção',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 13),
+          InkWell(
+            onTap: onAbrirAgenda,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 19,
+                    color: Colors.white70,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      mensagemAgenda,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.white38,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                resultadoPositivo
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.warning_amber_rounded,
+                size: 20,
+                color: resultadoPositivo
+                    ? Colors.greenAccent.shade100
+                    : Colors.orangeAccent.shade100,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  resultadoPositivo
+                      ? 'O resultado financeiro do mês está positivo.'
+                      : 'As saídas do mês estão maiores que as entradas.',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ),
+            ],
           ),
         ],
       ),

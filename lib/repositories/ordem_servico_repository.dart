@@ -540,7 +540,7 @@ class OrdemServicoRepository {
         await transaction.insert(
           'movimentos_financeiros',
           {
-            'tipo': 'Entrada',
+            'tipo': 'entrada',
             'descricao':
             'Ordem de Serviço finalizada: $numero',
             'valor': valorFinal,

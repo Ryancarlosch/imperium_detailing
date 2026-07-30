@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 
 import '../models/agendamento.dart';
-import '../models/movimento_financeiro.dart';
 import '../repositories/agendamento_repository.dart';
-import '../repositories/financeiro_repository.dart';
 import '../services/notification_service.dart';
 import 'agendamento_detalhes_page.dart';
 import 'novo_agendamento_page.dart';
+import '../models/movimento_financeiro.dart';
+import '../repositories/financeiro_repository.dart';
 
 class AgendaPage extends StatefulWidget {
   const AgendaPage({super.key});

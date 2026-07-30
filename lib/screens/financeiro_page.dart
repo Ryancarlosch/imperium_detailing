@@ -102,8 +102,8 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
     }
 
     return double.tryParse(
-          valor.toString().replaceAll(',', '.'),
-        ) ??
+      valor.toString().replaceAll(',', '.'),
+    ) ??
         0;
   }
 
@@ -132,11 +132,11 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
       final tipo = (movimento['tipo'] ?? '').toString();
       final descricao = (movimento['descricao'] ?? '').toString();
       final formaPagamento =
-          (movimento['forma_pagamento'] ?? '').toString();
+      (movimento['forma_pagamento'] ?? '').toString();
       final nomeCliente = (movimento['cliente_nome'] ??
-              movimento['nome_cliente'] ??
-              movimento['nome'] ??
-              '')
+          movimento['nome_cliente'] ??
+          movimento['nome'] ??
+          '')
           .toString();
 
       final correspondePesquisa = termo.isEmpty ||
@@ -188,24 +188,24 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
     return _movimentosFiltrados
         .where(
           (item) =>
-              (item['tipo'] ?? '').toString().toLowerCase() == 'entrada',
-        )
+      (item['tipo'] ?? '').toString().toLowerCase() == 'entrada',
+    )
         .fold<double>(
-          0,
+      0,
           (total, item) => total + _converterParaDouble(item['valor']),
-        );
+    );
   }
 
   double get _saidasFiltradas {
     return _movimentosFiltrados
         .where((item) {
-          final tipo = (item['tipo'] ?? '').toString().toLowerCase();
-          return tipo == 'saída' || tipo == 'saida';
-        })
+      final tipo = (item['tipo'] ?? '').toString().toLowerCase();
+      return tipo == 'saída' || tipo == 'saida';
+    })
         .fold<double>(
-          0,
+      0,
           (total, item) => total + _converterParaDouble(item['valor']),
-        );
+    );
   }
 
   Future<void> _selecionarPeriodo() async {
@@ -256,8 +256,8 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
   }
 
   Future<void> _confirmarExclusao(
-    Map<String, dynamic> movimento,
-  ) async {
+      Map<String, dynamic> movimento,
+      ) async {
     final descricao = (movimento['descricao'] ?? 'Movimentação').toString();
 
     final confirmar = await showDialog<bool>(
@@ -267,7 +267,7 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
           title: const Text('Excluir movimentação'),
           content: Text(
             'Deseja realmente excluir "$descricao"?\n\n'
-            'Esta ação não poderá ser desfeita.',
+                'Esta ação não poderá ser desfeita.',
           ),
           actions: [
             TextButton(
@@ -317,9 +317,9 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
   }
 
   void _mostrarMensagem(
-    String mensagem, {
-    bool erro = false,
-  }) {
+      String mensagem, {
+        bool erro = false,
+      }) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -338,10 +338,10 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
         _periodoSelecionado != null;
 
     final entradasExibidas =
-        usandoFiltros ? _entradasFiltradas : _entradas;
+    usandoFiltros ? _entradasFiltradas : _entradas;
     final saidasExibidas = usandoFiltros ? _saidasFiltradas : _saidas;
     final saldoExibido =
-        usandoFiltros ? entradasExibidas - saidasExibidas : _saldo;
+    usandoFiltros ? entradasExibidas - saidasExibidas : _saldo;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F7),
@@ -365,94 +365,94 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
         onRefresh: _carregarDados,
         child: _carregando
             ? const Center(
-                child: CircularProgressIndicator(),
-              )
+          child: CircularProgressIndicator(),
+        )
             : CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    sliver: SliverToBoxAdapter(
-                      child: _ResumoFinanceiro(
-                        entradas: entradasExibidas,
-                        saidas: saidasExibidas,
-                        saldo: saldoExibido,
-                        formatoMoeda: _formatoMoeda,
-                      ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    sliver: SliverToBoxAdapter(
-                      child: _construirFiltros(),
-                    ),
-                  ),
-                  if (movimentosFiltrados.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _EstadoVazio(
-                        possuiFiltros: usandoFiltros,
-                        aoAdicionar: () => _abrirFormulario(),
-                        aoLimparFiltros: _limparFiltros,
-                      ),
-                    )
-                  else ...[
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                      sliver: SliverToBoxAdapter(
-                        child: Row(
-                          children: [
-                            Text(
-                              'Movimentações',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '${movimentosFiltrados.length} registro(s)',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Colors.grey.shade700,
-                                  ),
-                            ),
-                          ],
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              sliver: SliverToBoxAdapter(
+                child: _ResumoFinanceiro(
+                  entradas: entradasExibidas,
+                  saidas: saidasExibidas,
+                  saldo: saldoExibido,
+                  formatoMoeda: _formatoMoeda,
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              sliver: SliverToBoxAdapter(
+                child: _construirFiltros(),
+              ),
+            ),
+            if (movimentosFiltrados.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _EstadoVazio(
+                  possuiFiltros: usandoFiltros,
+                  aoAdicionar: () => _abrirFormulario(),
+                  aoLimparFiltros: _limparFiltros,
+                ),
+              )
+            else ...[
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                sliver: SliverToBoxAdapter(
+                  child: Row(
+                    children: [
+                      Text(
+                        'Movimentações',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                      sliver: SliverList.separated(
-                        itemCount: movimentosFiltrados.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final movimento = movimentosFiltrados[index];
-
-                          return _CardMovimento(
-                            movimento: movimento,
-                            formatoMoeda: _formatoMoeda,
-                            formatoData: _formatoData,
-                            converterData: _converterData,
-                            converterValor: _converterParaDouble,
-                            aoEditar: () => _abrirFormulario(
-                              movimento: movimento,
-                            ),
-                            aoExcluir: () => _confirmarExclusao(
-                              movimento,
-                            ),
-                          );
-                        },
+                      const Spacer(),
+                      Text(
+                        '${movimentosFiltrados.length} registro(s)',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(
+                          color: Colors.grey.shade700,
+                        ),
                       ),
-                    ),
-                  ],
-                ],
+                    ],
+                  ),
+                ),
               ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                sliver: SliverList.separated(
+                  itemCount: movimentosFiltrados.length,
+                  separatorBuilder: (_, __) =>
+                  const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final movimento = movimentosFiltrados[index];
+
+                    return _CardMovimento(
+                      movimento: movimento,
+                      formatoMoeda: _formatoMoeda,
+                      formatoData: _formatoData,
+                      converterData: _converterData,
+                      converterValor: _converterParaDouble,
+                      aoEditar: () => _abrirFormulario(
+                        movimento: movimento,
+                      ),
+                      aoExcluir: () => _confirmarExclusao(
+                        movimento,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -477,15 +477,15 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
                 suffixIcon: _pesquisa.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: 'Limpar pesquisa',
-                        onPressed: () {
-                          _pesquisaController.clear();
-                          setState(() {
-                            _pesquisa = '';
-                          });
-                        },
-                        icon: const Icon(Icons.close_rounded),
-                      ),
+                  tooltip: 'Limpar pesquisa',
+                  onPressed: () {
+                    _pesquisaController.clear();
+                    setState(() {
+                      _pesquisa = '';
+                    });
+                  },
+                  icon: const Icon(Icons.close_rounded),
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -538,8 +538,8 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
                       _periodoSelecionado == null
                           ? 'Período'
                           : '${_formatoData.format(_periodoSelecionado!.start)}'
-                              ' até '
-                              '${_formatoData.format(_periodoSelecionado!.end)}',
+                          ' até '
+                          '${_formatoData.format(_periodoSelecionado!.end)}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
@@ -630,18 +630,18 @@ class _ResumoFinanceiro extends StatelessWidget {
               Text(
                 'Saldo atual',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
+                  color: Colors.white70,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 formatoMoeda.format(saldo),
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: saldoPositivo
-                          ? Colors.lightGreenAccent
-                          : Colors.redAccent.shade100,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: saldoPositivo
+                      ? Colors.lightGreenAccent
+                      : Colors.redAccent.shade100,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -771,13 +771,13 @@ class _CardMovimento extends StatelessWidget {
     final data = converterData(movimento['data']);
 
     final nomeCliente = (movimento['cliente_nome'] ??
-            movimento['nome_cliente'] ??
-            movimento['nome'] ??
-            '')
+        movimento['nome_cliente'] ??
+        movimento['nome'] ??
+        '')
         .toString();
 
     final formaPagamento =
-        (movimento['forma_pagamento'] ?? '').toString();
+    (movimento['forma_pagamento'] ?? '').toString();
 
     return Card(
       elevation: 0,
@@ -964,8 +964,8 @@ class _EstadoVazio extends StatelessWidget {
                   : 'Nenhuma movimentação cadastrada',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1048,7 +1048,7 @@ class _FormularioMovimentoState extends State<_FormularioMovimento> {
     }
 
     final formaSalva =
-        (movimento?['forma_pagamento'] ?? '').toString().trim();
+    (movimento?['forma_pagamento'] ?? '').toString().trim();
     if (formaSalva.isNotEmpty) {
       _formaPagamento = formaSalva;
     }
@@ -1146,7 +1146,7 @@ class _FormularioMovimentoState extends State<_FormularioMovimento> {
         data: _data.toIso8601String(),
         clienteId: _converterInt(widget.movimento?['cliente_id']),
         agendamentoId:
-            _converterInt(widget.movimento?['agendamento_id']),
+        _converterInt(widget.movimento?['agendamento_id']),
       );
 
       if (_editando) {
@@ -1229,8 +1229,8 @@ class _FormularioMovimentoState extends State<_FormularioMovimento> {
                     ? 'Editar movimentação'
                     : 'Nova movimentação',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 18),
               SegmentedButton<String>(
@@ -1383,12 +1383,12 @@ class _FormularioMovimentoState extends State<_FormularioMovimento> {
                       onPressed: _salvando ? null : _salvar,
                       icon: _salvando
                           ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            )
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
                           : const Icon(Icons.save_outlined),
                       label: Text(
                         _salvando ? 'Salvando...' : 'Salvar',
