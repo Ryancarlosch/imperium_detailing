@@ -362,9 +362,7 @@ class _NovaOrdemServicoPageState
   }
 
   void _atualizarTela() {
-    if (mounted) {
-      setState(() {});
-    }
+    // Não faz nada por enquanto.
   }
 
   double _converterValor(String texto) {
@@ -815,48 +813,52 @@ class _NovaOrdemServicoPageState
       return;
     }
 
-    ItemEstoque? selecionado;
-    final quantidadeController =
-    TextEditingController(text: '1');
+    ItemEstoque? itemSelecionado;
+    String quantidadeDigitada = '1';
 
     final confirmou = await showDialog<bool>(
       context: context,
-      builder: (contexto) {
+      builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (contexto, atualizarDialogo) {
+          builder: (context, atualizarDialogo) {
             return AlertDialog(
               title: const Text('Adicionar produto'),
               content: SizedBox(
-                width: 420,
+                width: double.maxFinite,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<ItemEstoque>(
-                      value: selecionado,
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Produto',
+                        prefixIcon: Icon(
+                          Icons.inventory_2_outlined,
+                        ),
                         border: OutlineInputBorder(),
                       ),
                       items: _itensEstoque.map((item) {
                         return DropdownMenuItem<ItemEstoque>(
                           value: item,
                           child: Text(
-                            '${item.nome} • ${_formatarNumeroCampo(item.quantidade)} ${item.unidade}',
+                            '${item.nome} — Estoque: '
+                                '${_formatarNumeroCampo(item.quantidade)} '
+                                '${item.unidade}',
                             overflow: TextOverflow.ellipsis,
                           ),
                         );
                       }).toList(),
-                      onChanged: (valor) {
+                      onChanged: (item) {
                         atualizarDialogo(() {
-                          selecionado = valor;
+                          itemSelecionado = item;
                         });
                       },
                     ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: quantidadeController,
-                      keyboardType: const TextInputType.numberWithOptions(
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      initialValue: '1',
+                      keyboardType:
+                      const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       inputFormatters: [
@@ -864,30 +866,78 @@ class _NovaOrdemServicoPageState
                           RegExp(r'[0-9,.]'),
                         ),
                       ],
-                      decoration: InputDecoration(
-                        labelText: selecionado == null
-                            ? 'Quantidade utilizada'
-                            : 'Quantidade utilizada (${selecionado!.unidade})',
-                        border: const OutlineInputBorder(),
+                      decoration: const InputDecoration(
+                        labelText: 'Quantidade utilizada',
+                        border: OutlineInputBorder(),
                       ),
+                      onChanged: (valor) {
+                        quantidadeDigitada = valor;
+                      },
                     ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(contexto, false),
+                  onPressed: () {
+                    FocusScope.of(dialogContext).unfocus();
+                    Navigator.of(dialogContext).pop(false);
+                  },
                   child: const Text('Cancelar'),
                 ),
                 FilledButton(
                   onPressed: () {
+                    final item = itemSelecionado;
                     final quantidade = _converterValor(
-                      quantidadeController.text,
+                      quantidadeDigitada,
                     );
-                    if (selecionado == null || quantidade <= 0) {
+
+                    if (item == null) {
+                      ScaffoldMessenger.of(context)
+                          .hideCurrentSnackBar();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Selecione um produto.',
+                          ),
+                        ),
+                      );
                       return;
                     }
-                    Navigator.pop(contexto, true);
+
+                    if (quantidade <= 0) {
+                      ScaffoldMessenger.of(context)
+                          .hideCurrentSnackBar();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Informe uma quantidade válida.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (quantidade > item.quantidade) {
+                      ScaffoldMessenger.of(context)
+                          .hideCurrentSnackBar();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Quantidade maior que o estoque disponível: '
+                                '${_formatarNumeroCampo(item.quantidade)} '
+                                '${item.unidade}.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
+                    FocusScope.of(dialogContext).unfocus();
+                    Navigator.of(dialogContext).pop(true);
                   },
                   child: const Text('Adicionar'),
                 ),
@@ -898,18 +948,24 @@ class _NovaOrdemServicoPageState
       },
     );
 
-    if (confirmou == true && selecionado != null && mounted) {
-      setState(() {
-        _produtos.add(
-          _ProdutoOsFormulario(
-            item: selecionado!,
-            quantidade: quantidadeController.text,
-          ),
-        );
-      });
+    if (confirmou != true || !mounted) {
+      return;
     }
 
-    quantidadeController.dispose();
+    final item = itemSelecionado;
+
+    if (item == null) {
+      return;
+    }
+
+    setState(() {
+      _produtos.add(
+        _ProdutoOsFormulario(
+          item: item,
+          quantidade: quantidadeDigitada,
+        ),
+      );
+    });
   }
 
   Widget _construirProdutos() {
@@ -1430,26 +1486,14 @@ class _ServicoFormulario {
         ),
         valorController = TextEditingController(
           text: valor,
-        ) {
-    nomeController.addListener(aoAlterar);
-    quantidadeController.addListener(aoAlterar);
-    valorController.addListener(aoAlterar);
-
-    _aoAlterar = aoAlterar;
-  }
+        );
 
   final TextEditingController nomeController;
   final TextEditingController descricaoController;
   final TextEditingController quantidadeController;
   final TextEditingController valorController;
 
-  late final VoidCallback _aoAlterar;
-
   void dispose() {
-    nomeController.removeListener(_aoAlterar);
-    quantidadeController.removeListener(_aoAlterar);
-    valorController.removeListener(_aoAlterar);
-
     nomeController.dispose();
     descricaoController.dispose();
     quantidadeController.dispose();

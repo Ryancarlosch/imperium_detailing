@@ -404,17 +404,22 @@ class _OrdensServicoPageState
         formaPagamento: formaPagamento,
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       Navigator.of(context).pop();
 
-      _mostrarMensagem(
-        'Ordem de Serviço finalizada.',
-      );
+      Future.delayed(
+        const Duration(milliseconds: 300),
+            () async {
+          if (!mounted) return;
 
-      await _carregarOrdens();
+          _mostrarMensagem(
+            'Ordem de Serviço finalizada.',
+          );
+
+          await _carregarOrdens();
+        },
+      );
     } catch (erro) {
       _mostrarMensagem(
         'Não foi possível finalizar o serviço.\n'

@@ -20,10 +20,10 @@ class MovimentacaoEstoque {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'item_id': itemId,
+      'item_estoque_id': itemId,
       'tipo': tipo,
       'quantidade': quantidade,
-      'observacao': observacao,
+      'observacoes': observacao,
       'ordem_servico_id': ordemServicoId,
       'data': data,
     };
@@ -34,15 +34,14 @@ class MovimentacaoEstoque {
       ) {
     return MovimentacaoEstoque(
       id: map['id'] as int?,
-      itemId: map['item_id'] as int,
+      itemId: (map['item_estoque_id'] as num).toInt(),
       tipo: map['tipo']?.toString() ?? '',
       quantidade:
-      (map['quantidade'] as num?)?.toDouble() ??
-          0,
+      (map['quantidade'] as num?)?.toDouble() ?? 0,
       observacao:
-      map['observacao']?.toString() ?? '',
+      map['observacoes']?.toString() ?? '',
       ordemServicoId:
-      map['ordem_servico_id'] as int?,
+      (map['ordem_servico_id'] as num?)?.toInt(),
       data: map['data']?.toString() ?? '',
     );
   }

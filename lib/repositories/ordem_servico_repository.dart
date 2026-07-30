@@ -3,9 +3,20 @@ import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
 import '../models/ordem_servico.dart';
 import '../models/ordem_servico_item.dart';
+import '../models/movimentacao_estoque.dart';
+import '../models/produto_ordem_servico.dart';
+import '../repositories/estoque_repository.dart';
+import '../repositories/produto_ordem_servico_repository.dart';
+
 
 class OrdemServicoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
+  final EstoqueRepository _estoqueRepository =
+  EstoqueRepository();
+
+  final ProdutoOrdemServicoRepository
+  _produtoRepository =
+  ProdutoOrdemServicoRepository();
 
   Future<int> inserirOrdemServico(
       OrdemServico ordemServico, {
@@ -493,6 +504,7 @@ class OrdemServicoRepository {
         columns: [
           'id',
           'numero',
+          'status',
           'cliente_id',
           'valor_total',
           'desconto',
@@ -511,17 +523,28 @@ class OrdemServicoRepository {
 
       final ordem = resultado.first;
 
+      final statusAtual =
+      (ordem['status'] ?? '').toString().trim();
+
+      if (statusAtual == 'Finalizada') {
+        return;
+      }
+
+      if (statusAtual == 'Cancelada') {
+        throw StateError(
+          'Uma Ordem de Serviço cancelada não pode ser finalizada.',
+        );
+      }
+
       final valorTotal =
           (ordem['valor_total'] as num?)?.toDouble() ?? 0;
 
       final desconto =
           (ordem['desconto'] as num?)?.toDouble() ?? 0;
 
-      final valorFinal =
-      (valorTotal - desconto).clamp(
-        0,
-        double.infinity,
-      ).toDouble();
+      final valorFinal = (valorTotal - desconto)
+          .clamp(0, double.infinity)
+          .toDouble();
 
       final lancadoFinanceiro =
           (ordem['lancado_financeiro'] as num?)
@@ -535,6 +558,173 @@ class OrdemServicoRepository {
 
       final clienteId =
       (ordem['cliente_id'] as num?)?.toInt();
+
+      final produtos = await transaction.query(
+        'ordem_servico_produtos',
+        where:
+        'ordem_servico_id = ? AND baixado_estoque = 0',
+        whereArgs: [ordemServicoId],
+        orderBy: 'id ASC',
+      );
+
+      // Primeiro valida o estoque de todos os produtos.
+      for (final produtoOs in produtos) {
+        final produtoId =
+        (produtoOs['produto_id'] as num?)?.toInt();
+
+        final produtoNome =
+        (produtoOs['produto_nome'] ?? 'Produto')
+            .toString()
+            .trim();
+
+        final quantidadeUtilizada =
+            (produtoOs['quantidade'] as num?)
+                ?.toDouble() ??
+                0;
+
+        if (produtoId == null || quantidadeUtilizada <= 0) {
+          continue;
+        }
+
+        final resultadoItem = await transaction.query(
+          'itens_estoque',
+          columns: [
+            'id',
+            'nome',
+            'quantidade',
+            'custo_unitario',
+          ],
+          where: 'id = ?',
+          whereArgs: [produtoId],
+          limit: 1,
+        );
+
+        if (resultadoItem.isEmpty) {
+          throw StateError(
+            'O produto "$produtoNome" não foi encontrado no estoque.',
+          );
+        }
+
+        final quantidadeDisponivel =
+            (resultadoItem.first['quantidade'] as num?)
+                ?.toDouble() ??
+                0;
+
+        if (quantidadeUtilizada > quantidadeDisponivel) {
+          throw StateError(
+            'Estoque insuficiente para "$produtoNome". '
+                'Disponível: $quantidadeDisponivel. '
+                'Necessário: $quantidadeUtilizada.',
+          );
+        }
+      }
+
+      // Depois realiza todas as baixas.
+      for (final produtoOs in produtos) {
+        final produtoOsId =
+        (produtoOs['id'] as num?)?.toInt();
+
+        final produtoId =
+        (produtoOs['produto_id'] as num?)?.toInt();
+
+        final quantidadeUtilizada =
+            (produtoOs['quantidade'] as num?)
+                ?.toDouble() ??
+                0;
+
+        if (produtoId == null || quantidadeUtilizada <= 0) {
+          if (produtoOsId != null) {
+            await transaction.update(
+              'ordem_servico_produtos',
+              {
+                'baixado_estoque': 1,
+              },
+              where: 'id = ?',
+              whereArgs: [produtoOsId],
+            );
+          }
+
+          continue;
+        }
+
+        final resultadoItem = await transaction.query(
+          'itens_estoque',
+          columns: [
+            'quantidade',
+            'custo_unitario',
+          ],
+          where: 'id = ?',
+          whereArgs: [produtoId],
+          limit: 1,
+        );
+
+        if (resultadoItem.isEmpty) {
+          throw StateError(
+            'Produto não encontrado no estoque.',
+          );
+        }
+
+        final quantidadeAnterior =
+            (resultadoItem.first['quantidade'] as num?)
+                ?.toDouble() ??
+                0;
+
+        final custoUnitarioEstoque =
+            (resultadoItem.first['custo_unitario'] as num?)
+                ?.toDouble() ??
+                0;
+
+        final custoUnitarioOs =
+            (produtoOs['custo_unitario'] as num?)
+                ?.toDouble() ??
+                0;
+
+        final custoUnitario = custoUnitarioOs > 0
+            ? custoUnitarioOs
+            : custoUnitarioEstoque;
+
+        final quantidadePosterior =
+            quantidadeAnterior - quantidadeUtilizada;
+
+        await transaction.update(
+          'itens_estoque',
+          {
+            'quantidade': quantidadePosterior,
+            'atualizado_em': agora.toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [produtoId],
+        );
+
+        await transaction.insert(
+          'movimentacoes_estoque',
+          {
+            'item_estoque_id': produtoId,
+            'tipo': 'SAIDA',
+            'quantidade': quantidadeUtilizada,
+            'quantidade_anterior': quantidadeAnterior,
+            'quantidade_posterior': quantidadePosterior,
+            'custo_unitario': custoUnitario,
+            'observacoes':
+            'Baixa automática da Ordem de Serviço $numero',
+            'origem': 'Ordem de Serviço',
+            'ordem_servico_id': ordemServicoId,
+            'data': agora.toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.abort,
+        );
+
+        if (produtoOsId != null) {
+          await transaction.update(
+            'ordem_servico_produtos',
+            {
+              'baixado_estoque': 1,
+            },
+            where: 'id = ?',
+            whereArgs: [produtoOsId],
+          );
+        }
+      }
 
       if (!lancadoFinanceiro && valorFinal > 0) {
         await transaction.insert(
@@ -577,6 +767,8 @@ class OrdemServicoRepository {
       );
     });
   }
+
+
 
   Future<void> cancelarOrdemServico(
       int ordemServicoId,

@@ -51,18 +51,17 @@ class _ItemEstoqueDetalhesPageState
   }
 
   Future<void> _alterarQuantidade(
-    bool entrada,
-  ) async {
+      bool entrada,
+      ) async {
     final item = _item;
 
     if (item == null) return;
 
-    final controller = TextEditingController();
+    String textoQuantidade = '';
 
-    final quantidade =
-        await showDialog<double>(
+    final quantidade = await showDialog<double>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: Text(
             entrada
@@ -70,37 +69,37 @@ class _ItemEstoqueDetalhesPageState
                 : 'Retirar estoque',
           ),
           content: TextField(
-            controller: controller,
             autofocus: true,
             keyboardType:
-                const TextInputType
-                    .numberWithOptions(
+            const TextInputType.numberWithOptions(
               decimal: true,
             ),
+            onChanged: (valor) {
+              textoQuantidade = valor;
+            },
             decoration: InputDecoration(
               labelText:
-                  'Quantidade (${item.unidade})',
+              'Quantidade (${item.unidade})',
             ),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               },
               child: const Text('Cancelar'),
             ),
             FilledButton(
               onPressed: () {
                 final valor = double.tryParse(
-                  controller.text
-                      .replaceAll(',', '.'),
+                  textoQuantidade.replaceAll(',', '.'),
                 );
 
                 if (valor == null || valor <= 0) {
                   return;
                 }
 
-                Navigator.pop(context, valor);
+                Navigator.pop(dialogContext, valor);
               },
               child: const Text('Confirmar'),
             ),
@@ -108,8 +107,6 @@ class _ItemEstoqueDetalhesPageState
         );
       },
     );
-
-    controller.dispose();
 
     if (quantidade == null) return;
 
@@ -236,203 +233,203 @@ class _ItemEstoqueDetalhesPageState
       ),
       body: _carregando
           ? const Center(
-              child: CircularProgressIndicator(),
-            )
+        child: CircularProgressIndicator(),
+      )
           : item == null
-              ? const Center(
-                  child: Text(
-                    'Item não encontrado.',
+          ? const Center(
+        child: Text(
+          'Item não encontrado.',
+        ),
+      )
+          : ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: Padding(
+              padding:
+              const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Icon(
+                    item.estoqueBaixo
+                        ? Icons
+                        .warning_amber_rounded
+                        : Icons
+                        .inventory_2_outlined,
+                    size: 64,
+                    color: item.estoqueBaixo
+                        ? Colors.orange
+                        : const Color(
+                      0xFFD6A84B,
+                    ),
                   ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.all(16),
+                  const SizedBox(height: 14),
+                  Text(
+                    item.nome,
+                    textAlign:
+                    TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 23,
+                      fontWeight:
+                      FontWeight.bold,
+                    ),
+                  ),
+                  if (item.categoria
+                      .isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      item.categoria,
+                      style: const TextStyle(
+                        color:
+                        Colors.white60,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  Text(
+                    '${_numero(item.quantidade)} ${item.unidade}',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight:
+                      FontWeight.bold,
+                      color: item.estoqueBaixo
+                          ? Colors.orange
+                          : Colors.greenAccent,
+                    ),
+                  ),
+                  if (item.estoqueBaixo)
+                    const Padding(
+                      padding:
+                      EdgeInsets.only(
+                        top: 6,
+                      ),
+                      child: Text(
+                        'Estoque baixo',
+                        style: TextStyle(
+                          color:
+                          Colors.orange,
+                          fontWeight:
+                          FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () {
+                    _alterarQuantidade(
+                      true,
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.add,
+                  ),
+                  label:
+                  const Text('Entrada'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child:
+                OutlinedButton.icon(
+                  onPressed: () {
+                    _alterarQuantidade(
+                      false,
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.remove,
+                  ),
+                  label:
+                  const Text('Saída'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding:
+              const EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  _Linha(
+                    titulo:
+                    'Estoque mínimo',
+                    valor:
+                    '${_numero(item.quantidadeMinima)} ${item.unidade}',
+                  ),
+                  _Linha(
+                    titulo:
+                    'Custo unitário',
+                    valor: _moeda.format(
+                      item.custoUnitario,
+                    ),
+                  ),
+                  _Linha(
+                    titulo:
+                    'Valor em estoque',
+                    valor: _moeda.format(
+                      item.valorTotal,
+                    ),
+                  ),
+                  _Linha(
+                    titulo: 'Fornecedor',
+                    valor: item.fornecedor
+                        .isEmpty
+                        ? 'Não informado'
+                        : item.fornecedor,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (item.observacoes
+              .isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Card(
+              child: Padding(
+                padding:
+                const EdgeInsets.all(
+                  18,
+                ),
+                child: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment
+                      .start,
                   children: [
-                    Card(
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            Icon(
-                              item.estoqueBaixo
-                                  ? Icons
-                                      .warning_amber_rounded
-                                  : Icons
-                                      .inventory_2_outlined,
-                              size: 64,
-                              color: item.estoqueBaixo
-                                  ? Colors.orange
-                                  : const Color(
-                                      0xFFD6A84B,
-                                    ),
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              item.nome,
-                              textAlign:
-                                  TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 23,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-                            if (item.categoria
-                                .isNotEmpty) ...[
-                              const SizedBox(height: 5),
-                              Text(
-                                item.categoria,
-                                style: const TextStyle(
-                                  color:
-                                      Colors.white60,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 18),
-                            Text(
-                              '${_numero(item.quantidade)} ${item.unidade}',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight:
-                                    FontWeight.bold,
-                                color: item.estoqueBaixo
-                                    ? Colors.orange
-                                    : Colors.greenAccent,
-                              ),
-                            ),
-                            if (item.estoqueBaixo)
-                              const Padding(
-                                padding:
-                                    EdgeInsets.only(
-                                  top: 6,
-                                ),
-                                child: Text(
-                                  'Estoque baixo',
-                                  style: TextStyle(
-                                    color:
-                                        Colors.orange,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                    const Text(
+                      'Observações',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight:
+                        FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: () {
-                              _alterarQuantidade(
-                                true,
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.add,
-                            ),
-                            label:
-                                const Text('Entrada'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child:
-                              OutlinedButton.icon(
-                            onPressed: () {
-                              _alterarQuantidade(
-                                false,
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.remove,
-                            ),
-                            label:
-                                const Text('Saída'),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(
+                      height: 10,
                     ),
-                    const SizedBox(height: 14),
-                    Card(
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.all(18),
-                        child: Column(
-                          children: [
-                            _Linha(
-                              titulo:
-                                  'Estoque mínimo',
-                              valor:
-                                  '${_numero(item.quantidadeMinima)} ${item.unidade}',
-                            ),
-                            _Linha(
-                              titulo:
-                                  'Custo unitário',
-                              valor: _moeda.format(
-                                item.custoUnitario,
-                              ),
-                            ),
-                            _Linha(
-                              titulo:
-                                  'Valor em estoque',
-                              valor: _moeda.format(
-                                item.valorTotal,
-                              ),
-                            ),
-                            _Linha(
-                              titulo: 'Fornecedor',
-                              valor: item.fornecedor
-                                      .isEmpty
-                                  ? 'Não informado'
-                                  : item.fornecedor,
-                            ),
-                          ],
-                        ),
+                    Text(
+                      item.observacoes,
+                      style: const TextStyle(
+                        color:
+                        Colors.white70,
+                        height: 1.5,
                       ),
                     ),
-                    if (item.observacoes
-                        .isNotEmpty) ...[
-                      const SizedBox(height: 14),
-                      Card(
-                        child: Padding(
-                          padding:
-                              const EdgeInsets.all(
-                            18,
-                          ),
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
-                            children: [
-                              const Text(
-                                'Observações',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight:
-                                      FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              Text(
-                                item.observacoes,
-                                style: const TextStyle(
-                                  color:
-                                      Colors.white70,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -450,7 +447,7 @@ class _Linha extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding:
-          const EdgeInsets.symmetric(vertical: 8),
+      const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Expanded(

@@ -127,15 +127,56 @@ class _EstoquePageState extends State<EstoquePage>
   }
 
   Future<void> _adicionarItem() async {
-    final salvou = await Navigator.push<bool>(
-      context,
+    final salvou = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => const NovoItemEstoquePage(),
       ),
     );
 
-    if (salvou == true) {
-      await _atualizarTudo();
+    if (!mounted || salvou != true) {
+      return;
+    }
+
+    try {
+      final itensAtualizados =
+      await _repository.listarItens();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _itens = itensAtualizados;
+        _carregando = false;
+      });
+
+      ScaffoldMessenger.of(context)
+          .hideCurrentSnackBar();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Produto cadastrado com sucesso.',
+          ),
+        ),
+      );
+    } catch (erro, stackTrace) {
+      debugPrint('ERRO AO ATUALIZAR PRODUTOS');
+      debugPrint(erro.toString());
+      debugPrint(stackTrace.toString());
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'O produto foi salvo, mas a lista não pôde ser atualizada:\n$erro',
+          ),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
     }
   }
 
@@ -184,20 +225,18 @@ class _EstoquePageState extends State<EstoquePage>
     ItemEstoque itemSelecionado = _itens.first;
     String tipoSelecionado = 'ENTRADA';
 
-    final quantidadeController =
-    TextEditingController();
-
-    final observacaoController =
-    TextEditingController();
+    String quantidadeDigitada = '';
+    String observacaoDigitada = '';
 
     final salvou = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
         bool salvando = false;
 
         return StatefulBuilder(
           builder: (
-              context,
+              dialogContext,
               setStateDialog,
               ) {
             return AlertDialog(
@@ -210,6 +249,7 @@ class _EstoquePageState extends State<EstoquePage>
                   children: [
                     DropdownButtonFormField<ItemEstoque>(
                       initialValue: itemSelecionado,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Produto',
                         prefixIcon: Icon(
@@ -217,7 +257,7 @@ class _EstoquePageState extends State<EstoquePage>
                         ),
                       ),
                       items: _itens.map((item) {
-                        return DropdownMenuItem(
+                        return DropdownMenuItem<ItemEstoque>(
                           value: item,
                           child: Text(
                             item.nome,
@@ -228,7 +268,9 @@ class _EstoquePageState extends State<EstoquePage>
                       onChanged: salvando
                           ? null
                           : (item) {
-                        if (item == null) return;
+                        if (item == null) {
+                          return;
+                        }
 
                         setStateDialog(() {
                           itemSelecionado = item;
@@ -245,15 +287,15 @@ class _EstoquePageState extends State<EstoquePage>
                         ),
                       ),
                       items: const [
-                        DropdownMenuItem(
+                        DropdownMenuItem<String>(
                           value: 'ENTRADA',
                           child: Text('Entrada'),
                         ),
-                        DropdownMenuItem(
+                        DropdownMenuItem<String>(
                           value: 'SAIDA',
                           child: Text('Saída'),
                         ),
-                        DropdownMenuItem(
+                        DropdownMenuItem<String>(
                           value: 'AJUSTE',
                           child: Text(
                             'Ajustar quantidade total',
@@ -263,7 +305,9 @@ class _EstoquePageState extends State<EstoquePage>
                       onChanged: salvando
                           ? null
                           : (tipo) {
-                        if (tipo == null) return;
+                        if (tipo == null) {
+                          return;
+                        }
 
                         setStateDialog(() {
                           tipoSelecionado = tipo;
@@ -271,13 +315,15 @@ class _EstoquePageState extends State<EstoquePage>
                       },
                     ),
                     const SizedBox(height: 14),
-                    TextField(
-                      controller: quantidadeController,
+                    TextFormField(
                       enabled: !salvando,
                       keyboardType:
                       const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      onChanged: (valor) {
+                        quantidadeDigitada = valor;
+                      },
                       decoration: InputDecoration(
                         labelText: tipoSelecionado == 'AJUSTE'
                             ? 'Nova quantidade total'
@@ -285,15 +331,16 @@ class _EstoquePageState extends State<EstoquePage>
                         prefixIcon: const Icon(
                           Icons.numbers_rounded,
                         ),
-                        suffixText:
-                        itemSelecionado.unidade,
+                        suffixText: itemSelecionado.unidade,
                       ),
                     ),
                     const SizedBox(height: 14),
-                    TextField(
-                      controller: observacaoController,
+                    TextFormField(
                       enabled: !salvando,
                       maxLines: 3,
+                      onChanged: (valor) {
+                        observacaoDigitada = valor;
+                      },
                       decoration: const InputDecoration(
                         labelText: 'Observação',
                         prefixIcon: Icon(
@@ -324,10 +371,7 @@ class _EstoquePageState extends State<EstoquePage>
                   onPressed: salvando
                       ? null
                       : () {
-                    Navigator.pop(
-                      dialogContext,
-                      false,
-                    );
+                    Navigator.of(dialogContext).pop(false);
                   },
                   child: const Text('Cancelar'),
                 ),
@@ -335,8 +379,7 @@ class _EstoquePageState extends State<EstoquePage>
                   onPressed: salvando
                       ? null
                       : () async {
-                    final texto = quantidadeController
-                        .text
+                    final texto = quantidadeDigitada
                         .trim()
                         .replaceAll(',', '.');
 
@@ -346,37 +389,49 @@ class _EstoquePageState extends State<EstoquePage>
                     if (quantidade == null ||
                         quantidade < 0 ||
                         (quantidade == 0 &&
-                            tipoSelecionado !=
-                                'AJUSTE')) {
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Informe uma quantidade válida.',
+                            tipoSelecionado != 'AJUSTE')) {
+                      ScaffoldMessenger.of(dialogContext)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Informe uma quantidade válida.',
+                            ),
                           ),
-                        ),
-                      );
+                        );
 
                       return;
                     }
 
                     if (tipoSelecionado == 'SAIDA' &&
                         quantidade >
-                            itemSelecionado
-                                .quantidade) {
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'A quantidade de saída é maior que o estoque disponível.',
+                            itemSelecionado.quantidade) {
+                      ScaffoldMessenger.of(dialogContext)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'A quantidade de saída é maior que o estoque disponível.',
+                            ),
                           ),
-                        ),
-                      );
+                        );
 
                       return;
                     }
 
-                    if (itemSelecionado.id == null) {
+                    final itemId = itemSelecionado.id;
+
+                    if (itemId == null) {
+                      ScaffoldMessenger.of(dialogContext)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Não foi possível identificar o produto.',
+                            ),
+                          ),
+                        );
+
                       return;
                     }
 
@@ -388,14 +443,11 @@ class _EstoquePageState extends State<EstoquePage>
                       await _repository
                           .registrarMovimentacao(
                         MovimentacaoEstoque(
-                          itemId:
-                          itemSelecionado.id!,
+                          itemId: itemId,
                           tipo: tipoSelecionado,
                           quantidade: quantidade,
                           observacao:
-                          observacaoController
-                              .text
-                              .trim(),
+                          observacaoDigitada.trim(),
                           data: DateTime.now()
                               .toIso8601String(),
                         ),
@@ -405,37 +457,40 @@ class _EstoquePageState extends State<EstoquePage>
                         return;
                       }
 
-                      Navigator.pop(
-                        dialogContext,
-                        true,
-                      );
+                      Navigator.of(dialogContext).pop(true);
                     } catch (erro) {
+                      if (!dialogContext.mounted) {
+                        return;
+                      }
+
                       setStateDialog(() {
                         salvando = false;
                       });
 
-                      if (!context.mounted) return;
-
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Erro ao registrar movimentação: $erro',
+                      ScaffoldMessenger.of(dialogContext)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Erro ao registrar movimentação: $erro',
+                            ),
+                            backgroundColor:
+                            Colors.red.shade700,
                           ),
-                        ),
-                      );
+                        );
                     }
                   },
                   icon: salvando
                       ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child:
-                    CircularProgressIndicator(
+                    child: CircularProgressIndicator(
                       strokeWidth: 2,
                     ),
                   )
-                      : const Icon(Icons.save_outlined),
+                      : const Icon(
+                    Icons.save_outlined,
+                  ),
                   label: Text(
                     salvando ? 'Salvando...' : 'Salvar',
                   ),
@@ -447,21 +502,60 @@ class _EstoquePageState extends State<EstoquePage>
       },
     );
 
-    quantidadeController.dispose();
-    observacaoController.dispose();
+    if (salvou != true || !mounted) {
+      return;
+    }
 
-    if (salvou == true) {
-      await _atualizarTudo();
+// Aguarda o diálogo terminar de sair completamente da tela.
+    await WidgetsBinding.instance.endOfFrame;
 
-      if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Movimentação registrada com sucesso.',
+    try {
+      final resultados = await Future.wait([
+        _repository.listarItens(),
+        _repository.listarMovimentacoes(),
+        _repository.obterConfiguracao(),
+      ]);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _itens = resultados[0] as List<ItemEstoque>;
+        _movimentacoes =
+        resultados[1] as List<MovimentacaoEstoque>;
+        _configuracao =
+        resultados[2] as ConfiguracaoEstoque;
+      });
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Movimentação registrada com sucesso.',
+            ),
           ),
-        ),
-      );
+        );
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'A movimentação foi salva, mas a tela não pôde ser atualizada: $erro',
+            ),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
     }
   }
 
