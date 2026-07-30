@@ -27,7 +27,7 @@ class AppDatabase {
 
     return openDatabase(
       caminho,
-      version: 10,
+      version: 11,
       onConfigure: (database) async {
         await database.execute(
           'PRAGMA foreign_keys = ON',
@@ -87,6 +87,12 @@ class AppDatabase {
           await _criarTabelaMovimentacoesEstoque(database);
           await _criarTabelaConfiguracoesEstoque(database);
           await _inserirConfiguracaoEstoquePadrao(database);
+        }
+
+        if (versaoAntiga < 11) {
+          await _atualizarConfiguracoesEstoqueParaVersao11(
+            database,
+          );
         }
       },
     );
@@ -673,10 +679,14 @@ class AppDatabase {
     await database.execute('''
       CREATE TABLE IF NOT EXISTS configuracoes_estoque (
         id INTEGER PRIMARY KEY CHECK (id = 1),
-        controlar_produtos_os INTEGER NOT NULL DEFAULT 0,
-        baixar_automaticamente INTEGER NOT NULL DEFAULT 0,
-        exigir_quantidade INTEGER NOT NULL DEFAULT 0,
+        controlar_estoque INTEGER NOT NULL DEFAULT 1,
+        controlar_produtos_ordem_servico INTEGER NOT NULL DEFAULT 1,
+        baixa_automatica INTEGER NOT NULL DEFAULT 1,
+        exigir_quantidade INTEGER NOT NULL DEFAULT 1,
         alertar_estoque_baixo INTEGER NOT NULL DEFAULT 1,
+        estoque_minimo_padrao REAL NOT NULL DEFAULT 2,
+        controlar_produtos_os INTEGER NOT NULL DEFAULT 1,
+        baixar_automaticamente INTEGER NOT NULL DEFAULT 1,
         atualizado_em TEXT NOT NULL
       )
     ''');
@@ -689,15 +699,112 @@ class AppDatabase {
       'configuracoes_estoque',
       {
         'id': 1,
-        'controlar_produtos_os': 0,
-        'baixar_automaticamente': 0,
-        'exigir_quantidade': 0,
+        'controlar_estoque': 1,
+        'controlar_produtos_ordem_servico': 1,
+        'baixa_automatica': 1,
+        'exigir_quantidade': 1,
         'alertar_estoque_baixo': 1,
+        'estoque_minimo_padrao': 2,
+        'controlar_produtos_os': 1,
+        'baixar_automaticamente': 1,
         'atualizado_em': DateTime.now().toIso8601String(),
       },
       conflictAlgorithm: ConflictAlgorithm.ignore,
     );
   }
+
+  Future<void> _atualizarConfiguracoesEstoqueParaVersao11(
+      Database database,
+      ) async {
+    await _criarTabelaConfiguracoesEstoque(database);
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'controlar_estoque',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'controlar_produtos_ordem_servico',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'baixa_automatica',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'exigir_quantidade',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'alertar_estoque_baixo',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'estoque_minimo_padrao',
+      definicao: 'REAL NOT NULL DEFAULT 2',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'controlar_produtos_os',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'baixar_automaticamente',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    await _inserirConfiguracaoEstoquePadrao(database);
+
+    await database.execute('''
+      UPDATE configuracoes_estoque
+      SET
+        controlar_estoque = 1,
+        controlar_produtos_ordem_servico =
+          CASE
+            WHEN controlar_produtos_os = 1 THEN 1
+            ELSE controlar_produtos_ordem_servico
+          END,
+        baixa_automatica =
+          CASE
+            WHEN baixar_automaticamente = 1 THEN 1
+            ELSE baixa_automatica
+          END,
+        controlar_produtos_os =
+          CASE
+            WHEN controlar_produtos_ordem_servico = 1 THEN 1
+            ELSE controlar_produtos_os
+          END,
+        baixar_automaticamente =
+          CASE
+            WHEN baixa_automatica = 1 THEN 1
+            ELSE baixar_automaticamente
+          END,
+        atualizado_em = '${DateTime.now().toIso8601String()}'
+      WHERE id = 1
+    ''');
+  }
+
 
   Future<void> _criarTabelaConfiguracoes(
       Database database,

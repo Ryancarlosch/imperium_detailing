@@ -5,10 +5,13 @@ import 'package:intl/intl.dart';
 import '../models/cliente.dart';
 import '../models/ordem_servico.dart';
 import '../models/ordem_servico_item.dart';
+import '../models/item_estoque.dart';
 import '../models/veiculo.dart';
 import '../repositories/cliente_repository.dart';
 import '../repositories/orcamento_repository.dart';
 import '../repositories/ordem_servico_repository.dart';
+import '../repositories/estoque_repository.dart';
+import '../database/app_database.dart';
 import '../repositories/veiculo_repository.dart';
 
 class NovaOrdemServicoPage extends StatefulWidget {
@@ -41,6 +44,9 @@ class _NovaOrdemServicoPageState
   final OrcamentoRepository _orcamentoRepository =
   OrcamentoRepository();
 
+  final EstoqueRepository _estoqueRepository =
+  EstoqueRepository();
+
   final TextEditingController _numeroController =
   TextEditingController();
 
@@ -61,6 +67,8 @@ class _NovaOrdemServicoPageState
   List<Cliente> _clientes = [];
   List<Veiculo> _veiculos = [];
   final List<_ServicoFormulario> _servicos = [];
+  List<ItemEstoque> _itensEstoque = [];
+  final List<_ProdutoOsFormulario> _produtos = [];
 
   Cliente? _clienteSelecionado;
   Veiculo? _veiculoSelecionado;
@@ -88,6 +96,10 @@ class _NovaOrdemServicoPageState
       servico.dispose();
     }
 
+    for (final produto in _produtos) {
+      produto.dispose();
+    }
+
     super.dispose();
   }
 
@@ -96,10 +108,12 @@ class _NovaOrdemServicoPageState
       final resultados = await Future.wait([
         _clienteRepository.listarClientes(),
         _ordemRepository.gerarProximoNumero(),
+        _estoqueRepository.listarItens(),
       ]);
 
       final clientes = resultados[0] as List<Cliente>;
       final numero = resultados[1] as String;
+      final itensEstoque = resultados[2] as List<ItemEstoque>;
 
       Map<String, dynamic>? orcamento;
       List<Veiculo> veiculos = [];
@@ -216,6 +230,7 @@ class _NovaOrdemServicoPageState
         _clienteSelecionado = clienteSelecionado;
         _veiculoSelecionado = veiculoSelecionado;
         _numeroController.text = numero;
+        _itensEstoque = itensEstoque;
         _carregando = false;
       });
     } catch (erro) {
@@ -512,10 +527,37 @@ class _NovaOrdemServicoPageState
         );
       }
 
+      final ordemServicoId =
       await _ordemRepository.inserirOrdemServico(
         ordem,
         itens: itens,
       );
+
+      final database = await AppDatabase.instance.database;
+
+      for (final produto in _produtos) {
+        final item = produto.item;
+        final quantidade = _converterValor(
+          produto.quantidadeController.text,
+        );
+
+        if (item.id == null || quantidade <= 0) {
+          continue;
+        }
+
+        await database.insert(
+          'ordem_servico_produtos',
+          {
+            'ordem_servico_id': ordemServicoId,
+            'produto_id': item.id,
+            'produto_nome': item.nome,
+            'quantidade': quantidade,
+            'unidade': item.unidade,
+            'custo_unitario': item.custoUnitario,
+            'baixado_estoque': 0,
+          },
+        );
+      }
 
       if (!mounted) {
         return;
@@ -757,6 +799,180 @@ class _NovaOrdemServicoPageState
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  Future<void> _adicionarProduto() async {
+    if (_itensEstoque.isEmpty) {
+      _mostrarMensagem(
+        'Nenhum produto cadastrado no estoque.',
+        erro: true,
+      );
+      return;
+    }
+
+    ItemEstoque? selecionado;
+    final quantidadeController =
+    TextEditingController(text: '1');
+
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (contexto) {
+        return StatefulBuilder(
+          builder: (contexto, atualizarDialogo) {
+            return AlertDialog(
+              title: const Text('Adicionar produto'),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<ItemEstoque>(
+                      value: selecionado,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Produto',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _itensEstoque.map((item) {
+                        return DropdownMenuItem<ItemEstoque>(
+                          value: item,
+                          child: Text(
+                            '${item.nome} • ${_formatarNumeroCampo(item.quantidade)} ${item.unidade}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (valor) {
+                        atualizarDialogo(() {
+                          selecionado = valor;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: quantidadeController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[0-9,.]'),
+                        ),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: selecionado == null
+                            ? 'Quantidade utilizada'
+                            : 'Quantidade utilizada (${selecionado!.unidade})',
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(contexto, false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final quantidade = _converterValor(
+                      quantidadeController.text,
+                    );
+                    if (selecionado == null || quantidade <= 0) {
+                      return;
+                    }
+                    Navigator.pop(contexto, true);
+                  },
+                  child: const Text('Adicionar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmou == true && selecionado != null && mounted) {
+      setState(() {
+        _produtos.add(
+          _ProdutoOsFormulario(
+            item: selecionado!,
+            quantidade: quantidadeController.text,
+          ),
+        );
+      });
+    }
+
+    quantidadeController.dispose();
+  }
+
+  Widget _construirProdutos() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.inventory_2_outlined),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Produtos utilizados',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _salvando ? null : _adicionarProduto,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar'),
+                ),
+              ],
+            ),
+            if (_produtos.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 10),
+                child: Text(
+                  'Nenhum produto adicionado.',
+                ),
+              )
+            else
+              ...List.generate(_produtos.length, (indice) {
+                final produto = _produtos[indice];
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.science_outlined),
+                  ),
+                  title: Text(produto.item.nome),
+                  subtitle: Text(
+                    '${produto.quantidadeController.text} ${produto.item.unidade} • Estoque: ${_formatarNumeroCampo(produto.item.quantidade)} ${produto.item.unidade}',
+                  ),
+                  trailing: IconButton(
+                    tooltip: 'Remover produto',
+                    onPressed: _salvando
+                        ? null
+                        : () {
+                      setState(() {
+                        final removido = _produtos.removeAt(indice);
+                        removido.dispose();
+                      });
+                    },
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                );
+              }),
           ],
         ),
       ),
@@ -1126,6 +1342,8 @@ class _NovaOrdemServicoPageState
             const SizedBox(height: 12),
             _construirServicos(),
             const SizedBox(height: 12),
+            _construirProdutos(),
+            const SizedBox(height: 12),
             _construirValores(),
             const SizedBox(height: 12),
             _construirObservacoes(),
@@ -1174,6 +1392,23 @@ class _NovaOrdemServicoPageState
         ),
       ),
     );
+  }
+}
+
+
+class _ProdutoOsFormulario {
+  _ProdutoOsFormulario({
+    required this.item,
+    required String quantidade,
+  }) : quantidadeController = TextEditingController(
+    text: quantidade,
+  );
+
+  final ItemEstoque item;
+  final TextEditingController quantidadeController;
+
+  void dispose() {
+    quantidadeController.dispose();
   }
 }
 
