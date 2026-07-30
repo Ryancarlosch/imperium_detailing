@@ -6,6 +6,7 @@ import 'ordem_servico_fotos_page.dart';
 import 'ordem_servico_assinatura_page.dart';
 import '../repositories/ordem_servico_repository.dart';
 import '../services/pdf/ordem_servico_pdf_service.dart';
+import '../services/whatsapp_service.dart';
 
 class OrdensServicoPage extends StatefulWidget {
   const OrdensServicoPage({super.key});
@@ -864,6 +865,564 @@ class _OrdensServicoPageState
     }
   }
 
+
+  String _montarVeiculoComPlaca(
+      Map<String, dynamic> ordem,
+      ) {
+    final veiculo = _montarNomeVeiculo(ordem);
+    final placa = _obterTexto(
+      ordem,
+      'veiculo_placa',
+    );
+
+    if (placa.isEmpty) {
+      return veiculo;
+    }
+
+    return '$veiculo • ${placa.toUpperCase()}';
+  }
+
+  double _valorFinalOrdem(
+      Map<String, dynamic> ordem,
+      ) {
+    final valorTotal = _obterDouble(
+      ordem,
+      'valor_total',
+    );
+
+    final desconto = _obterDouble(
+      ordem,
+      'desconto',
+    );
+
+    return (valorTotal - desconto).clamp(
+      0,
+      double.infinity,
+    );
+  }
+
+  List<Map<String, dynamic>> _itensDaOrdem(
+      Map<String, dynamic> ordem,
+      ) {
+    final itensBrutos = ordem['itens'];
+
+    if (itensBrutos is! List) {
+      return <Map<String, dynamic>>[];
+    }
+
+    return itensBrutos
+        .whereType<Map>()
+        .map(
+          (item) => Map<String, dynamic>.from(item),
+    )
+        .toList();
+  }
+
+  String _resumoServicosWhatsApp(
+      Map<String, dynamic> ordem,
+      ) {
+    final itens = _itensDaOrdem(ordem);
+
+    if (itens.isEmpty) {
+      return 'Serviços conforme Ordem de Serviço.';
+    }
+
+    final linhas = <String>[];
+
+    for (final item in itens) {
+      final servico = _obterTexto(
+        item,
+        'servico',
+        padrao: 'Serviço',
+      );
+
+      final quantidade = _obterDouble(
+        item,
+        'quantidade',
+      );
+
+      final quantidadeTexto =
+      quantidade == quantidade.roundToDouble()
+          ? quantidade.toInt().toString()
+          : quantidade
+          .toStringAsFixed(2)
+          .replaceAll('.', ',')
+          .replaceAll(RegExp(r'0+$'), '')
+          .replaceAll(RegExp(r',$'), '');
+
+      linhas.add('• $quantidadeTexto × $servico');
+    }
+
+    return linhas.join('\n');
+  }
+
+  Future<void> _enviarMensagemWhatsApp({
+    required Map<String, dynamic> ordem,
+    required String mensagem,
+  }) async {
+    if (_executandoAcao) {
+      return;
+    }
+
+    final telefone = _obterTexto(
+      ordem,
+      'cliente_telefone',
+    );
+
+    final cliente = _obterTexto(
+      ordem,
+      'cliente_nome',
+      padrao: 'Cliente',
+    );
+
+    if (telefone.isEmpty) {
+      _mostrarMensagem(
+        'O cliente $cliente não possui telefone cadastrado.',
+        erro: true,
+      );
+      return;
+    }
+
+    setState(() {
+      _executandoAcao = true;
+    });
+
+    try {
+      await WhatsAppService.enviarMensagem(
+        telefone: telefone,
+        mensagem: mensagem,
+      );
+    } catch (erro) {
+      _mostrarMensagem(
+        'Não foi possível abrir o WhatsApp.\n$erro',
+        erro: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _executandoAcao = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _enviarServicoIniciadoWhatsApp(
+      Map<String, dynamic> ordem,
+      ) async {
+    final cliente = _obterTexto(
+      ordem,
+      'cliente_nome',
+      padrao: 'cliente',
+    );
+
+    final numero = _obterTexto(
+      ordem,
+      'numero',
+      padrao: 'Ordem de Serviço',
+    );
+
+    final veiculo = _montarVeiculoComPlaca(ordem);
+
+    final mensagem = '''
+Olá, $cliente! 👋
+
+Informamos que o serviço do seu veículo foi iniciado.
+
+🚗 Veículo: $veiculo
+📋 Ordem de Serviço: $numero
+
+Manteremos você informado sobre o andamento.
+
+*Imperium Detailing*
+''';
+
+    await _enviarMensagemWhatsApp(
+      ordem: ordem,
+      mensagem: mensagem,
+    );
+  }
+
+  Future<void> _enviarVeiculoProntoWhatsApp(
+      Map<String, dynamic> ordem,
+      ) async {
+    final cliente = _obterTexto(
+      ordem,
+      'cliente_nome',
+      padrao: 'cliente',
+    );
+
+    final numero = _obterTexto(
+      ordem,
+      'numero',
+      padrao: 'Ordem de Serviço',
+    );
+
+    final veiculo = _montarVeiculoComPlaca(ordem);
+    final valor = _moeda.format(
+      _valorFinalOrdem(ordem),
+    );
+
+    final mensagem = '''
+Olá, $cliente! ✅
+
+Temos uma ótima notícia: o serviço do seu veículo foi finalizado e ele já está pronto para retirada.
+
+🚗 Veículo: $veiculo
+📋 Ordem de Serviço: $numero
+💰 Valor: $valor
+
+Agradecemos pela confiança no nosso trabalho!
+
+*Imperium Detailing*
+''';
+
+    await _enviarMensagemWhatsApp(
+      ordem: ordem,
+      mensagem: mensagem,
+    );
+  }
+
+  Future<void> _enviarResumoOrdemWhatsApp(
+      Map<String, dynamic> ordem,
+      ) async {
+    final cliente = _obterTexto(
+      ordem,
+      'cliente_nome',
+      padrao: 'cliente',
+    );
+
+    final numero = _obterTexto(
+      ordem,
+      'numero',
+      padrao: 'Ordem de Serviço',
+    );
+
+    final status = _obterTexto(
+      ordem,
+      'status',
+      padrao: 'Aberta',
+    );
+
+    final veiculo = _montarVeiculoComPlaca(ordem);
+    final valor = _moeda.format(
+      _valorFinalOrdem(ordem),
+    );
+
+    final servicos = _resumoServicosWhatsApp(ordem);
+
+    final mensagem = '''
+Olá, $cliente! Segue o resumo da sua Ordem de Serviço:
+
+📋 *$numero*
+🚗 Veículo: $veiculo
+📌 Status: $status
+
+🧽 *Serviços*
+$servicos
+
+💰 *Valor total: $valor*
+
+Para receber o documento completo em PDF, utilize a opção “Compartilhar” na Ordem de Serviço.
+
+*Imperium Detailing*
+''';
+
+    await _enviarMensagemWhatsApp(
+      ordem: ordem,
+      mensagem: mensagem,
+    );
+  }
+
+  Future<void> _enviarCobrancaWhatsApp(
+      Map<String, dynamic> ordem,
+      ) async {
+    final cliente = _obterTexto(
+      ordem,
+      'cliente_nome',
+      padrao: 'cliente',
+    );
+
+    final numero = _obterTexto(
+      ordem,
+      'numero',
+      padrao: 'Ordem de Serviço',
+    );
+
+    final veiculo = _montarVeiculoComPlaca(ordem);
+    final valor = _moeda.format(
+      _valorFinalOrdem(ordem),
+    );
+
+    final formaPagamento = _obterTexto(
+      ordem,
+      'forma_pagamento',
+      padrao: 'a combinar',
+    );
+
+    final mensagem = '''
+Olá, $cliente! Tudo bem?
+
+Segue o valor referente ao serviço realizado:
+
+📋 Ordem de Serviço: $numero
+🚗 Veículo: $veiculo
+💰 Valor: *$valor*
+💳 Forma de pagamento: $formaPagamento
+
+Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
+
+*Imperium Detailing*
+''';
+
+    await _enviarMensagemWhatsApp(
+      ordem: ordem,
+      mensagem: mensagem,
+    );
+  }
+
+  Future<void> _enviarMensagemPersonalizadaWhatsApp(
+      Map<String, dynamic> ordem,
+      ) async {
+    String mensagem = '';
+
+    final resultado = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Mensagem personalizada',
+          ),
+          content: TextFormField(
+            autofocus: true,
+            minLines: 4,
+            maxLines: 8,
+            textCapitalization:
+            TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText:
+              'Digite a mensagem para o cliente',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (valor) {
+              mensagem = valor;
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cancelar'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(
+                  mensagem.trim(),
+                );
+              },
+              icon: const Icon(
+                Icons.send_outlined,
+              ),
+              label: const Text('Continuar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (resultado == null ||
+        resultado.trim().isEmpty) {
+      return;
+    }
+
+    await _enviarMensagemWhatsApp(
+      ordem: ordem,
+      mensagem: resultado.trim(),
+    );
+  }
+
+  Future<void> _abrirOpcoesWhatsApp(
+      Map<String, dynamic> ordem,
+      ) async {
+    final telefone = _obterTexto(
+      ordem,
+      'cliente_telefone',
+    );
+
+    final cliente = _obterTexto(
+      ordem,
+      'cliente_nome',
+      padrao: 'Cliente',
+    );
+
+    if (telefone.isEmpty) {
+      _mostrarMensagem(
+        'O cliente $cliente não possui telefone cadastrado.',
+        erro: true,
+      );
+      return;
+    }
+
+    final status = _obterTexto(
+      ordem,
+      'status',
+      padrao: 'Aberta',
+    );
+
+    final opcao = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (bottomContext) {
+        return Padding(
+          padding: const EdgeInsets.only(
+            bottom: 12,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  4,
+                  20,
+                  12,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Enviar pelo WhatsApp',
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              if (status == 'Aberta' ||
+                  status == 'Em andamento')
+                ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(
+                      Icons.play_arrow_outlined,
+                    ),
+                  ),
+                  title: const Text(
+                    'Serviço iniciado',
+                  ),
+                  subtitle: const Text(
+                    'Avisar que o veículo entrou em serviço',
+                  ),
+                  onTap: () {
+                    Navigator.of(bottomContext).pop(
+                      'iniciado',
+                    );
+                  },
+                ),
+              if (status == 'Finalizada')
+                ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(
+                      Icons.check_circle_outline,
+                    ),
+                  ),
+                  title: const Text(
+                    'Veículo pronto',
+                  ),
+                  subtitle: const Text(
+                    'Avisar que o serviço foi finalizado',
+                  ),
+                  onTap: () {
+                    Navigator.of(bottomContext).pop(
+                      'pronto',
+                    );
+                  },
+                ),
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(
+                    Icons.receipt_long_outlined,
+                  ),
+                ),
+                title: const Text(
+                  'Resumo da Ordem de Serviço',
+                ),
+                subtitle: const Text(
+                  'Enviar serviços, status e valor',
+                ),
+                onTap: () {
+                  Navigator.of(bottomContext).pop(
+                    'resumo',
+                  );
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(
+                    Icons.payments_outlined,
+                  ),
+                ),
+                title: const Text(
+                  'Enviar cobrança',
+                ),
+                subtitle: const Text(
+                  'Enviar o valor total ao cliente',
+                ),
+                onTap: () {
+                  Navigator.of(bottomContext).pop(
+                    'cobranca',
+                  );
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(
+                    Icons.edit_note_outlined,
+                  ),
+                ),
+                title: const Text(
+                  'Mensagem personalizada',
+                ),
+                subtitle: const Text(
+                  'Escrever uma mensagem livre',
+                ),
+                onTap: () {
+                  Navigator.of(bottomContext).pop(
+                    'personalizada',
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (opcao == null) {
+      return;
+    }
+
+    switch (opcao) {
+      case 'iniciado':
+        await _enviarServicoIniciadoWhatsApp(ordem);
+        break;
+      case 'pronto':
+        await _enviarVeiculoProntoWhatsApp(ordem);
+        break;
+      case 'resumo':
+        await _enviarResumoOrdemWhatsApp(ordem);
+        break;
+      case 'cobranca':
+        await _enviarCobrancaWhatsApp(ordem);
+        break;
+      case 'personalizada':
+        await _enviarMensagemPersonalizadaWhatsApp(
+          ordem,
+        );
+        break;
+    }
+  }
+
   Widget _construirDetalhes(
       Map<String, dynamic> ordem,
       ) {
@@ -1109,6 +1668,32 @@ class _OrdensServicoPageState
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _abrirAssinatura(ordem),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              leading: const Icon(
+                Icons.chat_outlined,
+              ),
+              title: const Text(
+                'WhatsApp',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: const Text(
+                'Avisar início, conclusão, enviar resumo ou cobrança',
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+              ),
+              onTap: _executandoAcao
+                  ? null
+                  : () => _abrirOpcoesWhatsApp(
+                ordem,
+              ),
             ),
           ),
           const SizedBox(height: 12),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:intl/intl.dart';
@@ -5,11 +6,15 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../repositories/foto_servico_repository.dart';
 import '../../repositories/ordem_servico_repository.dart';
 
 class OrdemServicoPdfService {
   final OrdemServicoRepository _repository =
   OrdemServicoRepository();
+
+  final FotoServicoRepository _fotoRepository =
+  FotoServicoRepository();
 
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
@@ -31,6 +36,10 @@ class OrdemServicoPdfService {
         'Ordem de Serviço não encontrada.',
       );
     }
+
+    final fotosPdf = await _carregarFotosParaPdf(
+      dados,
+    );
 
     final documento = pw.Document();
 
@@ -343,6 +352,16 @@ class OrdemServicoPdfService {
                     ),
                   ),
                 ],
+              ),
+            ],
+            if (fotosPdf.isNotEmpty) ...[
+              pw.SizedBox(height: 18),
+              _tituloSecao('REGISTRO FOTOGRÁFICO'),
+              pw.SizedBox(height: 10),
+              ...fotosPdf.map(
+                    (foto) => _cartaoComparativoFoto(
+                  foto,
+                ),
               ),
             ],
             pw.SizedBox(height: 18),
@@ -839,6 +858,238 @@ class OrdemServicoPdfService {
     );
   }
 
+  Future<List<_FotoPdfRegistro>>
+  _carregarFotosParaPdf(
+      Map<String, dynamic> dados,
+      ) async {
+    final clienteId = _inteiro(
+      dados['cliente_id'],
+    );
+
+    final veiculoId = _inteiro(
+      dados['veiculo_id'],
+    );
+
+    if (clienteId == null || veiculoId == null) {
+      return [];
+    }
+
+    final registros = await _fotoRepository
+        .listarFotosParaOrdemServico(
+      clienteId: clienteId,
+      veiculoId: veiculoId,
+      limite: 6,
+    );
+
+    final fotos = <_FotoPdfRegistro>[];
+
+    for (final registro in registros) {
+      final caminhoAntes = _texto(
+        registro['caminho_antes'],
+      );
+
+      final caminhoDepois = _texto(
+        registro['caminho_depois'],
+      );
+
+      final bytesAntes = await _lerImagem(
+        caminhoAntes,
+      );
+
+      final bytesDepois = await _lerImagem(
+        caminhoDepois,
+      );
+
+      if (bytesAntes == null && bytesDepois == null) {
+        continue;
+      }
+
+      fotos.add(
+        _FotoPdfRegistro(
+          antes: bytesAntes,
+          depois: bytesDepois,
+          descricao: _texto(
+            registro['descricao'],
+          ),
+          data: _formatarData(
+            registro['data'],
+          ),
+        ),
+      );
+    }
+
+    return fotos;
+  }
+
+  Future<Uint8List?> _lerImagem(
+      String caminho,
+      ) async {
+    if (caminho.isEmpty) {
+      return null;
+    }
+
+    try {
+      final arquivo = File(caminho);
+
+      if (!await arquivo.exists()) {
+        return null;
+      }
+
+      final bytes = await arquivo.readAsBytes();
+
+      if (bytes.isEmpty) {
+        return null;
+      }
+
+      return bytes;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  pw.Widget _cartaoComparativoFoto(
+      _FotoPdfRegistro foto,
+      ) {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(
+        bottom: 12,
+      ),
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(
+          color: PdfColors.grey300,
+          width: 0.7,
+        ),
+        borderRadius: pw.BorderRadius.circular(6),
+      ),
+      child: pw.Column(
+        crossAxisAlignment:
+        pw.CrossAxisAlignment.start,
+        children: [
+          if (foto.descricao.isNotEmpty ||
+              foto.data != '-')
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(
+                bottom: 8,
+              ),
+              child: pw.Row(
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(
+                      foto.descricao.isEmpty
+                          ? 'Registro do serviço'
+                          : foto.descricao,
+                      style: pw.TextStyle(
+                        fontSize: 8.5,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (foto.data != '-')
+                    pw.Text(
+                      foto.data,
+                      style: const pw.TextStyle(
+                        fontSize: 7.5,
+                        color: PdfColors.grey600,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          pw.Row(
+            crossAxisAlignment:
+            pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                child: _imagemComLegenda(
+                  titulo: 'ANTES',
+                  bytes: foto.antes,
+                ),
+              ),
+              pw.SizedBox(width: 10),
+              pw.Expanded(
+                child: _imagemComLegenda(
+                  titulo: 'DEPOIS',
+                  bytes: foto.depois,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _imagemComLegenda({
+    required String titulo,
+    required Uint8List? bytes,
+  }) {
+    return pw.Column(
+      children: [
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(
+            vertical: 5,
+          ),
+          decoration: const pw.BoxDecoration(
+            color: PdfColors.grey900,
+          ),
+          child: pw.Text(
+            titulo,
+            textAlign: pw.TextAlign.center,
+            style: pw.TextStyle(
+              color: titulo == 'DEPOIS'
+                  ? PdfColors.amber700
+                  : PdfColors.white,
+              fontSize: 8,
+              fontWeight: pw.FontWeight.bold,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ),
+        pw.Container(
+          width: double.infinity,
+          height: 165,
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+            border: pw.Border.all(
+              color: PdfColors.grey300,
+              width: 0.5,
+            ),
+          ),
+          child: bytes == null
+              ? pw.Center(
+            child: pw.Text(
+              'Foto não disponível',
+              style: const pw.TextStyle(
+                fontSize: 8,
+                color: PdfColors.grey600,
+              ),
+            ),
+          )
+              : pw.Image(
+            pw.MemoryImage(bytes),
+            fit: pw.BoxFit.cover,
+          ),
+        ),
+      ],
+    );
+  }
+
+  int? _inteiro(dynamic valor) {
+    if (valor is int) {
+      return valor;
+    }
+
+    if (valor is num) {
+      return valor.toInt();
+    }
+
+    return int.tryParse(
+      (valor ?? '').toString().trim(),
+    );
+  }
+
   pw.Widget _declaracao() {
     return pw.Container(
       width: double.infinity,
@@ -1031,4 +1282,18 @@ class OrdemServicoPdfService {
         .toStringAsFixed(2)
         .replaceAll('.', ',');
   }
+}
+
+class _FotoPdfRegistro {
+  final Uint8List? antes;
+  final Uint8List? depois;
+  final String descricao;
+  final String data;
+
+  const _FotoPdfRegistro({
+    required this.antes,
+    required this.depois,
+    required this.descricao,
+    required this.data,
+  });
 }

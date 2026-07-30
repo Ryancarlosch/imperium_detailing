@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -36,6 +38,23 @@ class _DashboardPageState extends State<DashboardPage> {
   int _totalVeiculos = 0;
   int _totalAgendamentos = 0;
   int _agendamentosHoje = 0;
+  int _ordensAbertas = 0;
+  int _ordensEmAndamento = 0;
+
+  double _entradasMesAnterior = 0;
+  double _ticketMedio = 0;
+
+  List<_FaturamentoDia> _faturamentoDias = [];
+
+  double get _crescimentoMes {
+    if (_entradasMesAnterior == 0) {
+      return _entradasMes > 0 ? 100 : 0;
+    }
+
+    return ((_entradasMes - _entradasMesAnterior) /
+        _entradasMesAnterior) *
+        100;
+  }
 
   @override
   void initState() {
@@ -77,6 +96,20 @@ class _DashboardPageState extends State<DashboardPage> {
         agora.month,
         agora.day + 1,
       ).toIso8601String();
+
+      final inicioMesAnterior = DateTime(
+        agora.year,
+        agora.month - 1,
+        1,
+      ).toIso8601String();
+
+      final inicioGrafico = DateTime(
+        agora.year,
+        agora.month,
+        agora.day,
+      )
+          .subtract(const Duration(days: 6))
+          .toIso8601String();
 
       final resultados = await Future.wait([
         database.rawQuery(
@@ -151,6 +184,65 @@ class _DashboardPageState extends State<DashboardPage> {
           FROM movimentos_financeiros
           ''',
         ),
+        database.rawQuery(
+          '''
+          SELECT COALESCE(SUM(valor), 0) AS total
+          FROM movimentos_financeiros
+          WHERE LOWER(tipo) = 'entrada'
+            AND data >= ?
+            AND data < ?
+          ''',
+          [
+            inicioMesAnterior,
+            inicioMes,
+          ],
+        ),
+        database.rawQuery(
+          '''
+          SELECT COALESCE(AVG(valor), 0) AS total
+          FROM movimentos_financeiros
+          WHERE LOWER(tipo) = 'entrada'
+            AND data >= ?
+            AND data < ?
+          ''',
+          [
+            inicioMes,
+            inicioProximoMes,
+          ],
+        ),
+        _consultaSegura(
+          database,
+          '''
+          SELECT COUNT(*) AS total
+          FROM ordens_servico
+          WHERE LOWER(status) = 'aberta'
+          ''',
+        ),
+        _consultaSegura(
+          database,
+          '''
+          SELECT COUNT(*) AS total
+          FROM ordens_servico
+          WHERE LOWER(status) = 'em andamento'
+          ''',
+        ),
+        database.rawQuery(
+          '''
+          SELECT
+            substr(data, 1, 10) AS dia,
+            COALESCE(SUM(valor), 0) AS total
+          FROM movimentos_financeiros
+          WHERE LOWER(tipo) = 'entrada'
+            AND data >= ?
+            AND data < ?
+          GROUP BY substr(data, 1, 10)
+          ORDER BY dia ASC
+          ''',
+          [
+            inicioGrafico,
+            inicioAmanha,
+          ],
+        ),
       ]);
 
       if (!mounted) {
@@ -166,6 +258,18 @@ class _DashboardPageState extends State<DashboardPage> {
         _entradasMes = _lerDouble(resultados[5]);
         _saidasMes = _lerDouble(resultados[6]);
         _saldo = _lerDouble(resultados[7]);
+        _entradasMesAnterior =
+            _lerDouble(resultados[8]);
+        _ticketMedio =
+            _lerDouble(resultados[9]);
+        _ordensAbertas =
+            _lerInteiro(resultados[10]);
+        _ordensEmAndamento =
+            _lerInteiro(resultados[11]);
+        _faturamentoDias =
+            _montarFaturamentoDias(
+              resultados[12],
+            );
         _carregando = false;
       });
     } catch (erro) {
@@ -188,6 +292,60 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         );
     }
+  }
+
+  Future<List<Map<String, Object?>>> _consultaSegura(
+      dynamic database,
+      String sql,
+      ) async {
+    try {
+      return await database.rawQuery(sql);
+    } catch (_) {
+      return <Map<String, Object?>>[];
+    }
+  }
+
+  List<_FaturamentoDia> _montarFaturamentoDias(
+      List<Map<String, Object?>> resultado,
+      ) {
+    final agora = DateTime.now();
+    final inicio = DateTime(
+      agora.year,
+      agora.month,
+      agora.day,
+    ).subtract(const Duration(days: 6));
+
+    final valores = <String, double>{};
+
+    for (final linha in resultado) {
+      final dia = linha['dia']?.toString() ?? '';
+      final valor = linha['total'];
+
+      valores[dia] = valor is num
+          ? valor.toDouble()
+          : double.tryParse(
+        valor?.toString() ?? '',
+      ) ??
+          0;
+    }
+
+    return List.generate(
+      7,
+          (indice) {
+        final data = inicio.add(
+          Duration(days: indice),
+        );
+
+        final chave = data
+            .toIso8601String()
+            .substring(0, 10);
+
+        return _FaturamentoDia(
+          data: data,
+          valor: valores[chave] ?? 0,
+        );
+      },
+    );
   }
 
   int _lerInteiro(
@@ -408,6 +566,40 @@ class _DashboardPageState extends State<DashboardPage> {
               onAbrirAgenda: () {
                 _abrirPagina(const AgendaPage());
               },
+            ),
+            const SizedBox(height: 22),
+            _DashboardPremiumCard(
+              entradasMes: _entradasMes,
+              lucroMes: lucroMes,
+              crescimentoMes: _crescimentoMes,
+              ticketMedio: _ticketMedio,
+              ordensAbertas: _ordensAbertas,
+              ordensEmAndamento:
+              _ordensEmAndamento,
+              formatoMoeda: _formatoMoeda,
+              onAbrirFinanceiro: () {
+                _abrirPagina(
+                  const FinanceiroPage(),
+                );
+              },
+              onAbrirOrdens: () {
+                _abrirPagina(
+                  const OrdensServicoPage(),
+                );
+              },
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'Faturamento dos últimos 7 dias',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _GraficoFaturamentoCard(
+              dados: _faturamentoDias,
+              formatoMoeda: _formatoMoeda,
             ),
             const SizedBox(height: 22),
             const Text(
@@ -1124,3 +1316,443 @@ class _MenuCard extends StatelessWidget {
     );
   }
 }
+
+class _DashboardPremiumCard extends StatelessWidget {
+  const _DashboardPremiumCard({
+    required this.entradasMes,
+    required this.lucroMes,
+    required this.crescimentoMes,
+    required this.ticketMedio,
+    required this.ordensAbertas,
+    required this.ordensEmAndamento,
+    required this.formatoMoeda,
+    required this.onAbrirFinanceiro,
+    required this.onAbrirOrdens,
+  });
+
+  final double entradasMes;
+  final double lucroMes;
+  final double crescimentoMes;
+  final double ticketMedio;
+  final int ordensAbertas;
+  final int ordensEmAndamento;
+  final NumberFormat formatoMoeda;
+  final VoidCallback onAbrirFinanceiro;
+  final VoidCallback onAbrirOrdens;
+
+  @override
+  Widget build(BuildContext context) {
+    final crescimentoPositivo =
+        crescimentoMes >= 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(
+          color: const Color(0xFFD6A84B)
+              .withValues(alpha: 0.22),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.insights_rounded,
+                color: Color(0xFFD6A84B),
+              ),
+              SizedBox(width: 9),
+              Text(
+                'Painel executivo',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          InkWell(
+            onTap: onAbrirFinanceiro,
+            borderRadius: BorderRadius.circular(15),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF292929),
+                    Color(0xFF202020),
+                  ],
+                ),
+                borderRadius:
+                BorderRadius.circular(15),
+              ),
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Faturamento do mês',
+                    style: TextStyle(
+                      color: Colors.white60,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    formatoMoeda.format(
+                      entradasMes,
+                    ),
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        crescimentoPositivo
+                            ? Icons
+                            .trending_up_rounded
+                            : Icons
+                            .trending_down_rounded,
+                        size: 18,
+                        color: crescimentoPositivo
+                            ? Colors.greenAccent
+                            : Colors.redAccent,
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          '${crescimentoPositivo ? '+' : ''}'
+                              '${crescimentoMes.toStringAsFixed(1)}% '
+                              'em relação ao mês anterior',
+                          style: TextStyle(
+                            color:
+                            crescimentoPositivo
+                                ? Colors
+                                .greenAccent
+                                : Colors.redAccent,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _MiniIndicadorPremium(
+                  titulo: 'Resultado',
+                  valor:
+                  formatoMoeda.format(lucroMes),
+                  icone: Icons.savings_outlined,
+                  cor: lucroMes >= 0
+                      ? Colors.green
+                      : Colors.orange,
+                  onTap: onAbrirFinanceiro,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MiniIndicadorPremium(
+                  titulo: 'Ticket médio',
+                  valor: formatoMoeda.format(
+                    ticketMedio,
+                  ),
+                  icone: Icons
+                      .confirmation_number_outlined,
+                  cor: const Color(0xFFD6A84B),
+                  onTap: onAbrirFinanceiro,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _MiniIndicadorPremium(
+                  titulo: 'OS abertas',
+                  valor: '$ordensAbertas',
+                  icone:
+                  Icons.assignment_outlined,
+                  cor: Colors.blue,
+                  onTap: onAbrirOrdens,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MiniIndicadorPremium(
+                  titulo: 'Em serviço',
+                  valor: '$ordensEmAndamento',
+                  icone:
+                  Icons.car_repair_outlined,
+                  cor: Colors.orange,
+                  onTap: onAbrirOrdens,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniIndicadorPremium
+    extends StatelessWidget {
+  const _MiniIndicadorPremium({
+    required this.titulo,
+    required this.valor,
+    required this.icone,
+    required this.cor,
+    required this.onTap,
+  });
+
+  final String titulo;
+  final String valor;
+  final IconData icone;
+  final Color cor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF222222),
+      borderRadius: BorderRadius.circular(15),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.all(13),
+          child: Column(
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
+            children: [
+              Icon(
+                icone,
+                color: cor,
+                size: 21,
+              ),
+              const SizedBox(height: 9),
+              Text(
+                titulo,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                valor,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GraficoFaturamentoCard
+    extends StatelessWidget {
+  const _GraficoFaturamentoCard({
+    required this.dados,
+    required this.formatoMoeda,
+  });
+
+  final List<_FaturamentoDia> dados;
+  final NumberFormat formatoMoeda;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = dados.fold<double>(
+      0,
+          (soma, item) => soma + item.valor,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+        children: [
+          Text(
+            formatoMoeda.format(total),
+            style: const TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Text(
+            'Total faturado no período',
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 170,
+            width: double.infinity,
+            child: CustomPaint(
+              painter: _DashboardGraficoPainter(
+                dados,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: dados.map(
+                  (item) {
+                return Expanded(
+                  child: Text(
+                    DateFormat('dd/MM').format(
+                      item.data,
+                    ),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 10,
+                    ),
+                  ),
+                );
+              },
+            ).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardGraficoPainter
+    extends CustomPainter {
+  _DashboardGraficoPainter(this.dados);
+
+  final List<_FaturamentoDia> dados;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (dados.isEmpty) {
+      return;
+    }
+
+    final maior = dados.fold<double>(
+      0,
+          (atual, item) =>
+          math.max(atual, item.valor),
+    );
+
+    final grade = Paint()
+      ..color =
+      Colors.white.withValues(alpha: 0.07)
+      ..strokeWidth = 1;
+
+    for (var i = 0; i <= 4; i++) {
+      final y = size.height * i / 4;
+
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        grade,
+      );
+    }
+
+    final larguraColuna =
+        size.width / dados.length;
+    final larguraBarra =
+        larguraColuna * 0.48;
+
+    for (var i = 0; i < dados.length; i++) {
+      final valor = dados[i].valor;
+
+      final altura = maior <= 0
+          ? 4.0
+          : math.max(
+        4.0,
+        (valor / maior) *
+            (size.height - 8),
+      );
+
+      final esquerda =
+          larguraColuna * i +
+              (larguraColuna -
+                  larguraBarra) /
+                  2;
+
+      final barra =
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          esquerda,
+          size.height - altura,
+          larguraBarra,
+          altura,
+        ),
+        const Radius.circular(7),
+      );
+
+      final paint = Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [
+            Color(0xFF8D6B28),
+            Color(0xFFD6A84B),
+          ],
+        ).createShader(
+          Rect.fromLTWH(
+            esquerda,
+            0,
+            larguraBarra,
+            size.height,
+          ),
+        );
+
+      canvas.drawRRect(barra, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(
+      covariant _DashboardGraficoPainter
+      oldDelegate,
+      ) {
+    return oldDelegate.dados != dados;
+  }
+}
+
+class _FaturamentoDia {
+  const _FaturamentoDia({
+    required this.data,
+    required this.valor,
+  });
+
+  final DateTime data;
+  final double valor;
+}
+
