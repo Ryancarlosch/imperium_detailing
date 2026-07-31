@@ -813,6 +813,48 @@ class OrdemServicoRepository {
     return total > 0;
   }
 
+  Future<int?> buscarIdOrdemPorAgendamento(
+      int agendamentoId,
+      ) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.query(
+      'ordens_servico',
+      columns: ['id'],
+      where: 'agendamento_id = ?',
+      whereArgs: [agendamentoId],
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+
+    if (resultado.isEmpty) {
+      return null;
+    }
+
+    final valor = resultado.first['id'];
+
+    if (valor is int) {
+      return valor;
+    }
+
+    if (valor is num) {
+      return valor.toInt();
+    }
+
+    return int.tryParse(
+      valor?.toString() ?? '',
+    );
+  }
+
+  Future<bool> existeOrdemParaAgendamento(
+      int agendamentoId,
+      ) async {
+    return await buscarIdOrdemPorAgendamento(
+          agendamentoId,
+        ) !=
+        null;
+  }
+
   Future<String> gerarProximoNumero() async {
     final database = await _appDatabase.database;
 

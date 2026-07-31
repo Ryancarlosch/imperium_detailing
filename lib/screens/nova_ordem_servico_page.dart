@@ -2,25 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../models/agendamento.dart';
 import '../models/cliente.dart';
 import '../models/ordem_servico.dart';
 import '../models/ordem_servico_item.dart';
 import '../models/item_estoque.dart';
 import '../models/veiculo.dart';
+import '../models/servico_catalogo.dart';
+import '../models/servico_produto.dart';
 import '../repositories/cliente_repository.dart';
 import '../repositories/orcamento_repository.dart';
 import '../repositories/ordem_servico_repository.dart';
 import '../repositories/estoque_repository.dart';
 import '../database/app_database.dart';
 import '../repositories/veiculo_repository.dart';
+import '../repositories/servico_repository.dart';
 
 class NovaOrdemServicoPage extends StatefulWidget {
   const NovaOrdemServicoPage({
     super.key,
     this.orcamentoId,
+    this.agendamento,
   });
 
   final int? orcamentoId;
+  final Agendamento? agendamento;
 
   @override
   State<NovaOrdemServicoPage> createState() =>
@@ -47,6 +53,9 @@ class _NovaOrdemServicoPageState
   final EstoqueRepository _estoqueRepository =
   EstoqueRepository();
 
+  final ServicoRepository _servicoRepository =
+  ServicoRepository();
+
   final TextEditingController _numeroController =
   TextEditingController();
 
@@ -68,6 +77,7 @@ class _NovaOrdemServicoPageState
   List<Veiculo> _veiculos = [];
   final List<_ServicoFormulario> _servicos = [];
   List<ItemEstoque> _itensEstoque = [];
+  List<ServicoCatalogo> _catalogoServicos = [];
   final List<_ProdutoOsFormulario> _produtos = [];
 
   Cliente? _clienteSelecionado;
@@ -109,14 +119,26 @@ class _NovaOrdemServicoPageState
         _clienteRepository.listarClientes(),
         _ordemRepository.gerarProximoNumero(),
         _estoqueRepository.listarItens(),
+        _servicoRepository.listarServicos(
+          somenteAtivos: true,
+        ),
       ]);
 
       final clientes = resultados[0] as List<Cliente>;
       final numero = resultados[1] as String;
       final itensEstoque = resultados[2] as List<ItemEstoque>;
+      final catalogoServicos =
+          resultados[3] as List<ServicoCatalogo>;
 
       Map<String, dynamic>? orcamento;
       List<Veiculo> veiculos = [];
+
+      if (widget.agendamento != null) {
+        veiculos = await _veiculoRepository
+            .listarVeiculosDoCliente(
+          widget.agendamento!.clienteId,
+        );
+      }
 
       if (widget.orcamentoId != null) {
         orcamento =
@@ -144,6 +166,44 @@ class _NovaOrdemServicoPageState
 
       Cliente? clienteSelecionado;
       Veiculo? veiculoSelecionado;
+
+      final agendamento = widget.agendamento;
+
+      if (agendamento != null) {
+        for (final cliente in clientes) {
+          if (cliente.id == agendamento.clienteId) {
+            clienteSelecionado = cliente;
+            break;
+          }
+        }
+
+        for (final veiculo in veiculos) {
+          if (veiculo.id == agendamento.veiculoId) {
+            veiculoSelecionado = veiculo;
+            break;
+          }
+        }
+
+        for (final servico in _servicos) {
+          servico.dispose();
+        }
+
+        _servicos
+          ..clear()
+          ..add(
+            _ServicoFormulario(
+              aoAlterar: _atualizarTela,
+              nome: agendamento.servico,
+              quantidade: '1',
+              valor: _formatarNumeroCampo(
+                agendamento.valor,
+              ),
+            ),
+          );
+
+        _observacoesController.text =
+            agendamento.observacoes;
+      }
 
       if (orcamento != null) {
         final clienteId = _converterInt(
@@ -231,6 +291,7 @@ class _NovaOrdemServicoPageState
         _veiculoSelecionado = veiculoSelecionado;
         _numeroController.text = numero;
         _itensEstoque = itensEstoque;
+        _catalogoServicos = catalogoServicos;
         _carregando = false;
       });
     } catch (erro) {
@@ -343,6 +404,181 @@ class _NovaOrdemServicoPageState
         ),
       );
     });
+  }
+
+  Future<void> _selecionarServicoCatalogo(
+      int indice,
+      ) async {
+    if (_catalogoServicos.isEmpty) {
+      _mostrarMensagem(
+        'Nenhum serviço ativo foi cadastrado no catálogo.',
+        erro: true,
+      );
+      return;
+    }
+
+    final selecionado =
+        await showModalBottomSheet<ServicoCatalogo>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (bottomContext) {
+        return SafeArea(
+          child: FractionallySizedBox(
+            heightFactor: 0.75,
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    18,
+                    4,
+                    18,
+                    12,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Selecionar serviço do catálogo',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _catalogoServicos.length,
+                    itemBuilder: (_, itemIndex) {
+                      final servico =
+                          _catalogoServicos[itemIndex];
+
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(
+                            Icons.cleaning_services_outlined,
+                          ),
+                        ),
+                        title: Text(servico.nome),
+                        subtitle: Text(
+                          '${servico.categoria.isEmpty ? "Sem categoria" : servico.categoria}'
+                          ' • ${_moeda.format(servico.precoPadrao)}'
+                          ' • ${servico.duracaoFormatada}',
+                        ),
+                        onTap: () {
+                          Navigator.pop(
+                            bottomContext,
+                            servico,
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selecionado == null || !mounted) {
+      return;
+    }
+
+    final formulario = _servicos[indice];
+
+    formulario.nomeController.text =
+        selecionado.nome;
+    formulario.descricaoController.text =
+        selecionado.descricao;
+    formulario.quantidadeController.text = '1';
+    formulario.valorController.text =
+        _formatarNumeroCampo(
+      selecionado.precoPadrao,
+    );
+    formulario.servicoCatalogoId =
+        selecionado.id;
+
+    if (selecionado.observacoesPadrao
+        .trim()
+        .isNotEmpty) {
+      final atual =
+          _observacoesController.text.trim();
+
+      _observacoesController.text = atual.isEmpty
+          ? selecionado.observacoesPadrao
+          : '$atual\n${selecionado.observacoesPadrao}';
+    }
+
+    if (selecionado.id != null) {
+      await _carregarProdutosDoServico(
+        selecionado.id!,
+      );
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _carregarProdutosDoServico(
+      int servicoId,
+      ) async {
+    final produtosCatalogo =
+        await _servicoRepository
+            .listarProdutosDoServico(
+      servicoId,
+    );
+
+    for (final produtoCatalogo
+        in produtosCatalogo) {
+      final deveAdicionar =
+          produtoCatalogo.obrigatorio ||
+              produtoCatalogo.marcadoPorPadrao;
+
+      if (!deveAdicionar) {
+        continue;
+      }
+
+      ItemEstoque? item;
+
+      for (final estoque in _itensEstoque) {
+        if (estoque.id ==
+            produtoCatalogo.itemEstoqueId) {
+          item = estoque;
+          break;
+        }
+      }
+
+      if (item == null) {
+        continue;
+      }
+
+      final existente = _produtos.any(
+        (produto) => produto.item.id == item!.id,
+      );
+
+      if (existente) {
+        continue;
+      }
+
+      _produtos.add(
+        _ProdutoOsFormulario(
+          item: item,
+          quantidade:
+              _formatarNumeroCampo(
+            produtoCatalogo.quantidadePadrao,
+          ),
+          selecionado:
+              produtoCatalogo.obrigatorio ||
+                  produtoCatalogo
+                      .marcadoPorPadrao,
+          obrigatorio:
+              produtoCatalogo.obrigatorio,
+        ),
+      );
+    }
   }
 
   void _removerServico(int indice) {
@@ -480,6 +716,7 @@ class _NovaOrdemServicoPageState
     try {
       final ordem = OrdemServico(
         orcamentoId: widget.orcamentoId,
+        agendamentoId: widget.agendamento?.id,
         clienteId: cliente!.id!,
         veiculoId: _veiculoSelecionado?.id,
         numero: _numeroController.text.trim(),
@@ -534,6 +771,10 @@ class _NovaOrdemServicoPageState
       final database = await AppDatabase.instance.database;
 
       for (final produto in _produtos) {
+        if (!produto.selecionado) {
+          continue;
+        }
+
         final item = produto.item;
         final quantidade = _converterValor(
           produto.quantidadeController.text,
@@ -1006,27 +1247,31 @@ class _NovaOrdemServicoPageState
             else
               ...List.generate(_produtos.length, (indice) {
                 final produto = _produtos[indice];
-                return ListTile(
+                return CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.science_outlined),
+                  value: produto.selecionado,
+                  onChanged: produto.obrigatorio ||
+                          _salvando
+                      ? null
+                      : (valor) {
+                          setState(() {
+                            produto.selecionado =
+                                valor ?? false;
+                          });
+                        },
+                  secondary: const CircleAvatar(
+                    child: Icon(
+                      Icons.science_outlined,
+                    ),
                   ),
                   title: Text(produto.item.nome),
                   subtitle: Text(
-                    '${produto.quantidadeController.text} ${produto.item.unidade} • Estoque: ${_formatarNumeroCampo(produto.item.quantidade)} ${produto.item.unidade}',
+                    '${produto.quantidadeController.text} ${produto.item.unidade}'
+                    ' • Estoque: ${_formatarNumeroCampo(produto.item.quantidade)} ${produto.item.unidade}'
+                    '${produto.obrigatorio ? " • Obrigatório" : " • Opcional"}',
                   ),
-                  trailing: IconButton(
-                    tooltip: 'Remover produto',
-                    onPressed: _salvando
-                        ? null
-                        : () {
-                      setState(() {
-                        final removido = _produtos.removeAt(indice);
-                        removido.dispose();
-                      });
-                    },
-                    icon: const Icon(Icons.delete_outline),
-                  ),
+                  controlAffinity:
+                      ListTileControlAffinity.trailing,
                 );
               }),
           ],
@@ -1138,6 +1383,20 @@ class _NovaOrdemServicoPageState
             ],
           ),
           const SizedBox(height: 4),
+          OutlinedButton.icon(
+            onPressed: _salvando
+                ? null
+                : () => _selecionarServicoCatalogo(
+                      indice,
+                    ),
+            icon: const Icon(
+              Icons.list_alt_outlined,
+            ),
+            label: const Text(
+              'Selecionar do catálogo',
+            ),
+          ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: servico.nomeController,
             textCapitalization:
@@ -1456,12 +1715,16 @@ class _ProdutoOsFormulario {
   _ProdutoOsFormulario({
     required this.item,
     required String quantidade,
+    this.selecionado = true,
+    this.obrigatorio = false,
   }) : quantidadeController = TextEditingController(
     text: quantidade,
   );
 
   final ItemEstoque item;
   final TextEditingController quantidadeController;
+  bool selecionado;
+  final bool obrigatorio;
 
   void dispose() {
     quantidadeController.dispose();
@@ -1492,6 +1755,7 @@ class _ServicoFormulario {
   final TextEditingController descricaoController;
   final TextEditingController quantidadeController;
   final TextEditingController valorController;
+  int? servicoCatalogoId;
 
   void dispose() {
     nomeController.dispose();

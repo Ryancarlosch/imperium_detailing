@@ -27,7 +27,7 @@
 
       return openDatabase(
         caminho,
-        version: 11,
+        version: 12,
         onConfigure: (database) async {
           await database.execute(
             'PRAGMA foreign_keys = ON',
@@ -94,6 +94,12 @@
               database,
             );
           }
+
+          if (versaoAntiga < 12) {
+            await _criarTabelaServicosCatalogo(database);
+            await _criarTabelaServicoProdutos(database);
+            await _criarTabelaServicosRelacionados(database);
+          }
         },
       );
     }
@@ -121,6 +127,9 @@
       await _criarTabelaMovimentacoesEstoque(database);
       await _criarTabelaConfiguracoesEstoque(database);
       await _inserirConfiguracaoEstoquePadrao(database);
+      await _criarTabelaServicosCatalogo(database);
+      await _criarTabelaServicoProdutos(database);
+      await _criarTabelaServicosRelacionados(database);
     }
 
     Future<void> _criarTabelaClientes(
@@ -802,6 +811,109 @@
             END,
           atualizado_em = '${DateTime.now().toIso8601String()}'
         WHERE id = 1
+      ''');
+    }
+
+
+    Future<void> _criarTabelaServicosCatalogo(
+        Database database,
+        ) async {
+      await database.execute('''
+        CREATE TABLE IF NOT EXISTS servicos_catalogo (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nome TEXT NOT NULL,
+          categoria TEXT NOT NULL DEFAULT '',
+          descricao TEXT NOT NULL DEFAULT '',
+          observacoes_padrao TEXT NOT NULL DEFAULT '',
+          preco_minimo REAL NOT NULL DEFAULT 0,
+          preco_padrao REAL NOT NULL DEFAULT 0,
+          preco_maximo REAL NOT NULL DEFAULT 0,
+          duracao_minutos INTEGER NOT NULL DEFAULT 0,
+          ativo INTEGER NOT NULL DEFAULT 1,
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL
+        )
+      ''');
+
+      await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_servicos_catalogo_nome
+        ON servicos_catalogo (nome)
+      ''');
+
+      await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_servicos_catalogo_categoria
+        ON servicos_catalogo (categoria)
+      ''');
+
+      await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_servicos_catalogo_ativo
+        ON servicos_catalogo (ativo)
+      ''');
+    }
+
+    Future<void> _criarTabelaServicoProdutos(
+        Database database,
+        ) async {
+      await database.execute('''
+        CREATE TABLE IF NOT EXISTS servico_produtos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          servico_id INTEGER NOT NULL,
+          item_estoque_id INTEGER NOT NULL,
+          quantidade_padrao REAL NOT NULL DEFAULT 0,
+          unidade TEXT NOT NULL DEFAULT '',
+          obrigatorio INTEGER NOT NULL DEFAULT 0,
+          marcado_por_padrao INTEGER NOT NULL DEFAULT 0,
+          ordem INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (servico_id)
+            REFERENCES servicos_catalogo (id)
+            ON DELETE CASCADE,
+          FOREIGN KEY (item_estoque_id)
+            REFERENCES itens_estoque (id)
+            ON DELETE CASCADE,
+          UNIQUE (servico_id, item_estoque_id)
+        )
+      ''');
+
+      await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_servico_produtos_servico_id
+        ON servico_produtos (servico_id)
+      ''');
+
+      await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_servico_produtos_item_id
+        ON servico_produtos (item_estoque_id)
+      ''');
+    }
+
+    Future<void> _criarTabelaServicosRelacionados(
+        Database database,
+        ) async {
+      await database.execute('''
+        CREATE TABLE IF NOT EXISTS servicos_relacionados (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          servico_id INTEGER NOT NULL,
+          servico_relacionado_id INTEGER NOT NULL,
+          ordem INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (servico_id)
+            REFERENCES servicos_catalogo (id)
+            ON DELETE CASCADE,
+          FOREIGN KEY (servico_relacionado_id)
+            REFERENCES servicos_catalogo (id)
+            ON DELETE CASCADE,
+          UNIQUE (servico_id, servico_relacionado_id),
+          CHECK (servico_id <> servico_relacionado_id)
+        )
+      ''');
+
+      await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_servicos_relacionados_servico_id
+        ON servicos_relacionados (servico_id)
       ''');
     }
 

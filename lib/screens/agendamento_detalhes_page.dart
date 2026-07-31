@@ -4,6 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../database/app_database.dart';
 import '../models/agendamento.dart';
 import '../repositories/agendamento_repository.dart';
+import '../repositories/ordem_servico_repository.dart';
+import 'nova_ordem_servico_page.dart';
+import 'ordens_servico_page.dart';
 
 class AgendamentoDetalhesPage extends StatefulWidget {
   final Agendamento agendamento;
@@ -23,9 +26,15 @@ class _AgendamentoDetalhesPageState
   final AgendamentoRepository _repository =
       AgendamentoRepository();
 
+  final OrdemServicoRepository _ordemServicoRepository =
+      OrdemServicoRepository();
+
   late Agendamento agendamento;
 
   bool _abrindoWhatsApp = false;
+  bool _verificandoOrdemServico = true;
+  bool _abrindoOrdemServico = false;
+  int? _ordemServicoId;
 
   final List<String> statusDisponiveis = [
     'Agendado',
@@ -38,6 +47,96 @@ class _AgendamentoDetalhesPageState
   void initState() {
     super.initState();
     agendamento = widget.agendamento;
+    _verificarOrdemServico();
+  }
+
+  Future<void> _verificarOrdemServico() async {
+    final agendamentoId = agendamento.id;
+
+    if (agendamentoId == null) {
+      if (mounted) {
+        setState(() {
+          _verificandoOrdemServico = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      final id = await _ordemServicoRepository
+          .buscarIdOrdemPorAgendamento(
+        agendamentoId,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _ordemServicoId = id;
+        _verificandoOrdemServico = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _verificandoOrdemServico = false;
+      });
+    }
+  }
+
+  Future<void> _criarOuAbrirOrdemServico() async {
+    if (_abrindoOrdemServico) {
+      return;
+    }
+
+    setState(() {
+      _abrindoOrdemServico = true;
+    });
+
+    try {
+      if (_ordemServicoId != null) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const OrdensServicoPage(),
+          ),
+        );
+
+        await _verificarOrdemServico();
+        return;
+      }
+
+      final criou = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => NovaOrdemServicoPage(
+            agendamento: agendamento,
+          ),
+        ),
+      );
+
+      if (criou == true) {
+        await _verificarOrdemServico();
+
+        if (mounted) {
+          mostrarMensagem(
+            'Ordem de Serviço criada e vinculada ao agendamento.',
+          );
+        }
+      }
+    } catch (erro) {
+      mostrarMensagem(
+        'Não foi possível abrir a Ordem de Serviço: $erro',
+        erro: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _abrindoOrdemServico = false;
+        });
+      }
+    }
   }
 
   String formatarValor(double valor) {
@@ -527,6 +626,38 @@ Aguardamos você!
               _abrindoWhatsApp
                   ? 'Abrindo WhatsApp...'
                   : 'Enviar confirmação pelo WhatsApp',
+            ),
+          ),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: _verificandoOrdemServico ||
+                    _abrindoOrdemServico
+                ? null
+                : _criarOuAbrirOrdemServico,
+            style: FilledButton.styleFrom(
+              backgroundColor:
+                  const Color(0xFFD6A84B),
+              foregroundColor: Colors.black,
+            ),
+            icon: _verificandoOrdemServico ||
+                    _abrindoOrdemServico
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.black,
+                    ),
+                  )
+                : Icon(
+                    _ordemServicoId == null
+                        ? Icons.add_task_outlined
+                        : Icons.assignment_outlined,
+                  ),
+            label: Text(
+              _ordemServicoId == null
+                  ? 'Criar Ordem de Serviço'
+                  : 'Abrir Ordem de Serviço',
             ),
           ),
           const SizedBox(height: 24),

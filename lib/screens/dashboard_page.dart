@@ -13,6 +13,7 @@ import 'veiculos_page.dart';
 import 'ordens_servico_page.dart';
 import 'configuracoes_page.dart';
 import 'estoque_page.dart';
+import 'servicos_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -734,6 +735,16 @@ class _DashboardPageState extends State<DashboardPage> {
                   onTap: () {
                     _abrirPagina(
                       const OrdensServicoPage(),
+                    );
+                  },
+                ),
+                _MenuCard(
+                  titulo: 'Serviços',
+                  icone:
+                  Icons.design_services_outlined,
+                  onTap: () {
+                    _abrirPagina(
+                      const ServicosPage(),
                     );
                   },
                 ),
