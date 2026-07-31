@@ -24,10 +24,10 @@ class AgendamentoDetalhesPage extends StatefulWidget {
 class _AgendamentoDetalhesPageState
     extends State<AgendamentoDetalhesPage> {
   final AgendamentoRepository _repository =
-      AgendamentoRepository();
+  AgendamentoRepository();
 
   final OrdemServicoRepository _ordemServicoRepository =
-      OrdemServicoRepository();
+  OrdemServicoRepository();
 
   late Agendamento agendamento;
 
@@ -47,7 +47,10 @@ class _AgendamentoDetalhesPageState
   void initState() {
     super.initState();
     agendamento = widget.agendamento;
-    _verificarOrdemServico();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _verificarOrdemServico();
+    });
   }
 
   Future<void> _verificarOrdemServico() async {
@@ -97,24 +100,18 @@ class _AgendamentoDetalhesPageState
     });
 
     try {
-      if (_ordemServicoId != null) {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const OrdensServicoPage(),
-          ),
-        );
-
-        await _verificarOrdemServico();
-        return;
-      }
-
-      final criou = await Navigator.of(context).push<bool>(
+      final criou = await Navigator.push<bool>(
+        context,
         MaterialPageRoute(
           builder: (_) => NovaOrdemServicoPage(
             agendamento: agendamento,
           ),
         ),
       );
+
+      if (!mounted) {
+        return;
+      }
 
       if (criou == true) {
         await _verificarOrdemServico();
@@ -125,11 +122,21 @@ class _AgendamentoDetalhesPageState
           );
         }
       }
-    } catch (erro) {
-      mostrarMensagem(
-        'Não foi possível abrir a Ordem de Serviço: $erro',
-        erro: true,
+    } catch (erro, stackTrace) {
+      debugPrint(
+        'Erro ao abrir nova Ordem de Serviço: $erro',
       );
+
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      if (mounted) {
+        mostrarMensagem(
+          'Não foi possível abrir a nova Ordem de Serviço.\n$erro',
+          erro: true,
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -176,9 +183,9 @@ class _AgendamentoDetalhesPageState
   }
 
   Future<Map<String, dynamic>?>
-      buscarDadosParaWhatsApp() async {
+  buscarDadosParaWhatsApp() async {
     final database =
-        await AppDatabase.instance.database;
+    await AppDatabase.instance.database;
 
     final resultado = await database.rawQuery(
       '''
@@ -231,8 +238,8 @@ class _AgendamentoDetalhesPageState
   }
 
   String montarNomeVeiculo(
-    Map<String, dynamic> dados,
-  ) {
+      Map<String, dynamic> dados,
+      ) {
     final partes = [
       dados['veiculo_marca'],
       dados['veiculo_modelo'],
@@ -240,7 +247,7 @@ class _AgendamentoDetalhesPageState
     ]
         .map(
           (item) => item?.toString().trim() ?? '',
-        )
+    )
         .where((item) => item.isNotEmpty)
         .toList();
 
@@ -289,7 +296,7 @@ Aguardamos você!
 
     try {
       final dados =
-          await buscarDadosParaWhatsApp();
+      await buscarDadosParaWhatsApp();
 
       if (dados == null) {
         throw Exception(
@@ -298,14 +305,14 @@ Aguardamos você!
       }
 
       final nomeCliente =
-          (dados['cliente_nome'] ?? '')
-              .toString()
-              .trim();
+      (dados['cliente_nome'] ?? '')
+          .toString()
+          .trim();
 
       final telefoneOriginal =
-          (dados['cliente_telefone'] ?? '')
-              .toString()
-              .trim();
+      (dados['cliente_telefone'] ?? '')
+          .toString()
+          .trim();
 
       if (telefoneOriginal.isEmpty) {
         mostrarMensagem(
@@ -316,20 +323,20 @@ Aguardamos você!
       }
 
       final telefone =
-          normalizarTelefone(telefoneOriginal);
+      normalizarTelefone(telefoneOriginal);
 
       if (telefone.length < 12 ||
           telefone.length > 13) {
         mostrarMensagem(
           'O telefone cadastrado parece inválido: '
-          '$telefoneOriginal',
+              '$telefoneOriginal',
           erro: true,
         );
         return;
       }
 
       final veiculo =
-          montarNomeVeiculo(dados);
+      montarNomeVeiculo(dados);
 
       final mensagem = montarMensagemWhatsApp(
         nomeCliente: nomeCliente.isEmpty
@@ -372,9 +379,9 @@ Aguardamos você!
   }
 
   void mostrarMensagem(
-    String mensagem, {
-    bool erro = false,
-  }) {
+      String mensagem, {
+        bool erro = false,
+      }) {
     if (!mounted) {
       return;
     }
@@ -385,7 +392,7 @@ Aguardamos você!
         SnackBar(
           content: Text(mensagem),
           backgroundColor:
-              erro ? Colors.red.shade700 : null,
+          erro ? Colors.red.shade700 : null,
         ),
       );
   }
@@ -403,7 +410,7 @@ Aguardamos você!
                 'Alterar status',
               ),
               content:
-                  DropdownButtonFormField<String>(
+              DropdownButtonFormField<String>(
                 value: novoStatus,
                 decoration: const InputDecoration(
                   labelText: 'Status',
@@ -413,7 +420,7 @@ Aguardamos você!
                   ),
                 ),
                 items:
-                    statusDisponiveis.map((status) {
+                statusDisponiveis.map((status) {
                   return DropdownMenuItem<String>(
                     value: status,
                     child: Text(status),
@@ -537,7 +544,7 @@ Aguardamos você!
   @override
   Widget build(BuildContext context) {
     final corStatus =
-        corDoStatus(agendamento.status);
+    corDoStatus(agendamento.status);
 
     return Scaffold(
       appBar: AppBar(
@@ -560,7 +567,7 @@ Aguardamos você!
           CircleAvatar(
             radius: 46,
             backgroundColor:
-                corStatus.withValues(alpha: 0.18),
+            corStatus.withValues(alpha: 0.18),
             child: Icon(
               Icons.calendar_month_outlined,
               size: 46,
@@ -606,22 +613,22 @@ Aguardamos você!
                 : enviarConfirmacaoWhatsApp,
             style: FilledButton.styleFrom(
               backgroundColor:
-                  const Color(0xFF25D366),
+              const Color(0xFF25D366),
               foregroundColor: Colors.white,
             ),
             icon: _abrindoWhatsApp
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child:
-                        CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
+              width: 20,
+              height: 20,
+              child:
+              CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
                 : const Icon(
-                    Icons.chat_outlined,
-                  ),
+              Icons.chat_outlined,
+            ),
             label: Text(
               _abrindoWhatsApp
                   ? 'Abrindo WhatsApp...'
@@ -631,39 +638,35 @@ Aguardamos você!
           const SizedBox(height: 10),
           FilledButton.icon(
             onPressed: _verificandoOrdemServico ||
-                    _abrindoOrdemServico
+                _abrindoOrdemServico
                 ? null
                 : _criarOuAbrirOrdemServico,
             style: FilledButton.styleFrom(
               backgroundColor:
-                  const Color(0xFFD6A84B),
+              const Color(0xFFD6A84B),
               foregroundColor: Colors.black,
             ),
             icon: _verificandoOrdemServico ||
-                    _abrindoOrdemServico
+                _abrindoOrdemServico
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.black,
-                    ),
-                  )
-                : Icon(
-                    _ordemServicoId == null
-                        ? Icons.add_task_outlined
-                        : Icons.assignment_outlined,
-                  ),
-            label: Text(
-              _ordemServicoId == null
-                  ? 'Criar Ordem de Serviço'
-                  : 'Abrir Ordem de Serviço',
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.black,
+              ),
+            )
+                : const Icon(
+              Icons.add_task_outlined,
+            ),
+            label: const Text(
+              'Criar Ordem de Serviço',
             ),
           ),
           const SizedBox(height: 24),
           criarInformacao(
             icone:
-                Icons.calendar_today_outlined,
+            Icons.calendar_today_outlined,
             titulo: 'Data',
             valor: agendamento.data,
           ),

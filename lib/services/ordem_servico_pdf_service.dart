@@ -6,8 +6,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-import '../../repositories/foto_servico_repository.dart';
-import '../../repositories/ordem_servico_repository.dart';
+import '../repositories/foto_servico_repository.dart';
+import '../repositories/ordem_servico_repository.dart';
 
 class OrdemServicoPdfService {
   final OrdemServicoRepository _repository =

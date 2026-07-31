@@ -5,7 +5,7 @@ import 'ordem_servico_checklist_page.dart';
 import 'ordem_servico_fotos_page.dart';
 import 'ordem_servico_assinatura_page.dart';
 import '../repositories/ordem_servico_repository.dart';
-import '../services/pdf/ordem_servico_pdf_service.dart';
+import '../services/ordem_servico_pdf_service.dart';
 import '../services/whatsapp_service.dart';
 
 class OrdensServicoPage extends StatefulWidget {
@@ -376,7 +376,7 @@ class _OrdensServicoPageState
     }
 
     final formaPagamento =
-    await _selecionarFormaPagamento();
+        await _selecionarFormaPagamento();
 
     if (formaPagamento == null) {
       return;
@@ -385,8 +385,10 @@ class _OrdensServicoPageState
     final confirmar = await _confirmarAcao(
       titulo: 'Finalizar serviço',
       mensagem:
-      'Deseja finalizar esta Ordem de Serviço?\n\n'
-          'Forma de pagamento: $formaPagamento',
+          'Deseja finalizar esta Ordem de Serviço?\n\n'
+          'Forma de pagamento: $formaPagamento\n\n'
+          'Os produtos utilizados serão baixados do estoque '
+          'e o valor será lançado no financeiro.',
       textoConfirmar: 'Finalizar',
       corConfirmar: Colors.green.shade700,
     );
@@ -409,30 +411,274 @@ class _OrdensServicoPageState
 
       Navigator.of(context).pop();
 
-      Future.delayed(
-        const Duration(milliseconds: 300),
-            () async {
-          if (!mounted) return;
+      await Future<void>.delayed(
+        const Duration(milliseconds: 250),
+      );
 
-          _mostrarMensagem(
-            'Ordem de Serviço finalizada.',
-          );
+      if (!mounted) return;
 
-          await _carregarOrdens();
-        },
+      _mostrarMensagem(
+        'Ordem de Serviço finalizada. '
+        'Estoque e financeiro atualizados.',
+      );
+
+      await _carregarOrdens();
+
+      if (!mounted) return;
+
+      setState(() {
+        _executandoAcao = false;
+      });
+
+      final ordemAtualizada =
+          await _repository
+              .buscarOrdemServicoCompletaPorId(id);
+
+      if (!mounted) return;
+
+      await _executarFluxoPosFinalizacao(
+        ordem: ordemAtualizada ?? ordem,
+        ordemServicoId: id,
       );
     } catch (erro) {
       _mostrarMensagem(
-        'Não foi possível finalizar o serviço.\n'
-            '$erro',
+        'Não foi possível finalizar o serviço.\n$erro',
         erro: true,
       );
     } finally {
-      if (mounted) {
+      if (mounted && _executandoAcao) {
         setState(() {
           _executandoAcao = false;
         });
       }
+    }
+  }
+
+  Future<void> _executarFluxoPosFinalizacao({
+    required Map<String, dynamic> ordem,
+    required int ordemServicoId,
+  }) async {
+    final registrarFotos = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          icon: const Icon(
+            Icons.add_a_photo_outlined,
+            size: 42,
+            color: Color(0xFFD6A84B),
+          ),
+          title: const Text(
+            'Registrar fotos do serviço?',
+          ),
+          content: const Text(
+            'Deseja abrir agora as fotos da Ordem de Serviço '
+            'para registrar o resultado final do veículo?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(
+                  dialogContext,
+                ).pop(false);
+              },
+              child: const Text('Agora não'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(
+                  dialogContext,
+                ).pop(true);
+              },
+              icon: const Icon(
+                Icons.photo_camera_outlined,
+              ),
+              label: const Text(
+                'Registrar fotos',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+
+    if (registrarFotos == true) {
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => OrdemServicoFotosPage(
+            ordemServicoId: ordemServicoId,
+            numeroOrdem: _obterTexto(
+              ordem,
+              'numero',
+              padrao: 'Ordem de Serviço',
+            ),
+            cliente: _obterTexto(
+              ordem,
+              'cliente_nome',
+              padrao: 'Cliente não informado',
+            ),
+            veiculo:
+                _montarNomeVeiculo(ordem),
+            somenteLeitura: false,
+          ),
+        ),
+      );
+    }
+
+    if (!mounted) return;
+
+    await _mostrarAcoesPosFinalizacao(
+      ordem: ordem,
+      ordemServicoId: ordemServicoId,
+    );
+  }
+
+  Future<void> _mostrarAcoesPosFinalizacao({
+    required Map<String, dynamic> ordem,
+    required int ordemServicoId,
+  }) async {
+    final acao =
+        await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (bottomContext) {
+        return SafeArea(
+          child: Padding(
+            padding:
+                const EdgeInsets.only(
+              bottom: 12,
+            ),
+            child: Column(
+              mainAxisSize:
+                  MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding:
+                      EdgeInsets.fromLTRB(
+                    20,
+                    4,
+                    20,
+                    12,
+                  ),
+                  child: Align(
+                    alignment:
+                        Alignment.centerLeft,
+                    child: Text(
+                      'Ordem de Serviço finalizada',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight:
+                            FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons
+                        .picture_as_pdf_outlined,
+                    color:
+                        Color(0xFFD6A84B),
+                  ),
+                  title: const Text(
+                    'Visualizar PDF',
+                  ),
+                  subtitle: const Text(
+                    'Gera o documento com os dados e as fotos atuais.',
+                  ),
+                  onTap: () {
+                    Navigator.of(
+                      bottomContext,
+                    ).pop('visualizar');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.share_outlined,
+                    color:
+                        Color(0xFFD6A84B),
+                  ),
+                  title: const Text(
+                    'Compartilhar PDF',
+                  ),
+                  subtitle: const Text(
+                    'Abre as opções de compartilhamento do celular.',
+                  ),
+                  onTap: () {
+                    Navigator.of(
+                      bottomContext,
+                    ).pop('compartilhar');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.chat_outlined,
+                    color:
+                        Color(0xFF25D366),
+                  ),
+                  title: const Text(
+                    'Avisar cliente no WhatsApp',
+                  ),
+                  subtitle: const Text(
+                    'Envia a mensagem de veículo pronto para retirada.',
+                  ),
+                  onTap: () {
+                    Navigator.of(
+                      bottomContext,
+                    ).pop('whatsapp');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons
+                        .check_circle_outline,
+                  ),
+                  title: const Text(
+                    'Concluir',
+                  ),
+                  onTap: () {
+                    Navigator.of(
+                      bottomContext,
+                    ).pop('concluir');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted ||
+        acao == null ||
+        acao == 'concluir') {
+      return;
+    }
+
+    try {
+      if (acao == 'visualizar') {
+        await _pdfService.visualizarPdf(
+          ordemServicoId:
+              ordemServicoId,
+        );
+      } else if (acao ==
+          'compartilhar') {
+        await _pdfService.compartilharPdf(
+          ordemServicoId:
+              ordemServicoId,
+        );
+      } else if (acao ==
+          'whatsapp') {
+        await _enviarVeiculoProntoWhatsApp(
+          ordem,
+        );
+      }
+    } catch (erro) {
+      _mostrarMensagem(
+        'Não foi possível concluir a ação.\n$erro',
+        erro: true,
+      );
     }
   }
 

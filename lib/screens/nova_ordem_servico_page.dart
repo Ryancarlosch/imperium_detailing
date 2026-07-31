@@ -598,7 +598,9 @@ class _NovaOrdemServicoPageState
   }
 
   void _atualizarTela() {
-    // Não faz nada por enquanto.
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   double _converterValor(String texto) {
@@ -651,6 +653,39 @@ class _NovaOrdemServicoPageState
     }
 
     return total;
+  }
+
+  double get _custoProdutosSelecionados {
+    return _produtos.fold<double>(
+      0,
+      (total, produto) {
+        if (!produto.selecionado) {
+          return total;
+        }
+
+        final quantidade = _converterValor(
+          produto.quantidadeController.text,
+        );
+
+        if (quantidade <= 0) {
+          return total;
+        }
+
+        return total +
+            (quantidade * produto.item.custoUnitario);
+      },
+    );
+  }
+
+  double get _lucroBrutoEstimado {
+    final lucro =
+        _totalFinal - _custoProdutosSelecionados;
+
+    if (lucro < 0) {
+      return 0;
+    }
+
+    return lucro;
   }
 
   String _formatarDataBanco(DateTime data) {
@@ -707,6 +742,34 @@ class _NovaOrdemServicoPageState
       );
 
       return;
+    }
+
+    for (final produto in _produtos) {
+      if (!produto.selecionado) {
+        continue;
+      }
+
+      final quantidade = _converterValor(
+        produto.quantidadeController.text,
+      );
+
+      if (quantidade <= 0) {
+        _mostrarMensagem(
+          'Informe uma quantidade válida para ${produto.item.nome}.',
+          erro: true,
+        );
+        return;
+      }
+
+      if (quantidade > produto.item.quantidade) {
+        _mostrarMensagem(
+          'Estoque insuficiente para ${produto.item.nome}. '
+          'Disponível: ${_formatarNumeroCampo(produto.item.quantidade)} '
+          '${produto.item.unidade}.',
+          erro: true,
+        );
+        return;
+      }
     }
 
     setState(() {
@@ -1215,11 +1278,14 @@ class _NovaOrdemServicoPageState
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.inventory_2_outlined),
+                const Icon(
+                  Icons.inventory_2_outlined,
+                ),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -1231,49 +1297,208 @@ class _NovaOrdemServicoPageState
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: _salvando ? null : _adicionarProduto,
+                  onPressed:
+                      _salvando ? null : _adicionarProduto,
                   icon: const Icon(Icons.add),
                   label: const Text('Adicionar'),
                 ),
               ],
             ),
+            const SizedBox(height: 6),
+            const Text(
+              'Marque somente o que foi realmente usado e ajuste a quantidade.',
+              style: TextStyle(
+                color: Colors.white60,
+                fontSize: 12,
+              ),
+            ),
             if (_produtos.isEmpty)
               const Padding(
-                padding: EdgeInsets.only(top: 10),
+                padding: EdgeInsets.only(top: 14),
                 child: Text(
                   'Nenhum produto adicionado.',
                 ),
               )
-            else
-              ...List.generate(_produtos.length, (indice) {
-                final produto = _produtos[indice];
-                return CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: produto.selecionado,
-                  onChanged: produto.obrigatorio ||
-                          _salvando
-                      ? null
-                      : (valor) {
-                          setState(() {
-                            produto.selecionado =
-                                valor ?? false;
-                          });
-                        },
-                  secondary: const CircleAvatar(
-                    child: Icon(
-                      Icons.science_outlined,
+            else ...[
+              const SizedBox(height: 12),
+              ...List.generate(
+                _produtos.length,
+                (indice) {
+                  final produto = _produtos[indice];
+
+                  final quantidade = _converterValor(
+                    produto.quantidadeController.text,
+                  );
+
+                  final custo =
+                      quantidade * produto.item.custoUnitario;
+
+                  final estoqueInsuficiente =
+                      produto.selecionado &&
+                      quantidade >
+                          produto.item.quantidade;
+
+                  return Container(
+                    margin:
+                        const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF222222),
+                      borderRadius:
+                          BorderRadius.circular(14),
+                      border: Border.all(
+                        color: estoqueInsuficiente
+                            ? Colors.redAccent
+                            : Colors.white.withValues(
+                                alpha: 0.08,
+                              ),
+                      ),
                     ),
-                  ),
-                  title: Text(produto.item.nome),
-                  subtitle: Text(
-                    '${produto.quantidadeController.text} ${produto.item.unidade}'
-                    ' • Estoque: ${_formatarNumeroCampo(produto.item.quantidade)} ${produto.item.unidade}'
-                    '${produto.obrigatorio ? " • Obrigatório" : " • Opcional"}',
-                  ),
-                  controlAffinity:
-                      ListTileControlAffinity.trailing,
-                );
-              }),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: produto.selecionado,
+                              onChanged:
+                                  produto.obrigatorio ||
+                                          _salvando
+                                      ? null
+                                      : (valor) {
+                                          setState(() {
+                                            produto.selecionado =
+                                                valor ?? false;
+                                          });
+                                        },
+                            ),
+                            const SizedBox(width: 4),
+                            const CircleAvatar(
+                              child: Icon(
+                                Icons.science_outlined,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    produto.item.nome,
+                                    style: const TextStyle(
+                                      fontWeight:
+                                          FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    produto.obrigatorio
+                                        ? 'Obrigatório'
+                                        : 'Opcional',
+                                    style: TextStyle(
+                                      color: produto.obrigatorio
+                                          ? Colors.orangeAccent
+                                          : Colors.white54,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (!produto.obrigatorio)
+                              IconButton(
+                                tooltip: 'Remover produto',
+                                onPressed: _salvando
+                                    ? null
+                                    : () {
+                                        setState(() {
+                                          final removido =
+                                              _produtos.removeAt(
+                                            indice,
+                                          );
+
+                                          removido.dispose();
+                                        });
+                                      },
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.redAccent,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller:
+                              produto.quantidadeController,
+                          enabled:
+                              produto.selecionado && !_salvando,
+                          keyboardType:
+                              const TextInputType
+                                  .numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'[0-9,.]'),
+                            ),
+                          ],
+                          onChanged: (_) {
+                            setState(() {});
+                          },
+                          decoration: InputDecoration(
+                            labelText:
+                                'Quantidade realmente utilizada',
+                            suffixText:
+                                produto.item.unidade,
+                            prefixIcon: const Icon(
+                              Icons.scale_outlined,
+                            ),
+                            border:
+                                const OutlineInputBorder(),
+                            helperText:
+                                'Estoque: ${_formatarNumeroCampo(produto.item.quantidade)} '
+                                '${produto.item.unidade}',
+                            errorText: estoqueInsuficiente
+                                ? 'Quantidade maior que o estoque disponível'
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Custo unitário: '
+                                '${_moeda.format(produto.item.custoUnitario)}',
+                                style: const TextStyle(
+                                  color: Colors.white60,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              'Custo: ${_moeda.format(custo)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFD6A84B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const Divider(height: 24),
+              _LinhaValor(
+                titulo: 'Custo total dos produtos',
+                valor: _moeda.format(
+                  _custoProdutosSelecionados,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1595,6 +1820,21 @@ class _NovaOrdemServicoPageState
             _LinhaValor(
               titulo: 'Total final',
               valor: _moeda.format(_totalFinal),
+              destaque: true,
+            ),
+            const SizedBox(height: 10),
+            _LinhaValor(
+              titulo: 'Custo dos produtos',
+              valor: _moeda.format(
+                _custoProdutosSelecionados,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _LinhaValor(
+              titulo: 'Lucro bruto estimado',
+              valor: _moeda.format(
+                _lucroBrutoEstimado,
+              ),
               destaque: true,
             ),
           ],
