@@ -108,6 +108,136 @@ class VeiculoRepository {
         .toList();
   }
 
+  Future<int> contarFotosDoVeiculo(
+    int veiculoId,
+  ) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.rawQuery(
+      '''
+      SELECT COUNT(*) AS total
+      FROM fotos_servico
+      WHERE veiculo_id = ?
+      ''',
+      [veiculoId],
+    );
+
+    if (resultado.isEmpty) {
+      return 0;
+    }
+
+    final valor = resultado.first['total'];
+
+    if (valor is int) {
+      return valor;
+    }
+
+    if (valor is num) {
+      return valor.toInt();
+    }
+
+    return int.tryParse(
+          valor?.toString() ?? '',
+        ) ??
+        0;
+  }
+
+  Future<Map<String, dynamic>>
+      obterEstatisticasBasicasDoVeiculo(
+    int veiculoId,
+  ) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.rawQuery(
+      '''
+      SELECT
+        (
+          SELECT COUNT(*)
+          FROM fotos_servico
+          WHERE veiculo_id = ?
+        ) AS quantidade_fotos,
+        (
+          SELECT COUNT(*)
+          FROM ordens_servico
+          WHERE veiculo_id = ?
+            AND status != 'Cancelada'
+        ) AS quantidade_ordens,
+        (
+          SELECT COUNT(*)
+          FROM ordens_servico
+          WHERE veiculo_id = ?
+            AND status = 'Finalizada'
+        ) AS quantidade_finalizadas
+      ''',
+      [
+        veiculoId,
+        veiculoId,
+        veiculoId,
+      ],
+    );
+
+    if (resultado.isEmpty) {
+      return {
+        'quantidade_fotos': 0,
+        'quantidade_ordens': 0,
+        'quantidade_finalizadas': 0,
+      };
+    }
+
+    final linha = resultado.first;
+
+    int converter(dynamic valor) {
+      if (valor is int) {
+        return valor;
+      }
+
+      if (valor is num) {
+        return valor.toInt();
+      }
+
+      return int.tryParse(
+            valor?.toString() ?? '',
+          ) ??
+          0;
+    }
+
+    return {
+      'quantidade_fotos':
+          converter(linha['quantidade_fotos']),
+      'quantidade_ordens':
+          converter(linha['quantidade_ordens']),
+      'quantidade_finalizadas':
+          converter(linha['quantidade_finalizadas']),
+    };
+  }
+
+  Future<List<Map<String, dynamic>>>
+      listarFotosResumidasDoVeiculo(
+    int veiculoId, {
+    int limite = 6,
+  }) async {
+    final database = await _appDatabase.database;
+
+    if (limite <= 0) {
+      return [];
+    }
+
+    return database.query(
+      'fotos_servico',
+      columns: [
+        'id',
+        'caminho_antes',
+        'caminho_depois',
+        'descricao',
+        'data',
+      ],
+      where: 'veiculo_id = ?',
+      whereArgs: [veiculoId],
+      orderBy: 'id DESC',
+      limit: limite,
+    );
+  }
+
   Future<int> atualizarVeiculo(Veiculo veiculo) async {
     if (veiculo.id == null) {
       throw ArgumentError(

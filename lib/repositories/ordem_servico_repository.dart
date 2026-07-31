@@ -814,6 +814,319 @@ class OrdemServicoRepository {
 
 
 
+  Future<Map<String, dynamic>> obterResumoDoCliente(
+    int clienteId,
+  ) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.rawQuery(
+      '''
+      SELECT
+        COUNT(*) AS quantidade_ordens,
+        COALESCE(
+          SUM(
+            CASE
+              WHEN status = 'Finalizada'
+              THEN MAX(valor_total - desconto, 0)
+              ELSE 0
+            END
+          ),
+          0
+        ) AS total_gasto,
+        MAX(
+          CASE
+            WHEN status = 'Finalizada'
+            THEN COALESCE(
+              data_finalizacao,
+              data_abertura
+            )
+            ELSE NULL
+          END
+        ) AS ultimo_atendimento
+      FROM ordens_servico
+      WHERE cliente_id = ?
+        AND status != 'Cancelada'
+      ''',
+      [clienteId],
+    );
+
+    if (resultado.isEmpty) {
+      return {
+        'quantidade_ordens': 0,
+        'total_gasto': 0.0,
+        'ticket_medio': 0.0,
+        'ultimo_atendimento': '',
+      };
+    }
+
+    final linha = resultado.first;
+
+    final quantidade =
+        (linha['quantidade_ordens'] as num?)
+                ?.toInt() ??
+            0;
+
+    final total =
+        (linha['total_gasto'] as num?)
+                ?.toDouble() ??
+            0.0;
+
+    return {
+      'quantidade_ordens': quantidade,
+      'total_gasto': total,
+      'ticket_medio':
+          quantidade > 0 ? total / quantidade : 0.0,
+      'ultimo_atendimento':
+          (linha['ultimo_atendimento'] ?? '')
+              .toString(),
+    };
+  }
+
+  Future<List<Map<String, dynamic>>>
+      listarHistoricoDoCliente(
+    int clienteId,
+  ) async {
+    final database = await _appDatabase.database;
+
+    return database.rawQuery(
+      '''
+      SELECT
+        os.id,
+        os.numero,
+        os.status,
+        os.data_abertura,
+        os.data_inicio,
+        os.data_finalizacao,
+        os.hora_entrada,
+        os.hora_saida,
+        os.valor_total,
+        os.desconto,
+        os.forma_pagamento,
+        os.observacoes,
+        os.veiculo_id,
+        veiculos.marca AS veiculo_marca,
+        veiculos.modelo AS veiculo_modelo,
+        veiculos.placa AS veiculo_placa,
+        (
+          SELECT GROUP_CONCAT(
+            itens.servico,
+            ' • '
+          )
+          FROM ordem_servico_itens itens
+          WHERE itens.ordem_servico_id = os.id
+        ) AS servicos
+      FROM ordens_servico os
+      LEFT JOIN veiculos
+        ON veiculos.id = os.veiculo_id
+      WHERE os.cliente_id = ?
+      ORDER BY
+        COALESCE(
+          os.data_finalizacao,
+          os.data_inicio,
+          os.data_abertura
+        ) DESC,
+        os.id DESC
+      ''',
+      [clienteId],
+    );
+  }
+
+  Future<Map<String, dynamic>> obterResumoDoVeiculo(
+    int veiculoId,
+  ) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.rawQuery(
+      '''
+      SELECT
+        COUNT(
+          CASE
+            WHEN status != 'Cancelada' THEN 1
+          END
+        ) AS quantidade_ordens,
+        COALESCE(
+          SUM(
+            CASE
+              WHEN status = 'Finalizada'
+              THEN CASE
+                WHEN (valor_total - desconto) > 0
+                THEN (valor_total - desconto)
+                ELSE 0
+              END
+              ELSE 0
+            END
+          ),
+          0
+        ) AS total_investido,
+        MAX(
+          CASE
+            WHEN status = 'Finalizada'
+            THEN COALESCE(
+              data_finalizacao,
+              data_inicio,
+              data_abertura
+            )
+            ELSE NULL
+          END
+        ) AS ultimo_atendimento
+      FROM ordens_servico
+      WHERE veiculo_id = ?
+      ''',
+      [veiculoId],
+    );
+
+    if (resultado.isEmpty) {
+      return {
+        'quantidade_ordens': 0,
+        'total_investido': 0.0,
+        'ultimo_atendimento': '',
+      };
+    }
+
+    final linha = resultado.first;
+
+    return {
+      'quantidade_ordens':
+          (linha['quantidade_ordens'] as num?)
+                  ?.toInt() ??
+              0,
+      'total_investido':
+          (linha['total_investido'] as num?)
+                  ?.toDouble() ??
+              0.0,
+      'ultimo_atendimento':
+          (linha['ultimo_atendimento'] ?? '')
+              .toString(),
+    };
+  }
+
+  Future<List<Map<String, dynamic>>>
+      listarHistoricoDoVeiculo(
+    int veiculoId,
+  ) async {
+    final database = await _appDatabase.database;
+
+    return database.rawQuery(
+      '''
+      SELECT
+        os.id,
+        os.numero,
+        os.status,
+        os.data_abertura,
+        os.data_inicio,
+        os.data_finalizacao,
+        os.hora_entrada,
+        os.hora_saida,
+        os.valor_total,
+        os.desconto,
+        os.forma_pagamento,
+        os.observacoes,
+        os.funcionario_responsavel,
+        (
+          SELECT GROUP_CONCAT(
+            itens.servico,
+            ' • '
+          )
+          FROM ordem_servico_itens itens
+          WHERE itens.ordem_servico_id = os.id
+        ) AS servicos,
+        (
+          SELECT GROUP_CONCAT(
+            produtos.produto_nome ||
+            CASE
+              WHEN produtos.quantidade > 0
+              THEN ' (' ||
+                REPLACE(
+                  printf('%.2f', produtos.quantidade),
+                  '.00',
+                  ''
+                ) ||
+                CASE
+                  WHEN TRIM(
+                    COALESCE(produtos.unidade, '')
+                  ) != ''
+                  THEN ' ' || produtos.unidade
+                  ELSE ''
+                END ||
+                ')'
+              ELSE ''
+            END,
+            ' • '
+          )
+          FROM ordem_servico_produtos produtos
+          WHERE produtos.ordem_servico_id = os.id
+        ) AS produtos_utilizados,
+        (
+          SELECT COALESCE(
+            SUM(
+              produtos.quantidade *
+              produtos.custo_unitario
+            ),
+            0
+          )
+          FROM ordem_servico_produtos produtos
+          WHERE produtos.ordem_servico_id = os.id
+        ) AS custo_produtos
+      FROM ordens_servico os
+      WHERE os.veiculo_id = ?
+      ORDER BY
+        COALESCE(
+          os.data_finalizacao,
+          os.data_inicio,
+          os.data_abertura
+        ) DESC,
+        os.id DESC
+      ''',
+      [veiculoId],
+    );
+  }
+
+  Future<Map<String, dynamic>?>
+      buscarUltimoServicoDoVeiculo(
+    int veiculoId,
+  ) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.rawQuery(
+      '''
+      SELECT
+        os.id,
+        os.numero,
+        os.data_finalizacao,
+        os.data_inicio,
+        os.data_abertura,
+        (
+          SELECT GROUP_CONCAT(
+            itens.servico,
+            ' • '
+          )
+          FROM ordem_servico_itens itens
+          WHERE itens.ordem_servico_id = os.id
+        ) AS servicos
+      FROM ordens_servico os
+      WHERE os.veiculo_id = ?
+        AND os.status = 'Finalizada'
+      ORDER BY
+        COALESCE(
+          os.data_finalizacao,
+          os.data_inicio,
+          os.data_abertura
+        ) DESC,
+        os.id DESC
+      LIMIT 1
+      ''',
+      [veiculoId],
+    );
+
+    if (resultado.isEmpty) {
+      return null;
+    }
+
+    return Map<String, dynamic>.from(
+      resultado.first,
+    );
+  }
+
   Future<void> cancelarOrdemServico(
       int ordemServicoId,
       ) async {

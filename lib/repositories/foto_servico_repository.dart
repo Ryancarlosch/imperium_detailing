@@ -207,6 +207,144 @@ class FotoServicoRepository {
     );
   }
 
+  Future<List<Map<String, dynamic>>>
+      listarGaleriaCompletaDoVeiculo(
+    int veiculoId,
+  ) async {
+    final database =
+        await AppDatabase.instance.database;
+
+    return database.rawQuery(
+      '''
+      SELECT
+        fotos_servico.id,
+        fotos_servico.cliente_id,
+        fotos_servico.veiculo_id,
+        fotos_servico.caminho_antes,
+        fotos_servico.caminho_depois,
+        fotos_servico.descricao,
+        fotos_servico.data,
+        clientes.nome AS cliente_nome,
+        veiculos.marca AS veiculo_marca,
+        veiculos.modelo AS veiculo_modelo,
+        veiculos.placa AS veiculo_placa
+      FROM fotos_servico
+      INNER JOIN clientes
+        ON clientes.id = fotos_servico.cliente_id
+      INNER JOIN veiculos
+        ON veiculos.id = fotos_servico.veiculo_id
+      WHERE fotos_servico.veiculo_id = ?
+      ORDER BY
+        fotos_servico.data DESC,
+        fotos_servico.id DESC
+      ''',
+      [veiculoId],
+    );
+  }
+
+  Future<Map<String, int>>
+      contarFotosAntesEDepoisDoVeiculo(
+    int veiculoId,
+  ) async {
+    final database =
+        await AppDatabase.instance.database;
+
+    final resultado = await database.rawQuery(
+      '''
+      SELECT
+        COUNT(*) AS registros,
+        SUM(
+          CASE
+            WHEN TRIM(
+              COALESCE(caminho_antes, '')
+            ) != ''
+            THEN 1
+            ELSE 0
+          END
+        ) AS fotos_antes,
+        SUM(
+          CASE
+            WHEN TRIM(
+              COALESCE(caminho_depois, '')
+            ) != ''
+            THEN 1
+            ELSE 0
+          END
+        ) AS fotos_depois
+      FROM fotos_servico
+      WHERE veiculo_id = ?
+      ''',
+      [veiculoId],
+    );
+
+    if (resultado.isEmpty) {
+      return {
+        'registros': 0,
+        'fotos_antes': 0,
+        'fotos_depois': 0,
+        'total_imagens': 0,
+      };
+    }
+
+    final linha = resultado.first;
+
+    int converter(dynamic valor) {
+      if (valor is int) {
+        return valor;
+      }
+
+      if (valor is num) {
+        return valor.toInt();
+      }
+
+      return int.tryParse(
+            valor?.toString() ?? '',
+          ) ??
+          0;
+    }
+
+    final registros =
+        converter(linha['registros']);
+
+    final fotosAntes =
+        converter(linha['fotos_antes']);
+
+    final fotosDepois =
+        converter(linha['fotos_depois']);
+
+    return {
+      'registros': registros,
+      'fotos_antes': fotosAntes,
+      'fotos_depois': fotosDepois,
+      'total_imagens':
+          fotosAntes + fotosDepois,
+    };
+  }
+
+  Future<Map<String, dynamic>?>
+      buscarUltimoRegistroFotograficoDoVeiculo(
+    int veiculoId,
+  ) async {
+    final database =
+        await AppDatabase.instance.database;
+
+    final resultado = await database.query(
+      'fotos_servico',
+      where: 'veiculo_id = ?',
+      whereArgs: [veiculoId],
+      orderBy: 'data DESC, id DESC',
+      limit: 1,
+    );
+
+    if (resultado.isEmpty) {
+      return null;
+    }
+
+    return Map<String, dynamic>.from(
+      resultado.first,
+    );
+  }
+
   Future<FotoServico?> buscarFotoPorId(
       int id,
       ) async {

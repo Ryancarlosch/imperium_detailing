@@ -29,6 +29,55 @@ class ClienteRepository {
         .toList();
   }
 
+  Future<Cliente?> buscarClientePorId(int id) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.query(
+      'clientes',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (resultado.isEmpty) {
+      return null;
+    }
+
+    return Cliente.fromMap(
+      Map<String, dynamic>.from(resultado.first),
+    );
+  }
+
+  Future<int> contarVeiculosDoCliente(
+    int clienteId,
+  ) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.rawQuery(
+      '''
+      SELECT COUNT(*) AS total
+      FROM veiculos
+      WHERE cliente_id = ?
+      ''',
+      [clienteId],
+    );
+
+    final valor = resultado.first['total'];
+
+    if (valor is int) {
+      return valor;
+    }
+
+    if (valor is num) {
+      return valor.toInt();
+    }
+
+    return int.tryParse(
+          valor?.toString() ?? '',
+        ) ??
+        0;
+  }
+
   Future<int> atualizarCliente(Cliente cliente) async {
     if (cliente.id == null) {
       throw ArgumentError(
