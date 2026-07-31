@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../models/veiculo.dart';
 import '../repositories/ordem_servico_repository.dart';
 import '../repositories/veiculo_repository.dart';
+import '../services/ordem_servico_pdf_service.dart';
+import 'galeria_veiculo_page.dart';
 import 'novo_veiculo_page.dart';
 
 class VeiculoDetalhesPage extends StatefulWidget {
@@ -29,6 +31,9 @@ class _VeiculoDetalhesPageState
   final OrdemServicoRepository _ordemRepository =
       OrdemServicoRepository();
 
+  final OrdemServicoPdfService _pdfService =
+      OrdemServicoPdfService();
+
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
@@ -47,6 +52,7 @@ class _VeiculoDetalhesPageState
 
   bool _carregando = true;
   bool _executandoAcao = false;
+  bool _gerandoPdf = false;
 
   @override
   void initState() {
@@ -461,6 +467,209 @@ class _VeiculoDetalhesPageState
     }
   }
 
+  Future<void> _abrirGaleriaCompleta() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => GaleriaVeiculoPage(
+          veiculoId: widget.veiculoId,
+          nomeVeiculo:
+              '${_texto(_veiculo, 'marca')} '
+              '${_texto(_veiculo, 'modelo')}'.trim(),
+          placa: _texto(_veiculo, 'placa'),
+        ),
+      ),
+    );
+
+    if (mounted) {
+      await _carregarTudo();
+    }
+  }
+
+  Future<void> _visualizarPdf(
+    int ordemServicoId,
+  ) async {
+    if (_gerandoPdf || ordemServicoId <= 0) {
+      return;
+    }
+
+    setState(() {
+      _gerandoPdf = true;
+    });
+
+    try {
+      await _pdfService.visualizarPdf(
+        ordemServicoId: ordemServicoId,
+      );
+    } catch (erro) {
+      _mostrarMensagem(
+        'Não foi possível visualizar o PDF.\n$erro',
+        erro: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _gerandoPdf = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _compartilharPdf(
+    int ordemServicoId,
+  ) async {
+    if (_gerandoPdf || ordemServicoId <= 0) {
+      return;
+    }
+
+    setState(() {
+      _gerandoPdf = true;
+    });
+
+    try {
+      await _pdfService.compartilharPdf(
+        ordemServicoId: ordemServicoId,
+      );
+    } catch (erro) {
+      _mostrarMensagem(
+        'Não foi possível compartilhar o PDF.\n$erro',
+        erro: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _gerandoPdf = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _mostrarAcoesDaOrdem(
+    Map<String, dynamic> ordem,
+  ) async {
+    final ordemId = _inteiro(ordem, 'id');
+
+    if (ordemId <= 0) {
+      return;
+    }
+
+    final acao = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (bottomContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(
+                  Icons.picture_as_pdf_outlined,
+                  color: Color(0xFFD6A84B),
+                ),
+                title: const Text('Visualizar PDF'),
+                onTap: () {
+                  Navigator.of(bottomContext)
+                      .pop('visualizar');
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.share_outlined,
+                  color: Color(0xFFD6A84B),
+                ),
+                title: const Text('Compartilhar PDF'),
+                onTap: () {
+                  Navigator.of(bottomContext)
+                      .pop('compartilhar');
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.inventory_2_outlined,
+                ),
+                title: const Text(
+                  'Produtos utilizados',
+                ),
+                subtitle: Text(
+                  _texto(
+                    ordem,
+                    'produtos_utilizados',
+                    padrao:
+                        'Nenhum produto registrado.',
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(bottomContext)
+                      .pop('produtos');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted || acao == null) {
+      return;
+    }
+
+    if (acao == 'visualizar') {
+      await _visualizarPdf(ordemId);
+    } else if (acao == 'compartilhar') {
+      await _compartilharPdf(ordemId);
+    } else if (acao == 'produtos') {
+      final produtos = _texto(
+        ordem,
+        'produtos_utilizados',
+        padrao:
+            'Nenhum produto registrado nesta Ordem de Serviço.',
+      );
+
+      final custo =
+          _numero(ordem, 'custo_produtos');
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            icon: const Icon(
+              Icons.inventory_2_outlined,
+              color: Color(0xFFD6A84B),
+            ),
+            title: const Text(
+              'Produtos utilizados',
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(produtos),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Custo total: ${_moeda.format(custo)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFD6A84B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                },
+                child: const Text('Fechar'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
   Widget _indicador({
     required String titulo,
     required String valor,
@@ -803,145 +1012,159 @@ class _VeiculoDetalhesPageState
       margin: const EdgeInsets.only(
         bottom: 12,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(15),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _texto(
-                      ordem,
-                      'numero',
-                      padrao:
-                          'Ordem de Serviço',
-                    ),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _corStatus(status)
-                        .withValues(alpha: 0.16),
-                    borderRadius:
-                        BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      color: _corStatus(status),
-                      fontSize: 12,
-                      fontWeight:
-                          FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 9),
-            Text(
-              servicos,
-              style: const TextStyle(
-                color: Colors.white70,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today_outlined,
-                  size: 16,
-                  color: Colors.white54,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _dataDaOrdem(ordem),
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 13,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  _moeda.format(valorFinal),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFD6A84B),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(
-                  Icons.timer_outlined,
-                  size: 16,
-                  color: Colors.white54,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Tempo: ${_formatarDuracao(duracao)}',
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-            if (produtos.isNotEmpty) ...[
-              const Divider(height: 22),
-              const Text(
-                'Produtos utilizados',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                produtos,
-                style: const TextStyle(
-                  color: Colors.white60,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 7),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: _gerandoPdf
+            ? null
+            : () => _mostrarAcoesDaOrdem(ordem),
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
                   Expanded(
                     child: Text(
-                      'Custo: ${_moeda.format(custoProdutos)}',
+                      _texto(
+                        ordem,
+                        'numero',
+                        padrao:
+                            'Ordem de Serviço',
+                      ),
                       style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
+                        fontSize: 16,
+                        fontWeight:
+                            FontWeight.bold,
                       ),
                     ),
                   ),
-                  Text(
-                    'Lucro estimado: ${_moeda.format(lucroEstimado < 0 ? 0 : lucroEstimado)}',
-                    style: const TextStyle(
-                      color: Colors.greenAccent,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _corStatus(status)
+                          .withValues(alpha: 0.16),
+                      borderRadius:
+                          BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        color: _corStatus(status),
+                        fontSize: 12,
+                        fontWeight:
+                            FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 9),
+              Text(
+                servicos,
+                style: const TextStyle(
+                  color: Colors.white70,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 16,
+                    color: Colors.white54,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _dataDaOrdem(ordem),
+                    style: const TextStyle(
+                      color: Colors.white60,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    _moeda.format(valorFinal),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight:
+                          FontWeight.bold,
+                      color: Color(0xFFD6A84B),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.timer_outlined,
+                    size: 16,
+                    color: Colors.white54,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Tempo: ${_formatarDuracao(duracao)}',
+                    style: const TextStyle(
+                      color: Colors.white60,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+              if (produtos.isNotEmpty) ...[
+                const Divider(height: 22),
+                Text(
+                  produtos,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white60,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Custo: ${_moeda.format(custoProdutos)}',
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Lucro: ${_moeda.format(lucroEstimado < 0 ? 0 : lucroEstimado)}',
+                      style: const TextStyle(
+                        color: Colors.greenAccent,
+                        fontSize: 12,
+                        fontWeight:
+                            FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 10),
+              const Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Toque para ver PDF e produtos',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -1118,6 +1341,17 @@ class _VeiculoDetalhesPageState
                       if (_fotos.isNotEmpty) ...[
                         const SizedBox(height: 22),
                         _galeriaResumida(),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed:
+                              _abrirGaleriaCompleta,
+                          icon: const Icon(
+                            Icons.photo_library_outlined,
+                          ),
+                          label: const Text(
+                            'Abrir galeria completa',
+                          ),
+                        ),
                       ],
                       const SizedBox(height: 22),
                       Row(
