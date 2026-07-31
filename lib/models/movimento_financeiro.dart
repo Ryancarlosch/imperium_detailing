@@ -19,9 +19,10 @@ class MovimentoFinanceiro {
     this.agendamentoId,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
+  Map<String, dynamic> toMap({
+    bool incluirId = true,
+  }) {
+    final mapa = <String, dynamic>{
       'tipo': tipo,
       'descricao': descricao,
       'valor': valor,
@@ -30,23 +31,61 @@ class MovimentoFinanceiro {
       'cliente_id': clienteId,
       'agendamento_id': agendamentoId,
     };
+
+    if (incluirId && id != null) {
+      mapa['id'] = id;
+    }
+
+    return mapa;
   }
 
   factory MovimentoFinanceiro.fromMap(
       Map<String, dynamic> map,
       ) {
     return MovimentoFinanceiro(
-      id: map['id'] as int?,
-      tipo: map['tipo'] ?? '',
-      descricao: map['descricao'] ?? '',
-      valor: (map['valor'] as num).toDouble(),
+      id: _converterInt(map['id']),
+      tipo: (map['tipo'] ?? '').toString(),
+      descricao: (map['descricao'] ?? '').toString(),
+      valor: _converterDouble(map['valor']),
       formaPagamento:
-      map['forma_pagamento'] ?? '',
-      data: map['data'] ?? '',
-      clienteId: map['cliente_id'] as int?,
-      agendamentoId:
-      map['agendamento_id'] as int?,
+      (map['forma_pagamento'] ?? '').toString(),
+      data: (map['data'] ?? '').toString(),
+      clienteId: _converterInt(
+        map['cliente_id'],
+      ),
+      agendamentoId: _converterInt(
+        map['agendamento_id'],
+      ),
     );
+  }
+
+  static int? _converterInt(dynamic valor) {
+    if (valor == null) {
+      return null;
+    }
+
+    if (valor is int) {
+      return valor;
+    }
+
+    return int.tryParse(
+      valor.toString(),
+    );
+  }
+
+  static double _converterDouble(dynamic valor) {
+    if (valor == null) {
+      return 0;
+    }
+
+    if (valor is num) {
+      return valor.toDouble();
+    }
+
+    return double.tryParse(
+      valor.toString().replaceAll(',', '.'),
+    ) ??
+        0;
   }
 
   MovimentoFinanceiro copyWith({
@@ -65,14 +104,12 @@ class MovimentoFinanceiro {
       descricao: descricao ?? this.descricao,
       valor: valor ?? this.valor,
       formaPagamento:
-      formaPagamento ??
-          this.formaPagamento,
+      formaPagamento ?? this.formaPagamento,
       data: data ?? this.data,
       clienteId:
       clienteId ?? this.clienteId,
       agendamentoId:
-      agendamentoId ??
-          this.agendamentoId,
+      agendamentoId ?? this.agendamentoId,
     );
   }
 }

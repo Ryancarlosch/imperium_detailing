@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'screens/dashboard_page.dart';
 import 'services/notification_service.dart';
@@ -19,11 +20,21 @@ class ImperiumApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Imperium Detailing',
+
+      locale: const Locale('pt', 'BR'),
+
+      supportedLocales: const [
+        Locale('pt', 'BR'),
+      ],
+
+      localizationsDelegates:
+      GlobalMaterialLocalizations.delegates,
+
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor:
-            const Color(0xFF0E0E0E),
+        const Color(0xFF0E0E0E),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFD6A84B),
           brightness: Brightness.dark,
@@ -37,7 +48,7 @@ class ImperiumApp extends StatelessWidget {
           color: Color(0xFF1A1A1A),
         ),
         inputDecorationTheme:
-            InputDecorationTheme(
+        InputDecorationTheme(
           filled: true,
           fillColor: const Color(0xFF181818),
           border: OutlineInputBorder(
@@ -60,11 +71,12 @@ class ImperiumApp extends StatelessWidget {
           ),
         ),
         floatingActionButtonTheme:
-            const FloatingActionButtonThemeData(
+        const FloatingActionButtonThemeData(
           backgroundColor: Color(0xFFD6A84B),
           foregroundColor: Colors.black,
         ),
       ),
+
       home: const DashboardPage(),
     );
   }

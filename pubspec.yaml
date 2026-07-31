@@ -11,7 +11,9 @@ dependencies:
   flutter:
     sdk: flutter
 
-  cupertino_icons: ^1.0.8
+  flutter_localizations:
+    sdk: flutter
+
 
   # Banco de dados
   sqflite: ^2.4.3

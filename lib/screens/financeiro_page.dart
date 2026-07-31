@@ -344,7 +344,7 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
     usandoFiltros ? entradasExibidas - saidasExibidas : _saldo;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F5F7),
+      backgroundColor: const Color(0xFF0E0E0E),
       appBar: AppBar(
         title: const Text('Controle financeiro'),
         centerTitle: false,
@@ -418,7 +418,7 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
                             .textTheme
                             .bodySmall
                             ?.copyWith(
-                          color: Colors.grey.shade700,
+                          color: Colors.white70,
                         ),
                       ),
                     ],
@@ -722,7 +722,7 @@ class _CardResumoMenor extends StatelessWidget {
                   Text(
                     titulo,
                     style: TextStyle(
-                      color: Colors.grey.shade700,
+                      color: Colors.white70,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -916,14 +916,14 @@ class _InformacaoLinha extends StatelessWidget {
         Icon(
           icone,
           size: 14,
-          color: Colors.grey.shade600,
+          color: Colors.white60,
         ),
         const SizedBox(width: 4),
         Text(
           texto,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade700,
+            color: Colors.white70,
           ),
         ),
       ],
@@ -955,7 +955,7 @@ class _EstadoVazio extends StatelessWidget {
                   ? Icons.search_off_rounded
                   : Icons.account_balance_wallet_outlined,
               size: 72,
-              color: Colors.grey.shade400,
+              color: Colors.white38,
             ),
             const SizedBox(height: 16),
             Text(
@@ -974,7 +974,7 @@ class _EstadoVazio extends StatelessWidget {
                   : 'Cadastre entradas e saídas para acompanhar o resultado da empresa.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.grey.shade700,
+                color: Colors.white70,
               ),
             ),
             const SizedBox(height: 18),
@@ -1101,15 +1101,39 @@ class _FormularioMovimentoState extends State<_FormularioMovimento> {
   }
 
   Future<void> _selecionarData() async {
+    FocusScope.of(context).unfocus();
+
+    final dataAtual = DateTime(
+      _data.year,
+      _data.month,
+      _data.day,
+    );
+
     final data = await showDatePicker(
       context: context,
       locale: const Locale('pt', 'BR'),
-      initialDate: _data,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(DateTime.now().year + 5),
+      initialDate: dataAtual,
+      firstDate: DateTime(2000, 1, 1),
+      lastDate: DateTime(DateTime.now().year + 10, 12, 31),
       helpText: 'Selecionar data',
       cancelText: 'Cancelar',
       confirmText: 'Selecionar',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFFD6A84B),
+              onPrimary: Colors.black,
+              surface: Color(0xFF211D17),
+              onSurface: Colors.white,
+            ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Color(0xFF211D17),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (data == null || !mounted) {
@@ -1117,7 +1141,11 @@ class _FormularioMovimentoState extends State<_FormularioMovimento> {
     }
 
     setState(() {
-      _data = data;
+      _data = DateTime(
+        data.year,
+        data.month,
+        data.day,
+      );
     });
   }
 
@@ -1137,22 +1165,53 @@ class _FormularioMovimentoState extends State<_FormularioMovimento> {
     });
 
     try {
+      final dataNormalizada = DateTime(
+        _data.year,
+        _data.month,
+        _data.day,
+      );
+
       final movimento = MovimentoFinanceiro(
-        id: widget.movimento?['id'] as int?,
+        id: _converterInt(widget.movimento?['id']),
         tipo: _tipo,
         descricao: _descricaoController.text.trim(),
         valor: valor,
         formaPagamento: _formaPagamento,
-        data: _data.toIso8601String(),
+        data: dataNormalizada.toIso8601String(),
         clienteId: _converterInt(widget.movimento?['cliente_id']),
         agendamentoId:
         _converterInt(widget.movimento?['agendamento_id']),
       );
 
+      int idSalvo;
+
       if (_editando) {
         await widget.repository.atualizarMovimento(movimento);
+        idSalvo = movimento.id!;
       } else {
-        await widget.repository.inserirMovimento(movimento);
+        idSalvo = await widget.repository.inserirMovimento(movimento);
+      }
+
+      final movimentoConfirmado =
+      await widget.repository.buscarMovimentoPorId(idSalvo);
+
+      if (movimentoConfirmado == null) {
+        throw Exception(
+          'A movimentação foi enviada, mas não foi encontrada no banco.',
+        );
+      }
+
+      final dataConfirmada = DateTime.tryParse(
+        movimentoConfirmado.data,
+      );
+
+      if (dataConfirmada == null ||
+          dataConfirmada.year != dataNormalizada.year ||
+          dataConfirmada.month != dataNormalizada.month ||
+          dataConfirmada.day != dataNormalizada.day) {
+        throw Exception(
+          'A data não foi gravada corretamente no banco.',
+        );
       }
 
       if (!mounted) {
@@ -1202,7 +1261,7 @@ class _FormularioMovimentoState extends State<_FormularioMovimento> {
       ),
       padding: EdgeInsets.fromLTRB(18, 10, 18, teclado + 20),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFF151515),
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(26),
         ),
