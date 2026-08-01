@@ -11,36 +11,27 @@ import 'galeria_veiculo_page.dart';
 import 'novo_veiculo_page.dart';
 
 class VeiculoDetalhesPage extends StatefulWidget {
-  const VeiculoDetalhesPage({
-    super.key,
-    required this.veiculoId,
-  });
+  const VeiculoDetalhesPage({super.key, required this.veiculoId});
 
   final int veiculoId;
 
   @override
-  State<VeiculoDetalhesPage> createState() =>
-      _VeiculoDetalhesPageState();
+  State<VeiculoDetalhesPage> createState() => _VeiculoDetalhesPageState();
 }
 
-class _VeiculoDetalhesPageState
-    extends State<VeiculoDetalhesPage> {
-  final VeiculoRepository _veiculoRepository =
-      VeiculoRepository();
+class _VeiculoDetalhesPageState extends State<VeiculoDetalhesPage> {
+  final VeiculoRepository _veiculoRepository = VeiculoRepository();
 
-  final OrdemServicoRepository _ordemRepository =
-      OrdemServicoRepository();
+  final OrdemServicoRepository _ordemRepository = OrdemServicoRepository();
 
-  final OrdemServicoPdfService _pdfService =
-      OrdemServicoPdfService();
+  final OrdemServicoPdfService _pdfService = OrdemServicoPdfService();
 
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
-  final DateFormat _dataBrasileira =
-      DateFormat('dd/MM/yyyy');
+  final DateFormat _dataBrasileira = DateFormat('dd/MM/yyyy');
 
   Map<String, dynamic>? _veiculo;
   Map<String, dynamic> _resumo = {};
@@ -69,25 +60,12 @@ class _VeiculoDetalhesPageState
 
     try {
       final resultados = await Future.wait([
-        _veiculoRepository
-            .buscarVeiculoComClientePorId(
-          widget.veiculoId,
-        ),
-        _ordemRepository.obterResumoDoVeiculo(
-          widget.veiculoId,
-        ),
-        _ordemRepository.listarHistoricoDoVeiculo(
-          widget.veiculoId,
-        ),
-        _ordemRepository.buscarUltimoServicoDoVeiculo(
-          widget.veiculoId,
-        ),
-        _veiculoRepository
-            .obterEstatisticasBasicasDoVeiculo(
-          widget.veiculoId,
-        ),
-        _veiculoRepository
-            .listarFotosResumidasDoVeiculo(
+        _veiculoRepository.buscarVeiculoComClientePorId(widget.veiculoId),
+        _ordemRepository.obterResumoDoVeiculo(widget.veiculoId),
+        _ordemRepository.listarHistoricoDoVeiculo(widget.veiculoId),
+        _ordemRepository.buscarUltimoServicoDoVeiculo(widget.veiculoId),
+        _veiculoRepository.obterEstatisticasBasicasDoVeiculo(widget.veiculoId),
+        _veiculoRepository.listarFotosResumidasDoVeiculo(
           widget.veiculoId,
           limite: 6,
         ),
@@ -98,34 +76,23 @@ class _VeiculoDetalhesPageState
       }
 
       setState(() {
-        _veiculo =
-            resultados[0] as Map<String, dynamic>?;
+        _veiculo = resultados[0] as Map<String, dynamic>?;
 
-        _resumo =
-            resultados[1] as Map<String, dynamic>;
+        _resumo = resultados[1] as Map<String, dynamic>;
 
-        _historico =
-            resultados[2]
-                as List<Map<String, dynamic>>;
+        _historico = resultados[2] as List<Map<String, dynamic>>;
 
-        _ultimoServico =
-            resultados[3] as Map<String, dynamic>?;
+        _ultimoServico = resultados[3] as Map<String, dynamic>?;
 
-        _estatisticas =
-            resultados[4] as Map<String, dynamic>;
+        _estatisticas = resultados[4] as Map<String, dynamic>;
 
-        _fotos =
-            resultados[5]
-                as List<Map<String, dynamic>>;
+        _fotos = resultados[5] as List<Map<String, dynamic>>;
 
         _carregando = false;
       });
 
       if (_veiculo == null) {
-        _mostrarMensagem(
-          'Veículo não encontrado.',
-          erro: true,
-        );
+        _mostrarMensagem('Veículo não encontrado.', erro: true);
       }
     } catch (erro) {
       if (!mounted) {
@@ -144,10 +111,7 @@ class _VeiculoDetalhesPageState
     }
   }
 
-  void _mostrarMensagem(
-    String mensagem, {
-    bool erro = false,
-  }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
@@ -157,8 +121,7 @@ class _VeiculoDetalhesPageState
       ..showSnackBar(
         SnackBar(
           content: Text(mensagem),
-          backgroundColor:
-              erro ? Colors.red.shade700 : null,
+          backgroundColor: erro ? Colors.red.shade700 : null,
         ),
       );
   }
@@ -168,16 +131,12 @@ class _VeiculoDetalhesPageState
     String campo, {
     String padrao = '',
   }) {
-    final valor =
-        (dados?[campo] ?? '').toString().trim();
+    final valor = (dados?[campo] ?? '').toString().trim();
 
     return valor.isEmpty ? padrao : valor;
   }
 
-  int _inteiro(
-    Map<String, dynamic>? dados,
-    String campo,
-  ) {
+  int _inteiro(Map<String, dynamic>? dados, String campo) {
     final valor = dados?[campo];
 
     if (valor is int) {
@@ -188,26 +147,17 @@ class _VeiculoDetalhesPageState
       return valor.toInt();
     }
 
-    return int.tryParse(
-          valor?.toString() ?? '',
-        ) ??
-        0;
+    return int.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
-  double _numero(
-    Map<String, dynamic>? dados,
-    String campo,
-  ) {
+  double _numero(Map<String, dynamic>? dados, String campo) {
     final valor = dados?[campo];
 
     if (valor is num) {
       return valor.toDouble();
     }
 
-    return double.tryParse(
-          valor?.toString() ?? '',
-        ) ??
-        0;
+    return double.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
   String _formatarData(String valor) {
@@ -224,53 +174,38 @@ class _VeiculoDetalhesPageState
     return _dataBrasileira.format(data);
   }
 
-  String _dataDaOrdem(
-    Map<String, dynamic> ordem,
-  ) {
+  String _dataDaOrdem(Map<String, dynamic> ordem) {
     final valor = _texto(
       ordem,
       'data_finalizacao',
       padrao: _texto(
         ordem,
         'data_inicio',
-        padrao: _texto(
-          ordem,
-          'data_abertura',
-        ),
+        padrao: _texto(ordem, 'data_abertura'),
       ),
     );
 
     return _formatarData(valor);
   }
 
-  double _valorFinal(
-    Map<String, dynamic> ordem,
-  ) {
-    final total =
-        _numero(ordem, 'valor_total');
+  double _valorFinal(Map<String, dynamic> ordem) {
+    final total = _numero(ordem, 'valor_total');
 
-    final desconto =
-        _numero(ordem, 'desconto');
+    final desconto = _numero(ordem, 'desconto');
 
     final resultado = total - desconto;
 
     return resultado < 0 ? 0 : resultado;
   }
 
-  Duration? _duracao(
-    Map<String, dynamic> ordem,
-  ) {
-    final dataInicio =
-        _texto(ordem, 'data_inicio');
+  Duration? _duracao(Map<String, dynamic> ordem) {
+    final dataInicio = _texto(ordem, 'data_inicio');
 
-    final horaEntrada =
-        _texto(ordem, 'hora_entrada');
+    final horaEntrada = _texto(ordem, 'hora_entrada');
 
-    final dataFim =
-        _texto(ordem, 'data_finalizacao');
+    final dataFim = _texto(ordem, 'data_finalizacao');
 
-    final horaSaida =
-        _texto(ordem, 'hora_saida');
+    final horaSaida = _texto(ordem, 'hora_saida');
 
     if (dataInicio.isEmpty ||
         horaEntrada.isEmpty ||
@@ -279,34 +214,25 @@ class _VeiculoDetalhesPageState
       return null;
     }
 
-    final inicio = DateTime.tryParse(
-      '${dataInicio}T$horaEntrada:00',
-    );
+    final inicio = DateTime.tryParse('${dataInicio}T$horaEntrada:00');
 
-    final fim = DateTime.tryParse(
-      '${dataFim}T$horaSaida:00',
-    );
+    final fim = DateTime.tryParse('${dataFim}T$horaSaida:00');
 
-    if (inicio == null ||
-        fim == null ||
-        fim.isBefore(inicio)) {
+    if (inicio == null || fim == null || fim.isBefore(inicio)) {
       return null;
     }
 
     return fim.difference(inicio);
   }
 
-  String _formatarDuracao(
-    Duration? duracao,
-  ) {
+  String _formatarDuracao(Duration? duracao) {
     if (duracao == null) {
       return 'Não informada';
     }
 
     final horas = duracao.inHours;
 
-    final minutos =
-        duracao.inMinutes.remainder(60);
+    final minutos = duracao.inMinutes.remainder(60);
 
     if (horas <= 0) {
       return '${minutos}min';
@@ -338,8 +264,7 @@ class _VeiculoDetalhesPageState
     }
 
     final id = _inteiro(_veiculo, 'id');
-    final clienteId =
-        _inteiro(_veiculo, 'cliente_id');
+    final clienteId = _inteiro(_veiculo, 'cliente_id');
 
     if (id <= 0 || clienteId <= 0) {
       return null;
@@ -353,8 +278,7 @@ class _VeiculoDetalhesPageState
       placa: _texto(_veiculo, 'placa'),
       cor: _texto(_veiculo, 'cor'),
       ano: _texto(_veiculo, 'ano'),
-      observacoes:
-          _texto(_veiculo, 'observacoes'),
+      observacoes: _texto(_veiculo, 'observacoes'),
     );
   }
 
@@ -363,8 +287,7 @@ class _VeiculoDetalhesPageState
       return;
     }
 
-    final veiculo =
-        _montarVeiculoParaEdicao();
+    final veiculo = _montarVeiculoParaEdicao();
 
     if (veiculo == null) {
       _mostrarMensagem(
@@ -376,19 +299,13 @@ class _VeiculoDetalhesPageState
 
     final alterou = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => NovoVeiculoPage(
-          veiculo: veiculo,
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => NovoVeiculoPage(veiculo: veiculo)),
     );
 
     if (alterou == true) {
       await _carregarTudo();
 
-      _mostrarMensagem(
-        'Veículo atualizado com sucesso.',
-      );
+      _mostrarMensagem('Veículo atualizado com sucesso.');
     }
   }
 
@@ -410,23 +327,16 @@ class _VeiculoDetalhesPageState
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  false,
-                );
+                Navigator.pop(dialogContext, false);
               },
               child: const Text('Cancelar'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor:
-                    Colors.red.shade700,
+                backgroundColor: Colors.red.shade700,
               ),
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  true,
-                );
+                Navigator.pop(dialogContext, true);
               },
               child: const Text('Excluir'),
             ),
@@ -444,9 +354,7 @@ class _VeiculoDetalhesPageState
     });
 
     try {
-      await _veiculoRepository.excluirVeiculo(
-        widget.veiculoId,
-      );
+      await _veiculoRepository.excluirVeiculo(widget.veiculoId);
 
       if (!mounted) {
         return;
@@ -474,7 +382,8 @@ class _VeiculoDetalhesPageState
           veiculoId: widget.veiculoId,
           nomeVeiculo:
               '${_texto(_veiculo, 'marca')} '
-              '${_texto(_veiculo, 'modelo')}'.trim(),
+                      '${_texto(_veiculo, 'modelo')}'
+                  .trim(),
           placa: _texto(_veiculo, 'placa'),
         ),
       ),
@@ -485,9 +394,7 @@ class _VeiculoDetalhesPageState
     }
   }
 
-  Future<void> _visualizarPdf(
-    int ordemServicoId,
-  ) async {
+  Future<void> _visualizarPdf(int ordemServicoId) async {
     if (_gerandoPdf || ordemServicoId <= 0) {
       return;
     }
@@ -497,14 +404,9 @@ class _VeiculoDetalhesPageState
     });
 
     try {
-      await _pdfService.visualizarPdf(
-        ordemServicoId: ordemServicoId,
-      );
+      await _pdfService.visualizarPdf(ordemServicoId: ordemServicoId);
     } catch (erro) {
-      _mostrarMensagem(
-        'Não foi possível visualizar o PDF.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível visualizar o PDF.\n$erro', erro: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -514,9 +416,7 @@ class _VeiculoDetalhesPageState
     }
   }
 
-  Future<void> _compartilharPdf(
-    int ordemServicoId,
-  ) async {
+  Future<void> _compartilharPdf(int ordemServicoId) async {
     if (_gerandoPdf || ordemServicoId <= 0) {
       return;
     }
@@ -526,9 +426,7 @@ class _VeiculoDetalhesPageState
     });
 
     try {
-      await _pdfService.compartilharPdf(
-        ordemServicoId: ordemServicoId,
-      );
+      await _pdfService.compartilharPdf(ordemServicoId: ordemServicoId);
     } catch (erro) {
       _mostrarMensagem(
         'Não foi possível compartilhar o PDF.\n$erro',
@@ -543,9 +441,7 @@ class _VeiculoDetalhesPageState
     }
   }
 
-  Future<void> _mostrarAcoesDaOrdem(
-    Map<String, dynamic> ordem,
-  ) async {
+  Future<void> _mostrarAcoesDaOrdem(Map<String, dynamic> ordem) async {
     final ordemId = _inteiro(ordem, 'id');
 
     if (ordemId <= 0) {
@@ -567,8 +463,7 @@ class _VeiculoDetalhesPageState
                 ),
                 title: const Text('Visualizar PDF'),
                 onTap: () {
-                  Navigator.of(bottomContext)
-                      .pop('visualizar');
+                  Navigator.of(bottomContext).pop('visualizar');
                 },
               ),
               ListTile(
@@ -578,28 +473,21 @@ class _VeiculoDetalhesPageState
                 ),
                 title: const Text('Compartilhar PDF'),
                 onTap: () {
-                  Navigator.of(bottomContext)
-                      .pop('compartilhar');
+                  Navigator.of(bottomContext).pop('compartilhar');
                 },
               ),
               ListTile(
-                leading: const Icon(
-                  Icons.inventory_2_outlined,
-                ),
-                title: const Text(
-                  'Produtos utilizados',
-                ),
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: const Text('Produtos utilizados'),
                 subtitle: Text(
                   _texto(
                     ordem,
                     'produtos_utilizados',
-                    padrao:
-                        'Nenhum produto registrado.',
+                    padrao: 'Nenhum produto registrado.',
                   ),
                 ),
                 onTap: () {
-                  Navigator.of(bottomContext)
-                      .pop('produtos');
+                  Navigator.of(bottomContext).pop('produtos');
                 },
               ),
             ],
@@ -620,12 +508,10 @@ class _VeiculoDetalhesPageState
       final produtos = _texto(
         ordem,
         'produtos_utilizados',
-        padrao:
-            'Nenhum produto registrado nesta Ordem de Serviço.',
+        padrao: 'Nenhum produto registrado nesta Ordem de Serviço.',
       );
 
-      final custo =
-          _numero(ordem, 'custo_produtos');
+      final custo = _numero(ordem, 'custo_produtos');
 
       await showDialog<void>(
         context: context,
@@ -635,14 +521,11 @@ class _VeiculoDetalhesPageState
               Icons.inventory_2_outlined,
               color: Color(0xFFD6A84B),
             ),
-            title: const Text(
-              'Produtos utilizados',
-            ),
+            title: const Text('Produtos utilizados'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(produtos),
                   const SizedBox(height: 14),
@@ -680,30 +563,20 @@ class _VeiculoDetalhesPageState
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icone,
-              color: const Color(0xFFD6A84B),
-            ),
+            Icon(icone, color: const Color(0xFFD6A84B)),
             const SizedBox(height: 10),
             Text(
               valor,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 3),
             Text(
               titulo,
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white60, fontSize: 12),
             ),
           ],
         ),
@@ -712,23 +585,11 @@ class _VeiculoDetalhesPageState
   }
 
   Widget _cabecalho() {
-    final marca = _texto(
-      _veiculo,
-      'marca',
-      padrao: 'Marca não informada',
-    );
+    final marca = _texto(_veiculo, 'marca', padrao: 'Marca não informada');
 
-    final modelo = _texto(
-      _veiculo,
-      'modelo',
-      padrao: 'Modelo não informado',
-    );
+    final modelo = _texto(_veiculo, 'modelo', padrao: 'Modelo não informado');
 
-    final placa = _texto(
-      _veiculo,
-      'placa',
-      padrao: 'Sem placa',
-    );
+    final placa = _texto(_veiculo, 'placa', padrao: 'Sem placa');
 
     return Container(
       width: double.infinity,
@@ -737,8 +598,7 @@ class _VeiculoDetalhesPageState
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFD6A84B)
-              .withValues(alpha: 0.35),
+          color: const Color(0xFFD6A84B).withValues(alpha: 0.35),
         ),
       ),
       child: Row(
@@ -747,10 +607,8 @@ class _VeiculoDetalhesPageState
             width: 68,
             height: 68,
             decoration: BoxDecoration(
-              color: const Color(0xFFD6A84B)
-                  .withValues(alpha: 0.13),
-              borderRadius:
-                  BorderRadius.circular(20),
+              color: const Color(0xFFD6A84B).withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: const Icon(
               Icons.directions_car_outlined,
@@ -761,8 +619,7 @@ class _VeiculoDetalhesPageState
           const SizedBox(width: 16),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '$marca $modelo'.trim(),
@@ -789,33 +646,20 @@ class _VeiculoDetalhesPageState
   }
 
   Widget _secaoInformacoes() {
-    Widget linha(
-      String titulo,
-      String valor,
-    ) {
+    Widget linha(String titulo, String valor) {
       return Padding(
-        padding:
-            const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.only(bottom: 12),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               titulo,
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
             const SizedBox(height: 3),
             Text(
-              valor.trim().isEmpty
-                  ? 'Não informado'
-                  : valor,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
+              valor.trim().isEmpty ? 'Não informado' : valor,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -827,55 +671,29 @@ class _VeiculoDetalhesPageState
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  color: Color(0xFFD6A84B),
-                ),
+                Icon(Icons.info_outline, color: Color(0xFFD6A84B)),
                 SizedBox(width: 8),
                 Text(
                   'Dados do veículo',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 14),
-            linha(
-              'Proprietário',
-              _texto(
-                _veiculo,
-                'cliente_nome',
-              ),
-            ),
-            linha(
-              'Telefone',
-              _texto(
-                _veiculo,
-                'cliente_telefone',
-              ),
-            ),
-            linha(
-              'Cor',
-              _texto(_veiculo, 'cor'),
-            ),
-            linha(
-              'Ano',
-              _texto(_veiculo, 'ano'),
-            ),
+            linha('Proprietário', _texto(_veiculo, 'cliente_nome')),
+            linha('Telefone', _texto(_veiculo, 'cliente_telefone')),
+            linha('Cor', _texto(_veiculo, 'cor')),
+            linha('Ano', _texto(_veiculo, 'ano')),
             linha(
               'Observações',
               _texto(
                 _veiculo,
                 'observacoes',
-                padrao:
-                    'Nenhuma observação registrada.',
+                padrao: 'Nenhuma observação registrada.',
               ),
             ),
           ],
@@ -884,17 +702,12 @@ class _VeiculoDetalhesPageState
     );
   }
 
-  Widget _miniaturaFoto(
-    Map<String, dynamic> foto,
-  ) {
-    final antes =
-        _texto(foto, 'caminho_antes');
+  Widget _miniaturaFoto(Map<String, dynamic> foto) {
+    final antes = _texto(foto, 'caminho_antes');
 
-    final depois =
-        _texto(foto, 'caminho_depois');
+    final depois = _texto(foto, 'caminho_depois');
 
-    final caminho =
-        antes.isNotEmpty ? antes : depois;
+    final caminho = antes.isNotEmpty ? antes : depois;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
@@ -902,23 +715,17 @@ class _VeiculoDetalhesPageState
         color: const Color(0xFF252525),
         child: caminho.isEmpty
             ? const Center(
-                child: Icon(
-                  Icons.image_outlined,
-                  color: Colors.white30,
-                ),
+                child: Icon(Icons.image_outlined, color: Colors.white30),
               )
             : Image.file(
                 File(caminho),
                 fit: BoxFit.cover,
-                errorBuilder: (
-                  context,
-                  error,
-                  stackTrace,
-                ) {
+                cacheWidth: 520,
+                filterQuality: FilterQuality.low,
+                errorBuilder: (context, error, stackTrace) {
                   return const Center(
                     child: Icon(
-                      Icons
-                          .image_not_supported_outlined,
+                      Icons.image_not_supported_outlined,
                       color: Colors.white30,
                     ),
                   );
@@ -934,58 +741,42 @@ class _VeiculoDetalhesPageState
     }
 
     return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             const Expanded(
               child: Text(
                 'Fotos recentes',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
             Text(
               '${_inteiro(_estatisticas, 'quantidade_fotos')} registro(s)',
-              style: const TextStyle(
-                color: Colors.white54,
-              ),
+              style: const TextStyle(color: Colors.white54),
             ),
           ],
         ),
         const SizedBox(height: 10),
         GridView.builder(
           shrinkWrap: true,
-          physics:
-              const NeverScrollableScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           itemCount: _fotos.length,
-          gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
           ),
           itemBuilder: (_, indice) {
-            return _miniaturaFoto(
-              _fotos[indice],
-            );
+            return _miniaturaFoto(_fotos[indice]);
           },
         ),
       ],
     );
   }
 
-  Widget _cardOrdem(
-    Map<String, dynamic> ordem,
-  ) {
-    final status = _texto(
-      ordem,
-      'status',
-      padrao: 'Aberta',
-    );
+  Widget _cardOrdem(Map<String, dynamic> ordem) {
+    final status = _texto(ordem, 'status', padrao: 'Aberta');
 
     final servicos = _texto(
       ordem,
@@ -993,84 +784,59 @@ class _VeiculoDetalhesPageState
       padrao: 'Serviços não informados',
     );
 
-    final produtos = _texto(
-      ordem,
-      'produtos_utilizados',
-    );
+    final produtos = _texto(ordem, 'produtos_utilizados');
 
-    final custoProdutos =
-        _numero(ordem, 'custo_produtos');
+    final custoProdutos = _numero(ordem, 'custo_produtos');
 
     final valorFinal = _valorFinal(ordem);
 
-    final lucroEstimado =
-        valorFinal - custoProdutos;
+    final lucroEstimado = valorFinal - custoProdutos;
 
     final duracao = _duracao(ordem);
 
     return Card(
-      margin: const EdgeInsets.only(
-        bottom: 12,
-      ),
+      margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: _gerandoPdf
-            ? null
-            : () => _mostrarAcoesDaOrdem(ordem),
+        onTap: _gerandoPdf ? null : () => _mostrarAcoesDaOrdem(ordem),
         child: Padding(
           padding: const EdgeInsets.all(15),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Expanded(
                     child: Text(
-                      _texto(
-                        ordem,
-                        'numero',
-                        padrao:
-                            'Ordem de Serviço',
-                      ),
+                      _texto(ordem, 'numero', padrao: 'Ordem de Serviço'),
                       style: const TextStyle(
                         fontSize: 16,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 9,
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: _corStatus(status)
-                          .withValues(alpha: 0.16),
-                      borderRadius:
-                          BorderRadius.circular(20),
+                      color: _corStatus(status).withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       status,
                       style: TextStyle(
                         color: _corStatus(status),
                         fontSize: 12,
-                        fontWeight:
-                            FontWeight.w600,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 9),
-              Text(
-                servicos,
-                style: const TextStyle(
-                  color: Colors.white70,
-                ),
-              ),
+              Text(servicos, style: const TextStyle(color: Colors.white70)),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -1082,18 +848,14 @@ class _VeiculoDetalhesPageState
                   const SizedBox(width: 6),
                   Text(
                     _dataDaOrdem(ordem),
-                    style: const TextStyle(
-                      color: Colors.white60,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: Colors.white60, fontSize: 13),
                   ),
                   const Spacer(),
                   Text(
                     _moeda.format(valorFinal),
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight:
-                          FontWeight.bold,
+                      fontWeight: FontWeight.bold,
                       color: Color(0xFFD6A84B),
                     ),
                   ),
@@ -1110,10 +872,7 @@ class _VeiculoDetalhesPageState
                   const SizedBox(width: 6),
                   Text(
                     'Tempo: ${_formatarDuracao(duracao)}',
-                    style: const TextStyle(
-                      color: Colors.white60,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: Colors.white60, fontSize: 13),
                   ),
                 ],
               ),
@@ -1123,10 +882,7 @@ class _VeiculoDetalhesPageState
                   produtos,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: Colors.white60, fontSize: 13),
                 ),
                 const SizedBox(height: 7),
                 Row(
@@ -1145,8 +901,7 @@ class _VeiculoDetalhesPageState
                       style: const TextStyle(
                         color: Colors.greenAccent,
                         fontSize: 12,
-                        fontWeight:
-                            FontWeight.w600,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -1157,10 +912,7 @@ class _VeiculoDetalhesPageState
                 alignment: Alignment.centerRight,
                 child: Text(
                   'Toque para ver PDF e produtos',
-                  style: TextStyle(
-                    color: Colors.white38,
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: Colors.white38, fontSize: 11),
                 ),
               ),
             ],
@@ -1172,20 +924,13 @@ class _VeiculoDetalhesPageState
 
   @override
   Widget build(BuildContext context) {
-    final totalInvestido =
-        _numero(_resumo, 'total_investido');
+    final totalInvestido = _numero(_resumo, 'total_investido');
 
-    final quantidadeOrdens =
-        _inteiro(_resumo, 'quantidade_ordens');
+    final quantidadeOrdens = _inteiro(_resumo, 'quantidade_ordens');
 
-    final quantidadeFotos =
-        _inteiro(
-      _estatisticas,
-      'quantidade_fotos',
-    );
+    final quantidadeFotos = _inteiro(_estatisticas, 'quantidade_fotos');
 
-    final ultimoAtendimento =
-        _texto(_resumo, 'ultimo_atendimento');
+    final ultimoAtendimento = _texto(_resumo, 'ultimo_atendimento');
 
     final ultimoServico = _texto(
       _ultimoServico,
@@ -1195,31 +940,20 @@ class _VeiculoDetalhesPageState
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('Detalhes do veículo'),
+        title: const Text('Detalhes do veículo'),
         actions: [
           IconButton(
-            onPressed: _carregando
-                ? null
-                : _carregarTudo,
+            onPressed: _carregando ? null : _carregarTudo,
             tooltip: 'Atualizar',
-            icon: const Icon(
-              Icons.refresh_outlined,
-            ),
+            icon: const Icon(Icons.refresh_outlined),
           ),
           IconButton(
-            onPressed:
-                _carregando || _executandoAcao
-                    ? null
-                    : _editarVeiculo,
+            onPressed: _carregando || _executandoAcao ? null : _editarVeiculo,
             tooltip: 'Editar veículo',
-            icon: const Icon(
-              Icons.edit_outlined,
-            ),
+            icon: const Icon(Icons.edit_outlined),
           ),
           PopupMenuButton<String>(
-            enabled:
-                !_carregando && !_executandoAcao,
+            enabled: !_carregando && !_executandoAcao,
             onSelected: (valor) {
               if (valor == 'excluir') {
                 _excluirVeiculo();
@@ -1230,10 +964,7 @@ class _VeiculoDetalhesPageState
                 value: 'excluir',
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.delete_outline,
-                      color: Colors.redAccent,
-                    ),
+                    Icon(Icons.delete_outline, color: Colors.redAccent),
                     SizedBox(width: 10),
                     Text('Excluir veículo'),
                   ],
@@ -1244,182 +975,128 @@ class _VeiculoDetalhesPageState
         ],
       ),
       body: _carregando
-          ? const Center(
-              child:
-                  CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : _veiculo == null
-              ? Center(
-                  child: FilledButton.icon(
-                    onPressed: _carregarTudo,
-                    icon: const Icon(
-                      Icons.refresh,
-                    ),
-                    label: const Text(
-                      'Tentar novamente',
-                    ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _carregarTudo,
-                  child: ListView(
-                    physics:
-                        const AlwaysScrollableScrollPhysics(),
-                    padding:
-                        const EdgeInsets.fromLTRB(
-                      16,
-                      16,
-                      16,
-                      32,
-                    ),
+          ? Center(
+              child: FilledButton.icon(
+                onPressed: _carregarTudo,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Tentar novamente'),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _carregarTudo,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
+                  _cabecalho(),
+                  const SizedBox(height: 14),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.45,
                     children: [
-                      _cabecalho(),
-                      const SizedBox(height: 14),
-                      GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics:
-                            const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 1.45,
-                        children: [
-                          _indicador(
-                            titulo:
-                                'Total investido',
-                            valor: _moeda.format(
-                              totalInvestido,
-                            ),
-                            icone:
-                                Icons.payments_outlined,
-                          ),
-                          _indicador(
-                            titulo:
-                                'Ordens de Serviço',
-                            valor:
-                                quantidadeOrdens.toString(),
-                            icone: Icons
-                                .assignment_outlined,
-                          ),
-                          _indicador(
-                            titulo: 'Fotos',
-                            valor:
-                                quantidadeFotos.toString(),
-                            icone:
-                                Icons.photo_library_outlined,
-                          ),
-                          _indicador(
-                            titulo:
-                                'Último atendimento',
-                            valor: _formatarData(
-                              ultimoAtendimento,
-                            ),
-                            icone: Icons
-                                .event_available_outlined,
-                          ),
-                        ],
+                      _indicador(
+                        titulo: 'Total investido',
+                        valor: _moeda.format(totalInvestido),
+                        icone: Icons.payments_outlined,
                       ),
-                      const SizedBox(height: 10),
-                      Card(
-                        margin: EdgeInsets.zero,
-                        child: ListTile(
-                          leading: const Icon(
-                            Icons
-                                .auto_awesome_outlined,
-                            color:
-                                Color(0xFFD6A84B),
-                          ),
-                          title: const Text(
-                            'Último serviço',
-                          ),
-                          subtitle:
-                              Text(ultimoServico),
-                        ),
+                      _indicador(
+                        titulo: 'Ordens de Serviço',
+                        valor: quantidadeOrdens.toString(),
+                        icone: Icons.assignment_outlined,
                       ),
-                      const SizedBox(height: 14),
-                      _secaoInformacoes(),
-                      if (_fotos.isNotEmpty) ...[
-                        const SizedBox(height: 22),
-                        _galeriaResumida(),
-                        const SizedBox(height: 10),
-                        OutlinedButton.icon(
-                          onPressed:
-                              _abrirGaleriaCompleta,
-                          icon: const Icon(
-                            Icons.photo_library_outlined,
-                          ),
-                          label: const Text(
-                            'Abrir galeria completa',
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 22),
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Histórico do veículo',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            '${_historico.length} registro(s)',
-                            style: const TextStyle(
-                              color: Colors.white54,
-                            ),
-                          ),
-                        ],
+                      _indicador(
+                        titulo: 'Fotos',
+                        valor: quantidadeFotos.toString(),
+                        icone: Icons.photo_library_outlined,
                       ),
-                      const SizedBox(height: 10),
-                      if (_historico.isEmpty)
-                        const Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding:
-                                EdgeInsets.all(24),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons
-                                      .history_toggle_off_outlined,
-                                  size: 44,
-                                  color:
-                                      Colors.white38,
-                                ),
-                                SizedBox(height: 10),
-                                Text(
-                                  'Este veículo ainda não possui Ordens de Serviço.',
-                                  textAlign:
-                                      TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        ..._historico.map(
-                          _cardOrdem,
-                        ),
-                      const SizedBox(height: 18),
-                      FilledButton.icon(
-                        onPressed:
-                            _executandoAcao
-                                ? null
-                                : _editarVeiculo,
-                        icon: const Icon(
-                          Icons.edit_outlined,
-                        ),
-                        label: const Text(
-                          'Editar veículo',
-                        ),
+                      _indicador(
+                        titulo: 'Último atendimento',
+                        valor: _formatarData(ultimoAtendimento),
+                        icone: Icons.event_available_outlined,
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.auto_awesome_outlined,
+                        color: Color(0xFFD6A84B),
+                      ),
+                      title: const Text('Último serviço'),
+                      subtitle: Text(ultimoServico),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _secaoInformacoes(),
+                  if (_fotos.isNotEmpty) ...[
+                    const SizedBox(height: 22),
+                    _galeriaResumida(),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: _abrirGaleriaCompleta,
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: const Text('Abrir galeria completa'),
+                    ),
+                  ],
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Histórico do veículo',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${_historico.length} registro(s)',
+                        style: const TextStyle(color: Colors.white54),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (_historico.isEmpty)
+                    const Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.history_toggle_off_outlined,
+                              size: 44,
+                              color: Colors.white38,
+                            ),
+                            SizedBox(height: 10),
+                            Text(
+                              'Este veículo ainda não possui Ordens de Serviço.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ..._historico.map(_cardOrdem),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: _executandoAcao ? null : _editarVeiculo,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Editar veículo'),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -24,15 +25,12 @@ class OrdemServicoFotosPage extends StatefulWidget {
   final bool somenteLeitura;
 
   @override
-  State<OrdemServicoFotosPage> createState() =>
-      _OrdemServicoFotosPageState();
+  State<OrdemServicoFotosPage> createState() => _OrdemServicoFotosPageState();
 }
 
-class _OrdemServicoFotosPageState
-    extends State<OrdemServicoFotosPage>
+class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
     with SingleTickerProviderStateMixin {
-  final OrdemServicoFotoRepository _repository =
-      OrdemServicoFotoRepository();
+  final OrdemServicoFotoRepository _repository = OrdemServicoFotoRepository();
   final ImagePicker _imagePicker = ImagePicker();
 
   late final TabController _tabController;
@@ -42,10 +40,10 @@ class _OrdemServicoFotosPageState
 
   bool _carregando = true;
   bool _salvando = false;
+  bool _selecionandoImagem = false;
   bool _alterou = false;
 
-  String get _etapaAtual =>
-      _tabController.index == 0 ? 'Antes' : 'Depois';
+  String get _etapaAtual => _tabController.index == 0 ? 'Antes' : 'Depois';
 
   @override
   void initState() {
@@ -77,14 +75,8 @@ class _OrdemServicoFotosPageState
 
     try {
       final resultados = await Future.wait([
-        _repository.listarFotos(
-          widget.ordemServicoId,
-          etapa: 'Antes',
-        ),
-        _repository.listarFotos(
-          widget.ordemServicoId,
-          etapa: 'Depois',
-        ),
+        _repository.listarFotos(widget.ordemServicoId, etapa: 'Antes'),
+        _repository.listarFotos(widget.ordemServicoId, etapa: 'Depois'),
       ]);
 
       if (!mounted) {
@@ -112,10 +104,7 @@ class _OrdemServicoFotosPageState
     }
   }
 
-  void _mostrarMensagem(
-    String mensagem, {
-    bool erro = false,
-  }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
@@ -143,10 +132,7 @@ class _OrdemServicoFotosPageState
                 const ListTile(
                   title: Text(
                     'Adicionar foto',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text('Escolha a origem da imagem'),
                 ),
@@ -201,9 +187,7 @@ class _OrdemServicoFotosPageState
             ),
             FilledButton(
               onPressed: () {
-                Navigator.of(dialogContext).pop(
-                  controller.text.trim(),
-                );
+                Navigator.of(dialogContext).pop(controller.text.trim());
               },
               child: const Text('Salvar foto'),
             ),
@@ -217,13 +201,22 @@ class _OrdemServicoFotosPageState
   }
 
   Future<void> _adicionarFoto() async {
-    if (widget.somenteLeitura || _salvando) {
+    if (widget.somenteLeitura || _salvando || _selecionandoImagem) {
       return;
     }
+
+    setState(() {
+      _selecionandoImagem = true;
+    });
 
     final origem = await _selecionarOrigem();
 
     if (origem == null) {
+      if (mounted) {
+        setState(() {
+          _selecionandoImagem = false;
+        });
+      }
       return;
     }
 
@@ -232,10 +225,17 @@ class _OrdemServicoFotosPageState
     try {
       imagem = await _imagePicker.pickImage(
         source: origem,
-        imageQuality: 88,
-        maxWidth: 2200,
+        imageQuality: 86,
+        maxWidth: 1920,
+        maxHeight: 1920,
       );
     } catch (erro) {
+      if (mounted) {
+        setState(() {
+          _selecionandoImagem = false;
+        });
+      }
+
       _mostrarMensagem(
         'Não foi possível abrir a câmera ou galeria.\n$erro',
         erro: true,
@@ -244,24 +244,36 @@ class _OrdemServicoFotosPageState
     }
 
     if (imagem == null || !mounted) {
+      if (mounted) {
+        setState(() {
+          _selecionandoImagem = false;
+        });
+      }
+
       return;
     }
 
     final descricao = await _pedirDescricao();
 
     if (descricao == null || !mounted) {
+      if (mounted) {
+        setState(() {
+          _selecionandoImagem = false;
+        });
+      }
+
       return;
     }
 
     setState(() {
       _salvando = true;
+      _selecionandoImagem = false;
     });
 
     String? caminhoSalvo;
 
     try {
-      final diretorioAplicativo =
-          await getApplicationDocumentsDirectory();
+      final diretorioAplicativo = await getApplicationDocumentsDirectory();
 
       final pasta = Directory(
         path.join(
@@ -280,8 +292,9 @@ class _OrdemServicoFotosPageState
           ? '.jpg'
           : path.extension(imagem.path);
 
+      final aleatorio = Random.secure().nextInt(1 << 32);
       final nomeArquivo =
-          '${DateTime.now().microsecondsSinceEpoch}$extensao';
+          '${_etapaAtual.toLowerCase()}_${DateTime.now().microsecondsSinceEpoch}_$aleatorio$extensao';
 
       caminhoSalvo = path.join(pasta.path, nomeArquivo);
 
@@ -306,21 +319,19 @@ class _OrdemServicoFotosPageState
         }
       }
 
-      _mostrarMensagem(
-        'Não foi possível salvar a foto.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível salvar a foto.\n$erro', erro: true);
     } finally {
       if (mounted) {
         setState(() {
           _salvando = false;
+          _selecionandoImagem = false;
         });
       }
     }
   }
 
   Future<void> _excluirFoto(Map<String, dynamic> foto) async {
-    if (widget.somenteLeitura || _salvando) {
+    if (widget.somenteLeitura || _salvando || _selecionandoImagem) {
       return;
     }
 
@@ -335,9 +346,7 @@ class _OrdemServicoFotosPageState
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Excluir foto'),
-          content: const Text(
-            'Deseja excluir permanentemente esta foto?',
-          ),
+          content: const Text('Deseja excluir permanentemente esta foto?'),
           actions: [
             TextButton(
               onPressed: () {
@@ -378,10 +387,7 @@ class _OrdemServicoFotosPageState
       await _carregarFotos();
       _mostrarMensagem('Foto excluída.');
     } catch (erro) {
-      _mostrarMensagem(
-        'Não foi possível excluir a foto.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível excluir a foto.\n$erro', erro: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -412,7 +418,7 @@ class _OrdemServicoFotosPageState
                 if (!widget.somenteLeitura)
                   IconButton(
                     tooltip: 'Excluir foto',
-                    onPressed: _salvando
+                    onPressed: _salvando || _selecionandoImagem
                         ? null
                         : () => _excluirFoto(foto),
                     icon: const Icon(Icons.delete_outline),
@@ -441,6 +447,8 @@ class _OrdemServicoFotosPageState
                           child: Image.file(
                             arquivo,
                             fit: BoxFit.contain,
+                            cacheWidth: 1700,
+                            filterQuality: FilterQuality.medium,
                             errorBuilder: (_, __, ___) {
                               return const Center(
                                 child: Text(
@@ -530,7 +538,9 @@ class _OrdemServicoFotosPageState
               if (!widget.somenteLeitura) ...[
                 const SizedBox(height: 20),
                 FilledButton.icon(
-                  onPressed: _salvando ? null : _adicionarFoto,
+                  onPressed: _salvando || _selecionandoImagem
+                      ? null
+                      : _adicionarFoto,
                   icon: const Icon(Icons.add_a_photo_outlined),
                   label: const Text('Adicionar foto'),
                 ),
@@ -555,8 +565,7 @@ class _OrdemServicoFotosPageState
         itemBuilder: (context, index) {
           final foto = fotos[index];
           final caminho = foto['caminho']?.toString().trim() ?? '';
-          final descricao =
-              foto['descricao']?.toString().trim() ?? '';
+          final descricao = foto['descricao']?.toString().trim() ?? '';
 
           return Card(
             margin: EdgeInsets.zero,
@@ -570,14 +579,16 @@ class _OrdemServicoFotosPageState
                     child: Image.file(
                       File(caminho),
                       fit: BoxFit.cover,
+                      cacheWidth: 760,
+                      filterQuality: FilterQuality.low,
                       errorBuilder: (_, __, ___) {
                         return Container(
-                          color: Colors.grey.shade200,
+                          color: const Color(0xFF252525),
                           alignment: Alignment.center,
                           child: const Icon(
-                            Icons.broken_image_outlined,
+                            Icons.image_not_supported_outlined,
                             size: 42,
-                            color: Colors.grey,
+                            color: Colors.white38,
                           ),
                         );
                       },
@@ -586,9 +597,7 @@ class _OrdemServicoFotosPageState
                   Padding(
                     padding: const EdgeInsets.all(10),
                     child: Text(
-                      descricao.isEmpty
-                          ? 'Foto ${index + 1}'
-                          : descricao,
+                      descricao.isEmpty ? 'Foto ${index + 1}' : descricao,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -652,9 +661,7 @@ class _OrdemServicoFotosPageState
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerLow,
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey.shade300),
-                ),
+                border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -695,7 +702,9 @@ class _OrdemServicoFotosPageState
         floatingActionButton: widget.somenteLeitura
             ? null
             : FloatingActionButton.extended(
-                onPressed: _salvando ? null : _adicionarFoto,
+                onPressed: _salvando || _selecionandoImagem
+                    ? null
+                    : _adicionarFoto,
                 icon: _salvando
                     ? const SizedBox(
                         width: 20,

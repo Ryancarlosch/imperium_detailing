@@ -19,17 +19,13 @@ class GaleriaVeiculoPage extends StatefulWidget {
   final String placa;
 
   @override
-  State<GaleriaVeiculoPage> createState() =>
-      _GaleriaVeiculoPageState();
+  State<GaleriaVeiculoPage> createState() => _GaleriaVeiculoPageState();
 }
 
-class _GaleriaVeiculoPageState
-    extends State<GaleriaVeiculoPage> {
-  final FotoServicoRepository _repository =
-      FotoServicoRepository();
+class _GaleriaVeiculoPageState extends State<GaleriaVeiculoPage> {
+  final FotoServicoRepository _repository = FotoServicoRepository();
 
-  final DateFormat _data =
-      DateFormat('dd/MM/yyyy');
+  final DateFormat _data = DateFormat('dd/MM/yyyy');
 
   bool _carregando = true;
   String _filtro = 'Todos';
@@ -56,12 +52,8 @@ class _GaleriaVeiculoPageState
 
     try {
       final resultados = await Future.wait([
-        _repository.listarGaleriaCompletaDoVeiculo(
-          widget.veiculoId,
-        ),
-        _repository.contarFotosAntesEDepoisDoVeiculo(
-          widget.veiculoId,
-        ),
+        _repository.listarGaleriaCompletaDoVeiculo(widget.veiculoId),
+        _repository.contarFotosAntesEDepoisDoVeiculo(widget.veiculoId),
       ]);
 
       if (!mounted) {
@@ -69,12 +61,9 @@ class _GaleriaVeiculoPageState
       }
 
       setState(() {
-        _registros =
-            resultados[0]
-                as List<Map<String, dynamic>>;
+        _registros = resultados[0] as List<Map<String, dynamic>>;
 
-        _contagem =
-            resultados[1] as Map<String, int>;
+        _contagem = resultados[1] as Map<String, int>;
 
         _carregando = false;
       });
@@ -91,11 +80,8 @@ class _GaleriaVeiculoPageState
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(
-              'Não foi possível carregar a galeria.\n$erro',
-            ),
-            backgroundColor:
-                Colors.red.shade700,
+            content: Text('Não foi possível carregar a galeria.\n$erro'),
+            backgroundColor: Colors.red.shade700,
           ),
         );
     }
@@ -106,47 +92,41 @@ class _GaleriaVeiculoPageState
     String campo, {
     String padrao = '',
   }) {
-    final texto =
-        (dados[campo] ?? '').toString().trim();
+    final texto = (dados[campo] ?? '').toString().trim();
 
     return texto.isEmpty ? padrao : texto;
   }
 
   String _formatarData(String valor) {
-    if (valor.trim().isEmpty) {
+    final valorLimpo = valor.trim();
+
+    if (valorLimpo.isEmpty) {
       return 'Data não informada';
     }
 
-    final data = DateTime.tryParse(valor);
+    final dataIso = DateTime.tryParse(valorLimpo);
 
-    if (data == null) {
-      return valor;
+    if (dataIso != null) {
+      return _data.format(dataIso);
     }
 
-    return _data.format(data);
-  }
+    final dataBr = _data.tryParse(valorLimpo);
 
-  bool _arquivoExiste(String caminho) {
-    if (caminho.trim().isEmpty) {
-      return false;
+    if (dataBr != null) {
+      return _data.format(dataBr);
     }
 
-    return File(caminho).existsSync();
+    return valorLimpo;
   }
 
   List<_ImagemGaleria> get _imagens {
     final imagens = <_ImagemGaleria>[];
+    final caminhosAdicionados = <String>{};
 
     for (final registro in _registros) {
-      final antes = _texto(
-        registro,
-        'caminho_antes',
-      );
+      final antes = _texto(registro, 'caminho_antes');
 
-      final depois = _texto(
-        registro,
-        'caminho_depois',
-      );
+      final depois = _texto(registro, 'caminho_depois');
 
       final descricao = _texto(
         registro,
@@ -154,41 +134,47 @@ class _GaleriaVeiculoPageState
         padrao: 'Registro do serviço',
       );
 
-      final data = _formatarData(
-        _texto(registro, 'data'),
-      );
+      final data = _formatarData(_texto(registro, 'data'));
 
-      if (_filtro != 'Depois' &&
-          _arquivoExiste(antes)) {
-        imagens.add(
-          _ImagemGaleria(
-            caminho: antes,
-            tipo: 'Antes',
-            descricao: descricao,
-            data: data,
-          ),
-        );
+      if (_filtro != 'Depois' && antes.isNotEmpty) {
+        final chave = 'Antes::$antes';
+
+        if (!caminhosAdicionados.contains(chave)) {
+          caminhosAdicionados.add(chave);
+
+          imagens.add(
+            _ImagemGaleria(
+              caminho: antes,
+              tipo: 'Antes',
+              descricao: descricao,
+              data: data,
+            ),
+          );
+        }
       }
 
-      if (_filtro != 'Antes' &&
-          _arquivoExiste(depois)) {
-        imagens.add(
-          _ImagemGaleria(
-            caminho: depois,
-            tipo: 'Depois',
-            descricao: descricao,
-            data: data,
-          ),
-        );
+      if (_filtro != 'Antes' && depois.isNotEmpty) {
+        final chave = 'Depois::$depois';
+
+        if (!caminhosAdicionados.contains(chave)) {
+          caminhosAdicionados.add(chave);
+
+          imagens.add(
+            _ImagemGaleria(
+              caminho: depois,
+              tipo: 'Depois',
+              descricao: descricao,
+              data: data,
+            ),
+          );
+        }
       }
     }
 
     return imagens;
   }
 
-  Future<void> _abrirImagem(
-    _ImagemGaleria imagem,
-  ) async {
+  Future<void> _abrirImagem(_ImagemGaleria imagem) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => FotoVeiculoDetalhesPage(
@@ -215,10 +201,7 @@ class _GaleriaVeiculoPageState
           padding: const EdgeInsets.all(13),
           child: Column(
             children: [
-              Icon(
-                icone,
-                color: const Color(0xFFD6A84B),
-              ),
+              Icon(icone, color: const Color(0xFFD6A84B)),
               const SizedBox(height: 7),
               Text(
                 valor.toString(),
@@ -229,10 +212,7 @@ class _GaleriaVeiculoPageState
               ),
               Text(
                 titulo,
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 11,
-                ),
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
               ),
             ],
           ),
@@ -247,23 +227,17 @@ class _GaleriaVeiculoPageState
         ButtonSegment<String>(
           value: 'Todos',
           label: Text('Todos'),
-          icon: Icon(
-            Icons.photo_library_outlined,
-          ),
+          icon: Icon(Icons.photo_library_outlined),
         ),
         ButtonSegment<String>(
           value: 'Antes',
           label: Text('Antes'),
-          icon: Icon(
-            Icons.first_page_outlined,
-          ),
+          icon: Icon(Icons.first_page_outlined),
         ),
         ButtonSegment<String>(
           value: 'Depois',
           label: Text('Depois'),
-          icon: Icon(
-            Icons.auto_awesome_outlined,
-          ),
+          icon: Icon(Icons.auto_awesome_outlined),
         ),
       ],
       selected: {_filtro},
@@ -279,64 +253,43 @@ class _GaleriaVeiculoPageState
   Widget build(BuildContext context) {
     final imagens = _imagens;
 
-    final tituloVeiculo =
-        widget.nomeVeiculo.trim().isEmpty
-            ? 'Veículo'
-            : widget.nomeVeiculo.trim();
+    final tituloVeiculo = widget.nomeVeiculo.trim().isEmpty
+        ? 'Veículo'
+        : widget.nomeVeiculo.trim();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Galeria do veículo'),
         actions: [
           IconButton(
-            onPressed:
-                _carregando ? null : _carregar,
+            onPressed: _carregando ? null : _carregar,
             tooltip: 'Atualizar',
-            icon: const Icon(
-              Icons.refresh_outlined,
-            ),
+            icon: const Icon(Icons.refresh_outlined),
           ),
         ],
       ),
       body: _carregando
-          ? const Center(
-              child:
-                  CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _carregar,
               child: ListView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(),
-                padding:
-                    const EdgeInsets.fromLTRB(
-                  16,
-                  16,
-                  16,
-                  28,
-                ),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
                 children: [
                   Card(
                     margin: EdgeInsets.zero,
                     child: ListTile(
                       leading: const CircleAvatar(
-                        child: Icon(
-                          Icons
-                              .directions_car_outlined,
-                        ),
+                        child: Icon(Icons.directions_car_outlined),
                       ),
                       title: Text(
                         tituloVeiculo,
-                        style: const TextStyle(
-                          fontWeight:
-                              FontWeight.bold,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
                         widget.placa.trim().isEmpty
                             ? 'Placa não informada'
-                            : widget.placa
-                                .toUpperCase(),
+                            : widget.placa.toUpperCase(),
                       ),
                     ),
                   ),
@@ -345,29 +298,20 @@ class _GaleriaVeiculoPageState
                     children: [
                       _indicador(
                         titulo: 'Registros',
-                        valor:
-                            _contagem['registros'] ??
-                                0,
-                        icone:
-                            Icons.collections_outlined,
+                        valor: _contagem['registros'] ?? 0,
+                        icone: Icons.collections_outlined,
                       ),
                       const SizedBox(width: 8),
                       _indicador(
                         titulo: 'Antes',
-                        valor:
-                            _contagem['fotos_antes'] ??
-                                0,
-                        icone:
-                            Icons.first_page_outlined,
+                        valor: _contagem['fotos_antes'] ?? 0,
+                        icone: Icons.first_page_outlined,
                       ),
                       const SizedBox(width: 8),
                       _indicador(
                         titulo: 'Depois',
-                        valor:
-                            _contagem['fotos_depois'] ??
-                                0,
-                        icone:
-                            Icons.auto_awesome_outlined,
+                        valor: _contagem['fotos_depois'] ?? 0,
+                        icone: Icons.auto_awesome_outlined,
                       ),
                     ],
                   ),
@@ -381,16 +325,13 @@ class _GaleriaVeiculoPageState
                           'Imagens',
                           style: TextStyle(
                             fontSize: 18,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       Text(
                         '${imagens.length} foto(s)',
-                        style: const TextStyle(
-                          color: Colors.white54,
-                        ),
+                        style: const TextStyle(color: Colors.white54),
                       ),
                     ],
                   ),
@@ -399,21 +340,18 @@ class _GaleriaVeiculoPageState
                     const Card(
                       margin: EdgeInsets.zero,
                       child: Padding(
-                        padding:
-                            EdgeInsets.all(28),
+                        padding: EdgeInsets.all(28),
                         child: Column(
                           children: [
                             Icon(
-                              Icons
-                                  .photo_library_outlined,
+                              Icons.photo_library_outlined,
                               size: 54,
                               color: Colors.white30,
                             ),
                             SizedBox(height: 12),
                             Text(
                               'Nenhuma imagem encontrada para este filtro.',
-                              textAlign:
-                                  TextAlign.center,
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
@@ -422,149 +360,100 @@ class _GaleriaVeiculoPageState
                   else
                     GridView.builder(
                       shrinkWrap: true,
-                      physics:
-                          const NeverScrollableScrollPhysics(),
+                      physics: const NeverScrollableScrollPhysics(),
                       itemCount: imagens.length,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 0.82,
-                      ),
-                      itemBuilder:
-                          (context, indice) {
-                        final imagem =
-                            imagens[indice];
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 10,
+                            childAspectRatio: 0.82,
+                          ),
+                      itemBuilder: (context, indice) {
+                        final imagem = imagens[indice];
 
                         return InkWell(
-                          borderRadius:
-                              BorderRadius.circular(
-                            15,
-                          ),
-                          onTap: () =>
-                              _abrirImagem(imagem),
+                          borderRadius: BorderRadius.circular(15),
+                          onTap: () => _abrirImagem(imagem),
                           child: Card(
                             margin: EdgeInsets.zero,
-                            clipBehavior:
-                                Clip.antiAlias,
+                            clipBehavior: Clip.antiAlias,
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .stretch,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Expanded(
                                   child: Image.file(
-                                    File(
-                                      imagem.caminho,
-                                    ),
+                                    File(imagem.caminho),
                                     fit: BoxFit.cover,
-                                    errorBuilder: (
-                                      context,
-                                      error,
-                                      stackTrace,
-                                    ) {
-                                      return const Center(
-                                        child: Icon(
-                                          Icons
-                                              .broken_image_outlined,
-                                          size: 44,
-                                          color: Colors
-                                              .white30,
+                                    cacheWidth: 760,
+                                    filterQuality: FilterQuality.low,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const ColoredBox(
+                                        color: Color(0xFF252525),
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.image_not_supported_outlined,
+                                            size: 44,
+                                            color: Colors.white38,
+                                          ),
                                         ),
                                       );
                                     },
                                   ),
                                 ),
                                 Padding(
-                                  padding:
-                                      const EdgeInsets
-                                          .all(10),
+                                  padding: const EdgeInsets.all(10),
                                   child: Column(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment
-                                            .start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
                                           Container(
-                                            padding:
-                                                const EdgeInsets
-                                                    .symmetric(
-                                              horizontal:
-                                                  8,
-                                              vertical:
-                                                  4,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
                                             ),
-                                            decoration:
-                                                BoxDecoration(
-                                              color: imagem.tipo ==
-                                                      'Depois'
-                                                  ? Colors
-                                                      .green
-                                                      .withValues(
-                                                        alpha:
-                                                            0.18,
-                                                      )
-                                                  : Colors
-                                                      .orange
-                                                      .withValues(
-                                                        alpha:
-                                                            0.18,
-                                                      ),
+                                            decoration: BoxDecoration(
+                                              color: imagem.tipo == 'Depois'
+                                                  ? Colors.green.withValues(
+                                                      alpha: 0.18,
+                                                    )
+                                                  : Colors.orange.withValues(
+                                                      alpha: 0.18,
+                                                    ),
                                               borderRadius:
-                                                  BorderRadius
-                                                      .circular(
-                                                20,
-                                              ),
+                                                  BorderRadius.circular(20),
                                             ),
                                             child: Text(
                                               imagem.tipo,
-                                              style:
-                                                  TextStyle(
-                                                color: imagem.tipo ==
-                                                        'Depois'
-                                                    ? Colors
-                                                        .greenAccent
-                                                    : Colors
-                                                        .orangeAccent,
-                                                fontSize:
-                                                    11,
-                                                fontWeight:
-                                                    FontWeight
-                                                        .bold,
+                                              style: TextStyle(
+                                                color: imagem.tipo == 'Depois'
+                                                    ? Colors.greenAccent
+                                                    : Colors.orangeAccent,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
                                           ),
                                           const Spacer(),
                                           Text(
                                             imagem.data,
-                                            style:
-                                                const TextStyle(
-                                              color: Colors
-                                                  .white38,
-                                              fontSize:
-                                                  10,
+                                            style: const TextStyle(
+                                              color: Colors.white38,
+                                              fontSize: 10,
                                             ),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(
-                                        height: 7,
-                                      ),
+                                      const SizedBox(height: 7),
                                       Text(
-                                        imagem
-                                            .descricao,
+                                        imagem.descricao,
                                         maxLines: 1,
-                                        overflow:
-                                            TextOverflow
-                                                .ellipsis,
-                                        style:
-                                            const TextStyle(
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
                                           fontSize: 12,
-                                          fontWeight:
-                                              FontWeight
-                                                  .w500,
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
                                     ],

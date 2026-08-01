@@ -8,27 +8,19 @@ import '../repositories/foto_servico_repository.dart';
 class FotoDetalhesPage extends StatefulWidget {
   final Map<String, dynamic> foto;
 
-  const FotoDetalhesPage({
-    super.key,
-    required this.foto,
-  });
+  const FotoDetalhesPage({super.key, required this.foto});
 
   @override
-  State<FotoDetalhesPage> createState() =>
-      _FotoDetalhesPageState();
+  State<FotoDetalhesPage> createState() => _FotoDetalhesPageState();
 }
 
-class _FotoDetalhesPageState
-    extends State<FotoDetalhesPage> {
-  final FotoServicoRepository _repository =
-  FotoServicoRepository();
+class _FotoDetalhesPageState extends State<FotoDetalhesPage> {
+  final FotoServicoRepository _repository = FotoServicoRepository();
 
   bool excluindo = false;
+  String _modoVisualizacao = 'Comparar';
 
-  String obterTexto(
-      String campo, {
-        String padrao = '',
-      }) {
+  String obterTexto(String campo, {String padrao = ''}) {
     final valor = widget.foto[campo];
 
     if (valor == null) {
@@ -45,13 +37,9 @@ class _FotoDetalhesPageState
   }
 
   String montarNomeVeiculo() {
-    final marca = obterTexto(
-      'veiculo_marca',
-    );
+    final marca = obterTexto('veiculo_marca');
 
-    final modelo = obterTexto(
-      'veiculo_modelo',
-    );
+    final modelo = obterTexto('veiculo_modelo');
 
     final nome = '$marca $modelo'.trim();
 
@@ -69,9 +57,7 @@ class _FotoDetalhesPageState
       return valor;
     }
 
-    return int.tryParse(
-      valor?.toString() ?? '',
-    );
+    return int.tryParse(valor?.toString() ?? '');
   }
 
   Future<void> confirmarExclusao() async {
@@ -86,48 +72,29 @@ class _FotoDetalhesPageState
         return AlertDialog(
           title: const Row(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange,
-              ),
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
               SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Excluir registro',
-                ),
-              ),
+              Expanded(child: Text('Excluir registro')),
             ],
           ),
           content: const Text(
             'Deseja realmente excluir este registro de fotos?\n\n'
-                'As fotos salvas no aparelho também serão apagadas. '
-                'Essa ação não poderá ser desfeita.',
+            'As fotos salvas no aparelho também serão apagadas. '
+            'Essa ação não poderá ser desfeita.',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  false,
-                );
+                Navigator.pop(dialogContext, false);
               },
-              child: const Text(
-                'Cancelar',
-              ),
+              child: const Text('Cancelar'),
             ),
             FilledButton.icon(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  true,
-                );
+                Navigator.pop(dialogContext, true);
               },
-              icon: const Icon(
-                Icons.delete_outline,
-              ),
-              label: const Text(
-                'Excluir',
-              ),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Excluir'),
             ),
           ],
         );
@@ -139,29 +106,11 @@ class _FotoDetalhesPageState
     }
   }
 
-  Future<void> excluirArquivoImagem(
-      String caminho,
-      ) async {
-    final caminhoLimpo = caminho.trim();
-
-    if (caminhoLimpo.isEmpty) {
-      return;
-    }
-
-    final arquivo = File(caminhoLimpo);
-
-    if (await arquivo.exists()) {
-      await arquivo.delete();
-    }
-  }
-
   Future<void> excluirRegistro() async {
     final id = obterIdRegistro();
 
     if (id == null) {
-      mostrarMensagem(
-        'Não foi possível identificar o registro.',
-      );
+      mostrarMensagem('Não foi possível identificar o registro.');
       return;
     }
 
@@ -169,66 +118,29 @@ class _FotoDetalhesPageState
       excluindo = true;
     });
 
-    final caminhoAntes = obterTexto(
-      'caminho_antes',
-    );
-
-    final caminhoDepois = obterTexto(
-      'caminho_depois',
-    );
-
     try {
-      final registrosExcluidos =
-      await _repository.excluirFoto(id);
+      final resultadoExclusao = await _repository.excluirFotoComArquivos(id);
 
-      if (registrosExcluidos == 0) {
-        throw Exception(
-          'O registro não foi encontrado no banco de dados.',
-        );
-      }
-
-      final errosAoExcluirArquivos =
-      <String>[];
-
-      try {
-        await excluirArquivoImagem(
-          caminhoAntes,
-        );
-      } catch (erro) {
-        errosAoExcluirArquivos.add(
-          'foto de antes',
-        );
-      }
-
-      try {
-        await excluirArquivoImagem(
-          caminhoDepois,
-        );
-      } catch (erro) {
-        errosAoExcluirArquivos.add(
-          'foto de depois',
-        );
+      if (resultadoExclusao.registrosExcluidos == 0) {
+        throw Exception('O registro não foi encontrado no banco de dados.');
       }
 
       if (!mounted) {
         return;
       }
 
-      if (errosAoExcluirArquivos.isNotEmpty) {
+      if (resultadoExclusao.arquivosComFalha.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               'O registro foi excluído, mas não foi possível apagar '
-                  '${errosAoExcluirArquivos.join(' e ')} do armazenamento.',
+              '${resultadoExclusao.arquivosComFalha.length} arquivo(s) do armazenamento.',
             ),
           ),
         );
       }
 
-      Navigator.pop(
-        context,
-        true,
-      );
+      Navigator.pop(context, true);
     } catch (erro) {
       if (!mounted) {
         return;
@@ -238,43 +150,29 @@ class _FotoDetalhesPageState
         excluindo = false;
       });
 
-      mostrarMensagem(
-        'Erro ao excluir registro: $erro',
-      );
+      mostrarMensagem('Erro ao excluir registro: $erro');
     }
   }
 
-  void mostrarMensagem(
-      String mensagem,
-      ) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensagem),
-      ),
-    );
+  void mostrarMensagem(String mensagem) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
-  void abrirImagem(
-      String caminho,
-      String titulo,
-      ) {
+  void abrirImagem(String caminho, String titulo) {
     final caminhoLimpo = caminho.trim();
 
-    if (caminhoLimpo.isEmpty ||
-        !File(caminhoLimpo).existsSync()) {
-      mostrarMensagem(
-        '$titulo não está disponível.',
-      );
+    if (caminhoLimpo.isEmpty || !File(caminhoLimpo).existsSync()) {
+      mostrarMensagem('$titulo não está disponível.');
       return;
     }
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => VisualizarFotoPage(
-          caminho: caminhoLimpo,
-          titulo: titulo,
-        ),
+        builder: (_) =>
+            VisualizarFotoPage(caminho: caminhoLimpo, titulo: titulo),
       ),
     );
   }
@@ -286,29 +184,18 @@ class _FotoDetalhesPageState
   }) {
     final caminhoLimpo = caminho.trim();
 
-    final existe = caminhoLimpo.isNotEmpty &&
-        File(caminhoLimpo).existsSync();
+    final existe = caminhoLimpo.isNotEmpty && File(caminhoLimpo).existsSync();
 
     return Column(
-      crossAxisAlignment:
-      CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(
-              icone,
-              size: 21,
-              color: const Color(
-                0xFFD6A84B,
-              ),
-            ),
+            Icon(icone, size: 21, color: const Color(0xFFD6A84B)),
             const SizedBox(width: 8),
             Text(
               titulo,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -321,49 +208,38 @@ class _FotoDetalhesPageState
             child: InkWell(
               onTap: existe
                   ? () {
-                abrirImagem(
-                  caminhoLimpo,
-                  titulo,
-                );
-              }
+                      abrirImagem(caminhoLimpo, titulo);
+                    }
                   : null,
               child: existe
                   ? Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.file(
-                    File(caminhoLimpo),
-                    fit: BoxFit.cover,
-                    errorBuilder: (
-                        context,
-                        erro,
-                        stackTrace,
-                        ) {
-                      return criarImagemIndisponivel();
-                    },
-                  ),
-                  const Positioned(
-                    right: 12,
-                    bottom: 12,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius:
-                        BorderRadius.all(
-                          Radius.circular(12),
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(
+                          File(caminhoLimpo),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, erro, stackTrace) {
+                            return criarImagemIndisponivel();
+                          },
                         ),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(9),
-                        child: Icon(
-                          Icons.zoom_in,
-                          color: Colors.white,
+                        const Positioned(
+                          right: 12,
+                          bottom: 12,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(12),
+                              ),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(9),
+                              child: Icon(Icons.zoom_in, color: Colors.white),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              )
+                      ],
+                    )
                   : criarImagemIndisponivel(),
             ),
           ),
@@ -376,18 +252,29 @@ class _FotoDetalhesPageState
     required String caminhoAntes,
     required String caminhoDepois,
   }) {
+    if (_modoVisualizacao == 'Antes') {
+      return criarFoto(
+        titulo: 'Antes',
+        caminho: caminhoAntes,
+        icone: Icons.history_outlined,
+      );
+    }
+
+    if (_modoVisualizacao == 'Depois') {
+      return criarFoto(
+        titulo: 'Depois',
+        caminho: caminhoDepois,
+        icone: Icons.auto_awesome_outlined,
+      );
+    }
+
     return LayoutBuilder(
-      builder: (
-          context,
-          constraints,
-          ) {
-        final telaLarga =
-            constraints.maxWidth >= 700;
+      builder: (context, constraints) {
+        final telaLarga = constraints.maxWidth >= 700;
 
         if (telaLarga) {
           return Row(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: criarFoto(
@@ -401,8 +288,7 @@ class _FotoDetalhesPageState
                 child: criarFoto(
                   titulo: 'Depois',
                   caminho: caminhoDepois,
-                  icone:
-                  Icons.auto_awesome_outlined,
+                  icone: Icons.auto_awesome_outlined,
                 ),
               ),
             ],
@@ -420,8 +306,7 @@ class _FotoDetalhesPageState
             criarFoto(
               titulo: 'Depois',
               caminho: caminhoDepois,
-              icone:
-              Icons.auto_awesome_outlined,
+              icone: Icons.auto_awesome_outlined,
             ),
           ],
         );
@@ -444,9 +329,7 @@ class _FotoDetalhesPageState
             SizedBox(height: 10),
             Text(
               'Imagem não disponível',
-              style: TextStyle(
-                color: Colors.white54,
-              ),
+              style: TextStyle(color: Colors.white54),
             ),
           ],
         ),
@@ -460,28 +343,17 @@ class _FotoDetalhesPageState
     required String valor,
   }) {
     return Row(
-      crossAxisAlignment:
-      CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icone,
-          size: 21,
-          color: const Color(
-            0xFFD6A84B,
-          ),
-        ),
+        Icon(icone, size: 21, color: const Color(0xFFD6A84B)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 titulo,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white54,
-                ),
+                style: const TextStyle(fontSize: 12, color: Colors.white54),
               ),
               const SizedBox(height: 3),
               Text(
@@ -499,59 +371,35 @@ class _FotoDetalhesPageState
   }
 
   @override
-  Widget build(
-      BuildContext context,
-      ) {
-    final cliente = obterTexto(
-      'cliente_nome',
-      padrao: 'Cliente não informado',
-    );
+  Widget build(BuildContext context) {
+    final cliente = obterTexto('cliente_nome', padrao: 'Cliente não informado');
 
     final veiculo = montarNomeVeiculo();
 
-    final placa = obterTexto(
-      'veiculo_placa',
-      padrao: 'Não informada',
-    );
+    final placa = obterTexto('veiculo_placa', padrao: 'Não informada');
 
-    final data = obterTexto(
-      'data',
-      padrao: 'Não informada',
-    );
+    final data = obterTexto('data', padrao: 'Não informada');
 
-    final descricao = obterTexto(
-      'descricao',
-    );
+    final descricao = obterTexto('descricao');
 
-    final caminhoAntes = obterTexto(
-      'caminho_antes',
-    );
+    final caminhoAntes = obterTexto('caminho_antes');
 
-    final caminhoDepois = obterTexto(
-      'caminho_depois',
-    );
+    final caminhoDepois = obterTexto('caminho_depois');
 
     return PopScope(
       canPop: !excluindo,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'Antes e Depois',
-          ),
+          title: const Text('Antes e Depois'),
           actions: [
             if (excluindo)
               const Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 18,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 18),
                 child: Center(
                   child: SizedBox(
                     width: 22,
                     height: 22,
-                    child:
-                    CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
               )
@@ -559,63 +407,42 @@ class _FotoDetalhesPageState
               IconButton(
                 onPressed: confirmarExclusao,
                 tooltip: 'Excluir registro',
-                icon: const Icon(
-                  Icons.delete_outline,
-                ),
+                icon: const Icon(Icons.delete_outline),
               ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            40,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
           child: Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Card(
                 margin: EdgeInsets.zero,
                 child: Padding(
-                  padding: const EdgeInsets.all(
-                    18,
-                  ),
+                  padding: const EdgeInsets.all(18),
                   child: Column(
                     children: [
                       criarInformacao(
-                        icone:
-                        Icons.person_outline,
+                        icone: Icons.person_outline,
                         titulo: 'Cliente',
                         valor: cliente,
                       ),
-                      const Divider(
-                        height: 28,
-                      ),
+                      const Divider(height: 28),
                       criarInformacao(
-                        icone: Icons
-                            .directions_car_outlined,
+                        icone: Icons.directions_car_outlined,
                         titulo: 'Veículo',
                         valor: veiculo,
                       ),
-                      const Divider(
-                        height: 28,
-                      ),
+                      const Divider(height: 28),
                       criarInformacao(
-                        icone:
-                        Icons.badge_outlined,
+                        icone: Icons.badge_outlined,
                         titulo: 'Placa',
                         valor: placa,
                       ),
-                      const Divider(
-                        height: 28,
-                      ),
+                      const Divider(height: 28),
                       criarInformacao(
-                        icone: Icons
-                            .calendar_today_outlined,
-                        titulo:
-                        'Data do serviço',
+                        icone: Icons.calendar_today_outlined,
+                        titulo: 'Data do serviço',
                         valor: data,
                       ),
                     ],
@@ -627,45 +454,30 @@ class _FotoDetalhesPageState
                 Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding:
-                    const EdgeInsets.all(
-                      18,
-                    ),
+                    padding: const EdgeInsets.all(18),
                     child: Row(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Icon(
-                          Icons
-                              .description_outlined,
-                          color: Color(
-                            0xFFD6A84B,
-                          ),
+                          Icons.description_outlined,
+                          color: Color(0xFFD6A84B),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment
-                                .start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 'Descrição',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color:
-                                  Colors.white54,
+                                  color: Colors.white54,
                                 ),
                               ),
-                              const SizedBox(
-                                height: 4,
-                              ),
+                              const SizedBox(height: 4),
                               Text(
                                 descricao,
-                                style:
-                                const TextStyle(
-                                  fontSize: 16,
-                                ),
+                                style: const TextStyle(fontSize: 16),
                               ),
                             ],
                           ),
@@ -676,10 +488,32 @@ class _FotoDetalhesPageState
                 ),
               ],
               const SizedBox(height: 22),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment<String>(
+                      value: 'Comparar',
+                      label: Text('Comparar'),
+                    ),
+                    ButtonSegment<String>(value: 'Antes', label: Text('Antes')),
+                    ButtonSegment<String>(
+                      value: 'Depois',
+                      label: Text('Depois'),
+                    ),
+                  ],
+                  selected: {_modoVisualizacao},
+                  onSelectionChanged: (valores) {
+                    setState(() {
+                      _modoVisualizacao = valores.first;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
               criarComparacao(
                 caminhoAntes: caminhoAntes,
-                caminhoDepois:
-                caminhoDepois,
+                caminhoDepois: caminhoDepois,
               ),
             ],
           ),
@@ -689,8 +523,7 @@ class _FotoDetalhesPageState
   }
 }
 
-class VisualizarFotoPage
-    extends StatelessWidget {
+class VisualizarFotoPage extends StatelessWidget {
   final String caminho;
   final String titulo;
 
@@ -701,9 +534,7 @@ class VisualizarFotoPage
   });
 
   @override
-  Widget build(
-      BuildContext context,
-      ) {
+  Widget build(BuildContext context) {
     final arquivo = File(caminho);
 
     return Scaffold(
@@ -715,82 +546,52 @@ class VisualizarFotoPage
       ),
       body: arquivo.existsSync()
           ? PhotoView(
-        imageProvider: FileImage(
-          arquivo,
-        ),
-        backgroundDecoration:
-        const BoxDecoration(
-          color: Colors.black,
-        ),
-        minScale:
-        PhotoViewComputedScale
-            .contained,
-        maxScale:
-        PhotoViewComputedScale
-            .covered *
-            4,
-        initialScale:
-        PhotoViewComputedScale
-            .contained,
-        enableRotation: false,
-        loadingBuilder: (
-            context,
-            event,
-            ) {
-          return const Center(
-            child:
-            CircularProgressIndicator(),
-          );
-        },
-        errorBuilder: (
-            context,
-            erro,
-            stackTrace,
-            ) {
-          return const Center(
-            child: Column(
-              mainAxisSize:
-              MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons
-                      .broken_image_outlined,
-                  size: 70,
-                  color: Colors.white38,
-                ),
-                SizedBox(height: 12),
-                Text(
-                  'Não foi possível abrir a imagem.',
-                  style: TextStyle(
-                    color: Colors.white70,
+              imageProvider: FileImage(arquivo),
+              backgroundDecoration: const BoxDecoration(color: Colors.black),
+              minScale: PhotoViewComputedScale.contained,
+              maxScale: PhotoViewComputedScale.covered * 4,
+              initialScale: PhotoViewComputedScale.contained,
+              enableRotation: false,
+              loadingBuilder: (context, event) {
+                return const Center(child: CircularProgressIndicator());
+              },
+              errorBuilder: (context, erro, stackTrace) {
+                return const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.broken_image_outlined,
+                        size: 70,
+                        color: Colors.white38,
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        'Não foi possível abrir a imagem.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      )
+                );
+              },
+            )
           : const Center(
-        child: Column(
-          mainAxisSize:
-          MainAxisSize.min,
-          children: [
-            Icon(
-              Icons
-                  .image_not_supported_outlined,
-              size: 70,
-              color: Colors.white38,
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Imagem não encontrada.',
-              style: TextStyle(
-                color: Colors.white70,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.image_not_supported_outlined,
+                    size: 70,
+                    color: Colors.white38,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Imagem não encontrada.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }

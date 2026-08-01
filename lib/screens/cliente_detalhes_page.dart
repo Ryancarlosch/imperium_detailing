@@ -5,45 +5,38 @@ import '../models/cliente.dart';
 import '../repositories/cliente_repository.dart';
 import '../repositories/ordem_servico_repository.dart';
 import '../services/ordem_servico_pdf_service.dart';
+import '../services/whatsapp_service.dart';
 import 'veiculos_cliente_page.dart';
 
 class ClienteDetalhesPage extends StatefulWidget {
   final Cliente cliente;
 
-  const ClienteDetalhesPage({
-    super.key,
-    required this.cliente,
-  });
+  const ClienteDetalhesPage({super.key, required this.cliente});
 
   @override
-  State<ClienteDetalhesPage> createState() =>
-      _ClienteDetalhesPageState();
+  State<ClienteDetalhesPage> createState() => _ClienteDetalhesPageState();
 }
 
-class _ClienteDetalhesPageState
-    extends State<ClienteDetalhesPage> {
+class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
   late Cliente cliente;
 
-  final ClienteRepository _clienteRepository =
-      ClienteRepository();
+  final ClienteRepository _clienteRepository = ClienteRepository();
 
-  final OrdemServicoRepository
-      _ordemServicoRepository =
+  final OrdemServicoRepository _ordemServicoRepository =
       OrdemServicoRepository();
 
-  final OrdemServicoPdfService _pdfService =
-      OrdemServicoPdfService();
+  final OrdemServicoPdfService _pdfService = OrdemServicoPdfService();
 
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
-  final DateFormat _dataBrasileira =
-      DateFormat('dd/MM/yyyy');
+  final DateFormat _dataBrasileira = DateFormat('dd/MM/yyyy');
 
   bool _carregando = true;
   bool _gerandoPdf = false;
+  bool _abrindoWhatsApp = false;
 
   int _quantidadeVeiculos = 0;
   int _quantidadeOrdens = 0;
@@ -80,51 +73,29 @@ class _ClienteDetalhesPageState
 
     try {
       final resultados = await Future.wait([
-        _clienteRepository.contarVeiculosDoCliente(
-          clienteId,
-        ),
-        _ordemServicoRepository.obterResumoDoCliente(
-          clienteId,
-        ),
-        _ordemServicoRepository
-            .listarHistoricoDoCliente(
-          clienteId,
-        ),
+        _clienteRepository.contarVeiculosDoCliente(clienteId),
+        _ordemServicoRepository.obterResumoDoCliente(clienteId),
+        _ordemServicoRepository.listarHistoricoDoCliente(clienteId),
       ]);
 
       if (!mounted) {
         return;
       }
 
-      final resumo =
-          resultados[1] as Map<String, dynamic>;
+      final resumo = resultados[1] as Map<String, dynamic>;
 
       setState(() {
-        _quantidadeVeiculos =
-            resultados[0] as int;
+        _quantidadeVeiculos = resultados[0] as int;
 
-        _quantidadeOrdens =
-            (resumo['quantidade_ordens'] as num?)
-                    ?.toInt() ??
-                0;
+        _quantidadeOrdens = (resumo['quantidade_ordens'] as num?)?.toInt() ?? 0;
 
-        _totalGasto =
-            (resumo['total_gasto'] as num?)
-                    ?.toDouble() ??
-                0;
+        _totalGasto = (resumo['total_gasto'] as num?)?.toDouble() ?? 0;
 
-        _ticketMedio =
-            (resumo['ticket_medio'] as num?)
-                    ?.toDouble() ??
-                0;
+        _ticketMedio = (resumo['ticket_medio'] as num?)?.toDouble() ?? 0;
 
-        _ultimoAtendimento =
-            (resumo['ultimo_atendimento'] ?? '')
-                .toString();
+        _ultimoAtendimento = (resumo['ultimo_atendimento'] ?? '').toString();
 
-        _historico =
-            resultados[2]
-                as List<Map<String, dynamic>>;
+        _historico = resultados[2] as List<Map<String, dynamic>>;
 
         _carregando = false;
       });
@@ -145,10 +116,7 @@ class _ClienteDetalhesPageState
     }
   }
 
-  void _mostrarMensagem(
-    String mensagem, {
-    bool erro = false,
-  }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
@@ -158,27 +126,21 @@ class _ClienteDetalhesPageState
       ..showSnackBar(
         SnackBar(
           content: Text(mensagem),
-          backgroundColor:
-              erro ? Colors.red.shade700 : null,
+          backgroundColor: erro ? Colors.red.shade700 : null,
         ),
       );
   }
 
   Future<void> editarCliente() async {
-    final nomeController =
-        TextEditingController(text: cliente.nome);
+    final nomeController = TextEditingController(text: cliente.nome);
 
-    final telefoneController =
-        TextEditingController(text: cliente.telefone);
+    final telefoneController = TextEditingController(text: cliente.telefone);
 
-    final emailController =
-        TextEditingController(text: cliente.email);
+    final emailController = TextEditingController(text: cliente.email);
 
-    final enderecoController =
-        TextEditingController(text: cliente.endereco);
+    final enderecoController = TextEditingController(text: cliente.endereco);
 
-    final observacoesController =
-        TextEditingController(
+    final observacoesController = TextEditingController(
       text: cliente.observacoes,
     );
 
@@ -193,12 +155,10 @@ class _ClienteDetalhesPageState
               children: [
                 TextField(
                   controller: nomeController,
-                  textCapitalization:
-                      TextCapitalization.words,
+                  textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Nome',
-                    prefixIcon:
-                        Icon(Icons.person_outline),
+                    prefixIcon: Icon(Icons.person_outline),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -207,31 +167,25 @@ class _ClienteDetalhesPageState
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
                     labelText: 'Telefone',
-                    prefixIcon:
-                        Icon(Icons.phone_outlined),
+                    prefixIcon: Icon(Icons.phone_outlined),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: emailController,
-                  keyboardType:
-                      TextInputType.emailAddress,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'E-mail',
-                    prefixIcon:
-                        Icon(Icons.email_outlined),
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: enderecoController,
-                  textCapitalization:
-                      TextCapitalization.words,
+                  textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Endereço',
-                    prefixIcon: Icon(
-                      Icons.location_on_outlined,
-                    ),
+                    prefixIcon: Icon(Icons.location_on_outlined),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -240,8 +194,7 @@ class _ClienteDetalhesPageState
                   maxLines: 3,
                   decoration: const InputDecoration(
                     labelText: 'Observações',
-                    prefixIcon:
-                        Icon(Icons.notes_outlined),
+                    prefixIcon: Icon(Icons.notes_outlined),
                   ),
                 ),
               ],
@@ -256,34 +209,23 @@ class _ClienteDetalhesPageState
             ),
             FilledButton(
               onPressed: () async {
-                final nome =
-                    nomeController.text.trim();
+                final nome = nomeController.text.trim();
 
                 if (nome.isEmpty) {
-                  _mostrarMensagem(
-                    'Informe o nome do cliente.',
-                    erro: true,
-                  );
+                  _mostrarMensagem('Informe o nome do cliente.', erro: true);
                   return;
                 }
 
                 final clienteAtualizado = Cliente(
                   id: cliente.id,
                   nome: nome,
-                  telefone:
-                      telefoneController.text.trim(),
-                  email:
-                      emailController.text.trim(),
-                  endereco:
-                      enderecoController.text.trim(),
-                  observacoes:
-                      observacoesController.text.trim(),
+                  telefone: telefoneController.text.trim(),
+                  email: emailController.text.trim(),
+                  endereco: enderecoController.text.trim(),
+                  observacoes: observacoesController.text.trim(),
                 );
 
-                await _clienteRepository
-                    .atualizarCliente(
-                  clienteAtualizado,
-                );
+                await _clienteRepository.atualizarCliente(clienteAtualizado);
 
                 if (!dialogContext.mounted) {
                   return;
@@ -299,9 +241,7 @@ class _ClienteDetalhesPageState
                   cliente = clienteAtualizado;
                 });
 
-                _mostrarMensagem(
-                  'Cliente atualizado com sucesso.',
-                );
+                _mostrarMensagem('Cliente atualizado com sucesso.');
               },
               child: const Text('Salvar'),
             ),
@@ -314,19 +254,181 @@ class _ClienteDetalhesPageState
   void abrirVeiculos() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => VeiculosClientePage(
-          cliente: cliente,
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => VeiculosClientePage(cliente: cliente)),
     ).then((_) {
       _carregarHistorico();
     });
   }
 
-  Future<void> _abrirPdf(
-    int ordemServicoId,
-  ) async {
+  Future<void> _enviarAgradecimentoWhatsApp() async {
+    final telefone = cliente.telefone.trim();
+
+    if (telefone.isEmpty) {
+      _mostrarMensagem('O cliente não possui telefone cadastrado.', erro: true);
+      return;
+    }
+
+    if (_abrindoWhatsApp) {
+      return;
+    }
+
+    setState(() {
+      _abrindoWhatsApp = true;
+    });
+
+    try {
+      await WhatsAppService.enviarAgradecimentoPosServico(
+        telefone: telefone,
+        cliente: cliente.nome,
+      );
+    } catch (erro) {
+      _mostrarMensagem('Não foi possível abrir o WhatsApp.\n$erro', erro: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _abrindoWhatsApp = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _enviarMensagemPersonalizadaWhatsApp() async {
+    String mensagem = '';
+
+    final resultado = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Mensagem personalizada'),
+          content: TextFormField(
+            autofocus: true,
+            minLines: 4,
+            maxLines: 8,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'Digite a mensagem para o cliente',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (valor) {
+              mensagem = valor;
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cancelar'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(mensagem.trim());
+              },
+              icon: const Icon(Icons.send_outlined),
+              label: const Text('Enviar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (resultado == null || resultado.trim().isEmpty) {
+      return;
+    }
+
+    final telefone = cliente.telefone.trim();
+
+    if (telefone.isEmpty) {
+      _mostrarMensagem('O cliente não possui telefone cadastrado.', erro: true);
+      return;
+    }
+
+    if (_abrindoWhatsApp) {
+      return;
+    }
+
+    setState(() {
+      _abrindoWhatsApp = true;
+    });
+
+    try {
+      await WhatsAppService.enviarMensagemPersonalizada(
+        telefone: telefone,
+        mensagem: resultado.trim(),
+      );
+    } catch (erro) {
+      _mostrarMensagem('Não foi possível abrir o WhatsApp.\n$erro', erro: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _abrindoWhatsApp = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _abrirOpcoesWhatsApp() async {
+    final opcao = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (bottomContext) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Enviar pelo WhatsApp',
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.favorite_outline),
+                ),
+                title: const Text('Agradecimento pós-serviço'),
+                subtitle: const Text('Mensagem pronta de agradecimento'),
+                onTap: () {
+                  Navigator.of(bottomContext).pop('agradecimento');
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.edit_note_outlined),
+                ),
+                title: const Text('Mensagem personalizada'),
+                subtitle: const Text('Escrever texto livre'),
+                onTap: () {
+                  Navigator.of(bottomContext).pop('personalizada');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (opcao == null) {
+      return;
+    }
+
+    if (opcao == 'agradecimento') {
+      await _enviarAgradecimentoWhatsApp();
+      return;
+    }
+
+    if (opcao == 'personalizada') {
+      await _enviarMensagemPersonalizadaWhatsApp();
+    }
+  }
+
+  Future<void> _abrirPdf(int ordemServicoId) async {
     if (_gerandoPdf) {
       return;
     }
@@ -336,14 +438,9 @@ class _ClienteDetalhesPageState
     });
 
     try {
-      await _pdfService.visualizarPdf(
-        ordemServicoId: ordemServicoId,
-      );
+      await _pdfService.visualizarPdf(ordemServicoId: ordemServicoId);
     } catch (erro) {
-      _mostrarMensagem(
-        'Não foi possível gerar o PDF.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível gerar o PDF.\n$erro', erro: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -358,16 +455,12 @@ class _ClienteDetalhesPageState
     String campo, {
     String padrao = '',
   }) {
-    final valor =
-        (dados[campo] ?? '').toString().trim();
+    final valor = (dados[campo] ?? '').toString().trim();
 
     return valor.isEmpty ? padrao : valor;
   }
 
-  int _inteiro(
-    Map<String, dynamic> dados,
-    String campo,
-  ) {
+  int _inteiro(Map<String, dynamic> dados, String campo) {
     final valor = dados[campo];
 
     if (valor is int) {
@@ -378,26 +471,17 @@ class _ClienteDetalhesPageState
       return valor.toInt();
     }
 
-    return int.tryParse(
-          valor?.toString() ?? '',
-        ) ??
-        0;
+    return int.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
-  double _numero(
-    Map<String, dynamic> dados,
-    String campo,
-  ) {
+  double _numero(Map<String, dynamic> dados, String campo) {
     final valor = dados[campo];
 
     if (valor is num) {
       return valor.toDouble();
     }
 
-    return double.tryParse(
-          valor?.toString() ?? '',
-        ) ??
-        0;
+    return double.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
   String _formatarData(String valor) {
@@ -414,42 +498,26 @@ class _ClienteDetalhesPageState
     return _dataBrasileira.format(data);
   }
 
-  String _dataDaOrdem(
-    Map<String, dynamic> ordem,
-  ) {
+  String _dataDaOrdem(Map<String, dynamic> ordem) {
     final valor = _texto(
       ordem,
       'data_finalizacao',
       padrao: _texto(
         ordem,
         'data_inicio',
-        padrao: _texto(
-          ordem,
-          'data_abertura',
-        ),
+        padrao: _texto(ordem, 'data_abertura'),
       ),
     );
 
     return _formatarData(valor);
   }
 
-  String _nomeVeiculo(
-    Map<String, dynamic> ordem,
-  ) {
-    final marca = _texto(
-      ordem,
-      'veiculo_marca',
-    );
+  String _nomeVeiculo(Map<String, dynamic> ordem) {
+    final marca = _texto(ordem, 'veiculo_marca');
 
-    final modelo = _texto(
-      ordem,
-      'veiculo_modelo',
-    );
+    final modelo = _texto(ordem, 'veiculo_modelo');
 
-    final placa = _texto(
-      ordem,
-      'veiculo_placa',
-    );
+    final placa = _texto(ordem, 'veiculo_placa');
 
     final nome = '$marca $modelo'.trim();
 
@@ -468,14 +536,10 @@ class _ClienteDetalhesPageState
     return '$nome • ${placa.toUpperCase()}';
   }
 
-  double _valorFinal(
-    Map<String, dynamic> ordem,
-  ) {
-    final valorTotal =
-        _numero(ordem, 'valor_total');
+  double _valorFinal(Map<String, dynamic> ordem) {
+    final valorTotal = _numero(ordem, 'valor_total');
 
-    final desconto =
-        _numero(ordem, 'desconto');
+    final desconto = _numero(ordem, 'desconto');
 
     final resultado = valorTotal - desconto;
 
@@ -505,30 +569,20 @@ class _ClienteDetalhesPageState
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icone,
-              color: const Color(0xFFD6A84B),
-            ),
+            Icon(icone, color: const Color(0xFFD6A84B)),
             const SizedBox(height: 10),
             Text(
               valor,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 3),
             Text(
               titulo,
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white60, fontSize: 12),
             ),
           ],
         ),
@@ -541,39 +595,24 @@ class _ClienteDetalhesPageState
     required String titulo,
     required String valor,
   }) {
-    final texto = valor.trim().isEmpty
-        ? 'Não informado'
-        : valor;
+    final texto = valor.trim().isEmpty ? 'Não informado' : valor;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        leading: Icon(
-          icone,
-          color: const Color(0xFFD6A84B),
-        ),
+        leading: Icon(icone, color: const Color(0xFFD6A84B)),
         title: Text(titulo),
         subtitle: Text(texto),
       ),
     );
   }
 
-  Widget _cardOrdem(
-    Map<String, dynamic> ordem,
-  ) {
+  Widget _cardOrdem(Map<String, dynamic> ordem) {
     final id = _inteiro(ordem, 'id');
 
-    final numero = _texto(
-      ordem,
-      'numero',
-      padrao: 'Ordem de Serviço',
-    );
+    final numero = _texto(ordem, 'numero', padrao: 'Ordem de Serviço');
 
-    final status = _texto(
-      ordem,
-      'status',
-      padrao: 'Aberta',
-    );
+    final status = _texto(ordem, 'status', padrao: 'Aberta');
 
     final servicos = _texto(
       ordem,
@@ -585,14 +624,11 @@ class _ClienteDetalhesPageState
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: id <= 0
-            ? null
-            : () => _abrirPdf(id),
+        onTap: id <= 0 ? null : () => _abrirPdf(id),
         child: Padding(
           padding: const EdgeInsets.all(15),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
@@ -601,30 +637,25 @@ class _ClienteDetalhesPageState
                       numero,
                       style: const TextStyle(
                         fontSize: 16,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 9,
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: _corStatus(status)
-                          .withValues(alpha: 0.16),
-                      borderRadius:
-                          BorderRadius.circular(20),
+                      color: _corStatus(status).withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       status,
                       style: TextStyle(
                         color: _corStatus(status),
                         fontSize: 12,
-                        fontWeight:
-                            FontWeight.w600,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -635,9 +666,7 @@ class _ClienteDetalhesPageState
                 servicos,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white70,
-                ),
+                style: const TextStyle(color: Colors.white70),
               ),
               const SizedBox(height: 10),
               Row(
@@ -652,8 +681,7 @@ class _ClienteDetalhesPageState
                     child: Text(
                       _nomeVeiculo(ordem),
                       maxLines: 1,
-                      overflow:
-                          TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white60,
                         fontSize: 13,
@@ -673,20 +701,14 @@ class _ClienteDetalhesPageState
                   const SizedBox(width: 6),
                   Text(
                     _dataDaOrdem(ordem),
-                    style: const TextStyle(
-                      color: Colors.white60,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: Colors.white60, fontSize: 13),
                   ),
                   const Spacer(),
                   Text(
-                    _moeda.format(
-                      _valorFinal(ordem),
-                    ),
+                    _moeda.format(_valorFinal(ordem)),
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight:
-                          FontWeight.bold,
+                      fontWeight: FontWeight.bold,
                       color: Color(0xFFD6A84B),
                     ),
                   ),
@@ -698,10 +720,7 @@ class _ClienteDetalhesPageState
                   alignment: Alignment.centerRight,
                   child: Text(
                     'Toque para visualizar o PDF',
-                    style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: Colors.white38, fontSize: 11),
                   ),
                 ),
               ],
@@ -716,41 +735,42 @@ class _ClienteDetalhesPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('Detalhes do cliente'),
+        title: const Text('Detalhes do cliente'),
         actions: [
           IconButton(
-            onPressed:
-                _carregando ? null : _carregarHistorico,
+            onPressed: _abrindoWhatsApp ? null : _abrirOpcoesWhatsApp,
+            tooltip: 'WhatsApp',
+            icon: _abrindoWhatsApp
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.chat_outlined),
+          ),
+          IconButton(
+            onPressed: _carregando ? null : _carregarHistorico,
             tooltip: 'Atualizar',
-            icon: const Icon(
-              Icons.refresh_outlined,
-            ),
+            icon: const Icon(Icons.refresh_outlined),
           ),
           IconButton(
             onPressed: editarCliente,
             tooltip: 'Editar cliente',
-            icon: const Icon(
-              Icons.edit_outlined,
-            ),
+            icon: const Icon(Icons.edit_outlined),
           ),
         ],
       ),
       body: _carregando
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _carregarHistorico,
               child: ListView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(),
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 children: [
                   const CircleAvatar(
                     radius: 46,
-                    backgroundColor:
-                        Color(0xFF252525),
+                    backgroundColor: Color(0xFF252525),
                     child: Icon(
                       Icons.person,
                       size: 48,
@@ -763,47 +783,37 @@ class _ClienteDetalhesPageState
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 24,
-                      fontWeight:
-                          FontWeight.bold,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 20),
                   GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
-                    physics:
-                        const NeverScrollableScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
                     childAspectRatio: 1.45,
                     children: [
                       _cardIndicador(
                         titulo: 'Total gasto',
-                        valor:
-                            _moeda.format(_totalGasto),
-                        icone:
-                            Icons.payments_outlined,
+                        valor: _moeda.format(_totalGasto),
+                        icone: Icons.payments_outlined,
                       ),
                       _cardIndicador(
                         titulo: 'Ordens',
-                        valor:
-                            _quantidadeOrdens.toString(),
-                        icone:
-                            Icons.assignment_outlined,
+                        valor: _quantidadeOrdens.toString(),
+                        icone: Icons.assignment_outlined,
                       ),
                       _cardIndicador(
                         titulo: 'Ticket médio',
-                        valor:
-                            _moeda.format(_ticketMedio),
-                        icone:
-                            Icons.trending_up_outlined,
+                        valor: _moeda.format(_ticketMedio),
+                        icone: Icons.trending_up_outlined,
                       ),
                       _cardIndicador(
                         titulo: 'Veículos',
-                        valor:
-                            _quantidadeVeiculos.toString(),
-                        icone: Icons
-                            .directions_car_outlined,
+                        valor: _quantidadeVeiculos.toString(),
+                        icone: Icons.directions_car_outlined,
                       ),
                     ],
                   ),
@@ -812,38 +822,23 @@ class _ClienteDetalhesPageState
                     margin: EdgeInsets.zero,
                     child: ListTile(
                       leading: const Icon(
-                        Icons
-                            .event_available_outlined,
+                        Icons.event_available_outlined,
                         color: Color(0xFFD6A84B),
                       ),
-                      title: const Text(
-                        'Último atendimento',
-                      ),
-                      subtitle: Text(
-                        _formatarData(
-                          _ultimoAtendimento,
-                        ),
-                      ),
+                      title: const Text('Último atendimento'),
+                      subtitle: Text(_formatarData(_ultimoAtendimento)),
                     ),
                   ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: abrirVeiculos,
-                    icon: const Icon(
-                      Icons.directions_car_outlined,
-                    ),
-                    label: const Text(
-                      'Ver veículos do cliente',
-                    ),
+                    icon: const Icon(Icons.directions_car_outlined),
+                    label: const Text('Ver veículos do cliente'),
                   ),
                   const SizedBox(height: 22),
                   const Text(
                     'Dados do cliente',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight:
-                          FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
                   _informacao(
@@ -857,8 +852,7 @@ class _ClienteDetalhesPageState
                     valor: cliente.email,
                   ),
                   _informacao(
-                    icone:
-                        Icons.location_on_outlined,
+                    icone: Icons.location_on_outlined,
                     titulo: 'Endereço',
                     valor: cliente.endereco,
                   ),
@@ -875,16 +869,13 @@ class _ClienteDetalhesPageState
                           'Histórico de Ordens',
                           style: TextStyle(
                             fontSize: 18,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       Text(
                         '${_historico.length} registro(s)',
-                        style: const TextStyle(
-                          color: Colors.white54,
-                        ),
+                        style: const TextStyle(color: Colors.white54),
                       ),
                     ],
                   ),
@@ -893,30 +884,25 @@ class _ClienteDetalhesPageState
                     const Card(
                       margin: EdgeInsets.zero,
                       child: Padding(
-                        padding:
-                            EdgeInsets.all(24),
+                        padding: EdgeInsets.all(24),
                         child: Column(
                           children: [
                             Icon(
-                              Icons
-                                  .history_toggle_off_outlined,
+                              Icons.history_toggle_off_outlined,
                               size: 44,
                               color: Colors.white38,
                             ),
                             SizedBox(height: 10),
                             Text(
                               'Este cliente ainda não possui Ordens de Serviço.',
-                              textAlign:
-                                  TextAlign.center,
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
                       ),
                     )
                   else
-                    ..._historico.map(
-                      _cardOrdem,
-                    ),
+                    ..._historico.map(_cardOrdem),
                   const SizedBox(height: 24),
                 ],
               ),

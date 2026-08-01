@@ -12,28 +12,22 @@ class OrdensServicoPage extends StatefulWidget {
   const OrdensServicoPage({super.key});
 
   @override
-  State<OrdensServicoPage> createState() =>
-      _OrdensServicoPageState();
+  State<OrdensServicoPage> createState() => _OrdensServicoPageState();
 }
 
-class _OrdensServicoPageState
-    extends State<OrdensServicoPage> {
-  final OrdemServicoRepository _repository =
-  OrdemServicoRepository();
+class _OrdensServicoPageState extends State<OrdensServicoPage> {
+  final OrdemServicoRepository _repository = OrdemServicoRepository();
 
-  final OrdemServicoPdfService _pdfService =
-  OrdemServicoPdfService();
+  final OrdemServicoPdfService _pdfService = OrdemServicoPdfService();
 
-  final TextEditingController _pesquisaController =
-  TextEditingController();
+  final TextEditingController _pesquisaController = TextEditingController();
 
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
-  final DateFormat _dataBrasileira =
-  DateFormat('dd/MM/yyyy');
+  final DateFormat _dataBrasileira = DateFormat('dd/MM/yyyy');
 
   List<Map<String, dynamic>> _ordens = [];
 
@@ -54,18 +48,14 @@ class _OrdensServicoPageState
   void initState() {
     super.initState();
 
-    _pesquisaController.addListener(
-      _aoAlterarPesquisa,
-    );
+    _pesquisaController.addListener(_aoAlterarPesquisa);
 
     _carregarOrdens();
   }
 
   @override
   void dispose() {
-    _pesquisaController.removeListener(
-      _aoAlterarPesquisa,
-    );
+    _pesquisaController.removeListener(_aoAlterarPesquisa);
 
     _pesquisaController.dispose();
 
@@ -86,8 +76,7 @@ class _OrdensServicoPageState
     });
 
     try {
-      final resultado =
-      await _repository.listarOrdensServicoComDetalhes(
+      final resultado = await _repository.listarOrdensServicoComDetalhes(
         status: _statusSelecionado,
         pesquisa: _pesquisaController.text,
       );
@@ -111,16 +100,13 @@ class _OrdensServicoPageState
 
       _mostrarMensagem(
         'Não foi possível carregar as Ordens de Serviço.\n'
-            '$erro',
+        '$erro',
         erro: true,
       );
     }
   }
 
-  void _mostrarMensagem(
-      String mensagem, {
-        bool erro = false,
-      }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
@@ -130,19 +116,17 @@ class _OrdensServicoPageState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensagem),
-        backgroundColor:
-        erro ? Colors.red.shade700 : null,
+        backgroundColor: erro ? Colors.red.shade700 : null,
       ),
     );
   }
 
   String _obterTexto(
-      Map<String, dynamic> ordem,
-      String campo, {
-        String padrao = '',
-      }) {
-    final texto =
-    (ordem[campo] ?? '').toString().trim();
+    Map<String, dynamic> ordem,
+    String campo, {
+    String padrao = '',
+  }) {
+    final texto = (ordem[campo] ?? '').toString().trim();
 
     if (texto.isEmpty) {
       return padrao;
@@ -151,10 +135,7 @@ class _OrdensServicoPageState
     return texto;
   }
 
-  int _obterInt(
-      Map<String, dynamic> ordem,
-      String campo,
-      ) {
+  int _obterInt(Map<String, dynamic> ordem, String campo) {
     final valor = ordem[campo];
 
     if (valor is int) {
@@ -165,27 +146,18 @@ class _OrdensServicoPageState
       return valor.toInt();
     }
 
-    return int.tryParse(
-      valor?.toString().trim() ?? '',
-    ) ??
-        0;
+    return int.tryParse(valor?.toString().trim() ?? '') ?? 0;
   }
 
-  double _obterDouble(
-      Map<String, dynamic> ordem,
-      String campo,
-      ) {
+  double _obterDouble(Map<String, dynamic> ordem, String campo) {
     final valor = ordem[campo];
 
     if (valor is num) {
       return valor.toDouble();
     }
 
-    final texto = valor
-        ?.toString()
-        .trim()
-        .replaceAll('R\$', '')
-        .replaceAll(' ', '') ??
+    final texto =
+        valor?.toString().trim().replaceAll('R\$', '').replaceAll(' ', '') ??
         '';
 
     if (texto.isEmpty) {
@@ -193,11 +165,7 @@ class _OrdensServicoPageState
     }
 
     if (texto.contains(',')) {
-      return double.tryParse(
-        texto
-            .replaceAll('.', '')
-            .replaceAll(',', '.'),
-      ) ??
+      return double.tryParse(texto.replaceAll('.', '').replaceAll(',', '.')) ??
           0;
     }
 
@@ -218,18 +186,10 @@ class _OrdensServicoPageState
     return _dataBrasileira.format(data);
   }
 
-  String _montarNomeVeiculo(
-      Map<String, dynamic> ordem,
-      ) {
-    final marca = _obterTexto(
-      ordem,
-      'veiculo_marca',
-    );
+  String _montarNomeVeiculo(Map<String, dynamic> ordem) {
+    final marca = _obterTexto(ordem, 'veiculo_marca');
 
-    final modelo = _obterTexto(
-      ordem,
-      'veiculo_modelo',
-    );
+    final modelo = _obterTexto(ordem, 'veiculo_modelo');
 
     final nome = '$marca $modelo'.trim();
 
@@ -298,9 +258,7 @@ class _OrdensServicoPageState
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: corConfirmar,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: corConfirmar),
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
@@ -314,9 +272,7 @@ class _OrdensServicoPageState
     return resultado ?? false;
   }
 
-  Future<void> _iniciarOrdem(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _iniciarOrdem(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
     if (id <= 0 || _executandoAcao) {
@@ -325,8 +281,7 @@ class _OrdensServicoPageState
 
     final confirmar = await _confirmarAcao(
       titulo: 'Iniciar serviço',
-      mensagem:
-      'Deseja iniciar esta Ordem de Serviço agora?',
+      mensagem: 'Deseja iniciar esta Ordem de Serviço agora?',
       textoConfirmar: 'Iniciar',
     );
 
@@ -347,9 +302,7 @@ class _OrdensServicoPageState
 
       Navigator.of(context).pop();
 
-      _mostrarMensagem(
-        'Ordem de Serviço iniciada.',
-      );
+      _mostrarMensagem('Ordem de Serviço iniciada.');
 
       await _carregarOrdens();
     } catch (erro) {
@@ -366,17 +319,14 @@ class _OrdensServicoPageState
     }
   }
 
-  Future<void> _finalizarOrdem(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _finalizarOrdem(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
     if (id <= 0 || _executandoAcao) {
       return;
     }
 
-    final formaPagamento =
-        await _selecionarFormaPagamento();
+    final formaPagamento = await _selecionarFormaPagamento();
 
     if (formaPagamento == null) {
       return;
@@ -411,9 +361,7 @@ class _OrdensServicoPageState
 
       Navigator.of(context).pop();
 
-      await Future<void>.delayed(
-        const Duration(milliseconds: 250),
-      );
+      await Future<void>.delayed(const Duration(milliseconds: 250));
 
       if (!mounted) return;
 
@@ -430,9 +378,9 @@ class _OrdensServicoPageState
         _executandoAcao = false;
       });
 
-      final ordemAtualizada =
-          await _repository
-              .buscarOrdemServicoCompletaPorId(id);
+      final ordemAtualizada = await _repository.buscarOrdemServicoCompletaPorId(
+        id,
+      );
 
       if (!mounted) return;
 
@@ -467,9 +415,7 @@ class _OrdensServicoPageState
             size: 42,
             color: Color(0xFFD6A84B),
           ),
-          title: const Text(
-            'Registrar fotos do serviço?',
-          ),
+          title: const Text('Registrar fotos do serviço?'),
           content: const Text(
             'Deseja abrir agora as fotos da Ordem de Serviço '
             'para registrar o resultado final do veículo?',
@@ -477,24 +423,16 @@ class _OrdensServicoPageState
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop(false);
+                Navigator.of(dialogContext).pop(false);
               },
               child: const Text('Agora não'),
             ),
             FilledButton.icon(
               onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop(true);
+                Navigator.of(dialogContext).pop(true);
               },
-              icon: const Icon(
-                Icons.photo_camera_outlined,
-              ),
-              label: const Text(
-                'Registrar fotos',
-              ),
+              icon: const Icon(Icons.photo_camera_outlined),
+              label: const Text('Registrar fotos'),
             ),
           ],
         );
@@ -518,8 +456,7 @@ class _OrdensServicoPageState
               'cliente_nome',
               padrao: 'Cliente não informado',
             ),
-            veiculo:
-                _montarNomeVeiculo(ordem),
+            veiculo: _montarNomeVeiculo(ordem),
             somenteLeitura: false,
           ),
         ),
@@ -538,109 +475,73 @@ class _OrdensServicoPageState
     required Map<String, dynamic> ordem,
     required int ordemServicoId,
   }) async {
-    final acao =
-        await showModalBottomSheet<String>(
+    final acao = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (bottomContext) {
         return SafeArea(
           child: Padding(
-            padding:
-                const EdgeInsets.only(
-              bottom: 12,
-            ),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Column(
-              mainAxisSize:
-                  MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Padding(
-                  padding:
-                      EdgeInsets.fromLTRB(
-                    20,
-                    4,
-                    20,
-                    12,
-                  ),
+                  padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
                   child: Align(
-                    alignment:
-                        Alignment.centerLeft,
+                    alignment: Alignment.centerLeft,
                     child: Text(
                       'Ordem de Serviço finalizada',
                       style: TextStyle(
                         fontSize: 20,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
                 ListTile(
                   leading: const Icon(
-                    Icons
-                        .picture_as_pdf_outlined,
-                    color:
-                        Color(0xFFD6A84B),
+                    Icons.picture_as_pdf_outlined,
+                    color: Color(0xFFD6A84B),
                   ),
-                  title: const Text(
-                    'Visualizar PDF',
-                  ),
+                  title: const Text('Visualizar PDF'),
                   subtitle: const Text(
                     'Gera o documento com os dados e as fotos atuais.',
                   ),
                   onTap: () {
-                    Navigator.of(
-                      bottomContext,
-                    ).pop('visualizar');
+                    Navigator.of(bottomContext).pop('visualizar');
                   },
                 ),
                 ListTile(
                   leading: const Icon(
                     Icons.share_outlined,
-                    color:
-                        Color(0xFFD6A84B),
+                    color: Color(0xFFD6A84B),
                   ),
-                  title: const Text(
-                    'Compartilhar PDF',
-                  ),
+                  title: const Text('Compartilhar PDF'),
                   subtitle: const Text(
                     'Abre as opções de compartilhamento do celular.',
                   ),
                   onTap: () {
-                    Navigator.of(
-                      bottomContext,
-                    ).pop('compartilhar');
+                    Navigator.of(bottomContext).pop('compartilhar');
                   },
                 ),
                 ListTile(
                   leading: const Icon(
                     Icons.chat_outlined,
-                    color:
-                        Color(0xFF25D366),
+                    color: Color(0xFF25D366),
                   ),
-                  title: const Text(
-                    'Avisar cliente no WhatsApp',
-                  ),
+                  title: const Text('Avisar cliente no WhatsApp'),
                   subtitle: const Text(
                     'Envia a mensagem de veículo pronto para retirada.',
                   ),
                   onTap: () {
-                    Navigator.of(
-                      bottomContext,
-                    ).pop('whatsapp');
+                    Navigator.of(bottomContext).pop('whatsapp');
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
-                    Icons
-                        .check_circle_outline,
-                  ),
-                  title: const Text(
-                    'Concluir',
-                  ),
+                  leading: const Icon(Icons.check_circle_outline),
+                  title: const Text('Concluir'),
                   onTap: () {
-                    Navigator.of(
-                      bottomContext,
-                    ).pop('concluir');
+                    Navigator.of(bottomContext).pop('concluir');
                   },
                 ),
               ],
@@ -650,35 +551,20 @@ class _OrdensServicoPageState
       },
     );
 
-    if (!mounted ||
-        acao == null ||
-        acao == 'concluir') {
+    if (!mounted || acao == null || acao == 'concluir') {
       return;
     }
 
     try {
       if (acao == 'visualizar') {
-        await _pdfService.visualizarPdf(
-          ordemServicoId:
-              ordemServicoId,
-        );
-      } else if (acao ==
-          'compartilhar') {
-        await _pdfService.compartilharPdf(
-          ordemServicoId:
-              ordemServicoId,
-        );
-      } else if (acao ==
-          'whatsapp') {
-        await _enviarVeiculoProntoWhatsApp(
-          ordem,
-        );
+        await _pdfService.visualizarPdf(ordemServicoId: ordemServicoId);
+      } else if (acao == 'compartilhar') {
+        await _pdfService.compartilharPdf(ordemServicoId: ordemServicoId);
+      } else if (acao == 'whatsapp') {
+        await _enviarVeiculoProntoWhatsApp(ordem);
       }
     } catch (erro) {
-      _mostrarMensagem(
-        'Não foi possível concluir a ação.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível concluir a ação.\n$erro', erro: true);
     }
   }
 
@@ -698,19 +584,12 @@ class _OrdensServicoPageState
       builder: (bottomContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.only(
-              bottom: 12,
-            ),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    4,
-                    20,
-                    12,
-                  ),
+                  padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -723,15 +602,11 @@ class _OrdensServicoPageState
                   ),
                 ),
                 ...formas.map(
-                      (forma) => ListTile(
-                    leading: const Icon(
-                      Icons.payments_outlined,
-                    ),
+                  (forma) => ListTile(
+                    leading: const Icon(Icons.payments_outlined),
                     title: Text(forma),
                     onTap: () {
-                      Navigator.of(bottomContext).pop(
-                        forma,
-                      );
+                      Navigator.of(bottomContext).pop(forma);
                     },
                   ),
                 ),
@@ -743,9 +618,7 @@ class _OrdensServicoPageState
     );
   }
 
-  Future<void> _cancelarOrdem(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _cancelarOrdem(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
     if (id <= 0 || _executandoAcao) {
@@ -755,7 +628,7 @@ class _OrdensServicoPageState
     final confirmar = await _confirmarAcao(
       titulo: 'Cancelar Ordem de Serviço',
       mensagem:
-      'Tem certeza de que deseja cancelar esta '
+          'Tem certeza de que deseja cancelar esta '
           'Ordem de Serviço?',
       textoConfirmar: 'Cancelar OS',
       corConfirmar: Colors.red.shade700,
@@ -778,16 +651,11 @@ class _OrdensServicoPageState
 
       Navigator.of(context).pop();
 
-      _mostrarMensagem(
-        'Ordem de Serviço cancelada.',
-      );
+      _mostrarMensagem('Ordem de Serviço cancelada.');
 
       await _carregarOrdens();
     } catch (erro) {
-      _mostrarMensagem(
-        'Não foi possível cancelar a ordem.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível cancelar a ordem.\n$erro', erro: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -797,15 +665,9 @@ class _OrdensServicoPageState
     }
   }
 
-  Future<void> _excluirOrdem(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _excluirOrdem(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
-    final numero = _obterTexto(
-      ordem,
-      'numero',
-      padrao: 'sem número',
-    );
+    final numero = _obterTexto(ordem, 'numero', padrao: 'sem número');
 
     if (id <= 0 || _executandoAcao) {
       return;
@@ -814,7 +676,7 @@ class _OrdensServicoPageState
     final confirmar = await _confirmarAcao(
       titulo: 'Excluir Ordem de Serviço',
       mensagem:
-      'Deseja excluir permanentemente a Ordem de '
+          'Deseja excluir permanentemente a Ordem de '
           'Serviço $numero?\n\n'
           'Esta ação não poderá ser desfeita.',
       textoConfirmar: 'Excluir',
@@ -838,16 +700,11 @@ class _OrdensServicoPageState
 
       Navigator.of(context).pop();
 
-      _mostrarMensagem(
-        'Ordem de Serviço excluída.',
-      );
+      _mostrarMensagem('Ordem de Serviço excluída.');
 
       await _carregarOrdens();
     } catch (erro) {
-      _mostrarMensagem(
-        'Não foi possível excluir a ordem.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível excluir a ordem.\n$erro', erro: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -857,33 +714,26 @@ class _OrdensServicoPageState
     }
   }
 
-  Future<void> _abrirDetalhes(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _abrirDetalhes(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
     if (id <= 0) {
-      _mostrarMensagem(
-        'Ordem de Serviço inválida.',
-        erro: true,
-      );
+      _mostrarMensagem('Ordem de Serviço inválida.', erro: true);
 
       return;
     }
 
     try {
-      final ordemCompleta = await _repository
-          .buscarOrdemServicoCompletaPorId(id);
+      final ordemCompleta = await _repository.buscarOrdemServicoCompletaPorId(
+        id,
+      );
 
       if (!mounted) {
         return;
       }
 
       if (ordemCompleta == null) {
-        _mostrarMensagem(
-          'Ordem de Serviço não encontrada.',
-          erro: true,
-        );
+        _mostrarMensagem('Ordem de Serviço não encontrada.', erro: true);
 
         return;
       }
@@ -896,9 +746,7 @@ class _OrdensServicoPageState
         builder: (bottomContext) {
           return FractionallySizedBox(
             heightFactor: 0.92,
-            child: _construirDetalhes(
-              ordemCompleta,
-            ),
+            child: _construirDetalhes(ordemCompleta),
           );
         },
       );
@@ -910,42 +758,28 @@ class _OrdensServicoPageState
     }
   }
 
-  Future<void> _abrirChecklist(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _abrirChecklist(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
     if (id <= 0) {
-      _mostrarMensagem(
-        'Ordem de Serviço inválida.',
-        erro: true,
-      );
+      _mostrarMensagem('Ordem de Serviço inválida.', erro: true);
       return;
     }
 
-    final status = _obterTexto(
-      ordem,
-      'status',
-      padrao: 'Aberta',
-    );
+    final status = _obterTexto(ordem, 'status', padrao: 'Aberta');
 
     final alterou = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => OrdemServicoChecklistPage(
           ordemServicoId: id,
-          numeroOrdem: _obterTexto(
-            ordem,
-            'numero',
-            padrao: 'Ordem de Serviço',
-          ),
+          numeroOrdem: _obterTexto(ordem, 'numero', padrao: 'Ordem de Serviço'),
           cliente: _obterTexto(
             ordem,
             'cliente_nome',
             padrao: 'Cliente não informado',
           ),
           veiculo: _montarNomeVeiculo(ordem),
-          somenteLeitura:
-          status == 'Finalizada' || status == 'Cancelada',
+          somenteLeitura: status == 'Finalizada' || status == 'Cancelada',
         ),
       ),
     );
@@ -955,42 +789,28 @@ class _OrdensServicoPageState
     }
   }
 
-  Future<void> _abrirFotos(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _abrirFotos(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
     if (id <= 0) {
-      _mostrarMensagem(
-        'Ordem de Serviço inválida.',
-        erro: true,
-      );
+      _mostrarMensagem('Ordem de Serviço inválida.', erro: true);
       return;
     }
 
-    final status = _obterTexto(
-      ordem,
-      'status',
-      padrao: 'Aberta',
-    );
+    final status = _obterTexto(ordem, 'status', padrao: 'Aberta');
 
     final alterou = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => OrdemServicoFotosPage(
           ordemServicoId: id,
-          numeroOrdem: _obterTexto(
-            ordem,
-            'numero',
-            padrao: 'Ordem de Serviço',
-          ),
+          numeroOrdem: _obterTexto(ordem, 'numero', padrao: 'Ordem de Serviço'),
           cliente: _obterTexto(
             ordem,
             'cliente_nome',
             padrao: 'Cliente não informado',
           ),
           veiculo: _montarNomeVeiculo(ordem),
-          somenteLeitura:
-          status == 'Finalizada' || status == 'Cancelada',
+          somenteLeitura: status == 'Finalizada' || status == 'Cancelada',
         ),
       ),
     );
@@ -1000,58 +820,40 @@ class _OrdensServicoPageState
     }
   }
 
-  Future<void> _abrirAssinatura(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _abrirAssinatura(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
     if (id <= 0) {
-      _mostrarMensagem(
-        'Ordem de Serviço inválida.',
-        erro: true,
-      );
+      _mostrarMensagem('Ordem de Serviço inválida.', erro: true);
       return;
     }
 
-    final status = _obterTexto(
-      ordem,
-      'status',
-      padrao: 'Aberta',
-    );
+    final status = _obterTexto(ordem, 'status', padrao: 'Aberta');
 
     final alterou = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => OrdemServicoAssinaturaPage(
           ordemServicoId: id,
-          numeroOrdem: _obterTexto(
-            ordem,
-            'numero',
-            padrao: 'Ordem de Serviço',
-          ),
+          numeroOrdem: _obterTexto(ordem, 'numero', padrao: 'Ordem de Serviço'),
           cliente: _obterTexto(
             ordem,
             'cliente_nome',
             padrao: 'Cliente não informado',
           ),
           veiculo: _montarNomeVeiculo(ordem),
-          somenteLeitura:
-          status == 'Finalizada' || status == 'Cancelada',
+          somenteLeitura: status == 'Finalizada' || status == 'Cancelada',
         ),
       ),
     );
 
     if (alterou == true && mounted) {
-      _mostrarMensagem(
-        'Assinatura do cliente atualizada.',
-      );
+      _mostrarMensagem('Assinatura do cliente atualizada.');
 
       await _carregarOrdens();
     }
   }
 
-  Future<void> _visualizarPdf(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _visualizarPdf(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
     if (id <= 0 || _executandoAcao) {
@@ -1063,14 +865,9 @@ class _OrdensServicoPageState
     });
 
     try {
-      await _pdfService.visualizarPdf(
-        ordemServicoId: id,
-      );
+      await _pdfService.visualizarPdf(ordemServicoId: id);
     } catch (erro) {
-      _mostrarMensagem(
-        'Não foi possível gerar o PDF.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível gerar o PDF.\n$erro', erro: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -1080,9 +877,7 @@ class _OrdensServicoPageState
     }
   }
 
-  Future<void> _compartilharPdf(
-      Map<String, dynamic> ordem,
-      ) async {
+  Future<void> _compartilharPdf(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
     if (id <= 0 || _executandoAcao) {
@@ -1094,9 +889,7 @@ class _OrdensServicoPageState
     });
 
     try {
-      await _pdfService.compartilharPdf(
-        ordemServicoId: id,
-      );
+      await _pdfService.compartilharPdf(ordemServicoId: id);
     } catch (erro) {
       _mostrarMensagem(
         'Não foi possível compartilhar o PDF.\n$erro',
@@ -1111,115 +904,42 @@ class _OrdensServicoPageState
     }
   }
 
+  double _valorFinalOrdem(Map<String, dynamic> ordem) {
+    final valorTotal = _obterDouble(ordem, 'valor_total');
 
-  String _montarVeiculoComPlaca(
-      Map<String, dynamic> ordem,
-      ) {
-    final veiculo = _montarNomeVeiculo(ordem);
-    final placa = _obterTexto(
-      ordem,
-      'veiculo_placa',
-    );
+    final desconto = _obterDouble(ordem, 'desconto');
 
-    if (placa.isEmpty) {
-      return veiculo;
-    }
-
-    return '$veiculo • ${placa.toUpperCase()}';
+    return (valorTotal - desconto).clamp(0, double.infinity);
   }
 
-  double _valorFinalOrdem(
-      Map<String, dynamic> ordem,
-      ) {
-    final valorTotal = _obterDouble(
-      ordem,
-      'valor_total',
-    );
+  String _previsaoWhatsApp(Map<String, dynamic> ordem) {
+    final previsao = _obterTexto(ordem, 'data_finalizacao');
 
-    final desconto = _obterDouble(
-      ordem,
-      'desconto',
-    );
-
-    return (valorTotal - desconto).clamp(
-      0,
-      double.infinity,
-    );
-  }
-
-  List<Map<String, dynamic>> _itensDaOrdem(
-      Map<String, dynamic> ordem,
-      ) {
-    final itensBrutos = ordem['itens'];
-
-    if (itensBrutos is! List) {
-      return <Map<String, dynamic>>[];
+    if (previsao.isNotEmpty) {
+      return _formatarData(previsao);
     }
 
-    return itensBrutos
-        .whereType<Map>()
-        .map(
-          (item) => Map<String, dynamic>.from(item),
-    )
-        .toList();
-  }
+    final inicio = _obterTexto(ordem, 'data_inicio');
 
-  String _resumoServicosWhatsApp(
-      Map<String, dynamic> ordem,
-      ) {
-    final itens = _itensDaOrdem(ordem);
-
-    if (itens.isEmpty) {
-      return 'Serviços conforme Ordem de Serviço.';
+    if (inicio.isNotEmpty) {
+      return _formatarData(inicio);
     }
 
-    final linhas = <String>[];
-
-    for (final item in itens) {
-      final servico = _obterTexto(
-        item,
-        'servico',
-        padrao: 'Serviço',
-      );
-
-      final quantidade = _obterDouble(
-        item,
-        'quantidade',
-      );
-
-      final quantidadeTexto =
-      quantidade == quantidade.roundToDouble()
-          ? quantidade.toInt().toString()
-          : quantidade
-          .toStringAsFixed(2)
-          .replaceAll('.', ',')
-          .replaceAll(RegExp(r'0+$'), '')
-          .replaceAll(RegExp(r',$'), '');
-
-      linhas.add('• $quantidadeTexto × $servico');
-    }
-
-    return linhas.join('\n');
+    return '';
   }
 
-  Future<void> _enviarMensagemWhatsApp({
-    required Map<String, dynamic> ordem,
-    required String mensagem,
-  }) async {
+  Future<void> _executarAcaoWhatsApp(
+    Map<String, dynamic> ordem,
+    Future<void> Function({required String telefone, required String cliente})
+    acao,
+  ) async {
     if (_executandoAcao) {
       return;
     }
 
-    final telefone = _obterTexto(
-      ordem,
-      'cliente_telefone',
-    );
+    final telefone = _obterTexto(ordem, 'cliente_telefone');
 
-    final cliente = _obterTexto(
-      ordem,
-      'cliente_nome',
-      padrao: 'Cliente',
-    );
+    final cliente = _obterTexto(ordem, 'cliente_nome', padrao: 'Cliente');
 
     if (telefone.isEmpty) {
       _mostrarMensagem(
@@ -1234,15 +954,9 @@ class _OrdensServicoPageState
     });
 
     try {
-      await WhatsAppService.enviarMensagem(
-        telefone: telefone,
-        mensagem: mensagem,
-      );
+      await acao(telefone: telefone, cliente: cliente);
     } catch (erro) {
-      _mostrarMensagem(
-        'Não foi possível abrir o WhatsApp.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível abrir o WhatsApp.\n$erro', erro: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -1252,152 +966,92 @@ class _OrdensServicoPageState
     }
   }
 
+  Future<void> _enviarMensagemWhatsApp({
+    required Map<String, dynamic> ordem,
+    required String mensagem,
+  }) async {
+    await _executarAcaoWhatsApp(ordem, ({
+      required String telefone,
+      required String cliente,
+    }) {
+      return WhatsAppService.enviarMensagemPersonalizada(
+        telefone: telefone,
+        mensagem: mensagem,
+      );
+    });
+  }
+
   Future<void> _enviarServicoIniciadoWhatsApp(
-      Map<String, dynamic> ordem,
-      ) async {
-    final cliente = _obterTexto(
-      ordem,
-      'cliente_nome',
-      padrao: 'cliente',
-    );
+    Map<String, dynamic> ordem,
+  ) async {
+    final numero = _obterTexto(ordem, 'numero', padrao: 'Ordem de Serviço');
 
-    final numero = _obterTexto(
-      ordem,
-      'numero',
-      padrao: 'Ordem de Serviço',
-    );
+    final status = _obterTexto(ordem, 'status', padrao: 'Em andamento');
 
-    final veiculo = _montarVeiculoComPlaca(ordem);
+    final valor = _moeda.format(_valorFinalOrdem(ordem));
 
-    final mensagem = '''
-Olá, $cliente! 👋
-
-Informamos que o serviço do seu veículo foi iniciado.
-
-🚗 Veículo: $veiculo
-📋 Ordem de Serviço: $numero
-
-Manteremos você informado sobre o andamento.
-
-*Imperium Detailing*
-''';
-
-    await _enviarMensagemWhatsApp(
-      ordem: ordem,
-      mensagem: mensagem,
-    );
+    await _executarAcaoWhatsApp(ordem, ({
+      required String telefone,
+      required String cliente,
+    }) {
+      return WhatsAppService.enviarAtualizacaoOrdemServico(
+        telefone: telefone,
+        cliente: cliente,
+        numeroOrdem: numero,
+        status: status,
+        valor: valor,
+        previsao: _previsaoWhatsApp(ordem),
+        mensagemPersonalizada:
+            'Informamos que o serviço foi iniciado e manteremos você atualizado sobre o andamento.',
+      );
+    });
   }
 
-  Future<void> _enviarVeiculoProntoWhatsApp(
-      Map<String, dynamic> ordem,
-      ) async {
-    final cliente = _obterTexto(
-      ordem,
-      'cliente_nome',
-      padrao: 'cliente',
-    );
+  Future<void> _enviarVeiculoProntoWhatsApp(Map<String, dynamic> ordem) async {
+    final numero = _obterTexto(ordem, 'numero', padrao: 'Ordem de Serviço');
 
-    final numero = _obterTexto(
-      ordem,
-      'numero',
-      padrao: 'Ordem de Serviço',
-    );
+    final valor = _moeda.format(_valorFinalOrdem(ordem));
 
-    final veiculo = _montarVeiculoComPlaca(ordem);
-    final valor = _moeda.format(
-      _valorFinalOrdem(ordem),
-    );
-
-    final mensagem = '''
-Olá, $cliente! ✅
-
-Temos uma ótima notícia: o serviço do seu veículo foi finalizado e ele já está pronto para retirada.
-
-🚗 Veículo: $veiculo
-📋 Ordem de Serviço: $numero
-💰 Valor: $valor
-
-Agradecemos pela confiança no nosso trabalho!
-
-*Imperium Detailing*
-''';
-
-    await _enviarMensagemWhatsApp(
-      ordem: ordem,
-      mensagem: mensagem,
-    );
+    await _executarAcaoWhatsApp(ordem, ({
+      required String telefone,
+      required String cliente,
+    }) {
+      return WhatsAppService.enviarVeiculoPronto(
+        telefone: telefone,
+        cliente: cliente,
+        numeroOrdem: numero,
+        valor: valor,
+        previsao: _previsaoWhatsApp(ordem),
+      );
+    });
   }
 
-  Future<void> _enviarResumoOrdemWhatsApp(
-      Map<String, dynamic> ordem,
-      ) async {
-    final cliente = _obterTexto(
-      ordem,
-      'cliente_nome',
-      padrao: 'cliente',
-    );
+  Future<void> _enviarResumoOrdemWhatsApp(Map<String, dynamic> ordem) async {
+    final numero = _obterTexto(ordem, 'numero', padrao: 'Ordem de Serviço');
 
-    final numero = _obterTexto(
-      ordem,
-      'numero',
-      padrao: 'Ordem de Serviço',
-    );
+    final status = _obterTexto(ordem, 'status', padrao: 'Aberta');
 
-    final status = _obterTexto(
-      ordem,
-      'status',
-      padrao: 'Aberta',
-    );
+    final valor = _moeda.format(_valorFinalOrdem(ordem));
 
-    final veiculo = _montarVeiculoComPlaca(ordem);
-    final valor = _moeda.format(
-      _valorFinalOrdem(ordem),
-    );
-
-    final servicos = _resumoServicosWhatsApp(ordem);
-
-    final mensagem = '''
-Olá, $cliente! Segue o resumo da sua Ordem de Serviço:
-
-📋 *$numero*
-🚗 Veículo: $veiculo
-📌 Status: $status
-
-🧽 *Serviços*
-$servicos
-
-💰 *Valor total: $valor*
-
-Para receber o documento completo em PDF, utilize a opção “Compartilhar” na Ordem de Serviço.
-
-*Imperium Detailing*
-''';
-
-    await _enviarMensagemWhatsApp(
-      ordem: ordem,
-      mensagem: mensagem,
-    );
+    await _executarAcaoWhatsApp(ordem, ({
+      required String telefone,
+      required String cliente,
+    }) {
+      return WhatsAppService.enviarAtualizacaoOrdemServico(
+        telefone: telefone,
+        cliente: cliente,
+        numeroOrdem: numero,
+        status: status,
+        valor: valor,
+        previsao: _previsaoWhatsApp(ordem),
+      );
+    });
   }
 
-  Future<void> _enviarCobrancaWhatsApp(
-      Map<String, dynamic> ordem,
-      ) async {
-    final cliente = _obterTexto(
-      ordem,
-      'cliente_nome',
-      padrao: 'cliente',
-    );
+  Future<void> _enviarCobrancaWhatsApp(Map<String, dynamic> ordem) async {
+    final numero = _obterTexto(ordem, 'numero', padrao: 'Ordem de Serviço');
 
-    final numero = _obterTexto(
-      ordem,
-      'numero',
-      padrao: 'Ordem de Serviço',
-    );
-
-    final veiculo = _montarVeiculoComPlaca(ordem);
-    final valor = _moeda.format(
-      _valorFinalOrdem(ordem),
-    );
+    final valor = _moeda.format(_valorFinalOrdem(ordem));
 
     final formaPagamento = _obterTexto(
       ordem,
@@ -1405,48 +1059,37 @@ Para receber o documento completo em PDF, utilize a opção “Compartilhar” n
       padrao: 'a combinar',
     );
 
-    final mensagem = '''
-Olá, $cliente! Tudo bem?
-
-Segue o valor referente ao serviço realizado:
-
-📋 Ordem de Serviço: $numero
-🚗 Veículo: $veiculo
-💰 Valor: *$valor*
-💳 Forma de pagamento: $formaPagamento
-
-Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
-
-*Imperium Detailing*
-''';
-
-    await _enviarMensagemWhatsApp(
-      ordem: ordem,
-      mensagem: mensagem,
-    );
+    await _executarAcaoWhatsApp(ordem, ({
+      required String telefone,
+      required String cliente,
+    }) {
+      return WhatsAppService.enviarCobrancaOrdemServico(
+        telefone: telefone,
+        cliente: cliente,
+        numeroOrdem: numero,
+        valor: valor,
+        formaPagamento: formaPagamento,
+      );
+    });
   }
 
   Future<void> _enviarMensagemPersonalizadaWhatsApp(
-      Map<String, dynamic> ordem,
-      ) async {
+    Map<String, dynamic> ordem,
+  ) async {
     String mensagem = '';
 
     final resultado = await showDialog<String>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text(
-            'Mensagem personalizada',
-          ),
+          title: const Text('Mensagem personalizada'),
           content: TextFormField(
             autofocus: true,
             minLines: 4,
             maxLines: 8,
-            textCapitalization:
-            TextCapitalization.sentences,
+            textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
-              hintText:
-              'Digite a mensagem para o cliente',
+              hintText: 'Digite a mensagem para o cliente',
               border: OutlineInputBorder(),
             ),
             onChanged: (valor) {
@@ -1462,13 +1105,9 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
             ),
             FilledButton.icon(
               onPressed: () {
-                Navigator.of(dialogContext).pop(
-                  mensagem.trim(),
-                );
+                Navigator.of(dialogContext).pop(mensagem.trim());
               },
-              icon: const Icon(
-                Icons.send_outlined,
-              ),
+              icon: const Icon(Icons.send_outlined),
               label: const Text('Continuar'),
             ),
           ],
@@ -1476,30 +1115,17 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
       },
     );
 
-    if (resultado == null ||
-        resultado.trim().isEmpty) {
+    if (resultado == null || resultado.trim().isEmpty) {
       return;
     }
 
-    await _enviarMensagemWhatsApp(
-      ordem: ordem,
-      mensagem: resultado.trim(),
-    );
+    await _enviarMensagemWhatsApp(ordem: ordem, mensagem: resultado.trim());
   }
 
-  Future<void> _abrirOpcoesWhatsApp(
-      Map<String, dynamic> ordem,
-      ) async {
-    final telefone = _obterTexto(
-      ordem,
-      'cliente_telefone',
-    );
+  Future<void> _abrirOpcoesWhatsApp(Map<String, dynamic> ordem) async {
+    final telefone = _obterTexto(ordem, 'cliente_telefone');
 
-    final cliente = _obterTexto(
-      ordem,
-      'cliente_nome',
-      padrao: 'Cliente',
-    );
+    final cliente = _obterTexto(ordem, 'cliente_nome', padrao: 'Cliente');
 
     if (telefone.isEmpty) {
       _mostrarMensagem(
@@ -1509,11 +1135,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
       return;
     }
 
-    final status = _obterTexto(
-      ordem,
-      'status',
-      padrao: 'Aberta',
-    );
+    final status = _obterTexto(ordem, 'status', padrao: 'Aberta');
 
     final opcao = await showModalBottomSheet<String>(
       context: context,
@@ -1521,121 +1143,72 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
       useSafeArea: true,
       builder: (bottomContext) {
         return Padding(
-          padding: const EdgeInsets.only(
-            bottom: 12,
-          ),
+          padding: const EdgeInsets.only(bottom: 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  4,
-                  20,
-                  12,
-                ),
+                padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Enviar pelo WhatsApp',
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
-              if (status == 'Aberta' ||
-                  status == 'Em andamento')
+              if (status == 'Aberta' || status == 'Em andamento')
                 ListTile(
                   leading: const CircleAvatar(
-                    child: Icon(
-                      Icons.play_arrow_outlined,
-                    ),
+                    child: Icon(Icons.play_arrow_outlined),
                   ),
-                  title: const Text(
-                    'Serviço iniciado',
-                  ),
+                  title: const Text('Serviço iniciado'),
                   subtitle: const Text(
                     'Avisar que o veículo entrou em serviço',
                   ),
                   onTap: () {
-                    Navigator.of(bottomContext).pop(
-                      'iniciado',
-                    );
+                    Navigator.of(bottomContext).pop('iniciado');
                   },
                 ),
               if (status == 'Finalizada')
                 ListTile(
                   leading: const CircleAvatar(
-                    child: Icon(
-                      Icons.check_circle_outline,
-                    ),
+                    child: Icon(Icons.check_circle_outline),
                   ),
-                  title: const Text(
-                    'Veículo pronto',
-                  ),
-                  subtitle: const Text(
-                    'Avisar que o serviço foi finalizado',
-                  ),
+                  title: const Text('Veículo pronto'),
+                  subtitle: const Text('Avisar que o serviço foi finalizado'),
                   onTap: () {
-                    Navigator.of(bottomContext).pop(
-                      'pronto',
-                    );
+                    Navigator.of(bottomContext).pop('pronto');
                   },
                 ),
               ListTile(
                 leading: const CircleAvatar(
-                  child: Icon(
-                    Icons.receipt_long_outlined,
-                  ),
+                  child: Icon(Icons.receipt_long_outlined),
                 ),
-                title: const Text(
-                  'Resumo da Ordem de Serviço',
-                ),
-                subtitle: const Text(
-                  'Enviar serviços, status e valor',
-                ),
+                title: const Text('Resumo da Ordem de Serviço'),
+                subtitle: const Text('Enviar serviços, status e valor'),
                 onTap: () {
-                  Navigator.of(bottomContext).pop(
-                    'resumo',
-                  );
+                  Navigator.of(bottomContext).pop('resumo');
                 },
               ),
               ListTile(
                 leading: const CircleAvatar(
-                  child: Icon(
-                    Icons.payments_outlined,
-                  ),
+                  child: Icon(Icons.payments_outlined),
                 ),
-                title: const Text(
-                  'Enviar cobrança',
-                ),
-                subtitle: const Text(
-                  'Enviar o valor total ao cliente',
-                ),
+                title: const Text('Enviar cobrança'),
+                subtitle: const Text('Enviar o valor total ao cliente'),
                 onTap: () {
-                  Navigator.of(bottomContext).pop(
-                    'cobranca',
-                  );
+                  Navigator.of(bottomContext).pop('cobranca');
                 },
               ),
               ListTile(
                 leading: const CircleAvatar(
-                  child: Icon(
-                    Icons.edit_note_outlined,
-                  ),
+                  child: Icon(Icons.edit_note_outlined),
                 ),
-                title: const Text(
-                  'Mensagem personalizada',
-                ),
-                subtitle: const Text(
-                  'Escrever uma mensagem livre',
-                ),
+                title: const Text('Mensagem personalizada'),
+                subtitle: const Text('Escrever uma mensagem livre'),
                 onTap: () {
-                  Navigator.of(bottomContext).pop(
-                    'personalizada',
-                  );
+                  Navigator.of(bottomContext).pop('personalizada');
                 },
               ),
             ],
@@ -1662,27 +1235,15 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
         await _enviarCobrancaWhatsApp(ordem);
         break;
       case 'personalizada':
-        await _enviarMensagemPersonalizadaWhatsApp(
-          ordem,
-        );
+        await _enviarMensagemPersonalizadaWhatsApp(ordem);
         break;
     }
   }
 
-  Widget _construirDetalhes(
-      Map<String, dynamic> ordem,
-      ) {
-    final numero = _obterTexto(
-      ordem,
-      'numero',
-      padrao: 'Ordem de Serviço',
-    );
+  Widget _construirDetalhes(Map<String, dynamic> ordem) {
+    final numero = _obterTexto(ordem, 'numero', padrao: 'Ordem de Serviço');
 
-    final status = _obterTexto(
-      ordem,
-      'status',
-      padrao: 'Aberta',
-    );
+    final status = _obterTexto(ordem, 'status', padrao: 'Aberta');
 
     final cliente = _obterTexto(
       ordem,
@@ -1690,15 +1251,9 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
       padrao: 'Cliente não informado',
     );
 
-    final telefone = _obterTexto(
-      ordem,
-      'cliente_telefone',
-    );
+    final telefone = _obterTexto(ordem, 'cliente_telefone');
 
-    final placa = _obterTexto(
-      ordem,
-      'veiculo_placa',
-    );
+    final placa = _obterTexto(ordem, 'veiculo_placa');
 
     final responsavel = _obterTexto(
       ordem,
@@ -1706,43 +1261,19 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
       padrao: 'Não informado',
     );
 
-    final observacoes = _obterTexto(
-      ordem,
-      'observacoes',
-    );
+    final observacoes = _obterTexto(ordem, 'observacoes');
 
-    final dataAbertura = _formatarData(
-      _obterTexto(
-        ordem,
-        'data_abertura',
-      ),
-    );
+    final dataAbertura = _formatarData(_obterTexto(ordem, 'data_abertura'));
 
-    final dataInicio = _formatarData(
-      _obterTexto(
-        ordem,
-        'data_inicio',
-      ),
-    );
+    final dataInicio = _formatarData(_obterTexto(ordem, 'data_inicio'));
 
     final dataFinalizacao = _formatarData(
-      _obterTexto(
-        ordem,
-        'data_finalizacao',
-      ),
+      _obterTexto(ordem, 'data_finalizacao'),
     );
 
-    final horaEntrada = _obterTexto(
-      ordem,
-      'hora_entrada',
-      padrao: '-',
-    );
+    final horaEntrada = _obterTexto(ordem, 'hora_entrada', padrao: '-');
 
-    final horaSaida = _obterTexto(
-      ordem,
-      'hora_saida',
-      padrao: '-',
-    );
+    final horaSaida = _obterTexto(ordem, 'hora_saida', padrao: '-');
 
     final formaPagamento = _obterTexto(
       ordem,
@@ -1750,33 +1281,19 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
       padrao: 'Não informada',
     );
 
-    final valorTotal = _obterDouble(
-      ordem,
-      'valor_total',
-    );
+    final valorTotal = _obterDouble(ordem, 'valor_total');
 
-    final desconto = _obterDouble(
-      ordem,
-      'desconto',
-    );
+    final desconto = _obterDouble(ordem, 'desconto');
 
-    final valorFinal =
-    (valorTotal - desconto).clamp(
-      0,
-      double.infinity,
-    );
+    final valorFinal = (valorTotal - desconto).clamp(0, double.infinity);
 
     final itensBrutos = ordem['itens'];
 
     final itens = itensBrutos is List
         ? itensBrutos
-        .whereType<Map>()
-        .map(
-          (item) => Map<String, dynamic>.from(
-        item,
-      ),
-    )
-        .toList()
+              .whereType<Map>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList()
         : <Map<String, dynamic>>[];
 
     return Scaffold(
@@ -1794,12 +1311,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          8,
-          16,
-          120,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
           Row(
             children: [
@@ -1821,12 +1333,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
           ),
           if (telefone.isNotEmpty) ...[
             const SizedBox(height: 5),
-            Text(
-              telefone,
-              style: TextStyle(
-                color: Colors.grey.shade700,
-              ),
-            ),
+            Text(telefone, style: TextStyle(color: Colors.grey.shade700)),
           ],
           const SizedBox(height: 20),
           _CartaoInformacao(
@@ -1838,10 +1345,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
                 valor: _montarNomeVeiculo(ordem),
               ),
               if (placa.isNotEmpty)
-                _LinhaInformacao(
-                  titulo: 'Placa',
-                  valor: placa.toUpperCase(),
-                ),
+                _LinhaInformacao(titulo: 'Placa', valor: placa.toUpperCase()),
             ],
           ),
           const SizedBox(height: 12),
@@ -1849,22 +1353,15 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
             titulo: 'Execução',
             icone: Icons.build_outlined,
             children: [
-              _LinhaInformacao(
-                titulo: 'Responsável',
-                valor: responsavel,
-              ),
-              _LinhaInformacao(
-                titulo: 'Abertura',
-                valor: dataAbertura,
-              ),
+              _LinhaInformacao(titulo: 'Responsável', valor: responsavel),
+              _LinhaInformacao(titulo: 'Abertura', valor: dataAbertura),
               _LinhaInformacao(
                 titulo: 'Início',
                 valor: '$dataInicio às $horaEntrada',
               ),
               _LinhaInformacao(
                 titulo: 'Finalização',
-                valor:
-                '$dataFinalizacao às $horaSaida',
+                valor: '$dataFinalizacao às $horaSaida',
               ),
             ],
           ),
@@ -1877,9 +1374,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
                 'Checklist de entrada',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: const Text(
-                'Conferir estado e itens do veículo',
-              ),
+              subtitle: const Text('Conferir estado e itens do veículo'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _abrirChecklist(ordem),
             ),
@@ -1893,9 +1388,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
                 'Fotos do serviço',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: const Text(
-                'Registrar fotos de antes e depois',
-              ),
+              subtitle: const Text('Registrar fotos de antes e depois'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _abrirFotos(ordem),
             ),
@@ -1920,26 +1413,16 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
           Card(
             margin: EdgeInsets.zero,
             child: ListTile(
-              leading: const Icon(
-                Icons.chat_outlined,
-              ),
+              leading: const Icon(Icons.chat_outlined),
               title: const Text(
                 'WhatsApp',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: const Text(
                 'Avisar início, conclusão, enviar resumo ou cobrança',
               ),
-              trailing: const Icon(
-                Icons.chevron_right,
-              ),
-              onTap: _executandoAcao
-                  ? null
-                  : () => _abrirOpcoesWhatsApp(
-                ordem,
-              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _executandoAcao ? null : () => _abrirOpcoesWhatsApp(ordem),
             ),
           ),
           const SizedBox(height: 12),
@@ -1995,34 +1478,16 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
             children: [
               if (itens.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical: 10,
-                  ),
-                  child: Text(
-                    'Nenhum serviço cadastrado.',
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Text('Nenhum serviço cadastrado.'),
                 ),
               ...itens.map(
-                    (item) => _ItemServicoDetalhes(
-                  servico: _obterTexto(
-                    item,
-                    'servico',
-                    padrao: 'Serviço',
-                  ),
-                  descricao: _obterTexto(
-                    item,
-                    'descricao',
-                  ),
-                  quantidade: _obterDouble(
-                    item,
-                    'quantidade',
-                  ),
-                  valorUnitario: _obterDouble(
-                    item,
-                    'valor_unitario',
-                  ),
-                  concluido:
-                  _obterInt(item, 'concluido') == 1,
+                (item) => _ItemServicoDetalhes(
+                  servico: _obterTexto(item, 'servico', padrao: 'Serviço'),
+                  descricao: _obterTexto(item, 'descricao'),
+                  quantidade: _obterDouble(item, 'quantidade'),
+                  valorUnitario: _obterDouble(item, 'valor_unitario'),
+                  concluido: _obterInt(item, 'concluido') == 1,
                   moeda: _moeda,
                 ),
               ),
@@ -2047,10 +1512,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
                 valor: _moeda.format(valorFinal),
                 destaque: true,
               ),
-              _LinhaInformacao(
-                titulo: 'Pagamento',
-                valor: formaPagamento,
-              ),
+              _LinhaInformacao(titulo: 'Pagamento', valor: formaPagamento),
             ],
           ),
           if (observacoes.isNotEmpty) ...[
@@ -2060,9 +1522,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
               icone: Icons.notes_outlined,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(
-                    top: 4,
-                  ),
+                  padding: const EdgeInsets.only(top: 4),
                   child: Text(observacoes),
                 ),
               ],
@@ -2070,26 +1530,18 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
           ],
         ],
       ),
-      bottomNavigationBar: _construirAcoesDetalhes(
-        ordem,
-        status,
-      ),
+      bottomNavigationBar: _construirAcoesDetalhes(ordem, status),
     );
   }
 
-  Widget _construirAcoesDetalhes(
-      Map<String, dynamic> ordem,
-      String status,
-      ) {
+  Widget _construirAcoesDetalhes(Map<String, dynamic> ordem, String status) {
     final botoes = <Widget>[];
 
     if (status == 'Aberta') {
       botoes.add(
         Expanded(
           child: FilledButton.icon(
-            onPressed: _executandoAcao
-                ? null
-                : () => _iniciarOrdem(ordem),
+            onPressed: _executandoAcao ? null : () => _iniciarOrdem(ordem),
             icon: const Icon(Icons.play_arrow),
             label: const Text('Iniciar'),
           ),
@@ -2102,12 +1554,9 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
         Expanded(
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor:
-              Colors.green.shade700,
+              backgroundColor: Colors.green.shade700,
             ),
-            onPressed: _executandoAcao
-                ? null
-                : () => _finalizarOrdem(ordem),
+            onPressed: _executandoAcao ? null : () => _finalizarOrdem(ordem),
             icon: const Icon(Icons.check),
             label: const Text('Finalizar'),
           ),
@@ -2115,8 +1564,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
       );
     }
 
-    if (status == 'Aberta' ||
-        status == 'Em andamento') {
+    if (status == 'Aberta' || status == 'Em andamento') {
       if (botoes.isNotEmpty) {
         botoes.add(const SizedBox(width: 10));
       }
@@ -2124,22 +1572,17 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
       botoes.add(
         IconButton.filledTonal(
           tooltip: 'Cancelar OS',
-          onPressed: _executandoAcao
-              ? null
-              : () => _cancelarOrdem(ordem),
+          onPressed: _executandoAcao ? null : () => _cancelarOrdem(ordem),
           icon: const Icon(Icons.cancel_outlined),
         ),
       );
     }
 
-    if (status == 'Finalizada' ||
-        status == 'Cancelada') {
+    if (status == 'Finalizada' || status == 'Cancelada') {
       botoes.add(
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: _executandoAcao
-                ? null
-                : () => _excluirOrdem(ordem),
+            onPressed: _executandoAcao ? null : () => _excluirOrdem(ordem),
             icon: const Icon(Icons.delete_outline),
             label: const Text('Excluir'),
           ),
@@ -2154,20 +1597,10 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          12,
-          16,
-          12,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         decoration: BoxDecoration(
-          color: Theme.of(context)
-              .scaffoldBackgroundColor,
-          border: Border(
-            top: BorderSide(
-              color: Colors.grey.shade300,
-            ),
-          ),
+          color: Theme.of(context).scaffoldBackgroundColor,
+          border: Border(top: BorderSide(color: Colors.grey.shade300)),
         ),
         child: Row(children: botoes),
       ),
@@ -2181,22 +1614,18 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
           controller: _pesquisaController,
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
-            hintText:
-            'Pesquisar cliente, veículo, placa ou OS',
+            hintText: 'Pesquisar cliente, veículo, placa ou OS',
             prefixIcon: const Icon(Icons.search),
-            suffixIcon:
-            _pesquisaController.text.isEmpty
+            suffixIcon: _pesquisaController.text.isEmpty
                 ? null
                 : IconButton(
-              tooltip: 'Limpar pesquisa',
-              onPressed: () {
-                _pesquisaController.clear();
-              },
-              icon: const Icon(Icons.close),
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
+                    tooltip: 'Limpar pesquisa',
+                    onPressed: () {
+                      _pesquisaController.clear();
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
         const SizedBox(height: 12),
@@ -2209,13 +1638,11 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
               return const SizedBox(width: 8);
             },
             itemBuilder: (context, index) {
-              final status =
-              _statusDisponiveis[index];
+              final status = _statusDisponiveis[index];
 
               return ChoiceChip(
                 label: Text(status),
-                selected:
-                _statusSelecionado == status,
+                selected: _statusSelecionado == status,
                 onSelected: (_) {
                   setState(() {
                     _statusSelecionado = status;
@@ -2233,52 +1660,35 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
 
   Widget _construirConteudo() {
     if (_carregando) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_ordens.isEmpty) {
       return RefreshIndicator(
         onRefresh: _carregarOrdens,
         child: ListView(
-          physics:
-          const AlwaysScrollableScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             SizedBox(
-              height:
-              MediaQuery.sizeOf(context).height *
-                  0.55,
+              height: MediaQuery.sizeOf(context).height * 0.55,
               child: const Column(
-                mainAxisAlignment:
-                MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.assignment_outlined,
-                    size: 70,
-                    color: Colors.grey,
-                  ),
+                  Icon(Icons.assignment_outlined, size: 70, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
                     'Nenhuma Ordem de Serviço encontrada',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 7),
                   Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 30,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 30),
                     child: Text(
                       'As Ordens de Serviço criadas a '
-                          'partir dos orçamentos aparecerão aqui.',
+                      'partir dos orçamentos aparecerão aqui.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(color: Colors.grey),
                     ),
                   ),
                 ],
@@ -2292,11 +1702,8 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
     return RefreshIndicator(
       onRefresh: _carregarOrdens,
       child: ListView.separated(
-        physics:
-        const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(
-          bottom: 100,
-        ),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 100),
         itemCount: _ordens.length,
         separatorBuilder: (_, __) {
           return const SizedBox(height: 10);
@@ -2310,14 +1717,8 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
     );
   }
 
-  Widget _construirCartaoOrdem(
-      Map<String, dynamic> ordem,
-      ) {
-    final numero = _obterTexto(
-      ordem,
-      'numero',
-      padrao: 'OS sem número',
-    );
+  Widget _construirCartaoOrdem(Map<String, dynamic> ordem) {
+    final numero = _obterTexto(ordem, 'numero', padrao: 'OS sem número');
 
     final cliente = _obterTexto(
       ordem,
@@ -2325,49 +1726,21 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
       padrao: 'Cliente não informado',
     );
 
-    final status = _obterTexto(
-      ordem,
-      'status',
-      padrao: 'Aberta',
-    );
+    final status = _obterTexto(ordem, 'status', padrao: 'Aberta');
 
-    final placa = _obterTexto(
-      ordem,
-      'veiculo_placa',
-    );
+    final placa = _obterTexto(ordem, 'veiculo_placa');
 
-    final dataAbertura = _formatarData(
-      _obterTexto(
-        ordem,
-        'data_abertura',
-      ),
-    );
+    final dataAbertura = _formatarData(_obterTexto(ordem, 'data_abertura'));
 
-    final quantidadeItens = _obterInt(
-      ordem,
-      'quantidade_itens',
-    );
+    final quantidadeItens = _obterInt(ordem, 'quantidade_itens');
 
-    final itensConcluidos = _obterInt(
-      ordem,
-      'itens_concluidos',
-    );
+    final itensConcluidos = _obterInt(ordem, 'itens_concluidos');
 
-    final valorTotal = _obterDouble(
-      ordem,
-      'valor_total',
-    );
+    final valorTotal = _obterDouble(ordem, 'valor_total');
 
-    final desconto = _obterDouble(
-      ordem,
-      'desconto',
-    );
+    final desconto = _obterDouble(ordem, 'desconto');
 
-    final valorFinal =
-    (valorTotal - desconto).clamp(
-      0,
-      double.infinity,
-    );
+    final valorFinal = (valorTotal - desconto).clamp(0, double.infinity);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -2377,21 +1750,17 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
         child: Padding(
           padding: const EdgeInsets.all(15),
           child: Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: _corStatus(status)
-                          .withValues(alpha: 0.12),
-                      borderRadius:
-                      BorderRadius.circular(12),
+                      color: _corStatus(status).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       _iconeStatus(status),
@@ -2401,26 +1770,21 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           numero,
                           style: const TextStyle(
                             fontSize: 16,
-                            fontWeight:
-                            FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           cliente,
                           maxLines: 1,
-                          overflow:
-                          TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                          ),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 15),
                         ),
                       ],
                     ),
@@ -2446,16 +1810,13 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
                     child: Text(
                       _montarNomeVeiculo(ordem),
                       maxLines: 1,
-                      overflow:
-                      TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (placa.isNotEmpty)
                     Text(
                       placa.toUpperCase(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                 ],
               ),
@@ -2482,24 +1843,19 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
               if (quantidadeItens > 0) ...[
                 const SizedBox(height: 13),
                 ClipRRect(
-                  borderRadius:
-                  BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(5),
                   child: LinearProgressIndicator(
                     minHeight: 6,
                     value: quantidadeItens <= 0
                         ? 0
-                        : itensConcluidos /
-                        quantidadeItens,
+                        : itensConcluidos / quantidadeItens,
                   ),
                 ),
                 const SizedBox(height: 5),
                 Text(
                   '$itensConcluidos de '
-                      '$quantidadeItens serviços concluídos',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade700,
-                  ),
+                  '$quantidadeItens serviços concluídos',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
               ],
             ],
@@ -2511,9 +1867,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
 
   Future<void> _novaOrdemServico() async {
     final resultado = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const NovaOrdemServicoPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const NovaOrdemServicoPage()),
     );
 
     if (resultado == true) {
@@ -2529,8 +1883,7 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
         actions: [
           IconButton(
             tooltip: 'Atualizar',
-            onPressed:
-            _carregando ? null : _carregarOrdens,
+            onPressed: _carregando ? null : _carregarOrdens,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -2541,19 +1894,12 @@ Caso já tenha realizado o pagamento, por favor desconsidere esta mensagem.
         label: const Text('Nova OS'),
       ),
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          14,
-          14,
-          14,
-          0,
-        ),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
         child: Column(
           children: [
             _construirFiltros(),
             const SizedBox(height: 14),
-            Expanded(
-              child: _construirConteudo(),
-            ),
+            Expanded(child: _construirConteudo()),
           ],
         ),
       ),
@@ -2575,10 +1921,7 @@ class _EtiquetaStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 9,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
         color: cor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
@@ -2586,11 +1929,7 @@ class _EtiquetaStatus extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icone,
-            size: 14,
-            color: cor,
-          ),
+          Icon(icone, size: 14, color: cor),
           const SizedBox(width: 5),
           Text(
             status,
@@ -2624,15 +1963,11 @@ class _CartaoInformacao extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(15),
         child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(
-                  icone,
-                  size: 20,
-                ),
+                Icon(icone, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   titulo,
@@ -2666,21 +2001,13 @@ class _LinhaInformacao extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 105,
-            child: Text(
-              titulo,
-              style: TextStyle(
-                color: Colors.grey.shade700,
-              ),
-            ),
+            child: Text(titulo, style: TextStyle(color: Colors.grey.shade700)),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -2689,9 +2016,7 @@ class _LinhaInformacao extends StatelessWidget {
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontSize: destaque ? 17 : 14,
-                fontWeight: destaque
-                    ? FontWeight.bold
-                    : FontWeight.w500,
+                fontWeight: destaque ? FontWeight.bold : FontWeight.w500,
               ),
             ),
           ),
@@ -2732,13 +2057,10 @@ class _ItemServicoDetalhes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subtotal =
-        quantidade * valorUnitario;
+    final subtotal = quantidade * valorUnitario;
 
     return Container(
-      margin: const EdgeInsets.only(
-        bottom: 9,
-      ),
+      margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: concluido
@@ -2746,53 +2068,37 @@ class _ItemServicoDetalhes extends StatelessWidget {
             : Colors.grey.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: concluido
-              ? Colors.green.shade200
-              : Colors.grey.shade300,
+          color: concluido ? Colors.green.shade200 : Colors.grey.shade300,
         ),
       ),
       child: Row(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            concluido
-                ? Icons.check_circle
-                : Icons.radio_button_unchecked,
-            color: concluido
-                ? Colors.green.shade700
-                : Colors.grey,
+            concluido ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: concluido ? Colors.green.shade700 : Colors.grey,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   servico,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 if (descricao.isNotEmpty) ...[
                   const SizedBox(height: 3),
                   Text(
                     descricao,
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                   ),
                 ],
                 const SizedBox(height: 6),
                 Text(
                   '${_formatarQuantidade()} × '
-                      '${moeda.format(valorUnitario)}',
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                    fontSize: 12,
-                  ),
+                  '${moeda.format(valorUnitario)}',
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
                 ),
               ],
             ),
@@ -2800,9 +2106,7 @@ class _ItemServicoDetalhes extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             moeda.format(subtotal),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
       ),

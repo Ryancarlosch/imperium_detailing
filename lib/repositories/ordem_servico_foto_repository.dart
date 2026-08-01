@@ -1,9 +1,9 @@
-import 'dart:io';
-
 import '../database/app_database.dart';
+import 'foto_servico_repository.dart';
 
 class OrdemServicoFotoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
+  final FotoServicoRepository _fotoServicoRepository = FotoServicoRepository();
 
   Future<List<Map<String, dynamic>>> listarFotos(
     int ordemServicoId, {
@@ -21,18 +21,13 @@ class OrdemServicoFotoRepository {
       whereArgs: etapaLimpa.isEmpty
           ? [ordemServicoId]
           : [ordemServicoId, etapaLimpa],
-      orderBy: 'etapa ASC, ordem ASC, id ASC',
+      orderBy: 'ordem DESC, id DESC',
     );
 
-    return resultado
-        .map((mapa) => Map<String, dynamic>.from(mapa))
-        .toList();
+    return resultado.map((mapa) => Map<String, dynamic>.from(mapa)).toList();
   }
 
-  Future<int> contarFotos(
-    int ordemServicoId, {
-    required String etapa,
-  }) async {
+  Future<int> contarFotos(int ordemServicoId, {required String etapa}) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -81,17 +76,14 @@ class OrdemServicoFotoRepository {
         ? valorOrdem.toInt()
         : int.tryParse(valorOrdem?.toString() ?? '') ?? 0;
 
-    return database.insert(
-      'ordem_servico_fotos',
-      {
-        'ordem_servico_id': ordemServicoId,
-        'etapa': etapa.trim(),
-        'caminho': caminho.trim(),
-        'descricao': descricao.trim(),
-        'data': DateTime.now().toIso8601String(),
-        'ordem': proximaOrdem,
-      },
-    );
+    return database.insert('ordem_servico_fotos', {
+      'ordem_servico_id': ordemServicoId,
+      'etapa': etapa.trim(),
+      'caminho': caminho.trim(),
+      'descricao': descricao.trim(),
+      'data': DateTime.now().toIso8601String(),
+      'ordem': proximaOrdem,
+    });
   }
 
   Future<void> atualizarDescricao({
@@ -108,10 +100,7 @@ class OrdemServicoFotoRepository {
     );
   }
 
-  Future<void> excluirFoto(
-    int fotoId, {
-    bool excluirArquivo = true,
-  }) async {
+  Future<void> excluirFoto(int fotoId, {bool excluirArquivo = true}) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -122,13 +111,13 @@ class OrdemServicoFotoRepository {
       limit: 1,
     );
 
-    await database.delete(
+    final removidos = await database.delete(
       'ordem_servico_fotos',
       where: 'id = ?',
       whereArgs: [fotoId],
     );
 
-    if (!excluirArquivo || resultado.isEmpty) {
+    if (!excluirArquivo || resultado.isEmpty || removidos <= 0) {
       return;
     }
 
@@ -138,10 +127,13 @@ class OrdemServicoFotoRepository {
       return;
     }
 
-    final arquivo = File(caminho);
-
-    if (await arquivo.exists()) {
-      await arquivo.delete();
+    try {
+      await _fotoServicoRepository.excluirArquivoSeNaoReferenciado(
+        caminho,
+        ignorarOrdemServicoFotoId: fotoId,
+      );
+    } catch (_) {
+      // Erros de arquivo não devem impedir a limpeza do banco.
     }
   }
 }

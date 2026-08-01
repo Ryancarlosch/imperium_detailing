@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../database/app_database.dart';
 import '../models/agendamento.dart';
 import '../repositories/agendamento_repository.dart';
 import '../repositories/ordem_servico_repository.dart';
+import '../repositories/veiculo_repository.dart';
+import '../services/whatsapp_service.dart';
 import 'nova_ordem_servico_page.dart';
-import 'ordens_servico_page.dart';
 
 class AgendamentoDetalhesPage extends StatefulWidget {
   final Agendamento agendamento;
@@ -24,12 +23,13 @@ class _AgendamentoDetalhesPageState extends State<AgendamentoDetalhesPage> {
   final OrdemServicoRepository _ordemServicoRepository =
       OrdemServicoRepository();
 
+  final VeiculoRepository _veiculoRepository = VeiculoRepository();
+
   late Agendamento agendamento;
 
   bool _abrindoWhatsApp = false;
   bool _verificandoOrdemServico = true;
   bool _abrindoOrdemServico = false;
-  int? _ordemServicoId;
 
   final List<String> statusDisponiveis = [
     'Agendado',
@@ -61,16 +61,13 @@ class _AgendamentoDetalhesPageState extends State<AgendamentoDetalhesPage> {
     }
 
     try {
-      final id = await _ordemServicoRepository.buscarIdOrdemPorAgendamento(
-        agendamentoId,
-      );
+      await _ordemServicoRepository.buscarIdOrdemPorAgendamento(agendamentoId);
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _ordemServicoId = id;
         _verificandoOrdemServico = false;
       });
     } catch (_) {
@@ -98,17 +95,8 @@ class _AgendamentoDetalhesPageState extends State<AgendamentoDetalhesPage> {
         return;
       }
 
-      final ordemId = await _ordemServicoRepository.buscarIdOrdemPorAgendamento(
-        atualizado.id!,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
       setState(() {
         agendamento = atualizado;
-        _ordemServicoId = ordemId;
       });
     } catch (_) {
       // Ignorar falhas na recarga para não interromper a experiência.
@@ -199,90 +187,9 @@ class _AgendamentoDetalhesPageState extends State<AgendamentoDetalhesPage> {
   }
 
   Future<Map<String, dynamic>?> buscarDadosParaWhatsApp() async {
-    final database = await AppDatabase.instance.database;
-
-    final resultado = await database.rawQuery(
-      '''
-      SELECT
-        c.nome AS cliente_nome,
-        c.telefone AS cliente_telefone,
-        v.marca AS veiculo_marca,
-        v.modelo AS veiculo_modelo,
-        v.placa AS veiculo_placa
-      FROM clientes c
-      LEFT JOIN veiculos v
-        ON v.id = ?
-      WHERE c.id = ?
-      LIMIT 1
-      ''',
-      [agendamento.veiculoId, agendamento.clienteId],
+    return _veiculoRepository.buscarVeiculoComClientePorId(
+      agendamento.veiculoId,
     );
-
-    if (resultado.isEmpty) {
-      return null;
-    }
-
-    return resultado.first;
-  }
-
-  String normalizarTelefone(String telefone) {
-    var numeros = telefone.replaceAll(RegExp(r'[^0-9]'), '');
-
-    while (numeros.startsWith('0')) {
-      numeros = numeros.substring(1);
-    }
-
-    if (numeros.startsWith('55') && numeros.length >= 12) {
-      return numeros;
-    }
-
-    if (numeros.length == 10 || numeros.length == 11) {
-      return '55$numeros';
-    }
-
-    return numeros;
-  }
-
-  String montarNomeVeiculo(Map<String, dynamic> dados) {
-    final partes =
-        [
-              dados['veiculo_marca'],
-              dados['veiculo_modelo'],
-              dados['veiculo_placa'],
-            ]
-            .map((item) => item?.toString().trim() ?? '')
-            .where((item) => item.isNotEmpty)
-            .toList();
-
-    if (partes.isEmpty) {
-      return 'Não informado';
-    }
-
-    return partes.join(' • ');
-  }
-
-  String montarMensagemWhatsApp({
-    required String nomeCliente,
-    required String veiculo,
-  }) {
-    final primeiroNome = nomeCliente.trim().split(RegExp(r'\s+')).first;
-
-    return '''
-Olá, $primeiroNome! Tudo bem?
-
-Seu agendamento na *Imperium Detailing* está confirmado. ✅
-
-📅 *Data:* ${agendamento.data}
-🕒 *Horário:* ${agendamento.hora}
-🚗 *Veículo:* $veiculo
-✨ *Serviço:* ${agendamento.servico}
-💰 *Valor:* ${formatarValor(agendamento.valor)}
-
-Pedimos que, em caso de imprevisto, avise com antecedência.
-
-Aguardamos você!
-*Imperium Detailing*
-''';
   }
 
   Future<void> enviarConfirmacaoWhatsApp() async {
@@ -303,11 +210,13 @@ Aguardamos você!
 
       final nomeCliente = (dados['cliente_nome'] ?? '').toString().trim();
 
-      final telefoneOriginal = (dados['cliente_telefone'] ?? '')
-          .toString()
-          .trim();
+      final telefone = (dados['cliente_telefone'] ?? '').toString().trim();
 
-      if (telefoneOriginal.isEmpty) {
+      final marca = (dados['marca'] ?? '').toString().trim();
+      final modelo = (dados['modelo'] ?? '').toString().trim();
+      final placa = (dados['placa'] ?? '').toString().trim();
+
+      if (telefone.isEmpty) {
         mostrarMensagem(
           'O cliente não possui telefone cadastrado.',
           erro: true,
@@ -315,31 +224,17 @@ Aguardamos você!
         return;
       }
 
-      final telefone = normalizarTelefone(telefoneOriginal);
+      final veiculo = '$marca $modelo'.trim();
 
-      if (telefone.length < 12 || telefone.length > 13) {
-        mostrarMensagem(
-          'O telefone cadastrado parece inválido: '
-          '$telefoneOriginal',
-          erro: true,
-        );
-        return;
-      }
-
-      final veiculo = montarNomeVeiculo(dados);
-
-      final mensagem = montarMensagemWhatsApp(
-        nomeCliente: nomeCliente.isEmpty ? 'cliente' : nomeCliente,
+      await WhatsAppService.confirmarAgendamento(
+        telefone: telefone,
+        cliente: nomeCliente,
+        data: agendamento.data,
+        horario: agendamento.hora,
         veiculo: veiculo,
+        placa: placa,
+        servico: agendamento.servico,
       );
-
-      final uri = Uri.https('wa.me', '/$telefone', {'text': mensagem});
-
-      final abriu = await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-      if (!abriu) {
-        mostrarMensagem('Não foi possível abrir o WhatsApp.', erro: true);
-      }
     } catch (erro) {
       mostrarMensagem('Erro ao abrir o WhatsApp: $erro', erro: true);
     } finally {

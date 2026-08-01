@@ -18,14 +18,11 @@ class AgendaPage extends StatefulWidget {
 }
 
 class _AgendaPageState extends State<AgendaPage> {
-  final AgendamentoRepository _repository =
-  AgendamentoRepository();
+  final AgendamentoRepository _repository = AgendamentoRepository();
 
-  final FinanceiroRepository _financeiroRepository =
-  FinanceiroRepository();
+  final FinanceiroRepository _financeiroRepository = FinanceiroRepository();
 
-  final VeiculoRepository _veiculoRepository =
-  VeiculoRepository();
+  final VeiculoRepository _veiculoRepository = VeiculoRepository();
 
   List<Agendamento> agendamentos = [];
 
@@ -42,18 +39,15 @@ class _AgendaPageState extends State<AgendaPage> {
 
   Future<void> carregarAgendamentos() async {
     try {
-      final lista =
-      await _repository.listarAgendamentos();
+      final lista = await _repository.listarAgendamentos();
 
       if (!_permissaoSolicitada) {
         _permissaoSolicitada = true;
 
-        await NotificationService.instance
-            .solicitarPermissao();
+        await NotificationService.instance.solicitarPermissao();
       }
 
-      await NotificationService.instance
-          .sincronizarAgendamentos(lista);
+      await NotificationService.instance.sincronizarAgendamentos(lista);
 
       if (!mounted) return;
 
@@ -70,9 +64,7 @@ class _AgendaPageState extends State<AgendaPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Erro ao carregar agenda: $erro',
-          ),
+          content: Text('Erro ao carregar agenda: $erro'),
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -100,39 +92,29 @@ class _AgendaPageState extends State<AgendaPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Agendamento salvo e lembrete atualizado.',
-          ),
+          content: Text('Agendamento salvo e lembrete atualizado.'),
         ),
       );
     }
   }
 
-  Future<void> abrirDetalhes(
-      Agendamento agendamento,
-      ) async {
+  Future<void> abrirDetalhes(Agendamento agendamento) async {
     await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) {
-          return AgendamentoDetalhesPage(
-            agendamento: agendamento,
-          );
+          return AgendamentoDetalhesPage(agendamento: agendamento);
         },
       ),
     );
 
     if (agendamento.id != null) {
-      final atualizado =
-      await _repository.buscarAgendamentoPorId(
+      final atualizado = await _repository.buscarAgendamentoPorId(
         agendamento.id!,
       );
 
-      if (atualizado != null &&
-          atualizado.status == 'Finalizado') {
-        await _oferecerLancamentoFinanceiro(
-          atualizado,
-        );
+      if (atualizado != null && atualizado.status == 'Finalizado') {
+        await _oferecerLancamentoFinanceiro(atualizado);
       }
     }
 
@@ -145,114 +127,34 @@ class _AgendaPageState extends State<AgendaPage> {
     await carregarAgendamentos();
   }
 
-  Future<void> abrirWhatsApp(
-      Agendamento agendamento,
-      ) async {
+  Future<void> abrirWhatsApp(Agendamento agendamento) async {
     if (_agendamentoAbrindoWhatsAppId != null) {
       return;
     }
 
     setState(() {
-      _agendamentoAbrindoWhatsAppId =
-          agendamento.id ?? -1;
+      _agendamentoAbrindoWhatsAppId = agendamento.id ?? -1;
     });
 
     try {
-      final dados =
-      await _veiculoRepository
-          .buscarVeiculoComClientePorId(
-        agendamento.veiculoId,
-      );
-
-      if (dados == null) {
-        throw Exception(
-          'Não foi possível localizar o veículo '
-              'e o cliente deste agendamento.',
-        );
-      }
-
-      final cliente =
-      (dados['cliente_nome'] ?? '')
-          .toString()
-          .trim();
-
-      final telefone =
-      (dados['cliente_telefone'] ?? '')
-          .toString()
-          .trim();
-
-      final marca =
-      (dados['marca'] ?? '')
-          .toString()
-          .trim();
-
-      final modelo =
-      (dados['modelo'] ?? '')
-          .toString()
-          .trim();
-
-      final placa =
-      (dados['placa'] ?? '')
-          .toString()
-          .trim();
-
-      if (cliente.isEmpty) {
-        throw Exception(
-          'O nome do cliente não foi encontrado.',
-        );
-      }
-
-      if (telefone.isEmpty) {
-        throw Exception(
-          'O cliente $cliente não possui '
-              'telefone cadastrado.',
-        );
-      }
-
-      final partesVeiculo = <String>[
-        marca,
-        modelo,
-      ].where(
-            (parte) => parte.isNotEmpty,
-      ).toList();
-
-      var veiculo = partesVeiculo.join(' ');
-
-      if (placa.isNotEmpty) {
-        if (veiculo.isNotEmpty) {
-          veiculo = '$veiculo • $placa';
-        } else {
-          veiculo = placa;
-        }
-      }
-
-      if (veiculo.isEmpty) {
-        veiculo = 'Veículo não informado';
-      }
+      final dados = await _carregarDadosClienteVeiculoWhatsApp(agendamento);
 
       await WhatsAppService.confirmarAgendamento(
-        telefone: telefone,
-        cliente: cliente,
+        telefone: dados.telefone,
+        cliente: dados.cliente,
         data: agendamento.data,
         horario: agendamento.hora,
-        veiculo: veiculo,
+        veiculo: dados.veiculo,
+        placa: dados.placa,
         servico: agendamento.servico,
       );
     } catch (erro) {
       if (!mounted) return;
 
-      final mensagem = erro
-          .toString()
-          .replaceFirst(
-        'Exception: ',
-        '',
-      );
+      final mensagem = erro.toString().replaceFirst('Exception: ', '');
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensagem),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text(mensagem), backgroundColor: Colors.red.shade700),
       );
     } finally {
       if (!mounted) return;
@@ -263,21 +165,14 @@ class _AgendaPageState extends State<AgendaPage> {
     }
   }
 
-  Future<void> abrirOpcoesWhatsApp(
-      Agendamento agendamento,
-      ) async {
+  Future<void> abrirOpcoesWhatsApp(Agendamento agendamento) async {
     final opcao = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              0,
-              16,
-              16,
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -285,51 +180,34 @@ class _AgendaPageState extends State<AgendaPage> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Enviar pelo WhatsApp',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 8),
                 ListTile(
                   leading: const CircleAvatar(
-                    child: Icon(
-                      Icons.event_available_outlined,
-                    ),
+                    child: Icon(Icons.event_available_outlined),
                   ),
-                  title: const Text(
-                    'Confirmar agendamento',
-                  ),
+                  title: const Text('Confirmar agendamento'),
                   subtitle: const Text(
                     'Envia data, horário, veículo '
-                        'e serviço.',
+                    'e serviço.',
                   ),
                   onTap: () {
-                    Navigator.pop(
-                      context,
-                      'confirmacao',
-                    );
+                    Navigator.pop(context, 'confirmacao');
                   },
                 ),
                 ListTile(
                   leading: const CircleAvatar(
-                    child: Icon(
-                      Icons.notifications_active_outlined,
-                    ),
+                    child: Icon(Icons.notifications_active_outlined),
                   ),
-                  title: const Text(
-                    'Enviar lembrete',
-                  ),
+                  title: const Text('Enviar lembrete'),
                   subtitle: const Text(
                     'Lembra o cliente sobre o '
-                        'agendamento.',
+                    'agendamento.',
                   ),
                   onTap: () {
-                    Navigator.pop(
-                      context,
-                      'lembrete',
-                    );
+                    Navigator.pop(context, 'lembrete');
                   },
                 ),
               ],
@@ -344,128 +222,43 @@ class _AgendaPageState extends State<AgendaPage> {
     }
 
     if (opcao == 'confirmacao') {
-      await abrirWhatsApp(
-        agendamento,
-      );
+      await abrirWhatsApp(agendamento);
 
       return;
     }
 
     if (opcao == 'lembrete') {
-      await enviarLembreteWhatsApp(
-        agendamento,
-      );
+      await enviarLembreteWhatsApp(agendamento);
     }
   }
 
-  Future<void> enviarLembreteWhatsApp(
-      Agendamento agendamento,
-      ) async {
+  Future<void> enviarLembreteWhatsApp(Agendamento agendamento) async {
     if (_agendamentoAbrindoWhatsAppId != null) {
       return;
     }
 
     setState(() {
-      _agendamentoAbrindoWhatsAppId =
-          agendamento.id ?? -1;
+      _agendamentoAbrindoWhatsAppId = agendamento.id ?? -1;
     });
 
     try {
-      final dados =
-      await _veiculoRepository
-          .buscarVeiculoComClientePorId(
-        agendamento.veiculoId,
-      );
+      final dados = await _carregarDadosClienteVeiculoWhatsApp(agendamento);
 
-      if (dados == null) {
-        throw Exception(
-          'Não foi possível localizar o veículo '
-              'e o cliente deste agendamento.',
-        );
-      }
-
-      final cliente =
-      (dados['cliente_nome'] ?? '')
-          .toString()
-          .trim();
-
-      final telefone =
-      (dados['cliente_telefone'] ?? '')
-          .toString()
-          .trim();
-
-      final marca =
-      (dados['marca'] ?? '')
-          .toString()
-          .trim();
-
-      final modelo =
-      (dados['modelo'] ?? '')
-          .toString()
-          .trim();
-
-      final placa =
-      (dados['placa'] ?? '')
-          .toString()
-          .trim();
-
-      if (cliente.isEmpty) {
-        throw Exception(
-          'O nome do cliente não foi encontrado.',
-        );
-      }
-
-      if (telefone.isEmpty) {
-        throw Exception(
-          'O cliente $cliente não possui '
-              'telefone cadastrado.',
-        );
-      }
-
-      final partesVeiculo = <String>[
-        marca,
-        modelo,
-      ].where(
-            (parte) => parte.isNotEmpty,
-      ).toList();
-
-      var veiculo = partesVeiculo.join(' ');
-
-      if (placa.isNotEmpty) {
-        if (veiculo.isNotEmpty) {
-          veiculo = '$veiculo • $placa';
-        } else {
-          veiculo = placa;
-        }
-      }
-
-      if (veiculo.isEmpty) {
-        veiculo = 'Veículo não informado';
-      }
-
-      await WhatsAppService
-          .enviarLembreteAgendamento(
-        telefone: telefone,
-        cliente: cliente,
+      await WhatsAppService.enviarLembreteAgendamento(
+        telefone: dados.telefone,
+        cliente: dados.cliente,
         data: agendamento.data,
         horario: agendamento.hora,
-        veiculo: veiculo,
+        veiculo: dados.veiculo,
+        placa: dados.placa,
       );
     } catch (erro) {
       if (!mounted) return;
 
-      final mensagem = erro
-          .toString()
-          .replaceFirst(
-        'Exception: ',
-        '',
-      );
+      final mensagem = erro.toString().replaceFirst('Exception: ', '');
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensagem),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text(mensagem), backgroundColor: Colors.red.shade700),
       );
     } finally {
       if (!mounted) return;
@@ -476,16 +269,53 @@ class _AgendaPageState extends State<AgendaPage> {
     }
   }
 
-  Future<void> _oferecerLancamentoFinanceiro(
-      Agendamento agendamento,
-      ) async {
+  Future<_ContatoAgendamentoWhatsApp> _carregarDadosClienteVeiculoWhatsApp(
+    Agendamento agendamento,
+  ) async {
+    final dados = await _veiculoRepository.buscarVeiculoComClientePorId(
+      agendamento.veiculoId,
+    );
+
+    if (dados == null) {
+      throw Exception(
+        'Não foi possível localizar o veículo e o cliente deste agendamento.',
+      );
+    }
+
+    final cliente = (dados['cliente_nome'] ?? '').toString().trim();
+
+    final telefone = (dados['cliente_telefone'] ?? '').toString().trim();
+
+    final marca = (dados['marca'] ?? '').toString().trim();
+
+    final modelo = (dados['modelo'] ?? '').toString().trim();
+
+    final placa = (dados['placa'] ?? '').toString().trim();
+
+    if (cliente.isEmpty) {
+      throw Exception('O nome do cliente não foi encontrado.');
+    }
+
+    if (telefone.isEmpty) {
+      throw Exception('O cliente $cliente não possui telefone cadastrado.');
+    }
+
+    final veiculo = '$marca $modelo'.trim();
+
+    return _ContatoAgendamentoWhatsApp(
+      cliente: cliente,
+      telefone: telefone,
+      veiculo: veiculo,
+      placa: placa,
+    );
+  }
+
+  Future<void> _oferecerLancamentoFinanceiro(Agendamento agendamento) async {
     if (agendamento.id == null) {
       return;
     }
 
-    final jaExiste =
-    await _financeiroRepository
-        .existeMovimentoDoAgendamento(
+    final jaExiste = await _financeiroRepository.existeMovimentoDoAgendamento(
       agendamento.id!,
     );
 
@@ -497,40 +327,26 @@ class _AgendaPageState extends State<AgendaPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            'Lançar no financeiro?',
-          ),
+          title: const Text('Lançar no financeiro?'),
           content: Text(
             'O serviço "${agendamento.servico}" foi '
-                'finalizado.\n\n'
-                'Deseja registrar uma entrada de '
-                '${formatarValor(agendamento.valor)}?',
+            'finalizado.\n\n'
+            'Deseja registrar uma entrada de '
+            '${formatarValor(agendamento.valor)}?',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  context,
-                  false,
-                );
+                Navigator.pop(context, false);
               },
-              child: const Text(
-                'Agora não',
-              ),
+              child: const Text('Agora não'),
             ),
             FilledButton.icon(
               onPressed: () {
-                Navigator.pop(
-                  context,
-                  true,
-                );
+                Navigator.pop(context, true);
               },
-              icon: const Icon(
-                Icons.attach_money,
-              ),
-              label: const Text(
-                'Lançar',
-              ),
+              icon: const Icon(Icons.attach_money),
+              label: const Text('Lançar'),
             ),
           ],
         );
@@ -544,8 +360,7 @@ class _AgendaPageState extends State<AgendaPage> {
     try {
       final movimento = MovimentoFinanceiro(
         tipo: 'Entrada',
-        descricao:
-        'Serviço finalizado: ${agendamento.servico}',
+        descricao: 'Serviço finalizado: ${agendamento.servico}',
         valor: agendamento.valor,
         formaPagamento: 'Não informado',
         data: DateTime.now().toIso8601String(),
@@ -553,9 +368,7 @@ class _AgendaPageState extends State<AgendaPage> {
         agendamentoId: agendamento.id,
       );
 
-      await _financeiroRepository.inserirMovimento(
-        movimento,
-      );
+      await _financeiroRepository.inserirMovimento(movimento);
 
       if (!mounted) return;
 
@@ -563,8 +376,8 @@ class _AgendaPageState extends State<AgendaPage> {
         SnackBar(
           content: Text(
             'Entrada de '
-                '${formatarValor(agendamento.valor)} '
-                'lançada no financeiro.',
+            '${formatarValor(agendamento.valor)} '
+            'lançada no financeiro.',
           ),
           backgroundColor: Colors.green.shade700,
         ),
@@ -574,9 +387,7 @@ class _AgendaPageState extends State<AgendaPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Erro ao lançar no financeiro: $erro',
-          ),
+          content: Text('Erro ao lançar no financeiro: $erro'),
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -614,102 +425,66 @@ class _AgendaPageState extends State<AgendaPage> {
     }
   }
 
-  bool estaAbrindoWhatsApp(
-      Agendamento agendamento,
-      ) {
-    return _agendamentoAbrindoWhatsAppId ==
-        (agendamento.id ?? -1);
+  bool estaAbrindoWhatsApp(Agendamento agendamento) {
+    return _agendamentoAbrindoWhatsAppId == (agendamento.id ?? -1);
   }
 
-  Widget construirCardAgendamento(
-      Agendamento agendamento,
-      ) {
-    final cor = corDoStatus(
-      agendamento.status,
-    );
+  Widget construirCardAgendamento(Agendamento agendamento) {
+    final cor = corDoStatus(agendamento.status);
 
-    final abrindoWhatsApp =
-    estaAbrindoWhatsApp(
-      agendamento,
-    );
+    final abrindoWhatsApp = estaAbrindoWhatsApp(agendamento);
 
-    final podeEnviarWhatsApp =
-        agendamento.status != 'Cancelado';
+    final podeEnviarWhatsApp = agendamento.status != 'Cancelado';
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          abrirDetalhes(
-            agendamento,
-          );
+          abrirDetalhes(agendamento);
         },
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            14,
-            10,
-            10,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 14, 10, 10),
           child: Column(
             children: [
               Row(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(
-                    backgroundColor:
-                    cor.withValues(
-                      alpha: 0.18,
-                    ),
-                    child: Icon(
-                      iconeDoStatus(
-                        agendamento.status,
-                      ),
-                      color: cor,
-                    ),
+                    backgroundColor: cor.withValues(alpha: 0.18),
+                    child: Icon(iconeDoStatus(agendamento.status), color: cor),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           agendamento.servico,
                           style: const TextStyle(
                             fontSize: 16,
-                            fontWeight:
-                            FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           '${agendamento.data} às '
-                              '${agendamento.hora}',
+                          '${agendamento.hora}',
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${formatarValor(
-                            agendamento.valor,
-                          )} • '
-                              '${agendamento.status}',
+                          '${formatarValor(agendamento.valor)} • '
+                          '${agendamento.status}',
                           style: TextStyle(
                             color: cor,
-                            fontWeight:
-                            FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
                   const Padding(
-                    padding: EdgeInsets.only(
-                      top: 8,
-                    ),
-                    child: Icon(
-                      Icons.chevron_right,
-                    ),
+                    padding: EdgeInsets.only(top: 8),
+                    child: Icon(Icons.chevron_right),
                   ),
                 ],
               ),
@@ -722,27 +497,16 @@ class _AgendaPageState extends State<AgendaPage> {
                     onPressed: abrindoWhatsApp
                         ? null
                         : () {
-                      abrirOpcoesWhatsApp(
-                        agendamento,
-                      );
-                    },
+                            abrirOpcoesWhatsApp(agendamento);
+                          },
                     icon: abrindoWhatsApp
                         ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child:
-                      CircularProgressIndicator(
-                        strokeWidth: 2,
-                      ),
-                    )
-                        : const Icon(
-                      Icons.chat_outlined,
-                    ),
-                    label: Text(
-                      abrindoWhatsApp
-                          ? 'Abrindo...'
-                          : 'WhatsApp',
-                    ),
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.chat_outlined),
+                    label: Text(abrindoWhatsApp ? 'Abrindo...' : 'WhatsApp'),
                   ),
                 ),
               ],
@@ -756,78 +520,66 @@ class _AgendaPageState extends State<AgendaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Agenda de serviços',
-        ),
-      ),
+      appBar: AppBar(title: const Text('Agenda de serviços')),
       body: carregando
-          ? const Center(
-        child: CircularProgressIndicator(),
-      )
+          ? const Center(child: CircularProgressIndicator())
           : agendamentos.isEmpty
           ? const Center(
-        child: Column(
-          mainAxisSize:
-          MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.calendar_month_outlined,
-              size: 72,
-              color: Colors.white38,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Nenhum agendamento cadastrado',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight:
-                FontWeight.bold,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.calendar_month_outlined,
+                    size: 72,
+                    color: Colors.white38,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Nenhum agendamento cadastrado',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Toque no botão + para agendar',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ],
               ),
-            ),
-            SizedBox(height: 6),
-            Text(
-              'Toque no botão + para agendar',
-              style: TextStyle(
-                color: Colors.white54,
-              ),
-            ),
-          ],
-        ),
-      )
+            )
           : RefreshIndicator(
-        onRefresh: carregarAgendamentos,
-        child: ListView.separated(
-          physics:
-          const AlwaysScrollableScrollPhysics(),
-          padding:
-          const EdgeInsets.all(16),
-          itemCount:
-          agendamentos.length,
-          separatorBuilder:
-              (_, __) {
-            return const SizedBox(
-              height: 10,
-            );
-          },
-          itemBuilder:
-              (context, index) {
-            final agendamento =
-            agendamentos[index];
+              onRefresh: carregarAgendamentos,
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: agendamentos.length,
+                separatorBuilder: (_, __) {
+                  return const SizedBox(height: 10);
+                },
+                itemBuilder: (context, index) {
+                  final agendamento = agendamentos[index];
 
-            return construirCardAgendamento(
-              agendamento,
-            );
-          },
-        ),
-      ),
-      floatingActionButton:
-      FloatingActionButton(
+                  return construirCardAgendamento(agendamento);
+                },
+              ),
+            ),
+      floatingActionButton: FloatingActionButton(
         onPressed: abrirNovoAgendamento,
-        child: const Icon(
-          Icons.add,
-        ),
+        child: const Icon(Icons.add),
       ),
     );
   }
+}
+
+class _ContatoAgendamentoWhatsApp {
+  const _ContatoAgendamentoWhatsApp({
+    required this.cliente,
+    required this.telefone,
+    required this.veiculo,
+    required this.placa,
+  });
+
+  final String cliente;
+  final String telefone;
+  final String veiculo;
+  final String placa;
 }
