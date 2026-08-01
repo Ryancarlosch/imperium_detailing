@@ -23,18 +23,12 @@ class CabecalhoPdf {
       decoration: pw.BoxDecoration(
         color: contexto.corSecundaria,
         borderRadius: pw.BorderRadius.circular(9),
-        border: pw.Border.all(
-          color: contexto.corPrincipal,
-          width: 1.2,
-        ),
+        border: pw.Border.all(color: contexto.corPrincipal, width: 1.2),
       ),
       child: pw.Row(
-        crossAxisAlignment:
-        pw.CrossAxisAlignment.center,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          _criarLogo(
-            contexto: contexto,
-          ),
+          _criarLogo(contexto: contexto),
           pw.SizedBox(width: 15),
           pw.Expanded(
             child: _criarDadosEmpresa(
@@ -61,27 +55,18 @@ class CabecalhoPdf {
     required String tipoDocumento,
     required String numeroDocumento,
   }) {
-    final nomeEmpresa =
-    _nomeEmpresa(contexto.configuracao);
+    final nomeEmpresa = _nomeEmpresa(contexto.configuracao);
 
     return pw.Container(
-      margin: const pw.EdgeInsets.only(
-        bottom: 16,
-      ),
-      padding: const pw.EdgeInsets.only(
-        bottom: 8,
-      ),
+      margin: const pw.EdgeInsets.only(bottom: 16),
+      padding: const pw.EdgeInsets.only(bottom: 8),
       decoration: const pw.BoxDecoration(
         border: pw.Border(
-          bottom: pw.BorderSide(
-            color: PdfColors.grey400,
-            width: 0.7,
-          ),
+          bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.7),
         ),
       ),
       child: pw.Row(
-        crossAxisAlignment:
-        pw.CrossAxisAlignment.center,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
           if (contexto.logo != null) ...[
             pw.Container(
@@ -89,17 +74,10 @@ class CabecalhoPdf {
               height: 28,
               padding: const pw.EdgeInsets.all(2),
               decoration: pw.BoxDecoration(
-                borderRadius:
-                pw.BorderRadius.circular(5),
-                border: pw.Border.all(
-                  color: contexto.corPrincipal,
-                  width: 0.6,
-                ),
+                borderRadius: pw.BorderRadius.circular(5),
+                border: pw.Border.all(color: contexto.corPrincipal, width: 0.6),
               ),
-              child: pw.Image(
-                contexto.logo!,
-                fit: pw.BoxFit.contain,
-              ),
+              child: pw.Image(contexto.logo!, fit: pw.BoxFit.contain),
             ),
             pw.SizedBox(width: 8),
           ],
@@ -119,19 +97,14 @@ class CabecalhoPdf {
               tipoDocumento: tipoDocumento,
               numeroDocumento: numeroDocumento,
             ),
-            style: const pw.TextStyle(
-              fontSize: 8,
-              color: PdfColors.grey700,
-            ),
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
           ),
         ],
       ),
     );
   }
 
-  static pw.Widget _criarLogo({
-    required DocumentoPdfContexto contexto,
-  }) {
+  static pw.Widget _criarLogo({required DocumentoPdfContexto contexto}) {
     return pw.Container(
       width: 78,
       height: 78,
@@ -139,42 +112,35 @@ class CabecalhoPdf {
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(9),
-        border: pw.Border.all(
-          color: contexto.corPrincipal,
-          width: 1,
-        ),
+        border: pw.Border.all(color: contexto.corPrincipal, width: 1),
       ),
       child: contexto.logo != null
-          ? pw.Image(
-        contexto.logo!,
-        fit: pw.BoxFit.contain,
-      )
+          ? pw.Image(contexto.logo!, fit: pw.BoxFit.contain)
           : pw.Center(
-        child: pw.Column(
-          mainAxisAlignment:
-          pw.MainAxisAlignment.center,
-          children: [
-            pw.Text(
-              'ID',
-              style: pw.TextStyle(
-                fontSize: 23,
-                fontWeight: pw.FontWeight.bold,
-                color: contexto.corPrincipal,
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Text(
+                    'ID',
+                    style: pw.TextStyle(
+                      fontSize: 23,
+                      fontWeight: pw.FontWeight.bold,
+                      color: contexto.corPrincipal,
+                    ),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    'IMPERIUM',
+                    style: pw.TextStyle(
+                      fontSize: 5.5,
+                      fontWeight: pw.FontWeight.bold,
+                      letterSpacing: 1,
+                      color: PdfColors.grey800,
+                    ),
+                  ),
+                ],
               ),
             ),
-            pw.SizedBox(height: 2),
-            pw.Text(
-              'IMPERIUM',
-              style: pw.TextStyle(
-                fontSize: 5.5,
-                fontWeight: pw.FontWeight.bold,
-                letterSpacing: 1,
-                color: PdfColors.grey800,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -187,8 +153,7 @@ class CabecalhoPdf {
     final linhas = _dadosEmpresa(configuracao);
 
     return pw.Column(
-      crossAxisAlignment:
-      pw.CrossAxisAlignment.start,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       mainAxisSize: pw.MainAxisSize.min,
       children: [
         pw.Text(
@@ -215,10 +180,8 @@ class CabecalhoPdf {
         if (linhas.isNotEmpty) ...[
           pw.SizedBox(height: 9),
           ...linhas.map(
-                (linha) => pw.Padding(
-              padding: const pw.EdgeInsets.only(
-                bottom: 2,
-              ),
+            (linha) => pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 2),
               child: pw.Text(
                 linha,
                 maxLines: 2,
@@ -242,12 +205,10 @@ class CabecalhoPdf {
     required String status,
     required bool mostrarQrCode,
   }) {
-    final possuiWhatsApp =
-    _possuiWhatsApp(contexto.configuracao);
+    final possuiWhatsApp = _possuiWhatsApp(contexto.configuracao);
 
     return pw.Column(
-      crossAxisAlignment:
-      pw.CrossAxisAlignment.end,
+      crossAxisAlignment: pw.CrossAxisAlignment.end,
       mainAxisSize: pw.MainAxisSize.min,
       children: [
         pw.Text(
@@ -263,10 +224,7 @@ class CabecalhoPdf {
           pw.SizedBox(height: 4),
           pw.Text(
             'Nº ${numeroDocumento.trim()}',
-            style: const pw.TextStyle(
-              fontSize: 9,
-              color: PdfColors.grey300,
-            ),
+            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey300),
           ),
         ],
         if (status.trim().isNotEmpty) ...[
@@ -275,22 +233,15 @@ class CabecalhoPdf {
         ],
         if (mostrarQrCode && possuiWhatsApp) ...[
           pw.SizedBox(height: 9),
-          _criarQrCode(
-            contexto: contexto,
-          ),
+          _criarQrCode(contexto: contexto),
         ],
       ],
     );
   }
 
-  static pw.Widget _criarStatus(
-      String status,
-      ) {
+  static pw.Widget _criarStatus(String status) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 4,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: pw.BoxDecoration(
         color: _corStatus(status),
         borderRadius: pw.BorderRadius.circular(10),
@@ -306,12 +257,8 @@ class CabecalhoPdf {
     );
   }
 
-  static pw.Widget _criarQrCode({
-    required DocumentoPdfContexto contexto,
-  }) {
-    final numero = _numeroWhatsApp(
-      contexto.configuracao,
-    );
+  static pw.Widget _criarQrCode({required DocumentoPdfContexto contexto}) {
+    final numero = _numeroWhatsApp(contexto.configuracao);
 
     if (numero.isEmpty) {
       return pw.SizedBox();
@@ -349,65 +296,40 @@ class CabecalhoPdf {
     );
   }
 
-  static List<String> _dadosEmpresa(
-      Configuracao configuracao,
-      ) {
+  static List<String> _dadosEmpresa(Configuracao configuracao) {
     final linhas = <String>[];
 
-    if (configuracao.razaoSocial
-        .trim()
-        .isNotEmpty) {
-      linhas.add(
-        configuracao.razaoSocial.trim(),
-      );
+    if (configuracao.razaoSocial.trim().isNotEmpty) {
+      linhas.add(configuracao.razaoSocial.trim());
     }
 
     final registros = <String>[];
 
     if (configuracao.cnpj.trim().isNotEmpty) {
-      registros.add(
-        'CNPJ: ${configuracao.cnpj.trim()}',
-      );
+      registros.add('CNPJ: ${configuracao.cnpj.trim()}');
     }
 
-    if (configuracao.inscricaoEstadual
-        .trim()
-        .isNotEmpty) {
-      registros.add(
-        'IE: ${configuracao.inscricaoEstadual.trim()}',
-      );
+    if (configuracao.inscricaoEstadual.trim().isNotEmpty) {
+      registros.add('IE: ${configuracao.inscricaoEstadual.trim()}');
     }
 
     if (registros.isNotEmpty) {
       linhas.add(registros.join(' • '));
     }
 
-    if (configuracao.enderecoCompleto
-        .trim()
-        .isNotEmpty) {
-      linhas.add(
-        configuracao.enderecoCompleto.trim(),
-      );
+    if (configuracao.enderecoCompleto.trim().isNotEmpty) {
+      linhas.add(configuracao.enderecoCompleto.trim());
     }
 
     final contatos = <String>[];
 
-    if (configuracao.telefone
-        .trim()
-        .isNotEmpty) {
-      contatos.add(
-        'Tel.: ${configuracao.telefone.trim()}',
-      );
+    if (configuracao.telefone.trim().isNotEmpty) {
+      contatos.add('Tel.: ${configuracao.telefone.trim()}');
     }
 
-    if (configuracao.whatsapp
-        .trim()
-        .isNotEmpty &&
-        configuracao.whatsapp.trim() !=
-            configuracao.telefone.trim()) {
-      contatos.add(
-        'WhatsApp: ${configuracao.whatsapp.trim()}',
-      );
+    if (configuracao.whatsapp.trim().isNotEmpty &&
+        configuracao.whatsapp.trim() != configuracao.telefone.trim()) {
+      contatos.add('WhatsApp: ${configuracao.whatsapp.trim()}');
     }
 
     if (contatos.isNotEmpty) {
@@ -424,11 +346,8 @@ class CabecalhoPdf {
       digitais.add(configuracao.site.trim());
     }
 
-    if (configuracao.instagram
-        .trim()
-        .isNotEmpty) {
-      var instagram =
-      configuracao.instagram.trim();
+    if (configuracao.instagram.trim().isNotEmpty) {
+      var instagram = configuracao.instagram.trim();
 
       if (!instagram.startsWith('@')) {
         instagram = '@$instagram';
@@ -444,11 +363,8 @@ class CabecalhoPdf {
     return linhas;
   }
 
-  static String _nomeEmpresa(
-      Configuracao configuracao,
-      ) {
-    final nome =
-    configuracao.nomeFantasia.trim();
+  static String _nomeEmpresa(Configuracao configuracao) {
+    final nome = configuracao.nomeFantasia.trim();
 
     if (nome.isNotEmpty) {
       return nome;
@@ -457,29 +373,17 @@ class CabecalhoPdf {
     return 'Imperium Detailing';
   }
 
-  static bool _possuiWhatsApp(
-      Configuracao configuracao,
-      ) {
-    return configuracao.whatsapp
-        .trim()
-        .isNotEmpty ||
-        configuracao.telefone
-            .trim()
-            .isNotEmpty;
+  static bool _possuiWhatsApp(Configuracao configuracao) {
+    return configuracao.whatsapp.trim().isNotEmpty ||
+        configuracao.telefone.trim().isNotEmpty;
   }
 
-  static String _numeroWhatsApp(
-      Configuracao configuracao,
-      ) {
-    final telefone =
-    configuracao.whatsapp.trim().isNotEmpty
+  static String _numeroWhatsApp(Configuracao configuracao) {
+    final telefone = configuracao.whatsapp.trim().isNotEmpty
         ? configuracao.whatsapp
         : configuracao.telefone;
 
-    var numero = telefone.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
+    var numero = telefone.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (numero.isEmpty) {
       return '';
@@ -511,11 +415,8 @@ class CabecalhoPdf {
     return '$tipo #${numeroDocumento.trim()}';
   }
 
-  static PdfColor _corStatus(
-      String status,
-      ) {
-    final valor =
-    status.trim().toLowerCase();
+  static PdfColor _corStatus(String status) {
+    final valor = status.trim().toLowerCase();
 
     switch (valor) {
       case 'aprovado':
