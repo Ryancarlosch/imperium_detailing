@@ -146,7 +146,8 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
       final correspondeTipo =
           _filtroTipo == 'Todos' ||
           tipoNormalizado == _filtroTipo.toLowerCase() ||
-          (_filtroTipo == 'Saída' && tipoNormalizado == 'saida');
+          (_filtroTipo == 'Saída' &&
+              (tipoNormalizado == 'saida' || tipoNormalizado == 'saída'));
 
       final dataMovimento = _converterData(movimento['data']);
 
@@ -222,6 +223,22 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
       saveText: 'Aplicar',
       fieldStartHintText: 'Data inicial',
       fieldEndHintText: 'Data final',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFFD6A84B),
+              onPrimary: Colors.black,
+              surface: Color(0xFF211D17),
+              onSurface: Colors.white,
+            ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Color(0xFF151515),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (periodo == null || !mounted) {
@@ -448,6 +465,8 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
                 });
               },
               decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFF1A1A1A),
                 hintText: 'Pesquisar descrição, cliente ou pagamento',
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: _pesquisa.isEmpty
@@ -474,6 +493,8 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
                   child: DropdownButtonFormField<String>(
                     value: _filtroTipo,
                     decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFF1A1A1A),
                       labelText: 'Tipo',
                       prefixIcon: const Icon(Icons.tune_rounded),
                       border: OutlineInputBorder(

@@ -51,7 +51,7 @@ class FinanceiroRepository {
 
     final resultado = await database.query(
       'movimentos_financeiros',
-      where: 'data BETWEEN ? AND ?',
+      where: 'date(data) BETWEEN date(?) AND date(?)',
       whereArgs: [dataInicial, dataFinal],
       orderBy: 'data DESC, id DESC',
     );
@@ -115,7 +115,7 @@ class FinanceiroRepository {
 
     if (dataInicial != null && dataFinal != null) {
       consulta += '''
-        AND data BETWEEN ? AND ?
+        AND date(data) BETWEEN date(?) AND date(?)
       ''';
 
       argumentos.addAll([dataInicial, dataFinal]);
@@ -123,7 +123,14 @@ class FinanceiroRepository {
 
     final resultado = await database.rawQuery(consulta, argumentos);
 
+    if (resultado.isEmpty) {
+      return 0;
+    }
+
     final total = resultado.first['total'];
+    if (total == null) {
+      return 0;
+    }
 
     return (total as num).toDouble();
   }
@@ -142,7 +149,7 @@ class FinanceiroRepository {
 
     if (dataInicial != null && dataFinal != null) {
       consulta += '''
-        AND data BETWEEN ? AND ?
+        AND date(data) BETWEEN date(?) AND date(?)
       ''';
 
       argumentos.addAll([dataInicial, dataFinal]);
@@ -150,7 +157,14 @@ class FinanceiroRepository {
 
     final resultado = await database.rawQuery(consulta, argumentos);
 
+    if (resultado.isEmpty) {
+      return 0;
+    }
+
     final total = resultado.first['total'];
+    if (total == null) {
+      return 0;
+    }
 
     return (total as num).toDouble();
   }

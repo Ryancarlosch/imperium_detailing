@@ -23,31 +23,19 @@ class DashboardRepository {
     final inicioMesAnterior = DateTime(agora.year, agora.month - 1, 1);
     final inicioProximoMesAnterior = inicioMes;
 
-    final inicioSeteDias = inicioHoje.subtract(
-      const Duration(days: 6),
-    );
+    final inicioSeteDias = inicioHoje.subtract(const Duration(days: 6));
 
     final resultados = await Future.wait<List<Map<String, Object?>>>([
-      database.rawQuery(
-        'SELECT COUNT(*) AS total FROM clientes',
-      ),
-      database.rawQuery(
-        'SELECT COUNT(*) AS total FROM veiculos',
-      ),
-      database.rawQuery(
-        'SELECT COUNT(*) AS total FROM agendamentos',
-      ),
+      database.rawQuery('SELECT COUNT(*) AS total FROM clientes'),
+      database.rawQuery('SELECT COUNT(*) AS total FROM veiculos'),
+      database.rawQuery('SELECT COUNT(*) AS total FROM agendamentos'),
       database.rawQuery(
         '''
         SELECT COUNT(*) AS total
         FROM agendamentos
-        WHERE data >= ?
-          AND data < ?
+        WHERE data = ?
         ''',
-        [
-          _toIsoDateString(inicioHoje),
-          _toIsoDateString(inicioAmanha),
-        ],
+        [_toAgendamentoDateString(inicioHoje)],
       ),
       database.rawQuery(
         '''
@@ -57,10 +45,7 @@ class DashboardRepository {
           AND data >= ?
           AND data < ?
         ''',
-        [
-          _toIsoDateString(inicioHoje),
-          _toIsoDateString(inicioAmanha),
-        ],
+        [_toIsoDateString(inicioHoje), _toIsoDateString(inicioAmanha)],
       ),
       database.rawQuery(
         '''
@@ -70,10 +55,7 @@ class DashboardRepository {
           AND data >= ?
           AND data < ?
         ''',
-        [
-          _toIsoDateString(inicioMes),
-          _toIsoDateString(inicioProximoMes),
-        ],
+        [_toIsoDateString(inicioMes), _toIsoDateString(inicioProximoMes)],
       ),
       database.rawQuery(
         '''
@@ -83,45 +65,33 @@ class DashboardRepository {
           AND data >= ?
           AND data < ?
         ''',
-        [
-          _toIsoDateString(inicioMes),
-          _toIsoDateString(inicioProximoMes),
-        ],
+        [_toIsoDateString(inicioMes), _toIsoDateString(inicioProximoMes)],
       ),
-      database.rawQuery(
-        '''
+      database.rawQuery('''
         SELECT COUNT(*) AS total
         FROM ordens_servico
         WHERE LOWER(status) = 'aberta'
-        ''',
-      ),
-      database.rawQuery(
-        '''
+        '''),
+      database.rawQuery('''
         SELECT COUNT(*) AS total
         FROM ordens_servico
         WHERE LOWER(status) = 'em andamento'
-        ''',
-      ),
+        '''),
       database.rawQuery(
         '''
         SELECT COUNT(*) AS total
         FROM ordens_servico
-        WHERE LOWER(status) = 'finalizada'
+        WHERE status = 'Finalizada'
           AND data_finalizacao >= ?
           AND data_finalizacao < ?
         ''',
-        [
-          _toIsoDateString(inicioMes),
-          _toIsoDateString(inicioProximoMes),
-        ],
+        [_toIsoDateString(inicioMes), _toIsoDateString(inicioProximoMes)],
       ),
-      database.rawQuery(
-        '''
+      database.rawQuery('''
         SELECT COUNT(*) AS total
         FROM itens_estoque
         WHERE quantidade <= quantidade_minima
-        ''',
-      ),
+        '''),
       database.rawQuery(
         '''
         SELECT COALESCE(SUM(valor), 0) AS total
@@ -209,10 +179,7 @@ class DashboardRepository {
     };
   }
 
-  double _calcularCrescimentoPercentual(
-    double atual,
-    double anterior,
-  ) {
+  double _calcularCrescimentoPercentual(double atual, double anterior) {
     if (anterior == 0) {
       return atual > 0 ? 100 : 0;
     }
@@ -221,8 +188,7 @@ class DashboardRepository {
   }
 
   Future<double> _consultarSaldoTotal(Database database) async {
-    final resultado = await database.rawQuery(
-      '''
+    final resultado = await database.rawQuery('''
       SELECT COALESCE(SUM(
         CASE
           WHEN LOWER(tipo) = 'entrada' THEN valor
@@ -231,8 +197,7 @@ class DashboardRepository {
         END
       ), 0) AS total
       FROM movimentos_financeiros
-      ''',
-    );
+      ''');
 
     return _lerDouble(resultado);
   }
@@ -327,7 +292,7 @@ class DashboardRepository {
       FROM ordem_servico_itens item
       INNER JOIN ordens_servico os
         ON os.id = item.ordem_servico_id
-      WHERE LOWER(os.status) = 'finalizada'
+      WHERE os.status = 'Finalizada'
         AND os.data_finalizacao >= ?
         AND os.data_finalizacao < ?
       GROUP BY item.servico
@@ -411,6 +376,14 @@ class DashboardRepository {
 
   String _toIsoDateString(DateTime date) {
     return DateTime(date.year, date.month, date.day).toIso8601String();
+  }
+
+  String _toAgendamentoDateString(DateTime date) {
+    final dia = date.day.toString().padLeft(2, '0');
+    final mes = date.month.toString().padLeft(2, '0');
+    final ano = date.year.toString().padLeft(4, '0');
+
+    return '$dia/$mes/$ano';
   }
 
   double _lerDouble(List<Map<String, Object?>> resultado) {

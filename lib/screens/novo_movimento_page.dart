@@ -6,10 +6,7 @@ import '../models/movimento_financeiro.dart';
 import '../repositories/financeiro_repository.dart';
 
 class NovoMovimentoPage extends StatefulWidget {
-  const NovoMovimentoPage({
-    super.key,
-    this.movimento,
-  });
+  const NovoMovimentoPage({super.key, this.movimento});
 
   final Map<String, dynamic>? movimento;
 
@@ -20,17 +17,13 @@ class NovoMovimentoPage extends StatefulWidget {
 class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final FinanceiroRepository _financeiroRepository =
-      FinanceiroRepository();
+  final FinanceiroRepository _financeiroRepository = FinanceiroRepository();
 
-  final TextEditingController _descricaoController =
-      TextEditingController();
+  final TextEditingController _descricaoController = TextEditingController();
 
-  final TextEditingController _valorController =
-      TextEditingController();
+  final TextEditingController _valorController = TextEditingController();
 
-  final TextEditingController _observacoesController =
-      TextEditingController();
+  final TextEditingController _observacoesController = TextEditingController();
 
   final DateFormat _formatoData = DateFormat('dd/MM/yyyy');
 
@@ -84,10 +77,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
         _carregando = false;
       });
 
-      _mostrarMensagem(
-        'Não foi possível preparar a tela: $erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível preparar a tela: $erro', erro: true);
     }
   }
 
@@ -96,11 +86,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
 
     final resultado = await database.query(
       'clientes',
-      columns: [
-        'id',
-        'nome',
-        'telefone',
-      ],
+      columns: ['id', 'nome', 'telefone'],
       orderBy: 'nome COLLATE NOCASE ASC',
     );
 
@@ -114,8 +100,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       return;
     }
 
-    final tipoSalvo =
-        (movimento['tipo'] ?? '').toString().trim().toLowerCase();
+    final tipoSalvo = (movimento['tipo'] ?? '').toString().trim().toLowerCase();
 
     if (tipoSalvo == 'saída' || tipoSalvo == 'saida') {
       _tipo = 'Saída';
@@ -123,31 +108,23 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       _tipo = 'Entrada';
     }
 
-    _descricaoController.text =
-        (movimento['descricao'] ?? '').toString();
+    _descricaoController.text = (movimento['descricao'] ?? '').toString();
 
-    _valorController.text = _formatarValorInicial(
-      movimento['valor'],
-    );
+    _valorController.text = _formatarValorInicial(movimento['valor']);
 
-    final formaPagamento =
-        (movimento['forma_pagamento'] ?? '').toString().trim();
+    final formaPagamento = (movimento['forma_pagamento'] ?? '')
+        .toString()
+        .trim();
 
     if (formaPagamento.isNotEmpty) {
       _formaPagamento = formaPagamento;
     }
 
-    _clienteIdSelecionado = _converterParaInt(
-      movimento['cliente_id'],
-    );
+    _clienteIdSelecionado = _converterParaInt(movimento['cliente_id']);
 
-    _agendamentoId = _converterParaInt(
-      movimento['agendamento_id'],
-    );
+    _agendamentoId = _converterParaInt(movimento['agendamento_id']);
 
-    final data = _converterParaData(
-      movimento['data'],
-    );
+    final data = _converterParaData(movimento['data']);
 
     if (data != null) {
       _dataSelecionada = data;
@@ -159,9 +136,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       return valor;
     }
 
-    return int.tryParse(
-      valor?.toString() ?? '',
-    );
+    return int.tryParse(valor?.toString() ?? '');
   }
 
   DateTime? _converterParaData(dynamic valor) {
@@ -185,10 +160,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
   String _formatarValorInicial(dynamic valor) {
     final numero = valor is num
         ? valor.toDouble()
-        : double.tryParse(
-              valor?.toString().replaceAll(',', '.') ?? '',
-            ) ??
-            0;
+        : double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0;
 
     return numero.toStringAsFixed(2).replaceAll('.', ',');
   }
@@ -200,14 +172,10 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       return null;
     }
 
-    texto = texto
-        .replaceAll('R\$', '')
-        .replaceAll(' ', '');
+    texto = texto.replaceAll('R\$', '').replaceAll(' ', '');
 
     if (texto.contains(',') && texto.contains('.')) {
-      texto = texto
-          .replaceAll('.', '')
-          .replaceAll(',', '.');
+      texto = texto.replaceAll('.', '').replaceAll(',', '.');
     } else {
       texto = texto.replaceAll(',', '.');
     }
@@ -220,11 +188,27 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       context: context,
       locale: const Locale('pt', 'BR'),
       initialDate: _dataSelecionada,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(DateTime.now().year + 10),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(DateTime.now().year + 20),
       helpText: 'Selecionar data',
       cancelText: 'Cancelar',
       confirmText: 'Selecionar',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFFD6A84B),
+              onPrimary: Colors.black,
+              surface: Color(0xFF211D17),
+              onSurface: Colors.white,
+            ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Color(0xFF151515),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (data == null || !mounted) {
@@ -232,7 +216,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
     }
 
     setState(() {
-      _dataSelecionada = data;
+      _dataSelecionada = DateTime(data.year, data.month, data.day);
     });
   }
 
@@ -244,10 +228,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
     final valor = _lerValor();
 
     if (valor == null || valor <= 0) {
-      _mostrarMensagem(
-        'Informe um valor maior que zero.',
-        erro: true,
-      );
+      _mostrarMensagem('Informe um valor maior que zero.', erro: true);
       return;
     }
 
@@ -257,9 +238,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
 
     try {
       final movimento = MovimentoFinanceiro(
-        id: _converterParaInt(
-          widget.movimento?['id'],
-        ),
+        id: _converterParaInt(widget.movimento?['id']),
         tipo: _tipo,
         descricao: _montarDescricaoCompleta(),
         valor: valor,
@@ -274,13 +253,9 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       );
 
       if (_editando) {
-        await _financeiroRepository.atualizarMovimento(
-          movimento,
-        );
+        await _financeiroRepository.atualizarMovimento(movimento);
       } else {
-        await _financeiroRepository.inserirMovimento(
-          movimento,
-        );
+        await _financeiroRepository.inserirMovimento(movimento);
       }
 
       if (!mounted) {
@@ -315,17 +290,13 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
     return '$descricao — $observacoes';
   }
 
-  void _mostrarMensagem(
-    String mensagem, {
-    bool erro = false,
-  }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(mensagem),
-          backgroundColor:
-              erro ? Colors.red.shade700 : Colors.green.shade700,
+          backgroundColor: erro ? Colors.red.shade700 : Colors.green.shade700,
         ),
       );
   }
@@ -333,28 +304,20 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F5F7),
+      backgroundColor: const Color(0xFF0E0E0E),
       appBar: AppBar(
-        title: Text(
-          _editando
-              ? 'Editar movimentação'
-              : 'Nova movimentação',
-        ),
+        backgroundColor: const Color(0xFF151515),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Text(_editando ? 'Editar movimentação' : 'Nova movimentação'),
       ),
       body: _carregando
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : SafeArea(
               child: Form(
                 key: _formKey,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
-                    16,
-                    16,
-                    110,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
                   children: [
                     _construirCabecalho(),
                     const SizedBox(height: 16),
@@ -373,14 +336,9 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
           ? null
           : SafeArea(
               child: Container(
-                padding: const EdgeInsets.fromLTRB(
-                  16,
-                  12,
-                  16,
-                  12,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: const Color(0xFF151515),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.08),
@@ -395,35 +353,24 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
                       child: OutlinedButton(
                         onPressed: _salvando
                             ? null
-                            : () => Navigator.pop(
-                                  context,
-                                  false,
-                                ),
+                            : () => Navigator.pop(context, false),
                         child: const Text('Cancelar'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed:
-                            _salvando ? null : _salvar,
+                        onPressed: _salvando ? null : _salvar,
                         icon: _salvando
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child:
-                                    CircularProgressIndicator(
+                                child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Icon(
-                                Icons.save_outlined,
-                              ),
-                        label: Text(
-                          _salvando
-                              ? 'Salvando...'
-                              : 'Salvar',
-                        ),
+                            : const Icon(Icons.save_outlined),
+                        label: Text(_salvando ? 'Salvando...' : 'Salvar'),
                       ),
                     ),
                   ],
@@ -441,22 +388,15 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: entrada
-              ? [
-                  Colors.green.shade800,
-                  Colors.green.shade600,
-                ]
-              : [
-                  Colors.red.shade800,
-                  Colors.red.shade600,
-                ],
+              ? [Colors.green.shade800, Colors.green.shade600]
+              : [Colors.red.shade800, Colors.red.shade600],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: (entrada ? Colors.green : Colors.red)
-                .withOpacity(0.18),
+            color: (entrada ? Colors.green : Colors.red).withOpacity(0.18),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -472,9 +412,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
-              entrada
-                  ? Icons.south_west_rounded
-                  : Icons.north_east_rounded,
+              entrada ? Icons.south_west_rounded : Icons.north_east_rounded,
               color: Colors.white,
               size: 30,
             ),
@@ -482,29 +420,21 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
           const SizedBox(width: 14),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entrada
-                      ? 'Registrar entrada'
-                      : 'Registrar saída',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  entrada ? 'Registrar entrada' : 'Registrar saída',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   entrada
                       ? 'Registre pagamentos e receitas da empresa.'
                       : 'Registre despesas, compras e outros custos.',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                  ),
+                  style: const TextStyle(color: Colors.white70),
                 ),
               ],
             ),
@@ -549,33 +479,26 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Dados da movimentação',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _descricaoController,
-              textCapitalization:
-                  TextCapitalization.sentences,
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 labelText: 'Descrição',
                 hintText: 'Ex.: Polimento completo',
-                prefixIcon:
-                    Icon(Icons.description_outlined),
+                prefixIcon: Icon(Icons.description_outlined),
                 border: OutlineInputBorder(),
               ),
               validator: (valor) {
-                if (valor == null ||
-                    valor.trim().isEmpty) {
+                if (valor == null || valor.trim().isEmpty) {
                   return 'Informe uma descrição.';
                 }
 
@@ -589,16 +512,14 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _valorController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(
+              keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
               decoration: const InputDecoration(
                 labelText: 'Valor',
                 hintText: '0,00',
                 prefixText: 'R\$ ',
-                prefixIcon:
-                    Icon(Icons.attach_money_rounded),
+                prefixIcon: Icon(Icons.attach_money_rounded),
                 border: OutlineInputBorder(),
               ),
               validator: (_) {
@@ -619,20 +540,15 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
             DropdownButtonFormField<String>(
               value: _formaPagamento,
               decoration: const InputDecoration(
+                filled: true,
+                fillColor: Color(0xFF1A1A1A),
                 labelText: 'Forma de pagamento',
-                prefixIcon:
-                    Icon(Icons.payments_outlined),
+                prefixIcon: Icon(Icons.payments_outlined),
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(
-                  value: 'Pix',
-                  child: Text('Pix'),
-                ),
-                DropdownMenuItem(
-                  value: 'Dinheiro',
-                  child: Text('Dinheiro'),
-                ),
+                DropdownMenuItem(value: 'Pix', child: Text('Pix')),
+                DropdownMenuItem(value: 'Dinheiro', child: Text('Dinheiro')),
                 DropdownMenuItem(
                   value: 'Cartão de crédito',
                   child: Text('Cartão de crédito'),
@@ -645,14 +561,8 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
                   value: 'Transferência',
                   child: Text('Transferência'),
                 ),
-                DropdownMenuItem(
-                  value: 'Boleto',
-                  child: Text('Boleto'),
-                ),
-                DropdownMenuItem(
-                  value: 'Outro',
-                  child: Text('Outro'),
-                ),
+                DropdownMenuItem(value: 'Boleto', child: Text('Boleto')),
+                DropdownMenuItem(value: 'Outro', child: Text('Outro')),
               ],
               onChanged: (valor) {
                 if (valor == null) {
@@ -670,19 +580,14 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
               borderRadius: BorderRadius.circular(4),
               child: InputDecorator(
                 decoration: const InputDecoration(
+                  filled: true,
+                  fillColor: Color(0xFF1A1A1A),
                   labelText: 'Data',
-                  prefixIcon:
-                      Icon(Icons.calendar_month_rounded),
-                  suffixIcon: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                  ),
+                  prefixIcon: Icon(Icons.calendar_month_rounded),
+                  suffixIcon: Icon(Icons.keyboard_arrow_down_rounded),
                   border: OutlineInputBorder(),
                 ),
-                child: Text(
-                  _formatoData.format(
-                    _dataSelecionada,
-                  ),
-                ),
+                child: Text(_formatoData.format(_dataSelecionada)),
               ),
             ),
           ],
@@ -692,11 +597,11 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
   }
 
   Widget _construirVinculos() {
-    final clienteValido = _clienteIdSelecionado == null ||
+    final clienteValido =
+        _clienteIdSelecionado == null ||
         _clientes.any(
           (cliente) =>
-              _converterParaInt(cliente['id']) ==
-              _clienteIdSelecionado,
+              _converterParaInt(cliente['id']) == _clienteIdSelecionado,
         );
 
     if (!clienteValido) {
@@ -708,33 +613,28 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Cliente',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
               'O vínculo com um cliente é opcional.',
-              style: TextStyle(
-                color: Colors.grey.shade700,
-              ),
+              style: TextStyle(color: Colors.grey.shade700),
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<int?>(
               value: _clienteIdSelecionado,
               isExpanded: true,
               decoration: const InputDecoration(
+                filled: true,
+                fillColor: Color(0xFF1A1A1A),
                 labelText: 'Selecionar cliente',
-                prefixIcon:
-                    Icon(Icons.person_outline_rounded),
+                prefixIcon: Icon(Icons.person_outline_rounded),
                 border: OutlineInputBorder(),
               ),
               items: [
@@ -742,31 +642,23 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
                   value: null,
                   child: Text('Sem cliente vinculado'),
                 ),
-                ..._clientes.map(
-                  (cliente) {
-                    final id = _converterParaInt(
-                      cliente['id'],
-                    );
+                ..._clientes.map((cliente) {
+                  final id = _converterParaInt(cliente['id']);
 
-                    final nome =
-                        (cliente['nome'] ?? '').toString();
+                  final nome = (cliente['nome'] ?? '').toString();
 
-                    final telefone =
-                        (cliente['telefone'] ?? '')
-                            .toString()
-                            .trim();
+                  final telefone = (cliente['telefone'] ?? '')
+                      .toString()
+                      .trim();
 
-                    return DropdownMenuItem<int?>(
-                      value: id,
-                      child: Text(
-                        telefone.isEmpty
-                            ? nome
-                            : '$nome • $telefone',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  },
-                ),
+                  return DropdownMenuItem<int?>(
+                    value: id,
+                    child: Text(
+                      telefone.isEmpty ? nome : '$nome • $telefone',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
               ],
               onChanged: (valor) {
                 setState(() {
@@ -786,31 +678,26 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Observações',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _observacoesController,
               minLines: 3,
               maxLines: 5,
-              textCapitalization:
-                  TextCapitalization.sentences,
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                hintText:
-                    'Informações adicionais sobre a movimentação',
+                filled: true,
+                fillColor: Color(0xFF1A1A1A),
+                hintText: 'Informações adicionais sobre a movimentação',
                 alignLabelWithHint: true,
-                prefixIcon:
-                    Icon(Icons.notes_rounded),
+                prefixIcon: Icon(Icons.notes_rounded),
                 border: OutlineInputBorder(),
               ),
             ),

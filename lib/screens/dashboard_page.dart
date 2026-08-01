@@ -64,12 +64,14 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _carregarResumo() async {
-    if (mounted) {
-      setState(() {
-        _carregando = true;
-        _mensagemErro = null;
-      });
+    if (!mounted) {
+      return;
     }
+
+    setState(() {
+      _carregando = true;
+      _mensagemErro = null;
+    });
 
     try {
       final dados = await _dashboardRepository.carregarDashboard();
@@ -84,7 +86,8 @@ class _DashboardPageState extends State<DashboardPage> {
         _totalAgendamentos = dados['totalAgendamentos'] as int? ?? 0;
         _agendamentosHoje = dados['agendamentosHoje'] as int? ?? 0;
         _receitaHoje = (dados['faturamentoHoje'] as num?)?.toDouble() ?? 0;
-        _faturamentoSemana = (dados['faturamentoSemana'] as num?)?.toDouble() ?? 0;
+        _faturamentoSemana =
+            (dados['faturamentoSemana'] as num?)?.toDouble() ?? 0;
         _faturamentoMes = (dados['faturamentoMes'] as num?)?.toDouble() ?? 0;
         _saidasMes = (dados['saidasMes'] as num?)?.toDouble() ?? 0;
         _saldoMes = (dados['saldoMes'] as num?)?.toDouble() ?? 0;
@@ -100,10 +103,12 @@ class _DashboardPageState extends State<DashboardPage> {
         _estoqueBaixo = dados['estoqueBaixo'] as int? ?? 0;
         _saldoTotal = (dados['saldoTotal'] as num?)?.toDouble() ?? 0;
         _crescimentoMes = (dados['crescimentoMes'] as num?)?.toDouble() ?? 0;
-        _servicosTop5 = (dados['servicosTop5'] as List<dynamic>?)
+        _servicosTop5 =
+            (dados['servicosTop5'] as List<dynamic>?)
                 ?.cast<Map<String, Object?>>() ??
             [];
-        _clientesTop5 = (dados['clientesTop5'] as List<dynamic>?)
+        _clientesTop5 =
+            (dados['clientesTop5'] as List<dynamic>?)
                 ?.cast<Map<String, Object?>>() ??
             [];
         _faturamentoDias = _montarFaturamentoDias(
@@ -128,9 +133,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(
-              'Não foi possível carregar o dashboard: $erro',
-            ),
+            content: Text('Não foi possível carregar o dashboard: $erro'),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -138,8 +141,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   List<_FaturamentoDia> _montarFaturamentoDias(
-      List<Map<String, Object?>> resultado,
-      ) {
+    List<Map<String, Object?>> resultado,
+  ) {
     final agora = DateTime.now();
     final inicio = DateTime(
       agora.year,
@@ -155,54 +158,30 @@ class _DashboardPageState extends State<DashboardPage> {
 
       valores[dia] = valor is num
           ? valor.toDouble()
-          : double.tryParse(
-        valor?.toString() ?? '',
-      ) ??
-          0;
+          : double.tryParse(valor?.toString() ?? '') ?? 0;
     }
 
-    return List.generate(
-      7,
-          (indice) {
-        final data = inicio.add(
-          Duration(days: indice),
-        );
+    return List.generate(7, (indice) {
+      final data = inicio.add(Duration(days: indice));
 
-        final chave = data
-            .toIso8601String()
-            .substring(0, 10);
+      final chave = data.toIso8601String().substring(0, 10);
 
-        return _FaturamentoDia(
-          data: data,
-          valor: valores[chave] ?? 0,
-        );
-      },
-    );
+      return _FaturamentoDia(data: data, valor: valores[chave] ?? 0);
+    });
   }
 
-  Future<void> _abrirPagina(
-      Widget pagina,
-      ) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => pagina,
-      ),
-    );
+  Future<void> _abrirPagina(Widget pagina) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => pagina));
 
     await _carregarResumo();
   }
 
-  void _mostrarEmDesenvolvimento(
-      String modulo,
-      ) {
+  void _mostrarEmDesenvolvimento(String modulo) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(
-            '$modulo será desenvolvido nas próximas etapas.',
-          ),
+          content: Text('$modulo será desenvolvido nas próximas etapas.'),
         ),
       );
   }
@@ -242,343 +221,267 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             Text(
               'Detailing',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white70,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.white70),
             ),
           ],
         ),
         actions: [
           IconButton(
-            onPressed:
-            _carregando ? null : _carregarResumo,
+            onPressed: _carregando ? null : _carregarResumo,
             tooltip: 'Atualizar',
-            icon: const Icon(
-              Icons.refresh_rounded,
-            ),
+            icon: const Icon(Icons.refresh_rounded),
           ),
           IconButton(
             onPressed: () {
-              _mostrarEmDesenvolvimento(
-                'Notificações',
-              );
+              _mostrarEmDesenvolvimento('Notificações');
             },
             tooltip: 'Notificações',
-            icon: const Icon(
-              Icons.notifications_outlined,
-            ),
+            icon: const Icon(Icons.notifications_outlined),
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _carregarResumo,
         child: _carregando
-            ? const Center(
-          child: CircularProgressIndicator(),
-        )
+            ? const Center(child: CircularProgressIndicator())
             : ListView(
-          physics:
-          const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            18,
-            16,
-            30,
-          ),
-          children: [
-            Text(
-              '${_saudacao()}, Ryan!',
-              style: const TextStyle(
-                fontSize: 27,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Veja o resumo da Imperium Detailing',
-              style: TextStyle(
-                color: Colors.white60,
-              ),
-            ),
-            const SizedBox(height: 22),
-            _SaldoPrincipalCard(
-              saldo: _saldoTotal,
-              lucroMes: lucroMes,
-              formatoMoeda: _formatoMoeda,
-            ),
-            const SizedBox(height: 14),
-            _ResumoDiaCard(
-              receitaHoje: _receitaHoje,
-              agendamentosHoje: _agendamentosHoje,
-              lucroMes: lucroMes,
-              saldo: _saldoTotal,
-              formatoMoeda: _formatoMoeda,
-              onAbrirAgenda: () {
-                _abrirPagina(const AgendaPage());
-              },
-              onAbrirFinanceiro: () {
-                _abrirPagina(const FinanceiroPage());
-              },
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _ResumoCard(
-                    titulo: 'Entradas do mês',
-                    valor: _formatoMoeda.format(
-                      _faturamentoMes,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 30),
+                children: [
+                  Text(
+                    '${_saudacao()}, Ryan!',
+                    style: const TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.bold,
                     ),
-                    icone:
-                    Icons.south_west_rounded,
-                    cor: Colors.green,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ResumoCard(
-                    titulo: 'Saídas do mês',
-                    valor: _formatoMoeda.format(
-                      _saidasMes,
-                    ),
-                    icone:
-                    Icons.north_east_rounded,
-                    cor: Colors.red,
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Veja o resumo da Imperium Detailing',
+                    style: TextStyle(color: Colors.white60),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            _AtencaoCard(
-              agendamentosHoje: _agendamentosHoje,
-              lucroMes: lucroMes,
-              onAbrirAgenda: () {
-                _abrirPagina(const AgendaPage());
-              },
-            ),
-            const SizedBox(height: 22),
-            _DashboardPremiumCard(
-              entradasMes: _faturamentoMes,
-              lucroMes: lucroMes,
-              crescimentoMes: _crescimentoMes,
-              ticketMedio: _ticketMedio,
-              ordensAbertas: _ordensAbertas,
-              ordensEmAndamento:
-              _ordensEmAndamento,
-              formatoMoeda: _formatoMoeda,
-              onAbrirFinanceiro: () {
-                _abrirPagina(
-                  const FinanceiroPage(),
-                );
-              },
-              onAbrirOrdens: () {
-                _abrirPagina(
-                  const OrdensServicoPage(),
-                );
-              },
-            ),
-            const SizedBox(height: 22),
-            const Text(
-              'Faturamento dos últimos 7 dias',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+                  const SizedBox(height: 22),
+                  _SaldoPrincipalCard(
+                    saldo: _saldoTotal,
+                    lucroMes: lucroMes,
+                    formatoMoeda: _formatoMoeda,
+                  ),
+                  const SizedBox(height: 14),
+                  _ResumoDiaCard(
+                    receitaHoje: _receitaHoje,
+                    agendamentosHoje: _agendamentosHoje,
+                    lucroMes: lucroMes,
+                    saldo: _saldoTotal,
+                    formatoMoeda: _formatoMoeda,
+                    onAbrirAgenda: () {
+                      _abrirPagina(const AgendaPage());
+                    },
+                    onAbrirFinanceiro: () {
+                      _abrirPagina(const FinanceiroPage());
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ResumoCard(
+                          titulo: 'Entradas do mês',
+                          valor: _formatoMoeda.format(_faturamentoMes),
+                          icone: Icons.south_west_rounded,
+                          cor: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _ResumoCard(
+                          titulo: 'Saídas do mês',
+                          valor: _formatoMoeda.format(_saidasMes),
+                          icone: Icons.north_east_rounded,
+                          cor: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  _AtencaoCard(
+                    agendamentosHoje: _agendamentosHoje,
+                    lucroMes: lucroMes,
+                    onAbrirAgenda: () {
+                      _abrirPagina(const AgendaPage());
+                    },
+                  ),
+                  const SizedBox(height: 22),
+                  _DashboardPremiumCard(
+                    entradasMes: _faturamentoMes,
+                    lucroMes: lucroMes,
+                    crescimentoMes: _crescimentoMes,
+                    ticketMedio: _ticketMedio,
+                    ordensAbertas: _ordensAbertas,
+                    ordensEmAndamento: _ordensEmAndamento,
+                    formatoMoeda: _formatoMoeda,
+                    onAbrirFinanceiro: () {
+                      _abrirPagina(const FinanceiroPage());
+                    },
+                    onAbrirOrdens: () {
+                      _abrirPagina(const OrdensServicoPage());
+                    },
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    'Faturamento dos últimos 7 dias',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _GraficoFaturamentoCard(
+                    dados: _faturamentoDias,
+                    formatoMoeda: _formatoMoeda,
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    'Top 5 serviços deste mês',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _RankingCard(
+                    itens: _servicosTop5,
+                    descricao: 'Serviço',
+                    formatoMoeda: null,
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Top 5 clientes deste mês',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _RankingCard(
+                    itens: _clientesTop5,
+                    descricao: 'Cliente',
+                    formatoMoeda: _formatoMoeda,
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    'Visão geral',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.55,
+                    children: [
+                      _IndicadorCard(
+                        titulo: 'Clientes',
+                        valor: '$_totalClientes',
+                        icone: Icons.people_alt_outlined,
+                      ),
+                      _IndicadorCard(
+                        titulo: 'Veículos',
+                        valor: '$_totalVeiculos',
+                        icone: Icons.directions_car_outlined,
+                      ),
+                      _IndicadorCard(
+                        titulo: 'Ordens finalizadas',
+                        valor: '$_ordensFinalizadasMes',
+                        icone: Icons.check_circle_outline,
+                      ),
+                      _IndicadorCard(
+                        titulo: 'Veículos atendidos',
+                        valor: '$_veiculosAtendidos',
+                        icone: Icons.car_repair_outlined,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Acesso rápido',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 14),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.25,
+                    children: [
+                      _MenuCard(
+                        titulo: 'Agenda',
+                        icone: Icons.calendar_month,
+                        onTap: () {
+                          _abrirPagina(const AgendaPage());
+                        },
+                      ),
+                      _MenuCard(
+                        titulo: 'Clientes',
+                        icone: Icons.people_alt_outlined,
+                        onTap: () {
+                          _abrirPagina(const ClientesPage());
+                        },
+                      ),
+                      _MenuCard(
+                        titulo: 'Veículos',
+                        icone: Icons.directions_car_outlined,
+                        onTap: () {
+                          _abrirPagina(const VeiculosPage());
+                        },
+                      ),
+                      _MenuCard(
+                        titulo: 'Financeiro',
+                        icone: Icons.account_balance_wallet_outlined,
+                        onTap: () {
+                          _abrirPagina(const FinanceiroPage());
+                        },
+                      ),
+                      _MenuCard(
+                        titulo: 'Estoque',
+                        icone: Icons.inventory_2_outlined,
+                        onTap: () {
+                          _abrirPagina(const EstoquePage());
+                        },
+                      ),
+                      _MenuCard(
+                        titulo: 'Fotos',
+                        icone: Icons.photo_camera_outlined,
+                        onTap: () {
+                          _abrirPagina(const FotosPage());
+                        },
+                      ),
+                      _MenuCard(
+                        titulo: 'Orçamentos',
+                        icone: Icons.description_outlined,
+                        onTap: () {
+                          _abrirPagina(const OrcamentosPage());
+                        },
+                      ),
+                      _MenuCard(
+                        titulo: 'Ordens de Serviço',
+                        icone: Icons.build_circle_outlined,
+                        onTap: () {
+                          _abrirPagina(const OrdensServicoPage());
+                        },
+                      ),
+                      _MenuCard(
+                        titulo: 'Serviços',
+                        icone: Icons.design_services_outlined,
+                        onTap: () {
+                          _abrirPagina(const ServicosPage());
+                        },
+                      ),
+                      _MenuCard(
+                        titulo: 'Configurações',
+                        icone: Icons.settings_outlined,
+                        onTap: () {
+                          _abrirPagina(const ConfiguracoesPage());
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            _GraficoFaturamentoCard(
-              dados: _faturamentoDias,
-              formatoMoeda: _formatoMoeda,
-            ),
-            const SizedBox(height: 22),
-            const Text(
-              'Top 5 serviços deste mês',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _RankingCard(
-              itens: _servicosTop5,
-              descricao: 'Serviço',
-              formatoMoeda: null,
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'Top 5 clientes deste mês',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _RankingCard(
-              itens: _clientesTop5,
-              descricao: 'Cliente',
-              formatoMoeda: _formatoMoeda,
-            ),
-            const SizedBox(height: 22),
-            const Text(
-              'Visão geral',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics:
-              const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.55,
-              children: [
-                _IndicadorCard(
-                  titulo: 'Clientes',
-                  valor: '$_totalClientes',
-                  icone: Icons.people_alt_outlined,
-                ),
-                _IndicadorCard(
-                  titulo: 'Veículos',
-                  valor: '$_totalVeiculos',
-                  icone:
-                  Icons.directions_car_outlined,
-                ),
-                _IndicadorCard(
-                  titulo: 'Ordens finalizadas',
-                  valor: '$_ordensFinalizadasMes',
-                  icone: Icons.check_circle_outline,
-                ),
-                _IndicadorCard(
-                  titulo: 'Veículos atendidos',
-                  valor: '$_veiculosAtendidos',
-                  icone: Icons.car_repair_outlined,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Acesso rápido',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 14),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics:
-              const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.25,
-              children: [
-                _MenuCard(
-                  titulo: 'Agenda',
-                  icone: Icons.calendar_month,
-                  onTap: () {
-                    _abrirPagina(
-                      const AgendaPage(),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  titulo: 'Clientes',
-                  icone:
-                  Icons.people_alt_outlined,
-                  onTap: () {
-                    _abrirPagina(
-                      const ClientesPage(),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  titulo: 'Veículos',
-                  icone: Icons.directions_car_outlined,
-                  onTap: () {
-                    _abrirPagina(
-                      const VeiculosPage(),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  titulo: 'Financeiro',
-                  icone: Icons
-                      .account_balance_wallet_outlined,
-                  onTap: () {
-                    _abrirPagina(
-                      const FinanceiroPage(),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  titulo: 'Estoque',
-                  icone:
-                  Icons.inventory_2_outlined,
-                  onTap: () {
-                    _abrirPagina(
-                      const EstoquePage(),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  titulo: 'Fotos',
-                  icone:
-                  Icons.photo_camera_outlined,
-                  onTap: () {
-                    _abrirPagina(
-                      const FotosPage(),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  titulo: 'Orçamentos',
-                  icone:
-                  Icons.description_outlined,
-                  onTap: () {
-                    _abrirPagina(
-                      const OrcamentosPage(),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  titulo: 'Ordens de Serviço',
-                  icone: Icons.build_circle_outlined,
-                  onTap: () {
-                    _abrirPagina(
-                      const OrdensServicoPage(),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  titulo: 'Serviços',
-                  icone:
-                  Icons.design_services_outlined,
-                  onTap: () {
-                    _abrirPagina(
-                      const ServicosPage(),
-                    );
-                  },
-                ),
-                _MenuCard(
-                  titulo: 'Configurações',
-                  icone:
-                  Icons.settings_outlined,
-                  onTap: () {
-                    _abrirPagina(
-                      const ConfiguracoesPage(),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -605,46 +508,35 @@ class _SaldoPrincipalCard extends StatelessWidget {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF252525),
-            Color(0xFF171717),
-          ],
+          colors: [Color(0xFF252525), Color(0xFF171717)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: const Color(0xFFD6A84B)
-              .withValues(alpha: 0.45),
+          color: const Color(0xFFD6A84B).withValues(alpha: 0.45),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: 0.25,
-            ),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
               Icon(
-                Icons
-                    .account_balance_wallet_outlined,
+                Icons.account_balance_wallet_outlined,
                 color: Color(0xFFD6A84B),
               ),
               SizedBox(width: 8),
               Text(
                 'Saldo financeiro',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 15,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 15),
               ),
             ],
           ),
@@ -652,30 +544,23 @@ class _SaldoPrincipalCard extends StatelessWidget {
           Text(
             formatoMoeda.format(saldo),
             style: TextStyle(
-              color: saldoPositivo
-                  ? Colors.white
-                  : Colors.redAccent.shade100,
+              color: saldoPositivo ? Colors.white : Colors.redAccent.shade100,
               fontSize: 30,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 11,
-              vertical: 7,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
             decoration: BoxDecoration(
-              color: (lucroPositivo
-                  ? Colors.green
-                  : Colors.red)
-                  .withValues(alpha: 0.13),
-              borderRadius:
-              BorderRadius.circular(30),
+              color: (lucroPositivo ? Colors.green : Colors.red).withValues(
+                alpha: 0.13,
+              ),
+              borderRadius: BorderRadius.circular(30),
             ),
             child: Text(
               'Resultado do mês: '
-                  '${formatoMoeda.format(lucroMes)}',
+              '${formatoMoeda.format(lucroMes)}',
               style: TextStyle(
                 color: lucroPositivo
                     ? Colors.greenAccent.shade100
@@ -725,17 +610,11 @@ class _ResumoDiaCard extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(
-                Icons.today_rounded,
-                color: Color(0xFFD6A84B),
-              ),
+              Icon(Icons.today_rounded, color: Color(0xFFD6A84B)),
               SizedBox(width: 9),
               Text(
                 'Resumo do dia',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -815,20 +694,13 @@ class _ResumoDiaItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                icone,
-                size: 21,
-                color: const Color(0xFFD6A84B),
-              ),
+              Icon(icone, size: 21, color: const Color(0xFFD6A84B)),
               const SizedBox(height: 10),
               Text(
                 titulo,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white60,
-                  fontSize: 11,
-                ),
+                style: const TextStyle(color: Colors.white60, fontSize: 11),
               ),
               const SizedBox(height: 4),
               Text(
@@ -876,8 +748,9 @@ class _AtencaoCard extends StatelessWidget {
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: (resultadoPositivo ? Colors.green : Colors.orange)
-              .withValues(alpha: 0.22),
+          color: (resultadoPositivo ? Colors.green : Colors.orange).withValues(
+            alpha: 0.22,
+          ),
         ),
       ),
       child: Column(
@@ -892,10 +765,7 @@ class _AtencaoCard extends StatelessWidget {
               SizedBox(width: 9),
               Text(
                 'Atenção',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -976,44 +846,30 @@ class _ResumoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: cor.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: cor.withValues(alpha: 0.25)),
       ),
       child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: cor.withValues(alpha: 0.12),
-              borderRadius:
-              BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(
-              icone,
-              color: cor,
-              size: 21,
-            ),
+            child: Icon(icone, color: cor, size: 21),
           ),
           const SizedBox(height: 13),
           Text(
             titulo,
-            style: const TextStyle(
-              color: Colors.white60,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
           ),
           const SizedBox(height: 4),
           Text(
             valor,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -1046,24 +902,16 @@ class _IndicadorCard extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFFD6A84B)
-                  .withValues(alpha: 0.12),
-              borderRadius:
-              BorderRadius.circular(13),
+              color: const Color(0xFFD6A84B).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(13),
             ),
-            child: Icon(
-              icone,
-              color: const Color(0xFFD6A84B),
-              size: 23,
-            ),
+            child: Icon(icone, color: const Color(0xFFD6A84B), size: 23),
           ),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
-              mainAxisAlignment:
-              MainAxisAlignment.center,
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   valor,
@@ -1075,12 +923,8 @@ class _IndicadorCard extends StatelessWidget {
                 Text(
                   titulo,
                   maxLines: 1,
-                  overflow:
-                  TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 12,
-                  ),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],
             ),
@@ -1113,31 +957,19 @@ class _MenuCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
-          mainAxisAlignment:
-          MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               width: 54,
               height: 54,
               decoration: BoxDecoration(
-                color: const Color(0xFFD6A84B)
-                    .withValues(alpha: 0.11),
-                borderRadius:
-                BorderRadius.circular(17),
+                color: const Color(0xFFD6A84B).withValues(alpha: 0.11),
+                borderRadius: BorderRadius.circular(17),
               ),
-              child: Icon(
-                icone,
-                size: 30,
-                color: const Color(0xFFD6A84B),
-              ),
+              child: Icon(icone, size: 30, color: const Color(0xFFD6A84B)),
             ),
             const SizedBox(height: 11),
-            Text(
-              titulo,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -1170,8 +1002,7 @@ class _DashboardPremiumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final crescimentoPositivo =
-        crescimentoMes >= 0;
+    final crescimentoPositivo = crescimentoMes >= 0;
 
     return Container(
       width: double.infinity,
@@ -1180,27 +1011,19 @@ class _DashboardPremiumCard extends StatelessWidget {
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(21),
         border: Border.all(
-          color: const Color(0xFFD6A84B)
-              .withValues(alpha: 0.22),
+          color: const Color(0xFFD6A84B).withValues(alpha: 0.22),
         ),
       ),
       child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
-              Icon(
-                Icons.insights_rounded,
-                color: Color(0xFFD6A84B),
-              ),
+              Icon(Icons.insights_rounded, color: Color(0xFFD6A84B)),
               SizedBox(width: 9),
               Text(
                 'Painel executivo',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1213,29 +1036,20 @@ class _DashboardPremiumCard extends StatelessWidget {
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF292929),
-                    Color(0xFF202020),
-                  ],
+                  colors: [Color(0xFF292929), Color(0xFF202020)],
                 ),
-                borderRadius:
-                BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(15),
               ),
               child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Faturamento do mês',
-                    style: TextStyle(
-                      color: Colors.white60,
-                    ),
+                    style: TextStyle(color: Colors.white60),
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    formatoMoeda.format(
-                      entradasMes,
-                    ),
+                    formatoMoeda.format(entradasMes),
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -1246,10 +1060,8 @@ class _DashboardPremiumCard extends StatelessWidget {
                     children: [
                       Icon(
                         crescimentoPositivo
-                            ? Icons
-                            .trending_up_rounded
-                            : Icons
-                            .trending_down_rounded,
+                            ? Icons.trending_up_rounded
+                            : Icons.trending_down_rounded,
                         size: 18,
                         color: crescimentoPositivo
                             ? Colors.greenAccent
@@ -1259,13 +1071,11 @@ class _DashboardPremiumCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           '${crescimentoPositivo ? '+' : ''}'
-                              '${crescimentoMes.toStringAsFixed(1)}% '
-                              'em relação ao mês anterior',
+                          '${crescimentoMes.toStringAsFixed(1)}% '
+                          'em relação ao mês anterior',
                           style: TextStyle(
-                            color:
-                            crescimentoPositivo
-                                ? Colors
-                                .greenAccent
+                            color: crescimentoPositivo
+                                ? Colors.greenAccent
                                 : Colors.redAccent,
                             fontSize: 12,
                           ),
@@ -1283,12 +1093,9 @@ class _DashboardPremiumCard extends StatelessWidget {
               Expanded(
                 child: _MiniIndicadorPremium(
                   titulo: 'Resultado',
-                  valor:
-                  formatoMoeda.format(lucroMes),
+                  valor: formatoMoeda.format(lucroMes),
                   icone: Icons.savings_outlined,
-                  cor: lucroMes >= 0
-                      ? Colors.green
-                      : Colors.orange,
+                  cor: lucroMes >= 0 ? Colors.green : Colors.orange,
                   onTap: onAbrirFinanceiro,
                 ),
               ),
@@ -1296,11 +1103,8 @@ class _DashboardPremiumCard extends StatelessWidget {
               Expanded(
                 child: _MiniIndicadorPremium(
                   titulo: 'Ticket médio',
-                  valor: formatoMoeda.format(
-                    ticketMedio,
-                  ),
-                  icone: Icons
-                      .confirmation_number_outlined,
+                  valor: formatoMoeda.format(ticketMedio),
+                  icone: Icons.confirmation_number_outlined,
                   cor: const Color(0xFFD6A84B),
                   onTap: onAbrirFinanceiro,
                 ),
@@ -1314,8 +1118,7 @@ class _DashboardPremiumCard extends StatelessWidget {
                 child: _MiniIndicadorPremium(
                   titulo: 'OS abertas',
                   valor: '$ordensAbertas',
-                  icone:
-                  Icons.assignment_outlined,
+                  icone: Icons.assignment_outlined,
                   cor: Colors.blue,
                   onTap: onAbrirOrdens,
                 ),
@@ -1325,8 +1128,7 @@ class _DashboardPremiumCard extends StatelessWidget {
                 child: _MiniIndicadorPremium(
                   titulo: 'Em serviço',
                   valor: '$ordensEmAndamento',
-                  icone:
-                  Icons.car_repair_outlined,
+                  icone: Icons.car_repair_outlined,
                   cor: Colors.orange,
                   onTap: onAbrirOrdens,
                 ),
@@ -1339,8 +1141,7 @@ class _DashboardPremiumCard extends StatelessWidget {
   }
 }
 
-class _MiniIndicadorPremium
-    extends StatelessWidget {
+class _MiniIndicadorPremium extends StatelessWidget {
   const _MiniIndicadorPremium({
     required this.titulo,
     required this.valor,
@@ -1366,23 +1167,15 @@ class _MiniIndicadorPremium
         child: Padding(
           padding: const EdgeInsets.all(13),
           child: Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                icone,
-                color: cor,
-                size: 21,
-              ),
+              Icon(icone, color: cor, size: 21),
               const SizedBox(height: 9),
               Text(
                 titulo,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 11,
-                ),
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
               ),
               const SizedBox(height: 3),
               Text(
@@ -1413,10 +1206,7 @@ class _GraficoFaturamentoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = dados.fold<double>(
-      0,
-      (soma, item) => soma + item.valor,
-    );
+    final total = dados.fold<double>(0, (soma, item) => soma + item.valor);
 
     return Container(
       padding: const EdgeInsets.all(17),
@@ -1429,17 +1219,11 @@ class _GraficoFaturamentoCard extends StatelessWidget {
         children: [
           Text(
             formatoMoeda.format(total),
-            style: const TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
           ),
           const Text(
             'Total faturado no período',
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: Colors.white54, fontSize: 12),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -1457,9 +1241,7 @@ class _GraficoFaturamentoCard extends StatelessWidget {
                 ),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: false,
-                    ),
+                    sideTitles: SideTitles(showTitles: false),
                   ),
                   rightTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
@@ -1468,9 +1250,7 @@ class _GraficoFaturamentoCard extends StatelessWidget {
                     sideTitles: SideTitles(showTitles: false),
                   ),
                   bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: false,
-                    ),
+                    sideTitles: SideTitles(showTitles: false),
                   ),
                 ),
                 borderData: FlBorderData(show: false),
@@ -1478,10 +1258,7 @@ class _GraficoFaturamentoCard extends StatelessWidget {
                   LineChartBarData(
                     spots: List.generate(
                       dados.length,
-                      (index) => FlSpot(
-                        index.toDouble(),
-                        dados[index].valor,
-                      ),
+                      (index) => FlSpot(index.toDouble(), dados[index].valor),
                     ),
                     isCurved: true,
                     color: const Color(0xFFD6A84B),
@@ -1506,20 +1283,15 @@ class _GraficoFaturamentoCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Row(
-            children: dados.map(
-              (item) {
-                return Expanded(
-                  child: Text(
-                    DateFormat('dd/MM').format(item.data),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10,
-                    ),
-                  ),
-                );
-              },
-            ).toList(),
+            children: dados.map((item) {
+              return Expanded(
+                child: Text(
+                  DateFormat('dd/MM').format(item.data),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white54, fontSize: 10),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -1563,52 +1335,44 @@ class _RankingCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
-        children: itens.map(
-              (item) {
-            final nome = item['nome']?.toString() ?? '-';
-            final total = item['total'];
-            final valor = total is num
-                ? total.toDouble()
-                : double.tryParse(total?.toString() ?? '0') ?? 0;
+        children: itens.map((item) {
+          final nome = item['nome']?.toString() ?? '-';
+          final total = item['total'];
+          final valor = total is num
+              ? total.toDouble()
+              : double.tryParse(total?.toString() ?? '0') ?? 0;
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      nome,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    formatoMoeda != null
-                        ? formatoMoeda!.format(valor)
-                        : valor.toInt().toString(),
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    nome,
                     style: const TextStyle(
-                      color: Colors.white70,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ],
-              ),
-            );
-          },
-        ).toList(),
+                ),
+                Text(
+                  formatoMoeda != null
+                      ? formatoMoeda!.format(valor)
+                      : valor.toInt().toString(),
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 }
 
 class _FaturamentoDia {
-  const _FaturamentoDia({
-    required this.data,
-    required this.valor,
-  });
+  const _FaturamentoDia({required this.data, required this.valor});
 
   final DateTime data;
   final double valor;
 }
-
