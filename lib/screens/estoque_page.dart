@@ -19,24 +19,21 @@ class _EstoquePageState extends State<EstoquePage>
     with SingleTickerProviderStateMixin {
   final EstoqueRepository _repository = EstoqueRepository();
 
-  final TextEditingController _pesquisaController =
-  TextEditingController();
+  final TextEditingController _pesquisaController = TextEditingController();
 
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
-  final DateFormat _formatoData =
-  DateFormat('dd/MM/yyyy HH:mm');
+  final DateFormat _formatoData = DateFormat('dd/MM/yyyy HH:mm');
 
   late final TabController _tabController;
 
   List<ItemEstoque> _itens = [];
   List<MovimentacaoEstoque> _movimentacoes = [];
 
-  ConfiguracaoEstoque _configuracao =
-  ConfiguracaoEstoque.padrao();
+  ConfiguracaoEstoque _configuracao = ConfiguracaoEstoque.padrao();
 
   bool _carregando = true;
   bool _salvandoConfiguracao = false;
@@ -48,10 +45,7 @@ class _EstoquePageState extends State<EstoquePage>
   void initState() {
     super.initState();
 
-    _tabController = TabController(
-      length: 3,
-      vsync: this,
-    );
+    _tabController = TabController(length: 3, vsync: this);
 
     _carregar();
   }
@@ -75,10 +69,8 @@ class _EstoquePageState extends State<EstoquePage>
 
       setState(() {
         _itens = resultados[0] as List<ItemEstoque>;
-        _movimentacoes =
-        resultados[1] as List<MovimentacaoEstoque>;
-        _configuracao =
-        resultados[2] as ConfiguracaoEstoque;
+        _movimentacoes = resultados[1] as List<MovimentacaoEstoque>;
+        _configuracao = resultados[2] as ConfiguracaoEstoque;
         _carregando = false;
       });
     } catch (erro) {
@@ -89,11 +81,7 @@ class _EstoquePageState extends State<EstoquePage>
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Não foi possível carregar o estoque: $erro',
-          ),
-        ),
+        SnackBar(content: Text('Não foi possível carregar o estoque: $erro')),
       );
     }
   }
@@ -112,25 +100,21 @@ class _EstoquePageState extends State<EstoquePage>
     return _itens.where((item) {
       final correspondePesquisa =
           termo.isEmpty ||
-              [
-                item.nome,
-                item.categoria,
-                item.fornecedor,
-              ].join(' ').toLowerCase().contains(termo);
+          [
+            item.nome,
+            item.categoria,
+            item.fornecedor,
+          ].join(' ').toLowerCase().contains(termo);
 
-      final correspondeEstoque =
-          !_somenteBaixo || item.estoqueBaixo;
+      final correspondeEstoque = !_somenteBaixo || item.estoqueBaixo;
 
-      return correspondePesquisa &&
-          correspondeEstoque;
+      return correspondePesquisa && correspondeEstoque;
     }).toList();
   }
 
   Future<void> _adicionarItem() async {
     final salvou = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const NovoItemEstoquePage(),
-      ),
+      MaterialPageRoute(builder: (_) => const NovoItemEstoquePage()),
     );
 
     if (!mounted || salvou != true) {
@@ -138,8 +122,7 @@ class _EstoquePageState extends State<EstoquePage>
     }
 
     try {
-      final itensAtualizados =
-      await _repository.listarItens();
+      final itensAtualizados = await _repository.listarItens();
 
       if (!mounted) {
         return;
@@ -150,15 +133,10 @@ class _EstoquePageState extends State<EstoquePage>
         _carregando = false;
       });
 
-      ScaffoldMessenger.of(context)
-          .hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Produto cadastrado com sucesso.',
-          ),
-        ),
+        const SnackBar(content: Text('Produto cadastrado com sucesso.')),
       );
     } catch (erro, stackTrace) {
       debugPrint('ERRO AO ATUALIZAR PRODUTOS');
@@ -180,17 +158,13 @@ class _EstoquePageState extends State<EstoquePage>
     }
   }
 
-  Future<void> _abrirItem(
-      ItemEstoque item,
-      ) async {
+  Future<void> _abrirItem(ItemEstoque item) async {
     if (item.id == null) return;
 
     final alterou = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => ItemEstoqueDetalhesPage(
-          itemId: item.id!,
-        ),
+        builder: (_) => ItemEstoqueDetalhesPage(itemId: item.id!),
       ),
     );
 
@@ -198,11 +172,7 @@ class _EstoquePageState extends State<EstoquePage>
 
     if (alterou == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Estoque atualizado com sucesso.',
-          ),
-        ),
+        const SnackBar(content: Text('Estoque atualizado com sucesso.')),
       );
     }
 
@@ -235,14 +205,9 @@ class _EstoquePageState extends State<EstoquePage>
         bool salvando = false;
 
         return StatefulBuilder(
-          builder: (
-              dialogContext,
-              setStateDialog,
-              ) {
+          builder: (dialogContext, setStateDialog) {
             return AlertDialog(
-              title: const Text(
-                'Nova movimentação',
-              ),
+              title: const Text('Nova movimentação'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -252,9 +217,7 @@ class _EstoquePageState extends State<EstoquePage>
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Produto',
-                        prefixIcon: Icon(
-                          Icons.inventory_2_outlined,
-                        ),
+                        prefixIcon: Icon(Icons.inventory_2_outlined),
                       ),
                       items: _itens.map((item) {
                         return DropdownMenuItem<ItemEstoque>(
@@ -268,23 +231,21 @@ class _EstoquePageState extends State<EstoquePage>
                       onChanged: salvando
                           ? null
                           : (item) {
-                        if (item == null) {
-                          return;
-                        }
+                              if (item == null) {
+                                return;
+                              }
 
-                        setStateDialog(() {
-                          itemSelecionado = item;
-                        });
-                      },
+                              setStateDialog(() {
+                                itemSelecionado = item;
+                              });
+                            },
                     ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
                       initialValue: tipoSelecionado,
                       decoration: const InputDecoration(
                         labelText: 'Tipo',
-                        prefixIcon: Icon(
-                          Icons.swap_vert_rounded,
-                        ),
+                        prefixIcon: Icon(Icons.swap_vert_rounded),
                       ),
                       items: const [
                         DropdownMenuItem<String>(
@@ -297,28 +258,25 @@ class _EstoquePageState extends State<EstoquePage>
                         ),
                         DropdownMenuItem<String>(
                           value: 'AJUSTE',
-                          child: Text(
-                            'Ajustar quantidade total',
-                          ),
+                          child: Text('Ajustar quantidade total'),
                         ),
                       ],
                       onChanged: salvando
                           ? null
                           : (tipo) {
-                        if (tipo == null) {
-                          return;
-                        }
+                              if (tipo == null) {
+                                return;
+                              }
 
-                        setStateDialog(() {
-                          tipoSelecionado = tipo;
-                        });
-                      },
+                              setStateDialog(() {
+                                tipoSelecionado = tipo;
+                              });
+                            },
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       enabled: !salvando,
-                      keyboardType:
-                      const TextInputType.numberWithOptions(
+                      keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       onChanged: (valor) {
@@ -328,9 +286,7 @@ class _EstoquePageState extends State<EstoquePage>
                         labelText: tipoSelecionado == 'AJUSTE'
                             ? 'Nova quantidade total'
                             : 'Quantidade',
-                        prefixIcon: const Icon(
-                          Icons.numbers_rounded,
-                        ),
+                        prefixIcon: const Icon(Icons.numbers_rounded),
                         suffixText: itemSelecionado.unidade,
                       ),
                     ),
@@ -343,9 +299,7 @@ class _EstoquePageState extends State<EstoquePage>
                       },
                       decoration: const InputDecoration(
                         labelText: 'Observação',
-                        prefixIcon: Icon(
-                          Icons.notes_rounded,
-                        ),
+                        prefixIcon: Icon(Icons.notes_rounded),
                         alignLabelWithHint: true,
                       ),
                     ),
@@ -355,11 +309,9 @@ class _EstoquePageState extends State<EstoquePage>
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Disponível: '
-                              '${_numero(itemSelecionado.quantidade)} '
-                              '${itemSelecionado.unidade}',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                          ),
+                          '${_numero(itemSelecionado.quantidade)} '
+                          '${itemSelecionado.unidade}',
+                          style: TextStyle(color: Colors.grey.shade600),
                         ),
                       ),
                     ],
@@ -371,129 +323,118 @@ class _EstoquePageState extends State<EstoquePage>
                   onPressed: salvando
                       ? null
                       : () {
-                    Navigator.of(dialogContext).pop(false);
-                  },
+                          Navigator.of(dialogContext).pop(false);
+                        },
                   child: const Text('Cancelar'),
                 ),
                 FilledButton.icon(
                   onPressed: salvando
                       ? null
                       : () async {
-                    final texto = quantidadeDigitada
-                        .trim()
-                        .replaceAll(',', '.');
+                          final texto = quantidadeDigitada.trim().replaceAll(
+                            ',',
+                            '.',
+                          );
 
-                    final quantidade =
-                    double.tryParse(texto);
+                          final quantidade = double.tryParse(texto);
 
-                    if (quantidade == null ||
-                        quantidade < 0 ||
-                        (quantidade == 0 &&
-                            tipoSelecionado != 'AJUSTE')) {
-                      ScaffoldMessenger.of(dialogContext)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Informe uma quantidade válida.',
-                            ),
-                          ),
-                        );
+                          if (quantidade == null ||
+                              quantidade < 0 ||
+                              (quantidade == 0 &&
+                                  tipoSelecionado != 'AJUSTE')) {
+                            ScaffoldMessenger.of(dialogContext)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Informe uma quantidade válida.',
+                                  ),
+                                ),
+                              );
 
-                      return;
-                    }
+                            return;
+                          }
 
-                    if (tipoSelecionado == 'SAIDA' &&
-                        quantidade >
-                            itemSelecionado.quantidade) {
-                      ScaffoldMessenger.of(dialogContext)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'A quantidade de saída é maior que o estoque disponível.',
-                            ),
-                          ),
-                        );
+                          if (tipoSelecionado == 'SAIDA' &&
+                              quantidade > itemSelecionado.quantidade) {
+                            ScaffoldMessenger.of(dialogContext)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'A quantidade de saída é maior que o estoque disponível.',
+                                  ),
+                                ),
+                              );
 
-                      return;
-                    }
+                            return;
+                          }
 
-                    final itemId = itemSelecionado.id;
+                          final itemId = itemSelecionado.id;
 
-                    if (itemId == null) {
-                      ScaffoldMessenger.of(dialogContext)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Não foi possível identificar o produto.',
-                            ),
-                          ),
-                        );
+                          if (itemId == null) {
+                            ScaffoldMessenger.of(dialogContext)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Não foi possível identificar o produto.',
+                                  ),
+                                ),
+                              );
 
-                      return;
-                    }
+                            return;
+                          }
 
-                    setStateDialog(() {
-                      salvando = true;
-                    });
+                          setStateDialog(() {
+                            salvando = true;
+                          });
 
-                    try {
-                      await _repository
-                          .registrarMovimentacao(
-                        MovimentacaoEstoque(
-                          itemId: itemId,
-                          tipo: tipoSelecionado,
-                          quantidade: quantidade,
-                          observacao:
-                          observacaoDigitada.trim(),
-                          data: DateTime.now()
-                              .toIso8601String(),
-                        ),
-                      );
+                          try {
+                            await _repository.registrarMovimentacao(
+                              MovimentacaoEstoque(
+                                itemId: itemId,
+                                tipo: tipoSelecionado,
+                                quantidade: quantidade,
+                                observacao: observacaoDigitada.trim(),
+                                data: DateTime.now().toIso8601String(),
+                              ),
+                            );
 
-                      if (!dialogContext.mounted) {
-                        return;
-                      }
+                            if (!dialogContext.mounted) {
+                              return;
+                            }
 
-                      Navigator.of(dialogContext).pop(true);
-                    } catch (erro) {
-                      if (!dialogContext.mounted) {
-                        return;
-                      }
+                            Navigator.of(dialogContext).pop(true);
+                          } catch (erro) {
+                            if (!dialogContext.mounted) {
+                              return;
+                            }
 
-                      setStateDialog(() {
-                        salvando = false;
-                      });
+                            setStateDialog(() {
+                              salvando = false;
+                            });
 
-                      ScaffoldMessenger.of(dialogContext)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Erro ao registrar movimentação: $erro',
-                            ),
-                            backgroundColor:
-                            Colors.red.shade700,
-                          ),
-                        );
-                    }
-                  },
+                            ScaffoldMessenger.of(dialogContext)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Erro ao registrar movimentação: $erro',
+                                  ),
+                                  backgroundColor: Colors.red.shade700,
+                                ),
+                              );
+                          }
+                        },
                   icon: salvando
                       ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
-                  )
-                      : const Icon(
-                    Icons.save_outlined,
-                  ),
-                  label: Text(
-                    salvando ? 'Salvando...' : 'Salvar',
-                  ),
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(salvando ? 'Salvando...' : 'Salvar'),
                 ),
               ],
             );
@@ -506,7 +447,7 @@ class _EstoquePageState extends State<EstoquePage>
       return;
     }
 
-// Aguarda o diálogo terminar de sair completamente da tela.
+    // Aguarda o diálogo terminar de sair completamente da tela.
     await WidgetsBinding.instance.endOfFrame;
 
     if (!mounted) {
@@ -526,20 +467,14 @@ class _EstoquePageState extends State<EstoquePage>
 
       setState(() {
         _itens = resultados[0] as List<ItemEstoque>;
-        _movimentacoes =
-        resultados[1] as List<MovimentacaoEstoque>;
-        _configuracao =
-        resultados[2] as ConfiguracaoEstoque;
+        _movimentacoes = resultados[1] as List<MovimentacaoEstoque>;
+        _configuracao = resultados[2] as ConfiguracaoEstoque;
       });
 
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Movimentação registrada com sucesso.',
-            ),
-          ),
+          const SnackBar(content: Text('Movimentação registrada com sucesso.')),
         );
     } catch (erro) {
       if (!mounted) {
@@ -559,9 +494,7 @@ class _EstoquePageState extends State<EstoquePage>
     }
   }
 
-  Future<void> _salvarConfiguracao(
-      ConfiguracaoEstoque novaConfiguracao,
-      ) async {
+  Future<void> _salvarConfiguracao(ConfiguracaoEstoque novaConfiguracao) async {
     setState(() {
       _configuracao = novaConfiguracao;
       _salvandoConfiguracao = true;
@@ -570,13 +503,11 @@ class _EstoquePageState extends State<EstoquePage>
     try {
       await _repository.salvarConfiguracao(
         novaConfiguracao.copyWith(
-          atualizadoEm:
-          DateTime.now().toIso8601String(),
+          atualizadoEm: DateTime.now().toIso8601String(),
         ),
       );
 
-      final configuracaoAtualizada =
-      await _repository.obterConfiguracao();
+      final configuracaoAtualizada = await _repository.obterConfiguracao();
 
       if (!mounted) return;
 
@@ -593,17 +524,13 @@ class _EstoquePageState extends State<EstoquePage>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Não foi possível salvar a configuração: $erro',
-          ),
+          content: Text('Não foi possível salvar a configuração: $erro'),
         ),
       );
     }
   }
 
-  String _nomeItemMovimentacao(
-      MovimentacaoEstoque movimentacao,
-      ) {
+  String _nomeItemMovimentacao(MovimentacaoEstoque movimentacao) {
     for (final item in _itens) {
       if (item.id == movimentacao.itemId) {
         return item.nome;
@@ -613,9 +540,7 @@ class _EstoquePageState extends State<EstoquePage>
     return 'Produto removido';
   }
 
-  String _unidadeItemMovimentacao(
-      MovimentacaoEstoque movimentacao,
-      ) {
+  String _unidadeItemMovimentacao(MovimentacaoEstoque movimentacao) {
     for (final item in _itens) {
       if (item.id == movimentacao.itemId) {
         return item.unidade;
@@ -690,75 +615,53 @@ class _EstoquePageState extends State<EstoquePage>
         actions: [
           IconButton(
             tooltip: 'Atualizar',
-            onPressed:
-            _carregando ? null : _atualizarTudo,
-            icon: const Icon(
-              Icons.refresh_rounded,
-            ),
+            onPressed: _carregando ? null : _atualizarTudo,
+            icon: const Icon(Icons.refresh_rounded),
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(
-              icon: Icon(
-                Icons.inventory_2_outlined,
-              ),
-              text: 'Produtos',
-            ),
-            Tab(
-              icon: Icon(
-                Icons.swap_vert_rounded,
-              ),
-              text: 'Movimentações',
-            ),
-            Tab(
-              icon: Icon(
-                Icons.settings_outlined,
-              ),
-              text: 'Configurações',
-            ),
+            Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Produtos'),
+            Tab(icon: Icon(Icons.swap_vert_rounded), text: 'Movimentações'),
+            Tab(icon: Icon(Icons.settings_outlined), text: 'Configurações'),
           ],
         ),
       ),
       body: _carregando
-          ? const Center(
-        child: CircularProgressIndicator(),
-      )
+          ? const Center(child: CircularProgressIndicator())
           : TabBarView(
-        controller: _tabController,
-        children: [
-          _abaProdutos(),
-          _abaMovimentacoes(),
-          _abaConfiguracoes(),
-        ],
-      ),
+              controller: _tabController,
+              children: [
+                _abaProdutos(),
+                _abaMovimentacoes(),
+                _abaConfiguracoes(),
+              ],
+            ),
       floatingActionButton: _carregando
           ? null
           : AnimatedBuilder(
-        animation: _tabController,
-        builder: (context, _) {
-          if (_tabController.index == 0) {
-            return FloatingActionButton.extended(
-              onPressed: _adicionarItem,
-              icon: const Icon(Icons.add),
-              label: const Text('Novo produto'),
-            );
-          }
+              animation: _tabController,
+              builder: (context, _) {
+                if (_tabController.index == 0) {
+                  return FloatingActionButton.extended(
+                    onPressed: _adicionarItem,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Novo produto'),
+                  );
+                }
 
-          if (_tabController.index == 1) {
-            return FloatingActionButton.extended(
-              onPressed: _abrirNovaMovimentacao,
-              icon: const Icon(
-                Icons.swap_vert_rounded,
-              ),
-              label: const Text('Movimentar'),
-            );
-          }
+                if (_tabController.index == 1) {
+                  return FloatingActionButton.extended(
+                    onPressed: _abrirNovaMovimentacao,
+                    icon: const Icon(Icons.swap_vert_rounded),
+                    label: const Text('Movimentar'),
+                  );
+                }
 
-          return const SizedBox.shrink();
-        },
-      ),
+                return const SizedBox.shrink();
+              },
+            ),
     );
   }
 
@@ -767,24 +670,16 @@ class _EstoquePageState extends State<EstoquePage>
 
     final valorTotal = _itens.fold<double>(
       0,
-          (total, item) => total + item.valorTotal,
+      (total, item) => total + item.valorTotal,
     );
 
-    final baixos = _itens
-        .where((item) => item.estoqueBaixo)
-        .length;
+    final baixos = _itens.where((item) => item.estoqueBaixo).length;
 
     return RefreshIndicator(
       onRefresh: _atualizarTudo,
       child: ListView(
-        physics:
-        const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          100,
-        ),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
           Row(
             children: [
@@ -800,8 +695,7 @@ class _EstoquePageState extends State<EstoquePage>
                 child: _Resumo(
                   titulo: 'Estoque baixo',
                   valor: baixos.toString(),
-                  icone:
-                  Icons.warning_amber_rounded,
+                  icone: Icons.warning_amber_rounded,
                 ),
               ),
             ],
@@ -813,16 +707,11 @@ class _EstoquePageState extends State<EstoquePage>
               child: Row(
                 children: [
                   const Icon(
-                    Icons
-                        .account_balance_wallet_outlined,
+                    Icons.account_balance_wallet_outlined,
                     color: Color(0xFFD6A84B),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Valor total em estoque',
-                    ),
-                  ),
+                  const Expanded(child: Text('Valor total em estoque')),
                   Text(
                     _moeda.format(valorTotal),
                     style: const TextStyle(
@@ -843,25 +732,20 @@ class _EstoquePageState extends State<EstoquePage>
               });
             },
             decoration: InputDecoration(
-              hintText:
-              'Pesquisar produto, categoria ou fornecedor',
-              prefixIcon: const Icon(
-                Icons.search,
-              ),
+              hintText: 'Pesquisar produto, categoria ou fornecedor',
+              prefixIcon: const Icon(Icons.search),
               suffixIcon: _pesquisa.isEmpty
                   ? null
                   : IconButton(
-                onPressed: () {
-                  _pesquisaController.clear();
+                      onPressed: () {
+                        _pesquisaController.clear();
 
-                  setState(() {
-                    _pesquisa = '';
-                  });
-                },
-                icon: const Icon(
-                  Icons.close_rounded,
-                ),
-              ),
+                        setState(() {
+                          _pesquisa = '';
+                        });
+                      },
+                      icon: const Icon(Icons.close_rounded),
+                    ),
             ),
           ),
           const SizedBox(height: 10),
@@ -869,12 +753,8 @@ class _EstoquePageState extends State<EstoquePage>
             alignment: Alignment.centerLeft,
             child: FilterChip(
               selected: _somenteBaixo,
-              label: const Text(
-                'Somente estoque baixo',
-              ),
-              avatar: const Icon(
-                Icons.warning_amber_rounded,
-              ),
+              label: const Text('Somente estoque baixo'),
+              avatar: const Icon(Icons.warning_amber_rounded),
               onSelected: (selecionado) {
                 setState(() {
                   _somenteBaixo = selecionado;
@@ -895,66 +775,45 @@ class _EstoquePageState extends State<EstoquePage>
             )
           else
             ...filtrados.map(
-                  (item) => Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 10,
-                ),
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
                 child: Card(
                   child: ListTile(
                     onTap: () => _abrirItem(item),
                     leading: CircleAvatar(
                       backgroundColor:
-                      (item.estoqueBaixo
-                          ? Colors.orange
-                          : const Color(
-                        0xFFD6A84B,
-                      ))
-                          .withValues(
-                        alpha: 0.15,
-                      ),
+                          (item.estoqueBaixo
+                                  ? Colors.orange
+                                  : const Color(0xFFD6A84B))
+                              .withValues(alpha: 0.15),
                       child: Icon(
                         item.estoqueBaixo
-                            ? Icons
-                            .warning_amber_rounded
-                            : Icons
-                            .inventory_2_outlined,
+                            ? Icons.warning_amber_rounded
+                            : Icons.inventory_2_outlined,
                         color: item.estoqueBaixo
                             ? Colors.orange
-                            : const Color(
-                          0xFFD6A84B,
-                        ),
+                            : const Color(0xFFD6A84B),
                       ),
                     ),
                     title: Text(
                       item.nome,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
                       '${_numero(item.quantidade)} '
-                          '${item.unidade}'
-                          '${item.categoria.isEmpty ? '' : ' • ${item.categoria}'}',
+                      '${item.unidade}'
+                      '${item.categoria.isEmpty ? '' : ' • ${item.categoria}'}'
+                      '${item.estoqueZerado ? ' • ZERADO' : ''}',
                     ),
                     trailing: Column(
-                      mainAxisAlignment:
-                      MainAxisAlignment.center,
-                      crossAxisAlignment:
-                      CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          _moeda.format(
-                            item.valorTotal,
-                          ),
-                          style: const TextStyle(
-                            fontWeight:
-                            FontWeight.bold,
-                          ),
+                          _moeda.format(item.valorTotal),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        const Icon(
-                          Icons.chevron_right,
-                          size: 19,
-                        ),
+                        const Icon(Icons.chevron_right, size: 19),
                       ],
                     ),
                   ),
@@ -970,30 +829,19 @@ class _EstoquePageState extends State<EstoquePage>
     return RefreshIndicator(
       onRefresh: _atualizarTudo,
       child: ListView(
-        physics:
-        const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          100,
-        ),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const CircleAvatar(
-                    child: Icon(
-                      Icons.history_rounded,
-                    ),
-                  ),
+                  const CircleAvatar(child: Icon(Icons.history_rounded)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Histórico do estoque',
@@ -1017,77 +865,64 @@ class _EstoquePageState extends State<EstoquePage>
             const _EstadoVazio(
               icone: Icons.swap_vert_rounded,
               titulo: 'Nenhuma movimentação',
-              descricao:
-              'Registre entradas, saídas ou ajustes de estoque.',
+              descricao: 'Registre entradas, saídas ou ajustes de estoque.',
             )
           else
-            ..._movimentacoes.map(
-                  (movimentacao) {
-                final cor = _corTipoMovimentacao(
-                  movimentacao.tipo,
-                );
+            ..._movimentacoes.map((movimentacao) {
+              final cor = _corTipoMovimentacao(movimentacao.tipo);
 
-                final unidade =
-                _unidadeItemMovimentacao(
-                  movimentacao,
-                );
+              final unidade = _unidadeItemMovimentacao(movimentacao);
 
-                return Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: 10,
-                  ),
-                  child: Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                        cor.withValues(alpha: 0.15),
-                        child: Icon(
-                          _iconeTipoMovimentacao(
-                            movimentacao.tipo,
-                          ),
-                          color: cor,
-                        ),
-                      ),
-                      title: Text(
-                        _nomeItemMovimentacao(
-                          movimentacao,
-                        ),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${_nomeTipoMovimentacao(movimentacao.tipo)}'
-                                ' • ${_dataFormatada(movimentacao.data)}',
-                          ),
-                          if (movimentacao
-                              .observacao.isNotEmpty)
-                            Text(
-                              movimentacao.observacao,
-                              maxLines: 2,
-                              overflow:
-                              TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                      trailing: Text(
-                        '${movimentacao.tipo == 'ENTRADA' ? '+' : movimentacao.tipo == 'SAIDA' ? '-' : ''}'
-                            '${_numero(movimentacao.quantidade)}'
-                            '${unidade.isEmpty ? '' : ' $unidade'}',
-                        style: TextStyle(
-                          color: cor,
-                          fontWeight: FontWeight.bold,
-                        ),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: cor.withValues(alpha: 0.15),
+                      child: Icon(
+                        _iconeTipoMovimentacao(movimentacao.tipo),
+                        color: cor,
                       ),
                     ),
+                    title: Text(
+                      _nomeItemMovimentacao(movimentacao),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${_nomeTipoMovimentacao(movimentacao.tipo)}'
+                          ' • ${_dataFormatada(movimentacao.data)}',
+                        ),
+                        if (movimentacao.quantidadeAnterior != null &&
+                            movimentacao.quantidadePosterior != null)
+                          Text(
+                            'Anterior: ${_numero(movimentacao.quantidadeAnterior!)} '
+                            '$unidade • Posterior: ${_numero(movimentacao.quantidadePosterior!)} $unidade',
+                          ),
+                        if (movimentacao.observacao.isNotEmpty)
+                          Text(
+                            movimentacao.observacao,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                    trailing: Text(
+                      '${movimentacao.tipo == 'ENTRADA'
+                          ? '+'
+                          : movimentacao.tipo == 'SAIDA'
+                          ? '-'
+                          : ''}'
+                      '${_numero(movimentacao.quantidade)}'
+                      '${unidade.isEmpty ? '' : ' $unidade'}',
+                      style: TextStyle(color: cor, fontWeight: FontWeight.bold),
+                    ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            }),
         ],
       ),
     );
@@ -1095,168 +930,116 @@ class _EstoquePageState extends State<EstoquePage>
 
   Widget _abaConfiguracoes() {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        40,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       children: [
-        if (_salvandoConfiguracao)
-          const LinearProgressIndicator(),
-        if (_salvandoConfiguracao)
-          const SizedBox(height: 10),
+        if (_salvandoConfiguracao) const LinearProgressIndicator(),
+        if (_salvandoConfiguracao) const SizedBox(height: 10),
         Card(
           child: Column(
             children: [
               SwitchListTile(
-                title: const Text(
-                  'Controlar estoque',
-                ),
-                subtitle: const Text(
-                  'Ativa o módulo de controle de produtos.',
-                ),
-                secondary: const Icon(
-                  Icons.inventory_2_outlined,
-                ),
-                value:
-                _configuracao.controlarEstoque,
+                title: const Text('Controlar estoque'),
+                subtitle: const Text('Ativa o módulo de controle de produtos.'),
+                secondary: const Icon(Icons.inventory_2_outlined),
+                value: _configuracao.controlarEstoque,
                 onChanged: _salvandoConfiguracao
                     ? null
                     : (valor) {
-                  _salvarConfiguracao(
-                    _configuracao.copyWith(
-                      controlarEstoque: valor,
-                      controlarProdutosOrdemServico:
-                      valor
-                          ? _configuracao
-                          .controlarProdutosOrdemServico
-                          : false,
-                      baixaAutomatica: valor
-                          ? _configuracao
-                          .baixaAutomatica
-                          : false,
-                      exigirQuantidade: valor
-                          ? _configuracao
-                          .exigirQuantidade
-                          : false,
-                    ),
-                  );
-                },
+                        _salvarConfiguracao(
+                          _configuracao.copyWith(
+                            controlarEstoque: valor,
+                            controlarProdutosOrdemServico: valor
+                                ? _configuracao.controlarProdutosOrdemServico
+                                : false,
+                            baixaAutomatica: valor
+                                ? _configuracao.baixaAutomatica
+                                : false,
+                            exigirQuantidade: valor
+                                ? _configuracao.exigirQuantidade
+                                : false,
+                          ),
+                        );
+                      },
               ),
               const Divider(height: 1),
               SwitchListTile(
-                title: const Text(
-                  'Produtos nas Ordens de Serviço',
-                ),
+                title: const Text('Produtos nas Ordens de Serviço'),
                 subtitle: const Text(
                   'Mostra os produtos utilizados dentro das Ordens de Serviço.',
                 ),
-                secondary: const Icon(
-                  Icons
-                      .assignment_turned_in_outlined,
-                ),
-                value: _configuracao
-                    .controlarProdutosOrdemServico,
-                onChanged: !_configuracao
-                    .controlarEstoque ||
-                    _salvandoConfiguracao
+                secondary: const Icon(Icons.assignment_turned_in_outlined),
+                value: _configuracao.controlarProdutosOrdemServico,
+                onChanged:
+                    !_configuracao.controlarEstoque || _salvandoConfiguracao
                     ? null
                     : (valor) {
-                  _salvarConfiguracao(
-                    _configuracao.copyWith(
-                      controlarProdutosOrdemServico:
-                      valor,
-                      baixaAutomatica: valor
-                          ? _configuracao
-                          .baixaAutomatica
-                          : false,
-                      exigirQuantidade: valor
-                          ? _configuracao
-                          .exigirQuantidade
-                          : false,
-                    ),
-                  );
-                },
+                        _salvarConfiguracao(
+                          _configuracao.copyWith(
+                            controlarProdutosOrdemServico: valor,
+                            baixaAutomatica: valor
+                                ? _configuracao.baixaAutomatica
+                                : false,
+                            exigirQuantidade: valor
+                                ? _configuracao.exigirQuantidade
+                                : false,
+                          ),
+                        );
+                      },
               ),
               const Divider(height: 1),
               SwitchListTile(
-                title: const Text(
-                  'Baixa automática',
-                ),
+                title: const Text('Baixa automática'),
                 subtitle: const Text(
                   'Desconta os produtos quando a Ordem de Serviço for finalizada.',
                 ),
-                secondary: const Icon(
-                  Icons.auto_fix_high_outlined,
-                ),
-                value:
-                _configuracao.baixaAutomatica,
-                onChanged: !_configuracao
-                    .controlarEstoque ||
-                    !_configuracao
-                        .controlarProdutosOrdemServico ||
-                    _salvandoConfiguracao
+                secondary: const Icon(Icons.auto_fix_high_outlined),
+                value: _configuracao.baixaAutomatica,
+                onChanged:
+                    !_configuracao.controlarEstoque ||
+                        !_configuracao.controlarProdutosOrdemServico ||
+                        _salvandoConfiguracao
                     ? null
                     : (valor) {
-                  _salvarConfiguracao(
-                    _configuracao.copyWith(
-                      baixaAutomatica: valor,
-                    ),
-                  );
-                },
+                        _salvarConfiguracao(
+                          _configuracao.copyWith(baixaAutomatica: valor),
+                        );
+                      },
               ),
               const Divider(height: 1),
               SwitchListTile(
-                title: const Text(
-                  'Exigir quantidade utilizada',
-                ),
+                title: const Text('Exigir quantidade utilizada'),
                 subtitle: const Text(
                   'Não permite adicionar produto na Ordem de Serviço sem informar a quantidade.',
                 ),
-                secondary: const Icon(
-                  Icons.numbers_rounded,
-                ),
-                value:
-                _configuracao.exigirQuantidade,
-                onChanged: !_configuracao
-                    .controlarEstoque ||
-                    !_configuracao
-                        .controlarProdutosOrdemServico ||
-                    _salvandoConfiguracao
+                secondary: const Icon(Icons.numbers_rounded),
+                value: _configuracao.exigirQuantidade,
+                onChanged:
+                    !_configuracao.controlarEstoque ||
+                        !_configuracao.controlarProdutosOrdemServico ||
+                        _salvandoConfiguracao
                     ? null
                     : (valor) {
-                  _salvarConfiguracao(
-                    _configuracao.copyWith(
-                      exigirQuantidade: valor,
-                    ),
-                  );
-                },
+                        _salvarConfiguracao(
+                          _configuracao.copyWith(exigirQuantidade: valor),
+                        );
+                      },
               ),
               const Divider(height: 1),
               SwitchListTile(
-                title: const Text(
-                  'Alertar estoque baixo',
-                ),
+                title: const Text('Alertar estoque baixo'),
                 subtitle: const Text(
                   'Destaca produtos que atingiram a quantidade mínima.',
                 ),
-                secondary: const Icon(
-                  Icons.warning_amber_rounded,
-                ),
-                value: _configuracao
-                    .alertarEstoqueBaixo,
-                onChanged: !_configuracao
-                    .controlarEstoque ||
-                    _salvandoConfiguracao
+                secondary: const Icon(Icons.warning_amber_rounded),
+                value: _configuracao.alertarEstoqueBaixo,
+                onChanged:
+                    !_configuracao.controlarEstoque || _salvandoConfiguracao
                     ? null
                     : (valor) {
-                  _salvarConfiguracao(
-                    _configuracao.copyWith(
-                      alertarEstoqueBaixo: valor,
-                    ),
-                  );
-                },
+                        _salvarConfiguracao(
+                          _configuracao.copyWith(alertarEstoqueBaixo: valor),
+                        );
+                      },
               ),
             ],
           ),
@@ -1270,9 +1053,7 @@ class _EstoquePageState extends State<EstoquePage>
             ),
             title: const Text(
               'Controle opcional',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: const Text(
               'Você pode usar apenas o cadastro e as movimentações do estoque sem controlar produtos nas Ordens de Serviço.',
@@ -1302,15 +1083,11 @@ class _Resumo extends StatelessWidget {
         padding: const EdgeInsets.all(15),
         child: Row(
           children: [
-            Icon(
-              icone,
-              color: const Color(0xFFD6A84B),
-            ),
+            Icon(icone, color: const Color(0xFFD6A84B)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     valor,
@@ -1321,10 +1098,7 @@ class _Resumo extends StatelessWidget {
                   ),
                   Text(
                     titulo,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                   ),
                 ],
               ),
@@ -1350,33 +1124,21 @@ class _EstadoVazio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 60,
-        horizontal: 20,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
       child: Column(
         children: [
-          Icon(
-            icone,
-            size: 72,
-            color: Colors.grey.shade400,
-          ),
+          Icon(icone, size: 72, color: Colors.grey.shade400),
           const SizedBox(height: 14),
           Text(
             titulo,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
             descricao,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(color: Colors.grey.shade600),
           ),
         ],
       ),

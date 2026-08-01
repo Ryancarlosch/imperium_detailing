@@ -3,7 +3,11 @@ class MovimentacaoEstoque {
   final int itemId;
   final String tipo;
   final double quantidade;
+  final double? quantidadeAnterior;
+  final double? quantidadePosterior;
+  final double? custoUnitario;
   final String observacao;
+  final String origem;
   final int? ordemServicoId;
   final String data;
 
@@ -12,7 +16,11 @@ class MovimentacaoEstoque {
     required this.itemId,
     required this.tipo,
     required this.quantidade,
+    this.quantidadeAnterior,
+    this.quantidadePosterior,
+    this.custoUnitario,
     required this.observacao,
+    this.origem = 'Manual',
     this.ordemServicoId,
     required this.data,
   });
@@ -23,25 +31,29 @@ class MovimentacaoEstoque {
       'item_estoque_id': itemId,
       'tipo': tipo,
       'quantidade': quantidade,
+      if (quantidadeAnterior != null) 'quantidade_anterior': quantidadeAnterior,
+      if (quantidadePosterior != null)
+        'quantidade_posterior': quantidadePosterior,
+      if (custoUnitario != null) 'custo_unitario': custoUnitario,
       'observacoes': observacao,
+      'origem': origem,
       'ordem_servico_id': ordemServicoId,
       'data': data,
     };
   }
 
-  factory MovimentacaoEstoque.fromMap(
-      Map<String, dynamic> map,
-      ) {
+  factory MovimentacaoEstoque.fromMap(Map<String, dynamic> map) {
     return MovimentacaoEstoque(
       id: map['id'] as int?,
       itemId: (map['item_estoque_id'] as num).toInt(),
       tipo: map['tipo']?.toString() ?? '',
-      quantidade:
-      (map['quantidade'] as num?)?.toDouble() ?? 0,
-      observacao:
-      map['observacoes']?.toString() ?? '',
-      ordemServicoId:
-      (map['ordem_servico_id'] as num?)?.toInt(),
+      quantidade: (map['quantidade'] as num?)?.toDouble() ?? 0,
+      quantidadeAnterior: (map['quantidade_anterior'] as num?)?.toDouble(),
+      quantidadePosterior: (map['quantidade_posterior'] as num?)?.toDouble(),
+      custoUnitario: (map['custo_unitario'] as num?)?.toDouble(),
+      observacao: map['observacoes']?.toString() ?? '',
+      origem: map['origem']?.toString() ?? 'Manual',
+      ordemServicoId: (map['ordem_servico_id'] as num?)?.toInt(),
       data: map['data']?.toString() ?? '',
     );
   }

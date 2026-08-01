@@ -4,28 +4,22 @@ import '../models/item_estoque.dart';
 import '../repositories/estoque_repository.dart';
 
 class NovoItemEstoquePage extends StatefulWidget {
-  const NovoItemEstoquePage({
-    super.key,
-    this.item,
-  });
+  const NovoItemEstoquePage({super.key, this.item});
 
   final ItemEstoque? item;
 
   @override
-  State<NovoItemEstoquePage> createState() =>
-      _NovoItemEstoquePageState();
+  State<NovoItemEstoquePage> createState() => _NovoItemEstoquePageState();
 }
 
-class _NovoItemEstoquePageState
-    extends State<NovoItemEstoquePage> {
+class _NovoItemEstoquePageState extends State<NovoItemEstoquePage> {
   final _formKey = GlobalKey<FormState>();
   final _repository = EstoqueRepository();
 
   late final TextEditingController _nomeController;
   late final TextEditingController _categoriaController;
   late final TextEditingController _quantidadeController;
-  late final TextEditingController
-  _quantidadeMinimaController;
+  late final TextEditingController _quantidadeMinimaController;
   late final TextEditingController _custoController;
   late final TextEditingController _fornecedorController;
   late final TextEditingController _observacoesController;
@@ -39,45 +33,29 @@ class _NovoItemEstoquePageState
 
     final item = widget.item;
 
-    _nomeController = TextEditingController(
-      text: item?.nome ?? '',
-    );
+    _nomeController = TextEditingController(text: item?.nome ?? '');
 
-    _categoriaController = TextEditingController(
-      text: item?.categoria ?? '',
-    );
+    _categoriaController = TextEditingController(text: item?.categoria ?? '');
 
     _quantidadeController = TextEditingController(
-      text: item == null
-          ? ''
-          : _formatarNumero(item.quantidade),
+      text: item == null ? '' : _formatarNumero(item.quantidade),
     );
 
-    _quantidadeMinimaController =
-        TextEditingController(
-          text: item == null
-              ? ''
-              : _formatarNumero(
-            item.quantidadeMinima,
-          ),
-        );
+    _quantidadeMinimaController = TextEditingController(
+      text: item == null ? '' : _formatarNumero(item.quantidadeMinima),
+    );
 
     _custoController = TextEditingController(
       text: item == null
           ? ''
-          : item.custoUnitario
-          .toStringAsFixed(2)
-          .replaceAll('.', ','),
+          : item.custoUnitario.toStringAsFixed(2).replaceAll('.', ','),
     );
 
-    _fornecedorController = TextEditingController(
-      text: item?.fornecedor ?? '',
-    );
+    _fornecedorController = TextEditingController(text: item?.fornecedor ?? '');
 
-    _observacoesController =
-        TextEditingController(
-          text: item?.observacoes ?? '',
-        );
+    _observacoesController = TextEditingController(
+      text: item?.observacoes ?? '',
+    );
 
     _unidade = item?.unidade ?? 'un';
   }
@@ -87,15 +65,19 @@ class _NovoItemEstoquePageState
       return valor.toInt().toString();
     }
 
-    return valor
-        .toStringAsFixed(2)
-        .replaceAll('.', ',');
+    return valor.toStringAsFixed(2).replaceAll('.', ',');
   }
 
   double? _lerNumero(String texto) {
-    return double.tryParse(
-      texto.trim().replaceAll(',', '.'),
-    );
+    return double.tryParse(texto.trim().replaceAll(',', '.'));
+  }
+
+  bool get _unidadeAceitaDecimal {
+    return _unidade != 'un';
+  }
+
+  bool _numeroEhInteiro(double valor) {
+    return valor == valor.truncateToDouble();
   }
 
   @override
@@ -112,21 +94,31 @@ class _NovoItemEstoquePageState
   }
 
   Future<void> _salvar() async {
-    debugPrint('PASSO 1 - Botão salvar pressionado');
-
     if (_salvando) {
-      debugPrint('PASSO 2 - Já estava salvando');
       return;
     }
 
-    final formularioValido =
-        _formKey.currentState?.validate() ?? false;
-
-    debugPrint(
-      'PASSO 3 - Formulário válido: $formularioValido',
-    );
+    final formularioValido = _formKey.currentState?.validate() ?? false;
 
     if (!formularioValido) {
+      return;
+    }
+
+    final nome = _nomeController.text.trim();
+
+    final itemExistente = await _repository.buscarItemPorNome(nome);
+
+    if (itemExistente != null && itemExistente.id != widget.item?.id) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Já existe um produto com este nome.')),
+      );
+
       return;
     }
 
@@ -137,56 +129,26 @@ class _NovoItemEstoquePageState
     try {
       final item = ItemEstoque(
         id: widget.item?.id,
-        nome: _nomeController.text.trim(),
+        nome: nome,
         categoria: _categoriaController.text.trim(),
-        quantidade:
-        _lerNumero(_quantidadeController.text) ?? 0,
-        quantidadeMinima:
-        _lerNumero(
-          _quantidadeMinimaController.text,
-        ) ??
-            0,
+        quantidade: _lerNumero(_quantidadeController.text) ?? 0,
+        quantidadeMinima: _lerNumero(_quantidadeMinimaController.text) ?? 0,
         unidade: _unidade,
-        custoUnitario:
-        _lerNumero(_custoController.text) ?? 0,
-        fornecedor:
-        _fornecedorController.text.trim(),
-        observacoes:
-        _observacoesController.text.trim(),
-        atualizadoEm:
-        DateTime.now().toIso8601String(),
+        custoUnitario: _lerNumero(_custoController.text) ?? 0,
+        fornecedor: _fornecedorController.text.trim(),
+        observacoes: _observacoesController.text.trim(),
+        atualizadoEm: DateTime.now().toIso8601String(),
       );
 
-      debugPrint('PASSO 4 - Item criado');
-      debugPrint('Dados: ${item.toMap()}');
-
       if (widget.item == null) {
-        debugPrint('PASSO 5 - Iniciando inserção');
-
-        final id = await _repository.inserirItem(
-          item,
-        );
-
-        debugPrint(
-          'PASSO 6 - Item inserido com ID: $id',
-        );
+        await _repository.inserirItem(item);
       } else {
-        debugPrint('PASSO 5 - Iniciando atualização');
-
-        final linhas =
         await _repository.atualizarItem(item);
-
-        debugPrint(
-          'PASSO 6 - Linhas atualizadas: $linhas',
-        );
       }
 
       if (!mounted) {
-        debugPrint('PASSO 7 - Tela não está montada');
         return;
       }
-
-      debugPrint('PASSO 8 - Fechando tela');
 
       Navigator.pop(context, true);
     } catch (erro, stackTrace) {
@@ -204,26 +166,19 @@ class _NovoItemEstoquePageState
         _salvando = false;
       });
 
-      ScaffoldMessenger.of(context)
-          .hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Não foi possível salvar o item:\n$erro',
-          ),
+          content: Text('Não foi possível salvar o item:\n$erro'),
           backgroundColor: Colors.red.shade700,
         ),
       );
     }
   }
 
-  String? _validarNumero(
-      String? valor, {
-        required String campo,
-      }) {
-    if (valor == null ||
-        valor.trim().isEmpty) {
+  String? _validarNumero(String? valor, {required String campo}) {
+    if (valor == null || valor.trim().isEmpty) {
       return 'Informe $campo.';
     }
 
@@ -231,6 +186,10 @@ class _NovoItemEstoquePageState
 
     if (numero == null || numero < 0) {
       return 'Informe um valor válido.';
+    }
+
+    if (!_unidadeAceitaDecimal && !_numeroEhInteiro(numero)) {
+      return 'Para unidade, informe valor inteiro.';
     }
 
     return null;
@@ -242,15 +201,10 @@ class _NovoItemEstoquePageState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          editando
-              ? 'Editar item'
-              : 'Novo item',
-        ),
+        title: Text(editando ? 'Editar item' : 'Novo item'),
         actions: [
           TextButton(
-            onPressed:
-            _salvando ? null : _salvar,
+            onPressed: _salvando ? null : _salvar,
             child: const Text('SALVAR'),
           ),
         ],
@@ -262,19 +216,14 @@ class _NovoItemEstoquePageState
           children: [
             TextFormField(
               controller: _nomeController,
-              textCapitalization:
-              TextCapitalization.sentences,
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 labelText: 'Nome do produto',
-                hintText:
-                'Ex.: Shampoo automotivo',
-                prefixIcon: Icon(
-                  Icons.inventory_2_outlined,
-                ),
+                hintText: 'Ex.: Shampoo automotivo',
+                prefixIcon: Icon(Icons.inventory_2_outlined),
               ),
               validator: (valor) {
-                if (valor == null ||
-                    valor.trim().isEmpty) {
+                if (valor == null || valor.trim().isEmpty) {
                   return 'Informe o nome.';
                 }
 
@@ -284,15 +233,11 @@ class _NovoItemEstoquePageState
             const SizedBox(height: 14),
             TextFormField(
               controller: _categoriaController,
-              textCapitalization:
-              TextCapitalization.words,
+              textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Categoria',
-                hintText:
-                'Ex.: Limpeza, Polimento',
-                prefixIcon: Icon(
-                  Icons.category_outlined,
-                ),
+                hintText: 'Ex.: Limpeza, Polimento',
+                prefixIcon: Icon(Icons.category_outlined),
               ),
             ),
             const SizedBox(height: 14),
@@ -300,67 +245,33 @@ class _NovoItemEstoquePageState
               children: [
                 Expanded(
                   child: TextFormField(
-                    controller:
-                    _quantidadeController,
-                    keyboardType:
-                    const TextInputType
-                        .numberWithOptions(
+                    controller: _quantidadeController,
+                    keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration:
-                    const InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Quantidade',
-                      prefixIcon: Icon(
-                        Icons.numbers_rounded,
-                      ),
+                      prefixIcon: Icon(Icons.numbers_rounded),
                     ),
                     validator: (valor) =>
-                        _validarNumero(
-                          valor,
-                          campo: 'a quantidade',
-                        ),
+                        _validarNumero(valor, campo: 'a quantidade'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child:
-                  DropdownButtonFormField<
-                      String>(
+                  child: DropdownButtonFormField<String>(
                     initialValue: _unidade,
-                    decoration:
-                    const InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Unidade',
-                      prefixIcon: Icon(
-                        Icons.straighten,
-                      ),
+                      prefixIcon: Icon(Icons.straighten),
                     ),
                     items: const [
-                      DropdownMenuItem(
-                        value: 'un',
-                        child: Text('Unidade'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'L',
-                        child: Text('Litro'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'ml',
-                        child:
-                        Text('Mililitro'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'kg',
-                        child:
-                        Text('Quilograma'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'g',
-                        child: Text('Grama'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'm',
-                        child: Text('Metro'),
-                      ),
+                      DropdownMenuItem(value: 'un', child: Text('Unidade')),
+                      DropdownMenuItem(value: 'L', child: Text('Litro')),
+                      DropdownMenuItem(value: 'ml', child: Text('Mililitro')),
+                      DropdownMenuItem(value: 'kg', child: Text('Quilograma')),
+                      DropdownMenuItem(value: 'g', child: Text('Grama')),
+                      DropdownMenuItem(value: 'm', child: Text('Metro')),
                     ],
                     onChanged: (valor) {
                       if (valor == null) {
@@ -377,98 +288,64 @@ class _NovoItemEstoquePageState
             ),
             const SizedBox(height: 14),
             TextFormField(
-              controller:
-              _quantidadeMinimaController,
-              keyboardType:
-              const TextInputType
-                  .numberWithOptions(
+              controller: _quantidadeMinimaController,
+              keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
               decoration: const InputDecoration(
                 labelText: 'Estoque mínimo',
-                hintText:
-                'Avisar quando chegar neste valor',
-                prefixIcon: Icon(
-                  Icons.warning_amber_rounded,
-                ),
+                hintText: 'Avisar quando chegar neste valor',
+                prefixIcon: Icon(Icons.warning_amber_rounded),
               ),
               validator: (valor) =>
-                  _validarNumero(
-                    valor,
-                    campo: 'o estoque mínimo',
-                  ),
+                  _validarNumero(valor, campo: 'o estoque mínimo'),
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _custoController,
-              keyboardType:
-              const TextInputType
-                  .numberWithOptions(
+              keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
               decoration: const InputDecoration(
                 labelText: 'Custo unitário',
                 prefixText: 'R\$ ',
-                prefixIcon: Icon(
-                  Icons.attach_money,
-                ),
+                prefixIcon: Icon(Icons.attach_money),
               ),
               validator: (valor) =>
-                  _validarNumero(
-                    valor,
-                    campo: 'o custo unitário',
-                  ),
+                  _validarNumero(valor, campo: 'o custo unitário'),
             ),
             const SizedBox(height: 14),
             TextFormField(
-              controller:
-              _fornecedorController,
-              textCapitalization:
-              TextCapitalization.words,
+              controller: _fornecedorController,
+              textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Fornecedor',
-                prefixIcon: Icon(
-                  Icons.local_shipping_outlined,
-                ),
+                prefixIcon: Icon(Icons.local_shipping_outlined),
               ),
             ),
             const SizedBox(height: 14),
             TextFormField(
-              controller:
-              _observacoesController,
+              controller: _observacoesController,
               minLines: 3,
               maxLines: 6,
-              textCapitalization:
-              TextCapitalization.sentences,
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 labelText: 'Observações',
                 alignLabelWithHint: true,
-                prefixIcon: Icon(
-                  Icons.notes_outlined,
-                ),
+                prefixIcon: Icon(Icons.notes_outlined),
               ),
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed:
-              _salvando ? null : _salvar,
+              onPressed: _salvando ? null : _salvar,
               icon: _salvando
                   ? const SizedBox(
-                width: 20,
-                height: 20,
-                child:
-                CircularProgressIndicator(
-                  strokeWidth: 2,
-                ),
-              )
-                  : const Icon(
-                Icons.save_outlined,
-              ),
-              label: Text(
-                _salvando
-                    ? 'Salvando...'
-                    : 'Salvar item',
-              ),
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_outlined),
+              label: Text(_salvando ? 'Salvando...' : 'Salvar item'),
             ),
           ],
         ),

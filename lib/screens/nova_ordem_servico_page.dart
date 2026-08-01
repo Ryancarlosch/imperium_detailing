@@ -9,7 +9,6 @@ import '../models/ordem_servico_item.dart';
 import '../models/item_estoque.dart';
 import '../models/veiculo.dart';
 import '../models/servico_catalogo.dart';
-import '../models/servico_produto.dart';
 import '../repositories/cliente_repository.dart';
 import '../repositories/orcamento_repository.dart';
 import '../repositories/ordem_servico_repository.dart';
@@ -19,54 +18,39 @@ import '../repositories/veiculo_repository.dart';
 import '../repositories/servico_repository.dart';
 
 class NovaOrdemServicoPage extends StatefulWidget {
-  const NovaOrdemServicoPage({
-    super.key,
-    this.orcamentoId,
-    this.agendamento,
-  });
+  const NovaOrdemServicoPage({super.key, this.orcamentoId, this.agendamento});
 
   final int? orcamentoId;
   final Agendamento? agendamento;
 
   @override
-  State<NovaOrdemServicoPage> createState() =>
-      _NovaOrdemServicoPageState();
+  State<NovaOrdemServicoPage> createState() => _NovaOrdemServicoPageState();
 }
 
-class _NovaOrdemServicoPageState
-    extends State<NovaOrdemServicoPage> {
-  final GlobalKey<FormState> _formKey =
-  GlobalKey<FormState>();
+class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final ClienteRepository _clienteRepository =
-  ClienteRepository();
+  final ClienteRepository _clienteRepository = ClienteRepository();
 
-  final VeiculoRepository _veiculoRepository =
-  VeiculoRepository();
+  final VeiculoRepository _veiculoRepository = VeiculoRepository();
 
-  final OrdemServicoRepository _ordemRepository =
-  OrdemServicoRepository();
+  final OrdemServicoRepository _ordemRepository = OrdemServicoRepository();
 
-  final OrcamentoRepository _orcamentoRepository =
-  OrcamentoRepository();
+  final OrcamentoRepository _orcamentoRepository = OrcamentoRepository();
 
-  final EstoqueRepository _estoqueRepository =
-  EstoqueRepository();
+  final EstoqueRepository _estoqueRepository = EstoqueRepository();
 
-  final ServicoRepository _servicoRepository =
-  ServicoRepository();
+  final ServicoRepository _servicoRepository = ServicoRepository();
 
-  final TextEditingController _numeroController =
-  TextEditingController();
+  final TextEditingController _numeroController = TextEditingController();
 
-  final TextEditingController _responsavelController =
-  TextEditingController();
+  final TextEditingController _responsavelController = TextEditingController();
 
-  final TextEditingController _descontoController =
-  TextEditingController(text: '0,00');
+  final TextEditingController _descontoController = TextEditingController(
+    text: '0,00',
+  );
 
-  final TextEditingController _observacoesController =
-  TextEditingController();
+  final TextEditingController _observacoesController = TextEditingController();
 
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
@@ -119,30 +103,25 @@ class _NovaOrdemServicoPageState
         _clienteRepository.listarClientes(),
         _ordemRepository.gerarProximoNumero(),
         _estoqueRepository.listarItens(),
-        _servicoRepository.listarServicos(
-          somenteAtivos: true,
-        ),
+        _servicoRepository.listarServicos(somenteAtivos: true),
       ]);
 
       final clientes = resultados[0] as List<Cliente>;
       final numero = resultados[1] as String;
       final itensEstoque = resultados[2] as List<ItemEstoque>;
-      final catalogoServicos =
-          resultados[3] as List<ServicoCatalogo>;
+      final catalogoServicos = resultados[3] as List<ServicoCatalogo>;
 
       Map<String, dynamic>? orcamento;
       List<Veiculo> veiculos = [];
 
       if (widget.agendamento != null) {
-        veiculos = await _veiculoRepository
-            .listarVeiculosDoCliente(
+        veiculos = await _veiculoRepository.listarVeiculosDoCliente(
           widget.agendamento!.clienteId,
         );
       }
 
       if (widget.orcamentoId != null) {
-        orcamento =
-        await _orcamentoRepository.buscarOrcamentoComDetalhes(
+        orcamento = await _orcamentoRepository.buscarOrcamentoComDetalhes(
           widget.orcamentoId!,
         );
 
@@ -150,13 +129,12 @@ class _NovaOrdemServicoPageState
           throw Exception('Orçamento não encontrado.');
         }
 
-        final clienteId = _converterInt(
-          orcamento['cliente_id'],
-        );
+        final clienteId = _converterInt(orcamento['cliente_id']);
 
         if (clienteId != null) {
-          veiculos = await _veiculoRepository
-              .listarVeiculosDoCliente(clienteId);
+          veiculos = await _veiculoRepository.listarVeiculosDoCliente(
+            clienteId,
+          );
         }
       }
 
@@ -195,24 +173,17 @@ class _NovaOrdemServicoPageState
               aoAlterar: _atualizarTela,
               nome: agendamento.servico,
               quantidade: '1',
-              valor: _formatarNumeroCampo(
-                agendamento.valor,
-              ),
+              valor: _formatarNumeroCampo(agendamento.valor),
             ),
           );
 
-        _observacoesController.text =
-            agendamento.observacoes;
+        _observacoesController.text = agendamento.observacoes;
       }
 
       if (orcamento != null) {
-        final clienteId = _converterInt(
-          orcamento['cliente_id'],
-        );
+        final clienteId = _converterInt(orcamento['cliente_id']);
 
-        final veiculoId = _converterInt(
-          orcamento['veiculo_id'],
-        );
+        final veiculoId = _converterInt(orcamento['veiculo_id']);
 
         for (final cliente in clientes) {
           if (cliente.id == clienteId) {
@@ -248,18 +219,12 @@ class _NovaOrdemServicoPageState
               _ServicoFormulario(
                 aoAlterar: _atualizarTela,
                 nome: (mapa['servico'] ?? '').toString(),
-                descricao:
-                (mapa['descricao'] ?? '').toString(),
+                descricao: (mapa['descricao'] ?? '').toString(),
                 quantidade: _formatarNumeroCampo(
-                  _converterNumero(
-                    mapa['quantidade'],
-                    padrao: 1,
-                  ),
+                  _converterNumero(mapa['quantidade'], padrao: 1),
                 ),
                 valor: _formatarNumeroCampo(
-                  _converterNumero(
-                    mapa['valor_unitario'],
-                  ),
+                  _converterNumero(mapa['valor_unitario']),
                 ),
               ),
             );
@@ -267,21 +232,15 @@ class _NovaOrdemServicoPageState
         }
 
         if (_servicos.isEmpty) {
-          _servicos.add(
-            _ServicoFormulario(
-              aoAlterar: _atualizarTela,
-            ),
-          );
+          _servicos.add(_ServicoFormulario(aoAlterar: _atualizarTela));
         }
 
         _descontoController.text = _formatarNumeroCampo(
-          _converterNumero(
-            orcamento['desconto'],
-          ),
+          _converterNumero(orcamento['desconto']),
         );
 
-        _observacoesController.text =
-            (orcamento['observacoes'] ?? '').toString();
+        _observacoesController.text = (orcamento['observacoes'] ?? '')
+            .toString();
       }
 
       setState(() {
@@ -319,15 +278,10 @@ class _NovaOrdemServicoPageState
       return valor.toInt();
     }
 
-    return int.tryParse(
-      valor?.toString() ?? '',
-    );
+    return int.tryParse(valor?.toString() ?? '');
   }
 
-  double _converterNumero(
-      dynamic valor, {
-        double padrao = 0,
-      }) {
+  double _converterNumero(dynamic valor, {double padrao = 0}) {
     if (valor is num) {
       return valor.toDouble();
     }
@@ -340,14 +294,10 @@ class _NovaOrdemServicoPageState
   }
 
   String _formatarNumeroCampo(double valor) {
-    return valor
-        .toStringAsFixed(2)
-        .replaceAll('.', ',');
+    return valor.toStringAsFixed(2).replaceAll('.', ',');
   }
 
-  Future<void> _selecionarCliente(
-      Cliente? cliente,
-      ) async {
+  Future<void> _selecionarCliente(Cliente? cliente) async {
     setState(() {
       _clienteSelecionado = cliente;
       _veiculoSelecionado = null;
@@ -365,8 +315,9 @@ class _NovaOrdemServicoPageState
     });
 
     try {
-      final veiculos = await _veiculoRepository
-          .listarVeiculosDoCliente(clienteId);
+      final veiculos = await _veiculoRepository.listarVeiculosDoCliente(
+        clienteId,
+      );
 
       if (!mounted) {
         return;
@@ -398,17 +349,11 @@ class _NovaOrdemServicoPageState
 
   void _adicionarServico() {
     setState(() {
-      _servicos.add(
-        _ServicoFormulario(
-          aoAlterar: _atualizarTela,
-        ),
-      );
+      _servicos.add(_ServicoFormulario(aoAlterar: _atualizarTela));
     });
   }
 
-  Future<void> _selecionarServicoCatalogo(
-      int indice,
-      ) async {
+  Future<void> _selecionarServicoCatalogo(int indice) async {
     if (_catalogoServicos.isEmpty) {
       _mostrarMensagem(
         'Nenhum serviço ativo foi cadastrado no catálogo.',
@@ -417,8 +362,7 @@ class _NovaOrdemServicoPageState
       return;
     }
 
-    final selecionado =
-        await showModalBottomSheet<ServicoCatalogo>(
+    final selecionado = await showModalBottomSheet<ServicoCatalogo>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
@@ -429,12 +373,7 @@ class _NovaOrdemServicoPageState
             child: Column(
               children: [
                 const Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    18,
-                    4,
-                    18,
-                    12,
-                  ),
+                  padding: EdgeInsets.fromLTRB(18, 4, 18, 12),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -450,14 +389,11 @@ class _NovaOrdemServicoPageState
                   child: ListView.builder(
                     itemCount: _catalogoServicos.length,
                     itemBuilder: (_, itemIndex) {
-                      final servico =
-                          _catalogoServicos[itemIndex];
+                      final servico = _catalogoServicos[itemIndex];
 
                       return ListTile(
                         leading: const CircleAvatar(
-                          child: Icon(
-                            Icons.cleaning_services_outlined,
-                          ),
+                          child: Icon(Icons.cleaning_services_outlined),
                         ),
                         title: Text(servico.nome),
                         subtitle: Text(
@@ -466,10 +402,7 @@ class _NovaOrdemServicoPageState
                           ' • ${servico.duracaoFormatada}',
                         ),
                         onTap: () {
-                          Navigator.pop(
-                            bottomContext,
-                            servico,
-                          );
+                          Navigator.pop(bottomContext, servico);
                         },
                       );
                     },
@@ -488,23 +421,16 @@ class _NovaOrdemServicoPageState
 
     final formulario = _servicos[indice];
 
-    formulario.nomeController.text =
-        selecionado.nome;
-    formulario.descricaoController.text =
-        selecionado.descricao;
+    formulario.nomeController.text = selecionado.nome;
+    formulario.descricaoController.text = selecionado.descricao;
     formulario.quantidadeController.text = '1';
-    formulario.valorController.text =
-        _formatarNumeroCampo(
+    formulario.valorController.text = _formatarNumeroCampo(
       selecionado.precoPadrao,
     );
-    formulario.servicoCatalogoId =
-        selecionado.id;
+    formulario.servicoCatalogoId = selecionado.id;
 
-    if (selecionado.observacoesPadrao
-        .trim()
-        .isNotEmpty) {
-      final atual =
-          _observacoesController.text.trim();
+    if (selecionado.observacoesPadrao.trim().isNotEmpty) {
+      final atual = _observacoesController.text.trim();
 
       _observacoesController.text = atual.isEmpty
           ? selecionado.observacoesPadrao
@@ -512,9 +438,7 @@ class _NovaOrdemServicoPageState
     }
 
     if (selecionado.id != null) {
-      await _carregarProdutosDoServico(
-        selecionado.id!,
-      );
+      await _carregarProdutosDoServico(selecionado.id!);
     }
 
     if (mounted) {
@@ -522,20 +446,14 @@ class _NovaOrdemServicoPageState
     }
   }
 
-  Future<void> _carregarProdutosDoServico(
-      int servicoId,
-      ) async {
-    final produtosCatalogo =
-        await _servicoRepository
-            .listarProdutosDoServico(
+  Future<void> _carregarProdutosDoServico(int servicoId) async {
+    final produtosCatalogo = await _servicoRepository.listarProdutosDoServico(
       servicoId,
     );
 
-    for (final produtoCatalogo
-        in produtosCatalogo) {
+    for (final produtoCatalogo in produtosCatalogo) {
       final deveAdicionar =
-          produtoCatalogo.obrigatorio ||
-              produtoCatalogo.marcadoPorPadrao;
+          produtoCatalogo.obrigatorio || produtoCatalogo.marcadoPorPadrao;
 
       if (!deveAdicionar) {
         continue;
@@ -544,8 +462,7 @@ class _NovaOrdemServicoPageState
       ItemEstoque? item;
 
       for (final estoque in _itensEstoque) {
-        if (estoque.id ==
-            produtoCatalogo.itemEstoqueId) {
+        if (estoque.id == produtoCatalogo.itemEstoqueId) {
           item = estoque;
           break;
         }
@@ -555,30 +472,62 @@ class _NovaOrdemServicoPageState
         continue;
       }
 
-      final existente = _produtos.any(
-        (produto) => produto.item.id == item!.id,
-      );
-
-      if (existente) {
+      if (produtoCatalogo.quantidadePadrao <= 0) {
         continue;
       }
 
-      _produtos.add(
-        _ProdutoOsFormulario(
-          item: item,
-          quantidade:
-              _formatarNumeroCampo(
-            produtoCatalogo.quantidadePadrao,
-          ),
-          selecionado:
-              produtoCatalogo.obrigatorio ||
-                  produtoCatalogo
-                      .marcadoPorPadrao,
-          obrigatorio:
-              produtoCatalogo.obrigatorio,
-        ),
+      _adicionarOuSomarProdutoFormulario(
+        item: item,
+        quantidade: produtoCatalogo.quantidadePadrao,
+        selecionado:
+            produtoCatalogo.obrigatorio || produtoCatalogo.marcadoPorPadrao,
+        obrigatorio: produtoCatalogo.obrigatorio,
       );
     }
+  }
+
+  void _adicionarOuSomarProdutoFormulario({
+    required ItemEstoque item,
+    required double quantidade,
+    required bool selecionado,
+    required bool obrigatorio,
+  }) {
+    if (quantidade <= 0) {
+      return;
+    }
+
+    for (final produtoExistente in _produtos) {
+      if (produtoExistente.item.id == item.id) {
+        final quantidadeAtual = _converterValor(
+          produtoExistente.quantidadeController.text,
+        );
+
+        final novaQuantidade = quantidadeAtual + quantidade;
+
+        produtoExistente.quantidadeController.text = _formatarNumeroCampo(
+          novaQuantidade,
+        );
+
+        if (selecionado || obrigatorio) {
+          produtoExistente.selecionado = true;
+        }
+
+        if (obrigatorio) {
+          produtoExistente.obrigatorio = true;
+        }
+
+        return;
+      }
+    }
+
+    _produtos.add(
+      _ProdutoOsFormulario(
+        item: item,
+        quantidade: _formatarNumeroCampo(quantidade),
+        selecionado: selecionado || obrigatorio,
+        obrigatorio: obrigatorio,
+      ),
+    );
   }
 
   void _removerServico(int indice) {
@@ -604,45 +553,31 @@ class _NovaOrdemServicoPageState
   }
 
   double _converterValor(String texto) {
-    var valor = texto
-        .trim()
-        .replaceAll('R\$', '')
-        .replaceAll(' ', '');
+    var valor = texto.trim().replaceAll('R\$', '').replaceAll(' ', '');
 
     if (valor.isEmpty) {
       return 0;
     }
 
     if (valor.contains(',')) {
-      valor = valor
-          .replaceAll('.', '')
-          .replaceAll(',', '.');
+      valor = valor.replaceAll('.', '').replaceAll(',', '.');
     }
 
     return double.tryParse(valor) ?? 0;
   }
 
   double get _subtotal {
-    return _servicos.fold<double>(
-      0,
-          (total, servico) {
-        final quantidade = _converterValor(
-          servico.quantidadeController.text,
-        );
+    return _servicos.fold<double>(0, (total, servico) {
+      final quantidade = _converterValor(servico.quantidadeController.text);
 
-        final valorUnitario = _converterValor(
-          servico.valorController.text,
-        );
+      final valorUnitario = _converterValor(servico.valorController.text);
 
-        return total + (quantidade * valorUnitario);
-      },
-    );
+      return total + (quantidade * valorUnitario);
+    });
   }
 
   double get _desconto {
-    return _converterValor(
-      _descontoController.text,
-    );
+    return _converterValor(_descontoController.text);
   }
 
   double get _totalFinal {
@@ -656,30 +591,23 @@ class _NovaOrdemServicoPageState
   }
 
   double get _custoProdutosSelecionados {
-    return _produtos.fold<double>(
-      0,
-      (total, produto) {
-        if (!produto.selecionado) {
-          return total;
-        }
+    return _produtos.fold<double>(0, (total, produto) {
+      if (!produto.selecionado) {
+        return total;
+      }
 
-        final quantidade = _converterValor(
-          produto.quantidadeController.text,
-        );
+      final quantidade = _converterValor(produto.quantidadeController.text);
 
-        if (quantidade <= 0) {
-          return total;
-        }
+      if (quantidade <= 0) {
+        return total;
+      }
 
-        return total +
-            (quantidade * produto.item.custoUnitario);
-      },
-    );
+      return total + (quantidade * produto.item.custoUnitario);
+    });
   }
 
   double get _lucroBrutoEstimado {
-    final lucro =
-        _totalFinal - _custoProdutosSelecionados;
+    final lucro = _totalFinal - _custoProdutosSelecionados;
 
     if (lucro < 0) {
       return 0;
@@ -703,8 +631,7 @@ class _NovaOrdemServicoPageState
       return;
     }
 
-    final formularioValido =
-        _formKey.currentState?.validate() ?? false;
+    final formularioValido = _formKey.currentState?.validate() ?? false;
 
     if (!formularioValido) {
       return;
@@ -713,24 +640,17 @@ class _NovaOrdemServicoPageState
     final cliente = _clienteSelecionado;
 
     if (cliente?.id == null) {
-      _mostrarMensagem(
-        'Selecione um cliente.',
-        erro: true,
-      );
+      _mostrarMensagem('Selecione um cliente.', erro: true);
 
       return;
     }
 
     final servicosValidos = _servicos.where(
-          (servico) =>
-      servico.nomeController.text.trim().isNotEmpty,
+      (servico) => servico.nomeController.text.trim().isNotEmpty,
     );
 
     if (servicosValidos.isEmpty) {
-      _mostrarMensagem(
-        'Adicione pelo menos um serviço.',
-        erro: true,
-      );
+      _mostrarMensagem('Adicione pelo menos um serviço.', erro: true);
 
       return;
     }
@@ -749,9 +669,7 @@ class _NovaOrdemServicoPageState
         continue;
       }
 
-      final quantidade = _converterValor(
-        produto.quantidadeController.text,
-      );
+      final quantidade = _converterValor(produto.quantidadeController.text);
 
       if (quantidade <= 0) {
         _mostrarMensagem(
@@ -784,25 +702,18 @@ class _NovaOrdemServicoPageState
         veiculoId: _veiculoSelecionado?.id,
         numero: _numeroController.text.trim(),
         status: 'Aberta',
-        dataAbertura: _formatarDataBanco(
-          DateTime.now(),
-        ),
-        funcionarioResponsavel:
-        _responsavelController.text.trim(),
-        observacoes:
-        _observacoesController.text.trim(),
+        dataAbertura: _formatarDataBanco(DateTime.now()),
+        funcionarioResponsavel: _responsavelController.text.trim(),
+        observacoes: _observacoesController.text.trim(),
         valorTotal: _subtotal,
         desconto: _desconto,
       );
 
       final itens = <OrdemServicoItem>[];
 
-      for (var indice = 0;
-      indice < _servicos.length;
-      indice++) {
+      for (var indice = 0; indice < _servicos.length; indice++) {
         final servico = _servicos[indice];
-        final nome =
-        servico.nomeController.text.trim();
+        final nome = servico.nomeController.text.trim();
 
         if (nome.isEmpty) {
           continue;
@@ -812,21 +723,15 @@ class _NovaOrdemServicoPageState
           OrdemServicoItem(
             ordemServicoId: 0,
             servico: nome,
-            descricao:
-            servico.descricaoController.text.trim(),
-            quantidade: _converterValor(
-              servico.quantidadeController.text,
-            ),
-            valorUnitario: _converterValor(
-              servico.valorController.text,
-            ),
+            descricao: servico.descricaoController.text.trim(),
+            quantidade: _converterValor(servico.quantidadeController.text),
+            valorUnitario: _converterValor(servico.valorController.text),
             ordem: indice,
           ),
         );
       }
 
-      final ordemServicoId =
-      await _ordemRepository.inserirOrdemServico(
+      final ordemServicoId = await _ordemRepository.inserirOrdemServico(
         ordem,
         itens: itens,
       );
@@ -839,26 +744,21 @@ class _NovaOrdemServicoPageState
         }
 
         final item = produto.item;
-        final quantidade = _converterValor(
-          produto.quantidadeController.text,
-        );
+        final quantidade = _converterValor(produto.quantidadeController.text);
 
         if (item.id == null || quantidade <= 0) {
           continue;
         }
 
-        await database.insert(
-          'ordem_servico_produtos',
-          {
-            'ordem_servico_id': ordemServicoId,
-            'produto_id': item.id,
-            'produto_nome': item.nome,
-            'quantidade': quantidade,
-            'unidade': item.unidade,
-            'custo_unitario': item.custoUnitario,
-            'baixado_estoque': 0,
-          },
-        );
+        await database.insert('ordem_servico_produtos', {
+          'ordem_servico_id': ordemServicoId,
+          'produto_id': item.id,
+          'produto_nome': item.nome,
+          'quantidade': quantidade,
+          'unidade': item.unidade,
+          'custo_unitario': item.custoUnitario,
+          'baixado_estoque': 0,
+        });
       }
 
       if (!mounted) {
@@ -866,18 +766,14 @@ class _NovaOrdemServicoPageState
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Ordem de Serviço criada com sucesso.',
-          ),
-        ),
+        const SnackBar(content: Text('Ordem de Serviço criada com sucesso.')),
       );
 
       Navigator.of(context).pop(true);
     } catch (erro) {
       _mostrarMensagem(
         'Não foi possível salvar a Ordem de Serviço.\n'
-            '$erro',
+        '$erro',
         erro: true,
       );
     } finally {
@@ -889,10 +785,7 @@ class _NovaOrdemServicoPageState
     }
   }
 
-  void _mostrarMensagem(
-      String mensagem, {
-        bool erro = false,
-      }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
@@ -902,22 +795,18 @@ class _NovaOrdemServicoPageState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensagem),
-        backgroundColor:
-        erro ? Colors.red.shade700 : null,
+        backgroundColor: erro ? Colors.red.shade700 : null,
       ),
     );
   }
 
   String _nomeVeiculo(Veiculo veiculo) {
-    final nome =
-    '${veiculo.marca} ${veiculo.modelo}'.trim();
+    final nome = '${veiculo.marca} ${veiculo.modelo}'.trim();
 
     final detalhes = <String>[];
 
     if (veiculo.placa.trim().isNotEmpty) {
-      detalhes.add(
-        veiculo.placa.trim().toUpperCase(),
-      );
+      detalhes.add(veiculo.placa.trim().toUpperCase());
     }
 
     if (veiculo.cor.trim().isNotEmpty) {
@@ -925,9 +814,7 @@ class _NovaOrdemServicoPageState
     }
 
     if (detalhes.isEmpty) {
-      return nome.isEmpty
-          ? 'Veículo sem identificação'
-          : nome;
+      return nome.isEmpty ? 'Veículo sem identificação' : nome;
     }
 
     return '$nome — ${detalhes.join(' • ')}';
@@ -939,8 +826,7 @@ class _NovaOrdemServicoPageState
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
@@ -948,10 +834,7 @@ class _NovaOrdemServicoPageState
                 SizedBox(width: 8),
                 Text(
                   'Identificação',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -961,21 +844,18 @@ class _NovaOrdemServicoPageState
               readOnly: true,
               decoration: const InputDecoration(
                 labelText: 'Número da OS',
-                prefixIcon:
-                Icon(Icons.tag_outlined),
+                prefixIcon: Icon(Icons.tag_outlined),
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _responsavelController,
-              textCapitalization:
-              TextCapitalization.words,
+              textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Responsável pelo serviço',
                 hintText: 'Exemplo: João',
-                prefixIcon:
-                Icon(Icons.person_outline),
+                prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
             ),
@@ -991,8 +871,7 @@ class _NovaOrdemServicoPageState
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
@@ -1000,10 +879,7 @@ class _NovaOrdemServicoPageState
                 SizedBox(width: 8),
                 Text(
                   'Cliente e veículo',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -1013,29 +889,23 @@ class _NovaOrdemServicoPageState
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Cliente *',
-                prefixIcon:
-                Icon(Icons.person_outline),
+                prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              items: _clientes.map(
-                    (cliente) {
-                  final telefone =
-                  cliente.telefone.trim();
+              items: _clientes.map((cliente) {
+                final telefone = cliente.telefone.trim();
 
-                  return DropdownMenuItem<Cliente>(
-                    value: cliente,
-                    child: Text(
-                      telefone.isEmpty
-                          ? cliente.nome
-                          : '${cliente.nome} — $telefone',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                },
-              ).toList(),
-              onChanged: _salvando
-                  ? null
-                  : _selecionarCliente,
+                return DropdownMenuItem<Cliente>(
+                  value: cliente,
+                  child: Text(
+                    telefone.isEmpty
+                        ? cliente.nome
+                        : '${cliente.nome} — $telefone',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              onChanged: _salvando ? null : _selecionarCliente,
               validator: (valor) {
                 if (valor == null) {
                   return 'Selecione o cliente';
@@ -1050,44 +920,38 @@ class _NovaOrdemServicoPageState
               isExpanded: true,
               decoration: InputDecoration(
                 labelText: 'Veículo',
-                prefixIcon:
-                const Icon(Icons.directions_car),
+                prefixIcon: const Icon(Icons.directions_car),
                 border: const OutlineInputBorder(),
                 suffixIcon: _carregandoVeiculos
                     ? const Padding(
-                  padding: EdgeInsets.all(13),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child:
-                    CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
-                  ),
-                )
+                        padding: EdgeInsets.all(13),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
                     : null,
               ),
-              items: _veiculos.map(
-                    (veiculo) {
-                  return DropdownMenuItem<Veiculo>(
-                    value: veiculo,
-                    child: Text(
-                      _nomeVeiculo(veiculo),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                },
-              ).toList(),
-              onChanged: _clienteSelecionado == null ||
-                  _carregandoVeiculos ||
-                  _salvando
+              items: _veiculos.map((veiculo) {
+                return DropdownMenuItem<Veiculo>(
+                  value: veiculo,
+                  child: Text(
+                    _nomeVeiculo(veiculo),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              onChanged:
+                  _clienteSelecionado == null ||
+                      _carregandoVeiculos ||
+                      _salvando
                   ? null
                   : (veiculo) {
-                setState(() {
-                  _veiculoSelecionado =
-                      veiculo;
-                });
-              },
+                      setState(() {
+                        _veiculoSelecionado = veiculo;
+                      });
+                    },
             ),
             if (_clienteSelecionado != null &&
                 !_carregandoVeiculos &&
@@ -1095,10 +959,7 @@ class _NovaOrdemServicoPageState
               const SizedBox(height: 10),
               Text(
                 'Este cliente ainda não possui veículo cadastrado.',
-                style: TextStyle(
-                  color: Colors.orange.shade800,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: Colors.orange.shade800, fontSize: 13),
               ),
             ],
           ],
@@ -1107,13 +968,9 @@ class _NovaOrdemServicoPageState
     );
   }
 
-
   Future<void> _adicionarProduto() async {
     if (_itensEstoque.isEmpty) {
-      _mostrarMensagem(
-        'Nenhum produto cadastrado no estoque.',
-        erro: true,
-      );
+      _mostrarMensagem('Nenhum produto cadastrado no estoque.', erro: true);
       return;
     }
 
@@ -1136,9 +993,7 @@ class _NovaOrdemServicoPageState
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Produto',
-                        prefixIcon: Icon(
-                          Icons.inventory_2_outlined,
-                        ),
+                        prefixIcon: Icon(Icons.inventory_2_outlined),
                         border: OutlineInputBorder(),
                       ),
                       items: _itensEstoque.map((item) {
@@ -1146,8 +1001,8 @@ class _NovaOrdemServicoPageState
                           value: item,
                           child: Text(
                             '${item.nome} — Estoque: '
-                                '${_formatarNumeroCampo(item.quantidade)} '
-                                '${item.unidade}',
+                            '${_formatarNumeroCampo(item.quantidade)} '
+                            '${item.unidade}',
                             overflow: TextOverflow.ellipsis,
                           ),
                         );
@@ -1161,14 +1016,11 @@ class _NovaOrdemServicoPageState
                     const SizedBox(height: 16),
                     TextFormField(
                       initialValue: '1',
-                      keyboardType:
-                      const TextInputType.numberWithOptions(
+                      keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[0-9,.]'),
-                        ),
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Quantidade utilizada',
@@ -1192,48 +1044,37 @@ class _NovaOrdemServicoPageState
                 FilledButton(
                   onPressed: () {
                     final item = itemSelecionado;
-                    final quantidade = _converterValor(
-                      quantidadeDigitada,
-                    );
+                    final quantidade = _converterValor(quantidadeDigitada);
 
                     if (item == null) {
-                      ScaffoldMessenger.of(context)
-                          .hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Selecione um produto.',
-                          ),
-                        ),
+                        const SnackBar(content: Text('Selecione um produto.')),
                       );
                       return;
                     }
 
                     if (quantidade <= 0) {
-                      ScaffoldMessenger.of(context)
-                          .hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text(
-                            'Informe uma quantidade válida.',
-                          ),
+                          content: Text('Informe uma quantidade válida.'),
                         ),
                       );
                       return;
                     }
 
                     if (quantidade > item.quantidade) {
-                      ScaffoldMessenger.of(context)
-                          .hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
                             'Quantidade maior que o estoque disponível: '
-                                '${_formatarNumeroCampo(item.quantidade)} '
-                                '${item.unidade}.',
+                            '${_formatarNumeroCampo(item.quantidade)} '
+                            '${item.unidade}.',
                           ),
                         ),
                       );
@@ -1263,11 +1104,11 @@ class _NovaOrdemServicoPageState
     }
 
     setState(() {
-      _produtos.add(
-        _ProdutoOsFormulario(
-          item: item,
-          quantidade: quantidadeDigitada,
-        ),
+      _adicionarOuSomarProdutoFormulario(
+        item: item,
+        quantidade: _converterValor(quantidadeDigitada),
+        selecionado: true,
+        obrigatorio: false,
       );
     });
   }
@@ -1278,27 +1119,20 @@ class _NovaOrdemServicoPageState
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.inventory_2_outlined,
-                ),
+                const Icon(Icons.inventory_2_outlined),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
                     'Produtos utilizados',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                 ),
                 TextButton.icon(
-                  onPressed:
-                      _salvando ? null : _adicionarProduto,
+                  onPressed: _salvando ? null : _adicionarProduto,
                   icon: const Icon(Icons.add),
                   label: const Text('Adicionar'),
                 ),
@@ -1307,196 +1141,160 @@ class _NovaOrdemServicoPageState
             const SizedBox(height: 6),
             const Text(
               'Marque somente o que foi realmente usado e ajuste a quantidade.',
-              style: TextStyle(
-                color: Colors.white60,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.white60, fontSize: 12),
             ),
             if (_produtos.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 14),
-                child: Text(
-                  'Nenhum produto adicionado.',
-                ),
+                child: Text('Nenhum produto adicionado.'),
               )
             else ...[
               const SizedBox(height: 12),
-              ...List.generate(
-                _produtos.length,
-                (indice) {
-                  final produto = _produtos[indice];
+              ...List.generate(_produtos.length, (indice) {
+                final produto = _produtos[indice];
 
-                  final quantidade = _converterValor(
-                    produto.quantidadeController.text,
-                  );
+                final quantidade = _converterValor(
+                  produto.quantidadeController.text,
+                );
 
-                  final custo =
-                      quantidade * produto.item.custoUnitario;
+                final custo = quantidade * produto.item.custoUnitario;
 
-                  final estoqueInsuficiente =
-                      produto.selecionado &&
-                      quantidade >
-                          produto.item.quantidade;
+                final estoqueInsuficiente =
+                    produto.selecionado && quantidade > produto.item.quantidade;
 
-                  return Container(
-                    margin:
-                        const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF222222),
-                      borderRadius:
-                          BorderRadius.circular(14),
-                      border: Border.all(
-                        color: estoqueInsuficiente
-                            ? Colors.redAccent
-                            : Colors.white.withValues(
-                                alpha: 0.08,
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF222222),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: estoqueInsuficiente
+                          ? Colors.redAccent
+                          : Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: produto.selecionado,
+                            onChanged: produto.obrigatorio || _salvando
+                                ? null
+                                : (valor) {
+                                    setState(() {
+                                      produto.selecionado = valor ?? false;
+                                    });
+                                  },
+                          ),
+                          const SizedBox(width: 4),
+                          const CircleAvatar(
+                            child: Icon(Icons.science_outlined),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  produto.item.nome,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  produto.obrigatorio
+                                      ? 'Obrigatório'
+                                      : 'Opcional',
+                                  style: TextStyle(
+                                    color: produto.obrigatorio
+                                        ? Colors.orangeAccent
+                                        : Colors.white54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (!produto.obrigatorio)
+                            IconButton(
+                              tooltip: 'Remover produto',
+                              onPressed: _salvando
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        final removido = _produtos.removeAt(
+                                          indice,
+                                        );
+
+                                        removido.dispose();
+                                      });
+                                    },
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.redAccent,
                               ),
+                            ),
+                        ],
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: produto.selecionado,
-                              onChanged:
-                                  produto.obrigatorio ||
-                                          _salvando
-                                      ? null
-                                      : (valor) {
-                                          setState(() {
-                                            produto.selecionado =
-                                                valor ?? false;
-                                          });
-                                        },
-                            ),
-                            const SizedBox(width: 4),
-                            const CircleAvatar(
-                              child: Icon(
-                                Icons.science_outlined,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    produto.item.nome,
-                                    style: const TextStyle(
-                                      fontWeight:
-                                          FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    produto.obrigatorio
-                                        ? 'Obrigatório'
-                                        : 'Opcional',
-                                    style: TextStyle(
-                                      color: produto.obrigatorio
-                                          ? Colors.orangeAccent
-                                          : Colors.white54,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (!produto.obrigatorio)
-                              IconButton(
-                                tooltip: 'Remover produto',
-                                onPressed: _salvando
-                                    ? null
-                                    : () {
-                                        setState(() {
-                                          final removido =
-                                              _produtos.removeAt(
-                                            indice,
-                                          );
-
-                                          removido.dispose();
-                                        });
-                                      },
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.redAccent,
-                                ),
-                              ),
-                          ],
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: produto.quantidadeController,
+                        enabled: produto.selecionado && !_salvando,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
                         ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          controller:
-                              produto.quantidadeController,
-                          enabled:
-                              produto.selecionado && !_salvando,
-                          keyboardType:
-                              const TextInputType
-                                  .numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'[0-9,.]'),
-                            ),
-                          ],
-                          onChanged: (_) {
-                            setState(() {});
-                          },
-                          decoration: InputDecoration(
-                            labelText:
-                                'Quantidade realmente utilizada',
-                            suffixText:
-                                produto.item.unidade,
-                            prefixIcon: const Icon(
-                              Icons.scale_outlined,
-                            ),
-                            border:
-                                const OutlineInputBorder(),
-                            helperText:
-                                'Estoque: ${_formatarNumeroCampo(produto.item.quantidade)} '
-                                '${produto.item.unidade}',
-                            errorText: estoqueInsuficiente
-                                ? 'Quantidade maior que o estoque disponível'
-                                : null,
-                          ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                        ],
+                        onChanged: (_) {
+                          setState(() {});
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Quantidade realmente utilizada',
+                          suffixText: produto.item.unidade,
+                          prefixIcon: const Icon(Icons.scale_outlined),
+                          border: const OutlineInputBorder(),
+                          helperText:
+                              'Estoque: ${_formatarNumeroCampo(produto.item.quantidade)} '
+                              '${produto.item.unidade}',
+                          errorText: estoqueInsuficiente
+                              ? 'Quantidade maior que o estoque disponível'
+                              : null,
                         ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Custo unitário: '
-                                '${_moeda.format(produto.item.custoUnitario)}',
-                                style: const TextStyle(
-                                  color: Colors.white60,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              'Custo: ${_moeda.format(custo)}',
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Custo unitário: '
+                              '${_moeda.format(produto.item.custoUnitario)}',
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFD6A84B),
+                                color: Colors.white60,
+                                fontSize: 12,
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                          ),
+                          Text(
+                            'Custo: ${_moeda.format(custo)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFD6A84B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
               const Divider(height: 24),
               _LinhaValor(
                 titulo: 'Custo total dos produtos',
-                valor: _moeda.format(
-                  _custoProdutosSelecionados,
-                ),
+                valor: _moeda.format(_custoProdutosSelecionados),
               ),
             ],
           ],
@@ -1511,8 +1309,7 @@ class _NovaOrdemServicoPageState
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
@@ -1521,89 +1318,59 @@ class _NovaOrdemServicoPageState
                 const Expanded(
                   child: Text(
                     'Serviços',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                 ),
                 TextButton.icon(
-                  onPressed:
-                  _salvando ? null : _adicionarServico,
+                  onPressed: _salvando ? null : _adicionarServico,
                   icon: const Icon(Icons.add),
                   label: const Text('Adicionar'),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            ...List.generate(
-              _servicos.length,
-                  (indice) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: indice ==
-                        _servicos.length - 1
-                        ? 0
-                        : 14,
-                  ),
-                  child: _construirServico(
-                    indice,
-                    _servicos[indice],
-                  ),
-                );
-              },
-            ),
+            ...List.generate(_servicos.length, (indice) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: indice == _servicos.length - 1 ? 0 : 14,
+                ),
+                child: _construirServico(indice, _servicos[indice]),
+              );
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _construirServico(
-      int indice,
-      _ServicoFormulario servico,
-      ) {
-    final quantidade = _converterValor(
-      servico.quantidadeController.text,
-    );
+  Widget _construirServico(int indice, _ServicoFormulario servico) {
+    final quantidade = _converterValor(servico.quantidadeController.text);
 
-    final valorUnitario = _converterValor(
-      servico.valorController.text,
-    );
+    final valorUnitario = _converterValor(servico.valorController.text);
 
-    final subtotal =
-        quantidade * valorUnitario;
+    final subtotal = quantidade * valorUnitario;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: Colors.grey.shade300,
-        ),
+        border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Expanded(
                 child: Text(
                   'Serviço ${indice + 1}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               IconButton(
                 tooltip: 'Remover serviço',
-                onPressed: _salvando
-                    ? null
-                    : () => _removerServico(indice),
-                icon: const Icon(
-                  Icons.delete_outline,
-                ),
+                onPressed: _salvando ? null : () => _removerServico(indice),
+                icon: const Icon(Icons.delete_outline),
               ),
             ],
           ),
@@ -1611,31 +1378,21 @@ class _NovaOrdemServicoPageState
           OutlinedButton.icon(
             onPressed: _salvando
                 ? null
-                : () => _selecionarServicoCatalogo(
-                      indice,
-                    ),
-            icon: const Icon(
-              Icons.list_alt_outlined,
-            ),
-            label: const Text(
-              'Selecionar do catálogo',
-            ),
+                : () => _selecionarServicoCatalogo(indice),
+            icon: const Icon(Icons.list_alt_outlined),
+            label: const Text('Selecionar do catálogo'),
           ),
           const SizedBox(height: 10),
           TextFormField(
             controller: servico.nomeController,
-            textCapitalization:
-            TextCapitalization.sentences,
+            textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
               labelText: 'Nome do serviço *',
-              hintText:
-              'Exemplo: Polimento técnico',
+              hintText: 'Exemplo: Polimento técnico',
               border: OutlineInputBorder(),
             ),
             validator: (valor) {
-              if (indice == 0 &&
-                  (valor == null ||
-                      valor.trim().isEmpty)) {
+              if (indice == 0 && (valor == null || valor.trim().isEmpty)) {
                 return 'Informe o serviço';
               }
 
@@ -1644,15 +1401,12 @@ class _NovaOrdemServicoPageState
           ),
           const SizedBox(height: 12),
           TextFormField(
-            controller:
-            servico.descricaoController,
-            textCapitalization:
-            TextCapitalization.sentences,
+            controller: servico.descricaoController,
+            textCapitalization: TextCapitalization.sentences,
             maxLines: 2,
             decoration: const InputDecoration(
               labelText: 'Descrição',
-              hintText:
-              'Detalhes opcionais do serviço',
+              hintText: 'Detalhes opcionais do serviço',
               border: OutlineInputBorder(),
             ),
           ),
@@ -1661,32 +1415,24 @@ class _NovaOrdemServicoPageState
             children: [
               Expanded(
                 child: TextFormField(
-                  controller:
-                  servico.quantidadeController,
-                  keyboardType:
-                  const TextInputType.numberWithOptions(
+                  controller: servico.quantidadeController,
+                  keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'[0-9,.]'),
-                    ),
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                   ],
                   decoration: const InputDecoration(
                     labelText: 'Quantidade',
                     border: OutlineInputBorder(),
                   ),
                   validator: (valor) {
-                    if (servico.nomeController.text
-                        .trim()
-                        .isEmpty &&
-                        (valor == null ||
-                            valor.trim().isEmpty)) {
+                    if (servico.nomeController.text.trim().isEmpty &&
+                        (valor == null || valor.trim().isEmpty)) {
                       return null;
                     }
 
-                    if (_converterValor(valor ?? '') <=
-                        0) {
+                    if (_converterValor(valor ?? '') <= 0) {
                       return 'Inválida';
                     }
 
@@ -1698,16 +1444,12 @@ class _NovaOrdemServicoPageState
               Expanded(
                 flex: 2,
                 child: TextFormField(
-                  controller:
-                  servico.valorController,
-                  keyboardType:
-                  const TextInputType.numberWithOptions(
+                  controller: servico.valorController,
+                  keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'[0-9,.]'),
-                    ),
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                   ],
                   decoration: const InputDecoration(
                     labelText: 'Valor unitário',
@@ -1715,16 +1457,12 @@ class _NovaOrdemServicoPageState
                     border: OutlineInputBorder(),
                   ),
                   validator: (valor) {
-                    if (servico.nomeController.text
-                        .trim()
-                        .isEmpty &&
-                        (valor == null ||
-                            valor.trim().isEmpty)) {
+                    if (servico.nomeController.text.trim().isEmpty &&
+                        (valor == null || valor.trim().isEmpty)) {
                       return null;
                     }
 
-                    if (_converterValor(valor ?? '') <
-                        0) {
+                    if (_converterValor(valor ?? '') < 0) {
                       return 'Valor inválido';
                     }
 
@@ -1739,9 +1477,7 @@ class _NovaOrdemServicoPageState
             alignment: Alignment.centerRight,
             child: Text(
               'Subtotal: ${_moeda.format(subtotal)}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -1755,8 +1491,7 @@ class _NovaOrdemServicoPageState
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
@@ -1764,24 +1499,18 @@ class _NovaOrdemServicoPageState
                 SizedBox(width: 8),
                 Text(
                   'Valores',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _descontoController,
-              keyboardType:
-              const TextInputType.numberWithOptions(
+              keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
               inputFormatters: [
-                FilteringTextInputFormatter.allow(
-                  RegExp(r'[0-9,.]'),
-                ),
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
               ],
               onChanged: (_) {
                 setState(() {});
@@ -1792,8 +1521,7 @@ class _NovaOrdemServicoPageState
                 border: OutlineInputBorder(),
               ),
               validator: (valor) {
-                final desconto =
-                _converterValor(valor ?? '');
+                final desconto = _converterValor(valor ?? '');
 
                 if (desconto < 0) {
                   return 'Informe um desconto válido';
@@ -1807,15 +1535,9 @@ class _NovaOrdemServicoPageState
               },
             ),
             const SizedBox(height: 18),
-            _LinhaValor(
-              titulo: 'Subtotal',
-              valor: _moeda.format(_subtotal),
-            ),
+            _LinhaValor(titulo: 'Subtotal', valor: _moeda.format(_subtotal)),
             const SizedBox(height: 8),
-            _LinhaValor(
-              titulo: 'Desconto',
-              valor: _moeda.format(_desconto),
-            ),
+            _LinhaValor(titulo: 'Desconto', valor: _moeda.format(_desconto)),
             const Divider(height: 24),
             _LinhaValor(
               titulo: 'Total final',
@@ -1825,16 +1547,12 @@ class _NovaOrdemServicoPageState
             const SizedBox(height: 10),
             _LinhaValor(
               titulo: 'Custo dos produtos',
-              valor: _moeda.format(
-                _custoProdutosSelecionados,
-              ),
+              valor: _moeda.format(_custoProdutosSelecionados),
             ),
             const SizedBox(height: 8),
             _LinhaValor(
               titulo: 'Lucro bruto estimado',
-              valor: _moeda.format(
-                _lucroBrutoEstimado,
-              ),
+              valor: _moeda.format(_lucroBrutoEstimado),
               destaque: true,
             ),
           ],
@@ -1850,14 +1568,13 @@ class _NovaOrdemServicoPageState
         padding: const EdgeInsets.all(16),
         child: TextFormField(
           controller: _observacoesController,
-          textCapitalization:
-          TextCapitalization.sentences,
+          textCapitalization: TextCapitalization.sentences,
           minLines: 3,
           maxLines: 6,
           decoration: const InputDecoration(
             labelText: 'Observações',
             hintText:
-            'Condições do veículo, orientações ou informações adicionais',
+                'Condições do veículo, orientações ou informações adicionais',
             prefixIcon: Icon(Icons.notes_outlined),
             border: OutlineInputBorder(),
             alignLabelWithHint: true,
@@ -1878,78 +1595,54 @@ class _NovaOrdemServicoPageState
         ),
       ),
       body: _carregando
-          ? const Center(
-        child: CircularProgressIndicator(),
-      )
+          ? const Center(child: CircularProgressIndicator())
           : Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            14,
-            14,
-            14,
-            120,
-          ),
-          children: [
-            _construirCabecalho(),
-            const SizedBox(height: 12),
-            _construirClienteVeiculo(),
-            const SizedBox(height: 12),
-            _construirServicos(),
-            const SizedBox(height: 12),
-            _construirProdutos(),
-            const SizedBox(height: 12),
-            _construirValores(),
-            const SizedBox(height: 12),
-            _construirObservacoes(),
-          ],
-        ),
-      ),
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 120),
+                children: [
+                  _construirCabecalho(),
+                  const SizedBox(height: 12),
+                  _construirClienteVeiculo(),
+                  const SizedBox(height: 12),
+                  _construirServicos(),
+                  const SizedBox(height: 12),
+                  _construirProdutos(),
+                  const SizedBox(height: 12),
+                  _construirValores(),
+                  const SizedBox(height: 12),
+                  _construirObservacoes(),
+                ],
+              ),
+            ),
       bottomNavigationBar: _carregando
           ? null
           : SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            14,
-            10,
-            14,
-            12,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context)
-                .scaffoldBackgroundColor,
-            border: Border(
-              top: BorderSide(
-                color: Colors.grey.shade300,
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                ),
+                child: FilledButton.icon(
+                  onPressed: _salvando ? null : _salvar,
+                  icon: _salvando
+                      ? const SizedBox(
+                          width: 19,
+                          height: 19,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(
+                    _salvando ? 'Salvando...' : 'Salvar Ordem de Serviço',
+                  ),
+                ),
               ),
             ),
-          ),
-          child: FilledButton.icon(
-            onPressed:
-            _salvando ? null : _salvar,
-            icon: _salvando
-                ? const SizedBox(
-              width: 19,
-              height: 19,
-              child:
-              CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
-            )
-                : const Icon(Icons.save_outlined),
-            label: Text(
-              _salvando
-                  ? 'Salvando...'
-                  : 'Salvar Ordem de Serviço',
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
-
 
 class _ProdutoOsFormulario {
   _ProdutoOsFormulario({
@@ -1957,14 +1650,12 @@ class _ProdutoOsFormulario {
     required String quantidade,
     this.selecionado = true,
     this.obrigatorio = false,
-  }) : quantidadeController = TextEditingController(
-    text: quantidade,
-  );
+  }) : quantidadeController = TextEditingController(text: quantidade);
 
   final ItemEstoque item;
   final TextEditingController quantidadeController;
   bool selecionado;
-  final bool obrigatorio;
+  bool obrigatorio;
 
   void dispose() {
     quantidadeController.dispose();
@@ -1978,18 +1669,10 @@ class _ServicoFormulario {
     String descricao = '',
     String quantidade = '1',
     String valor = '0,00',
-  })  : nomeController = TextEditingController(
-    text: nome,
-  ),
-        descricaoController = TextEditingController(
-          text: descricao,
-        ),
-        quantidadeController = TextEditingController(
-          text: quantidade,
-        ),
-        valorController = TextEditingController(
-          text: valor,
-        );
+  }) : nomeController = TextEditingController(text: nome),
+       descricaoController = TextEditingController(text: descricao),
+       quantidadeController = TextEditingController(text: quantidade),
+       valorController = TextEditingController(text: valor);
 
   final TextEditingController nomeController;
   final TextEditingController descricaoController;
@@ -2025,9 +1708,7 @@ class _LinhaValor extends StatelessWidget {
             titulo,
             style: TextStyle(
               fontSize: destaque ? 17 : 14,
-              fontWeight: destaque
-                  ? FontWeight.bold
-                  : FontWeight.normal,
+              fontWeight: destaque ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ),
@@ -2035,9 +1716,7 @@ class _LinhaValor extends StatelessWidget {
           valor,
           style: TextStyle(
             fontSize: destaque ? 20 : 15,
-            fontWeight: destaque
-                ? FontWeight.bold
-                : FontWeight.w600,
+            fontWeight: destaque ? FontWeight.bold : FontWeight.w600,
           ),
         ),
       ],

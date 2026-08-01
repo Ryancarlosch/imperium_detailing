@@ -28,17 +28,13 @@ class OrdemServicoProdutosPage extends StatefulWidget {
       _OrdemServicoProdutosPageState();
 }
 
-class _OrdemServicoProdutosPageState
-    extends State<OrdemServicoProdutosPage> {
-  final ProdutoOrdemServicoRepository
-  _produtoRepository =
-  ProdutoOrdemServicoRepository();
+class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
+  final ProdutoOrdemServicoRepository _produtoRepository =
+      ProdutoOrdemServicoRepository();
 
-  final EstoqueRepository _estoqueRepository =
-  EstoqueRepository();
+  final EstoqueRepository _estoqueRepository = EstoqueRepository();
 
-  final TextEditingController _pesquisaController =
-  TextEditingController();
+  final TextEditingController _pesquisaController = TextEditingController();
 
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
@@ -57,18 +53,14 @@ class _OrdemServicoProdutosPageState
   void initState() {
     super.initState();
 
-    _pesquisaController.addListener(
-      _aoAlterarPesquisa,
-    );
+    _pesquisaController.addListener(_aoAlterarPesquisa);
 
     _carregarProdutos();
   }
 
   @override
   void dispose() {
-    _pesquisaController.removeListener(
-      _aoAlterarPesquisa,
-    );
+    _pesquisaController.removeListener(_aoAlterarPesquisa);
 
     _pesquisaController.dispose();
 
@@ -81,8 +73,7 @@ class _OrdemServicoProdutosPageState
     }
 
     setState(() {
-      _pesquisa =
-          _pesquisaController.text.trim().toLowerCase();
+      _pesquisa = _pesquisaController.text.trim().toLowerCase();
     });
   }
 
@@ -96,8 +87,7 @@ class _OrdemServicoProdutosPageState
     });
 
     try {
-      final produtos = await _produtoRepository
-          .listarProdutosPorOrdemServico(
+      final produtos = await _produtoRepository.listarProdutosPorOrdemServico(
         widget.ordemServicoId,
       );
 
@@ -143,15 +133,11 @@ class _OrdemServicoProdutosPageState
   double get _custoTotal {
     return _produtos.fold<double>(
       0,
-          (total, produto) =>
-      total + produto.custoTotal,
+      (total, produto) => total + produto.custoTotal,
     );
   }
 
-  void _mostrarMensagem(
-      String mensagem, {
-        bool erro = false,
-      }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
@@ -161,8 +147,7 @@ class _OrdemServicoProdutosPageState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensagem),
-        backgroundColor:
-        erro ? Colors.red.shade700 : null,
+        backgroundColor: erro ? Colors.red.shade700 : null,
       ),
     );
   }
@@ -180,10 +165,15 @@ class _OrdemServicoProdutosPageState
   }
 
   double? _converterQuantidade(String texto) {
-    final valor = texto
-        .trim()
-        .replaceAll('.', '')
-        .replaceAll(',', '.');
+    final textoLimpo = texto.trim();
+
+    if (textoLimpo.isEmpty) {
+      return null;
+    }
+
+    final valor = textoLimpo.contains(',')
+        ? textoLimpo.replaceAll('.', '').replaceAll(',', '.')
+        : textoLimpo;
 
     return double.tryParse(valor);
   }
@@ -208,9 +198,7 @@ class _OrdemServicoProdutosPageState
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: corConfirmar,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: corConfirmar),
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
@@ -230,8 +218,7 @@ class _OrdemServicoProdutosPageState
     }
 
     try {
-      final itens =
-      await _estoqueRepository.listarItens();
+      final itens = await _estoqueRepository.listarItens();
 
       if (!mounted) {
         return;
@@ -246,26 +233,20 @@ class _OrdemServicoProdutosPageState
         return;
       }
 
-      final itemSelecionado =
-      await _selecionarProdutoEstoque(itens);
+      final itemSelecionado = await _selecionarProdutoEstoque(itens);
 
       if (itemSelecionado == null || !mounted) {
         return;
       }
 
-      final quantidade = await _informarQuantidade(
-        item: itemSelecionado,
-      );
+      final quantidade = await _informarQuantidade(item: itemSelecionado);
 
       if (quantidade == null || !mounted) {
         return;
       }
 
       if (quantidade <= 0) {
-        _mostrarMensagem(
-          'Informe uma quantidade maior que zero.',
-          erro: true,
-        );
+        _mostrarMensagem('Informe uma quantidade maior que zero.', erro: true);
 
         return;
       }
@@ -283,17 +264,13 @@ class _OrdemServicoProdutosPageState
         custoUnitario: itemSelecionado.custoUnitario,
       );
 
-      await _produtoRepository.adicionarOuSomarProduto(
-        produto,
-      );
+      await _produtoRepository.adicionarOuSomarProduto(produto);
 
       _alterou = true;
 
       await _carregarProdutos();
 
-      _mostrarMensagem(
-        'Produto adicionado à Ordem de Serviço.',
-      );
+      _mostrarMensagem('Produto adicionado à Ordem de Serviço.');
     } catch (erro) {
       _mostrarMensagem(
         'Não foi possível adicionar o produto.\n$erro',
@@ -309,10 +286,9 @@ class _OrdemServicoProdutosPageState
   }
 
   Future<ItemEstoque?> _selecionarProdutoEstoque(
-      List<ItemEstoque> itens,
-      ) async {
-    final pesquisaController =
-    TextEditingController();
+    List<ItemEstoque> itens,
+  ) async {
+    final pesquisaController = TextEditingController();
 
     ItemEstoque? resultado;
 
@@ -347,15 +323,9 @@ class _OrdemServicoProdutosPageState
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      16,
-                      4,
-                      16,
-                      12,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                     child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Selecionar produto',
@@ -365,35 +335,28 @@ class _OrdemServicoProdutosPageState
                           ),
                         ),
                         const SizedBox(height: 5),
-                        const Text(
-                          'Escolha um produto cadastrado no estoque.',
-                        ),
+                        const Text('Escolha um produto cadastrado no estoque.'),
                         const SizedBox(height: 14),
                         TextField(
                           controller: pesquisaController,
                           autofocus: true,
                           decoration: InputDecoration(
-                            hintText:
-                            'Pesquisar produto ou categoria',
-                            prefixIcon:
-                            const Icon(Icons.search),
-                            suffixIcon:
-                            pesquisaController.text.isEmpty
+                            hintText: 'Pesquisar produto ou categoria',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: pesquisaController.text.isEmpty
                                 ? null
                                 : IconButton(
-                              onPressed: () {
-                                pesquisaController.clear();
+                                    onPressed: () {
+                                      pesquisaController.clear();
 
-                                alterarEstado(() {
-                                  pesquisa = '';
-                                });
-                              },
-                              icon:
-                              const Icon(Icons.close),
-                            ),
+                                      alterarEstado(() {
+                                        pesquisa = '';
+                                      });
+                                    },
+                                    icon: const Icon(Icons.close),
+                                  ),
                             border: OutlineInputBorder(
-                              borderRadius:
-                              BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
                           onChanged: (valor) {
@@ -409,94 +372,69 @@ class _OrdemServicoProdutosPageState
                   Expanded(
                     child: itensFiltrados.isEmpty
                         ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(30),
-                        child: Column(
-                          mainAxisSize:
-                          MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons
-                                  .inventory_2_outlined,
-                              size: 60,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 12),
-                            Text(
-                              'Nenhum produto encontrado',
-                              textAlign:
-                              TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight:
-                                FontWeight.bold,
+                            child: Padding(
+                              padding: EdgeInsets.all(30),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 60,
+                                    color: Colors.grey,
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Nenhum produto encontrado',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    )
+                          )
                         : ListView.separated(
-                      padding:
-                      const EdgeInsets.fromLTRB(
-                        12,
-                        10,
-                        12,
-                        30,
-                      ),
-                      itemCount:
-                      itensFiltrados.length,
-                      separatorBuilder: (_, __) {
-                        return const SizedBox(
-                          height: 7,
-                        );
-                      },
-                      itemBuilder: (
-                          context,
-                          index,
-                          ) {
-                        final item =
-                        itensFiltrados[index];
+                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 30),
+                            itemCount: itensFiltrados.length,
+                            separatorBuilder: (_, __) {
+                              return const SizedBox(height: 7);
+                            },
+                            itemBuilder: (context, index) {
+                              final item = itensFiltrados[index];
 
-                        return Card(
-                          margin: EdgeInsets.zero,
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              child: Icon(
-                                item.estoqueBaixo
-                                    ? Icons
-                                    .warning_amber_rounded
-                                    : Icons
-                                    .inventory_2_outlined,
-                              ),
-                            ),
-                            title: Text(
-                              item.nome,
-                              style: const TextStyle(
-                                fontWeight:
-                                FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              '${_formatarQuantidade(item.quantidade)} '
-                                  '${item.unidade}'
-                                  '${item.categoria.isEmpty ? '' : ' • ${item.categoria}'}',
-                            ),
-                            trailing:
-                            const Icon(
-                              Icons.chevron_right,
-                            ),
-                            onTap: () {
-                              resultado = item;
+                              return Card(
+                                margin: EdgeInsets.zero,
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    child: Icon(
+                                      item.estoqueBaixo
+                                          ? Icons.warning_amber_rounded
+                                          : Icons.inventory_2_outlined,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    item.nome,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    '${_formatarQuantidade(item.quantidade)} '
+                                    '${item.unidade}'
+                                    '${item.categoria.isEmpty ? '' : ' • ${item.categoria}'}',
+                                  ),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () {
+                                    resultado = item;
 
-                              Navigator.of(
-                                bottomContext,
-                              ).pop();
+                                    Navigator.of(bottomContext).pop();
+                                  },
+                                ),
+                              );
                             },
                           ),
-                        );
-                      },
-                    ),
                   ),
                 ],
               ),
@@ -515,13 +453,8 @@ class _OrdemServicoProdutosPageState
     required ItemEstoque item,
     double? quantidadeAtual,
   }) async {
-    final quantidadeController =
-    TextEditingController(
-      text: quantidadeAtual == null
-          ? ''
-          : _formatarQuantidade(
-        quantidadeAtual,
-      ),
+    final quantidadeController = TextEditingController(
+      text: quantidadeAtual == null ? '' : _formatarQuantidade(quantidadeAtual),
     );
 
     String? erro;
@@ -536,19 +469,25 @@ class _OrdemServicoProdutosPageState
                 quantidadeController.text,
               );
 
-              if (quantidade == null ||
-                  quantidade <= 0) {
+              if (quantidade == null || quantidade <= 0) {
                 alterarEstado(() {
-                  erro =
-                  'Informe uma quantidade maior que zero.';
+                  erro = 'Informe uma quantidade maior que zero.';
                 });
 
                 return;
               }
 
-              Navigator.of(dialogContext).pop(
-                quantidade,
-              );
+              if (quantidade > item.quantidade) {
+                alterarEstado(() {
+                  erro =
+                      'Quantidade maior que o estoque disponível: '
+                      '${_formatarQuantidade(item.quantidade)} ${item.unidade}.';
+                });
+
+                return;
+              }
+
+              Navigator.of(dialogContext).pop(quantidade);
             }
 
             return AlertDialog(
@@ -560,8 +499,7 @@ class _OrdemServicoProdutosPageState
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       item.nome,
@@ -573,28 +511,24 @@ class _OrdemServicoProdutosPageState
                     const SizedBox(height: 5),
                     Text(
                       'Disponível no estoque: '
-                          '${_formatarQuantidade(item.quantidade)} '
-                          '${item.unidade}',
+                      '${_formatarQuantidade(item.quantidade)} '
+                      '${item.unidade}',
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: quantidadeController,
                       autofocus: true,
-                      keyboardType:
-                      const TextInputType.numberWithOptions(
+                      keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[0-9,.]'),
-                        ),
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                       ],
                       decoration: InputDecoration(
                         labelText: 'Quantidade utilizada',
                         suffixText: item.unidade,
                         errorText: erro,
-                        border:
-                        const OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                       onSubmitted: (_) {
                         confirmar();
@@ -603,10 +537,8 @@ class _OrdemServicoProdutosPageState
                     const SizedBox(height: 10),
                     Text(
                       'Custo unitário: '
-                          '${_moeda.format(item.custoUnitario)}',
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                      ),
+                      '${_moeda.format(item.custoUnitario)}',
+                      style: TextStyle(color: Colors.grey.shade700),
                     ),
                   ],
                 ),
@@ -634,12 +566,8 @@ class _OrdemServicoProdutosPageState
     return resultado;
   }
 
-  Future<void> _editarProduto(
-      ProdutoOrdemServico produto,
-      ) async {
-    if (widget.somenteLeitura ||
-        produto.baixadoEstoque ||
-        _executandoAcao) {
+  Future<void> _editarProduto(ProdutoOrdemServico produto) async {
+    if (widget.somenteLeitura || produto.baixadoEstoque || _executandoAcao) {
       return;
     }
 
@@ -655,20 +583,14 @@ class _OrdemServicoProdutosPageState
     }
 
     try {
-      final item =
-      await _estoqueRepository.buscarItemPorId(
-        itemEstoqueId,
-      );
+      final item = await _estoqueRepository.buscarItemPorId(itemEstoqueId);
 
       if (!mounted) {
         return;
       }
 
       if (item == null) {
-        _mostrarMensagem(
-          'O produto não existe mais no estoque.',
-          erro: true,
-        );
+        _mostrarMensagem('O produto não existe mais no estoque.', erro: true);
 
         return;
       }
@@ -699,9 +621,7 @@ class _OrdemServicoProdutosPageState
 
       await _carregarProdutos();
 
-      _mostrarMensagem(
-        'Quantidade atualizada.',
-      );
+      _mostrarMensagem('Quantidade atualizada.');
     } catch (erro) {
       _mostrarMensagem(
         'Não foi possível atualizar o produto.\n$erro',
@@ -716,12 +636,8 @@ class _OrdemServicoProdutosPageState
     }
   }
 
-  Future<void> _excluirProduto(
-      ProdutoOrdemServico produto,
-      ) async {
-    if (widget.somenteLeitura ||
-        produto.baixadoEstoque ||
-        _executandoAcao) {
+  Future<void> _excluirProduto(ProdutoOrdemServico produto) async {
+    if (widget.somenteLeitura || produto.baixadoEstoque || _executandoAcao) {
       return;
     }
 
@@ -734,7 +650,7 @@ class _OrdemServicoProdutosPageState
     final confirmar = await _confirmarAcao(
       titulo: 'Remover produto',
       mensagem:
-      'Deseja remover ${produto.produtoNome} desta '
+          'Deseja remover ${produto.produtoNome} desta '
           'Ordem de Serviço?',
       textoConfirmar: 'Remover',
       corConfirmar: Colors.red.shade700,
@@ -755,9 +671,7 @@ class _OrdemServicoProdutosPageState
 
       await _carregarProdutos();
 
-      _mostrarMensagem(
-        'Produto removido da Ordem de Serviço.',
-      );
+      _mostrarMensagem('Produto removido da Ordem de Serviço.');
     } catch (erro) {
       _mostrarMensagem(
         'Não foi possível remover o produto.\n$erro',
@@ -784,14 +698,11 @@ class _OrdemServicoProdutosPageState
       child: Padding(
         padding: const EdgeInsets.all(15),
         child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.assignment_outlined,
-                ),
+                const Icon(Icons.assignment_outlined),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -804,27 +715,18 @@ class _OrdemServicoProdutosPageState
                 ),
                 Text(
                   '${_produtos.length} '
-                      '${_produtos.length == 1 ? 'produto' : 'produtos'}',
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                  ),
+                  '${_produtos.length == 1 ? 'produto' : 'produtos'}',
+                  style: TextStyle(color: Colors.grey.shade700),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
               widget.cliente,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 3),
-            Text(
-              widget.veiculo,
-              style: TextStyle(
-                color: Colors.grey.shade700,
-              ),
-            ),
+            Text(widget.veiculo, style: TextStyle(color: Colors.grey.shade700)),
           ],
         ),
       ),
@@ -838,40 +740,27 @@ class _OrdemServicoProdutosPageState
         padding: const EdgeInsets.all(15),
         child: Row(
           children: [
-            const CircleAvatar(
-              child: Icon(
-                Icons.payments_outlined,
-              ),
-            ),
+            const CircleAvatar(child: Icon(Icons.payments_outlined)),
             const SizedBox(width: 12),
             const Expanded(
               child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Custo dos produtos',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 3),
                   Text(
                     'Valor interno utilizado nesta OS',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
             ),
             Text(
               _moeda.format(_custoTotal),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -879,9 +768,7 @@ class _OrdemServicoProdutosPageState
     );
   }
 
-  Widget _construirProduto(
-      ProdutoOrdemServico produto,
-      ) {
+  Widget _construirProduto(ProdutoOrdemServico produto) {
     final baixado = produto.baixadoEstoque;
 
     return Card(
@@ -894,31 +781,23 @@ class _OrdemServicoProdutosPageState
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 backgroundColor: baixado
-                    ? Colors.green.withValues(
-                  alpha: 0.14,
-                )
-                    : Theme.of(context)
-                    .colorScheme
-                    .primaryContainer,
+                    ? Colors.green.withValues(alpha: 0.14)
+                    : Theme.of(context).colorScheme.primaryContainer,
                 child: Icon(
                   baixado
                       ? Icons.check_circle_outline
                       : Icons.inventory_2_outlined,
-                  color: baixado
-                      ? Colors.green.shade700
-                      : null,
+                  color: baixado ? Colors.green.shade700 : null,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       produto.produtoNome,
@@ -930,12 +809,12 @@ class _OrdemServicoProdutosPageState
                     const SizedBox(height: 5),
                     Text(
                       '${_formatarQuantidade(produto.quantidade)} '
-                          '${produto.unidade}',
+                      '${produto.unidade}',
                     ),
                     const SizedBox(height: 3),
                     Text(
                       '${_moeda.format(produto.custoUnitario)} '
-                          'por ${produto.unidade}',
+                      'por ${produto.unidade}',
                       style: TextStyle(
                         color: Colors.grey.shade700,
                         fontSize: 12,
@@ -954,11 +833,9 @@ class _OrdemServicoProdutosPageState
                           Text(
                             'Baixado do estoque',
                             style: TextStyle(
-                              color:
-                              Colors.green.shade700,
+                              color: Colors.green.shade700,
                               fontSize: 12,
-                              fontWeight:
-                              FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
@@ -969,29 +846,19 @@ class _OrdemServicoProdutosPageState
               ),
               const SizedBox(width: 8),
               Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    _moeda.format(
-                      produto.custoTotal,
-                    ),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    _moeda.format(produto.custoTotal),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  if (!widget.somenteLeitura &&
-                      !baixado)
+                  if (!widget.somenteLeitura && !baixado)
                     IconButton(
                       tooltip: 'Remover produto',
                       onPressed: _executandoAcao
                           ? null
-                          : () => _excluirProduto(
-                        produto,
-                      ),
-                      icon: const Icon(
-                        Icons.delete_outline,
-                      ),
+                          : () => _excluirProduto(produto),
+                      icon: const Icon(Icons.delete_outline),
                       color: Colors.red.shade700,
                     ),
                 ],
@@ -1005,9 +872,7 @@ class _OrdemServicoProdutosPageState
 
   Widget _construirConteudo() {
     if (_carregando) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     final produtos = _produtosFiltrados;
@@ -1015,14 +880,8 @@ class _OrdemServicoProdutosPageState
     return RefreshIndicator(
       onRefresh: _carregarProdutos,
       child: ListView(
-        physics:
-        const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          14,
-          14,
-          14,
-          110,
-        ),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 110),
         children: [
           _construirCabecalho(),
           const SizedBox(height: 12),
@@ -1033,16 +892,15 @@ class _OrdemServicoProdutosPageState
             decoration: InputDecoration(
               hintText: 'Pesquisar produto utilizado',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon:
-              _pesquisaController.text.isEmpty
+              suffixIcon: _pesquisaController.text.isEmpty
                   ? null
                   : IconButton(
-                tooltip: 'Limpar pesquisa',
-                onPressed: () {
-                  _pesquisaController.clear();
-                },
-                icon: const Icon(Icons.close),
-              ),
+                      tooltip: 'Limpar pesquisa',
+                      onPressed: () {
+                        _pesquisaController.clear();
+                      },
+                      icon: const Icon(Icons.close),
+                    ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -1051,10 +909,7 @@ class _OrdemServicoProdutosPageState
           const SizedBox(height: 14),
           if (produtos.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 55,
-                horizontal: 20,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 55, horizontal: 20),
               child: Column(
                 children: [
                   const Icon(
@@ -1078,13 +933,11 @@ class _OrdemServicoProdutosPageState
                     Text(
                       widget.somenteLeitura
                           ? 'Esta Ordem de Serviço não possui '
-                          'produtos registrados.'
+                                'produtos registrados.'
                           : 'Toque em “Adicionar produto” para '
-                          'registrar os materiais usados.',
+                                'registrar os materiais usados.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                      ),
+                      style: TextStyle(color: Colors.grey.shade700),
                     ),
                   ],
                 ],
@@ -1092,9 +945,8 @@ class _OrdemServicoProdutosPageState
             )
           else
             ...produtos.map(
-                  (produto) => Padding(
-                padding:
-                const EdgeInsets.only(bottom: 9),
+              (produto) => Padding(
+                padding: const EdgeInsets.only(bottom: 9),
                 child: _construirProduto(produto),
               ),
             ),
@@ -1107,10 +959,7 @@ class _OrdemServicoProdutosPageState
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (
-          didPop,
-          result,
-          ) {
+      onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           _aoVoltar();
         }
@@ -1126,9 +975,7 @@ class _OrdemServicoProdutosPageState
           actions: [
             IconButton(
               tooltip: 'Atualizar',
-              onPressed: _carregando
-                  ? null
-                  : _carregarProdutos,
+              onPressed: _carregando ? null : _carregarProdutos,
               icon: const Icon(Icons.refresh),
             ),
           ],
@@ -1137,22 +984,16 @@ class _OrdemServicoProdutosPageState
         floatingActionButton: widget.somenteLeitura
             ? null
             : FloatingActionButton.extended(
-          onPressed: _executandoAcao
-              ? null
-              : _adicionarProduto,
-          icon: _executandoAcao
-              ? const SizedBox(
-            width: 19,
-            height: 19,
-            child:
-            CircularProgressIndicator(
-              strokeWidth: 2,
-            ),
-          )
-              : const Icon(Icons.add),
-          label:
-          const Text('Adicionar produto'),
-        ),
+                onPressed: _executandoAcao ? null : _adicionarProduto,
+                icon: _executandoAcao
+                    ? const SizedBox(
+                        width: 19,
+                        height: 19,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add),
+                label: const Text('Adicionar produto'),
+              ),
       ),
     );
   }

@@ -3,18 +3,10 @@ import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
 import '../models/ordem_servico.dart';
 import '../models/ordem_servico_item.dart';
-import '../models/movimentacao_estoque.dart';
-import '../models/produto_ordem_servico.dart';
 import '../repositories/agendamento_repository.dart';
-import '../repositories/estoque_repository.dart';
-import '../repositories/produto_ordem_servico_repository.dart';
 
 class OrdemServicoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
-  final EstoqueRepository _estoqueRepository = EstoqueRepository();
-
-  final ProdutoOrdemServicoRepository _produtoRepository =
-      ProdutoOrdemServicoRepository();
 
   final AgendamentoRepository _agendamentoRepository = AgendamentoRepository();
 
@@ -573,21 +565,18 @@ class OrdemServicoRepository {
 
       final clienteId = (ordem['cliente_id'] as num?)?.toInt();
 
-      final produtos = await transaction.query(
+      final produtosPendentes = await transaction.query(
         'ordem_servico_produtos',
         where: 'ordem_servico_id = ? AND baixado_estoque = 0',
         whereArgs: [ordemServicoId],
         orderBy: 'id ASC',
       );
 
-      // Primeiro valida o estoque de todos os produtos.
-      for (final produtoOs in produtos) {
+      final consumoPorProduto = <int, double>{};
+      final nomesPorProduto = <int, String>{};
+
+      for (final produtoOs in produtosPendentes) {
         final produtoId = (produtoOs['produto_id'] as num?)?.toInt();
-
-        final produtoNome = (produtoOs['produto_nome'] ?? 'Produto')
-            .toString()
-            .trim();
-
         final quantidadeUtilizada =
             (produtoOs['quantidade'] as num?)?.toDouble() ?? 0;
 
@@ -595,34 +584,68 @@ class OrdemServicoRepository {
           continue;
         }
 
-        final resultadoItem = await transaction.query(
-          'itens_estoque',
-          columns: ['id', 'nome', 'quantidade', 'custo_unitario'],
-          where: 'id = ?',
-          whereArgs: [produtoId],
-          limit: 1,
-        );
+        consumoPorProduto[produtoId] =
+            (consumoPorProduto[produtoId] ?? 0) + quantidadeUtilizada;
 
-        if (resultadoItem.isEmpty) {
+        nomesPorProduto[produtoId] = (produtoOs['produto_nome'] ?? 'Produto')
+            .toString()
+            .trim();
+      }
+
+      final estoquePorProduto = <int, Map<String, dynamic>>{};
+
+      if (consumoPorProduto.isNotEmpty) {
+        final ids = consumoPorProduto.keys.toList();
+        final placeholders = List.filled(ids.length, '?').join(', ');
+
+        final itensEstoque = await transaction.rawQuery('''
+          SELECT id, nome, quantidade, custo_unitario
+          FROM itens_estoque
+          WHERE id IN ($placeholders)
+          ''', ids);
+
+        for (final linha in itensEstoque) {
+          final id = (linha['id'] as num?)?.toInt();
+
+          if (id != null) {
+            estoquePorProduto[id] = Map<String, dynamic>.from(linha);
+          }
+        }
+      }
+
+      // Primeiro valida o estoque de todos os produtos.
+      for (final entry in consumoPorProduto.entries) {
+        final produtoId = entry.key;
+        final quantidadeNecessaria = entry.value;
+        final itemEstoque = estoquePorProduto[produtoId];
+
+        final produtoNome = nomesPorProduto[produtoId] ?? 'Produto';
+
+        if (itemEstoque == null) {
           throw StateError(
             'O produto "$produtoNome" não foi encontrado no estoque.',
           );
         }
 
         final quantidadeDisponivel =
-            (resultadoItem.first['quantidade'] as num?)?.toDouble() ?? 0;
+            (itemEstoque['quantidade'] as num?)?.toDouble() ?? 0;
 
-        if (quantidadeUtilizada > quantidadeDisponivel) {
+        if (quantidadeNecessaria > quantidadeDisponivel) {
           throw StateError(
             'Estoque insuficiente para "$produtoNome". '
-            'Disponível: $quantidadeDisponivel. '
-            'Necessário: $quantidadeUtilizada.',
+            'Disponível: ${_formatarQuantidadeMensagem(quantidadeDisponivel)}. '
+            'Necessário: ${_formatarQuantidadeMensagem(quantidadeNecessaria)}.',
           );
         }
       }
 
+      final saldoAtualPorProduto = <int, double>{
+        for (final entry in estoquePorProduto.entries)
+          entry.key: (entry.value['quantidade'] as num?)?.toDouble() ?? 0,
+      };
+
       // Depois realiza todas as baixas.
-      for (final produtoOs in produtos) {
+      for (final produtoOs in produtosPendentes) {
         final produtoOsId = (produtoOs['id'] as num?)?.toInt();
 
         final produtoId = (produtoOs['produto_id'] as num?)?.toInt();
@@ -643,23 +666,18 @@ class OrdemServicoRepository {
           continue;
         }
 
-        final resultadoItem = await transaction.query(
-          'itens_estoque',
-          columns: ['quantidade', 'custo_unitario'],
-          where: 'id = ?',
-          whereArgs: [produtoId],
-          limit: 1,
-        );
+        final itemEstoque = estoquePorProduto[produtoId];
 
-        if (resultadoItem.isEmpty) {
+        if (itemEstoque == null) {
           throw StateError('Produto não encontrado no estoque.');
         }
 
         final quantidadeAnterior =
-            (resultadoItem.first['quantidade'] as num?)?.toDouble() ?? 0;
+            saldoAtualPorProduto[produtoId] ??
+            ((itemEstoque['quantidade'] as num?)?.toDouble() ?? 0);
 
         final custoUnitarioEstoque =
-            (resultadoItem.first['custo_unitario'] as num?)?.toDouble() ?? 0;
+            (itemEstoque['custo_unitario'] as num?)?.toDouble() ?? 0;
 
         final custoUnitarioOs =
             (produtoOs['custo_unitario'] as num?)?.toDouble() ?? 0;
@@ -670,6 +688,18 @@ class OrdemServicoRepository {
 
         final quantidadePosterior = quantidadeAnterior - quantidadeUtilizada;
 
+        if (quantidadePosterior < 0) {
+          final produtoNome = (produtoOs['produto_nome'] ?? 'Produto')
+              .toString()
+              .trim();
+
+          throw StateError(
+            'Estoque insuficiente para "$produtoNome". '
+            'Disponível: ${_formatarQuantidadeMensagem(quantidadeAnterior)}. '
+            'Necessário: ${_formatarQuantidadeMensagem(quantidadeUtilizada)}.',
+          );
+        }
+
         await transaction.update(
           'itens_estoque',
           {
@@ -679,6 +709,8 @@ class OrdemServicoRepository {
           where: 'id = ?',
           whereArgs: [produtoId],
         );
+
+        saldoAtualPorProduto[produtoId] = quantidadePosterior;
 
         await transaction.insert('movimentacoes_estoque', {
           'item_estoque_id': produtoId,
@@ -1198,5 +1230,15 @@ class OrdemServicoRepository {
     final minuto = data.minute.toString().padLeft(2, '0');
 
     return '$hora:$minuto';
+  }
+
+  String _formatarQuantidadeMensagem(double valor) {
+    final texto = valor
+        .toStringAsFixed(3)
+        .replaceAll(RegExp(r'0+$'), '')
+        .replaceAll(RegExp(r'\.$'), '')
+        .replaceAll('.', ',');
+
+    return texto.isEmpty ? '0' : texto;
   }
 }
