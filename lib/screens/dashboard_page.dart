@@ -1,9 +1,8 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
-import '../database/app_database.dart';
+import '../repositories/dashboard_repository.dart';
 import 'agenda_page.dart';
 import 'clientes_page.dart';
 import 'financeiro_page.dart';
@@ -23,17 +22,23 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  final DashboardRepository _dashboardRepository = DashboardRepository();
   final NumberFormat _formatoMoeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
   bool _carregando = true;
+  String? _mensagemErro;
 
   double _receitaHoje = 0;
-  double _entradasMes = 0;
+  double _faturamentoSemana = 0;
+  double _faturamentoMes = 0;
   double _saidasMes = 0;
-  double _saldo = 0;
+  double _saldoMes = 0;
+  double _lucroBrutoEstimadoMes = 0;
+  double _custoProdutosMes = 0;
+  double _saldoTotal = 0;
 
   int _totalClientes = 0;
   int _totalVeiculos = 0;
@@ -41,21 +46,16 @@ class _DashboardPageState extends State<DashboardPage> {
   int _agendamentosHoje = 0;
   int _ordensAbertas = 0;
   int _ordensEmAndamento = 0;
+  int _ordensFinalizadasMes = 0;
+  int _estoqueBaixo = 0;
+  int _veiculosAtendidos = 0;
 
-  double _entradasMesAnterior = 0;
+  double _crescimentoMes = 0;
   double _ticketMedio = 0;
 
+  List<Map<String, Object?>> _servicosTop5 = [];
+  List<Map<String, Object?>> _clientesTop5 = [];
   List<_FaturamentoDia> _faturamentoDias = [];
-
-  double get _crescimentoMes {
-    if (_entradasMesAnterior == 0) {
-      return _entradasMes > 0 ? 100 : 0;
-    }
-
-    return ((_entradasMes - _entradasMesAnterior) /
-        _entradasMesAnterior) *
-        100;
-  }
 
   @override
   void initState() {
@@ -67,210 +67,50 @@ class _DashboardPageState extends State<DashboardPage> {
     if (mounted) {
       setState(() {
         _carregando = true;
+        _mensagemErro = null;
       });
     }
 
     try {
-      final database = await AppDatabase.instance.database;
-      final agora = DateTime.now();
-
-      final inicioMes = DateTime(
-        agora.year,
-        agora.month,
-        1,
-      ).toIso8601String();
-
-      final inicioProximoMes = DateTime(
-        agora.year,
-        agora.month + 1,
-        1,
-      ).toIso8601String();
-
-      final inicioHoje = DateTime(
-        agora.year,
-        agora.month,
-        agora.day,
-      ).toIso8601String();
-
-      final inicioAmanha = DateTime(
-        agora.year,
-        agora.month,
-        agora.day + 1,
-      ).toIso8601String();
-
-      final inicioMesAnterior = DateTime(
-        agora.year,
-        agora.month - 1,
-        1,
-      ).toIso8601String();
-
-      final inicioGrafico = DateTime(
-        agora.year,
-        agora.month,
-        agora.day,
-      )
-          .subtract(const Duration(days: 6))
-          .toIso8601String();
-
-      final resultados = await Future.wait([
-        database.rawQuery(
-          'SELECT COUNT(*) AS total FROM clientes',
-        ),
-        database.rawQuery(
-          'SELECT COUNT(*) AS total FROM veiculos',
-        ),
-        database.rawQuery(
-          'SELECT COUNT(*) AS total FROM agendamentos',
-        ),
-        database.rawQuery(
-          '''
-          SELECT COUNT(*) AS total
-          FROM agendamentos
-          WHERE data >= ? AND data < ?
-          ''',
-          [
-            inicioHoje,
-            inicioAmanha,
-          ],
-        ),
-        database.rawQuery(
-          '''
-          SELECT COALESCE(SUM(valor), 0) AS total
-          FROM movimentos_financeiros
-          WHERE LOWER(tipo) = 'entrada'
-            AND data >= ?
-            AND data < ?
-          ''',
-          [
-            inicioHoje,
-            inicioAmanha,
-          ],
-        ),
-        database.rawQuery(
-          '''
-          SELECT COALESCE(SUM(valor), 0) AS total
-          FROM movimentos_financeiros
-          WHERE LOWER(tipo) = 'entrada'
-            AND data >= ?
-            AND data < ?
-          ''',
-          [
-            inicioMes,
-            inicioProximoMes,
-          ],
-        ),
-        database.rawQuery(
-          '''
-          SELECT COALESCE(SUM(valor), 0) AS total
-          FROM movimentos_financeiros
-          WHERE LOWER(tipo) IN ('saída', 'saida')
-            AND data >= ?
-            AND data < ?
-          ''',
-          [
-            inicioMes,
-            inicioProximoMes,
-          ],
-        ),
-        database.rawQuery(
-          '''
-          SELECT
-            COALESCE(SUM(
-              CASE
-                WHEN LOWER(tipo) = 'entrada' THEN valor
-                WHEN LOWER(tipo) IN ('saída', 'saida') THEN -valor
-                ELSE 0
-              END
-            ), 0) AS total
-          FROM movimentos_financeiros
-          ''',
-        ),
-        database.rawQuery(
-          '''
-          SELECT COALESCE(SUM(valor), 0) AS total
-          FROM movimentos_financeiros
-          WHERE LOWER(tipo) = 'entrada'
-            AND data >= ?
-            AND data < ?
-          ''',
-          [
-            inicioMesAnterior,
-            inicioMes,
-          ],
-        ),
-        database.rawQuery(
-          '''
-          SELECT COALESCE(AVG(valor), 0) AS total
-          FROM movimentos_financeiros
-          WHERE LOWER(tipo) = 'entrada'
-            AND data >= ?
-            AND data < ?
-          ''',
-          [
-            inicioMes,
-            inicioProximoMes,
-          ],
-        ),
-        _consultaSegura(
-          database,
-          '''
-          SELECT COUNT(*) AS total
-          FROM ordens_servico
-          WHERE LOWER(status) = 'aberta'
-          ''',
-        ),
-        _consultaSegura(
-          database,
-          '''
-          SELECT COUNT(*) AS total
-          FROM ordens_servico
-          WHERE LOWER(status) = 'em andamento'
-          ''',
-        ),
-        database.rawQuery(
-          '''
-          SELECT
-            substr(data, 1, 10) AS dia,
-            COALESCE(SUM(valor), 0) AS total
-          FROM movimentos_financeiros
-          WHERE LOWER(tipo) = 'entrada'
-            AND data >= ?
-            AND data < ?
-          GROUP BY substr(data, 1, 10)
-          ORDER BY dia ASC
-          ''',
-          [
-            inicioGrafico,
-            inicioAmanha,
-          ],
-        ),
-      ]);
+      final dados = await _dashboardRepository.carregarDashboard();
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _totalClientes = _lerInteiro(resultados[0]);
-        _totalVeiculos = _lerInteiro(resultados[1]);
-        _totalAgendamentos = _lerInteiro(resultados[2]);
-        _agendamentosHoje = _lerInteiro(resultados[3]);
-        _receitaHoje = _lerDouble(resultados[4]);
-        _entradasMes = _lerDouble(resultados[5]);
-        _saidasMes = _lerDouble(resultados[6]);
-        _saldo = _lerDouble(resultados[7]);
-        _entradasMesAnterior =
-            _lerDouble(resultados[8]);
-        _ticketMedio =
-            _lerDouble(resultados[9]);
-        _ordensAbertas =
-            _lerInteiro(resultados[10]);
-        _ordensEmAndamento =
-            _lerInteiro(resultados[11]);
-        _faturamentoDias =
-            _montarFaturamentoDias(
-              resultados[12],
-            );
+        _totalClientes = dados['totalClientes'] as int? ?? 0;
+        _totalVeiculos = dados['totalVeiculos'] as int? ?? 0;
+        _totalAgendamentos = dados['totalAgendamentos'] as int? ?? 0;
+        _agendamentosHoje = dados['agendamentosHoje'] as int? ?? 0;
+        _receitaHoje = (dados['faturamentoHoje'] as num?)?.toDouble() ?? 0;
+        _faturamentoSemana = (dados['faturamentoSemana'] as num?)?.toDouble() ?? 0;
+        _faturamentoMes = (dados['faturamentoMes'] as num?)?.toDouble() ?? 0;
+        _saidasMes = (dados['saidasMes'] as num?)?.toDouble() ?? 0;
+        _saldoMes = (dados['saldoMes'] as num?)?.toDouble() ?? 0;
+        _lucroBrutoEstimadoMes =
+            (dados['lucroBrutoEstimadoMes'] as num?)?.toDouble() ?? 0;
+        _custoProdutosMes =
+            (dados['custoProdutosMes'] as num?)?.toDouble() ?? 0;
+        _ticketMedio = (dados['ticketMedioMes'] as num?)?.toDouble() ?? 0;
+        _veiculosAtendidos = dados['veiculosAtendidosMes'] as int? ?? 0;
+        _ordensAbertas = dados['ordensAbertas'] as int? ?? 0;
+        _ordensEmAndamento = dados['ordensEmAndamento'] as int? ?? 0;
+        _ordensFinalizadasMes = dados['ordensFinalizadasMes'] as int? ?? 0;
+        _estoqueBaixo = dados['estoqueBaixo'] as int? ?? 0;
+        _saldoTotal = (dados['saldoTotal'] as num?)?.toDouble() ?? 0;
+        _crescimentoMes = (dados['crescimentoMes'] as num?)?.toDouble() ?? 0;
+        _servicosTop5 = (dados['servicosTop5'] as List<dynamic>?)
+                ?.cast<Map<String, Object?>>() ??
+            [];
+        _clientesTop5 = (dados['clientesTop5'] as List<dynamic>?)
+                ?.cast<Map<String, Object?>>() ??
+            [];
+        _faturamentoDias = _montarFaturamentoDias(
+          (dados['faturamentoUltimos7Dias'] as List<dynamic>?)
+                  ?.cast<Map<String, Object?>>() ??
+              [],
+        );
         _carregando = false;
       });
     } catch (erro) {
@@ -280,6 +120,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
       setState(() {
         _carregando = false;
+        _mensagemErro =
+            'Não foi possível carregar o dashboard. Tente novamente.';
       });
 
       ScaffoldMessenger.of(context)
@@ -292,17 +134,6 @@ class _DashboardPageState extends State<DashboardPage> {
             backgroundColor: Colors.red.shade700,
           ),
         );
-    }
-  }
-
-  Future<List<Map<String, Object?>>> _consultaSegura(
-      dynamic database,
-      String sql,
-      ) async {
-    try {
-      return await database.rawQuery(sql);
-    } catch (_) {
-      return <Map<String, Object?>>[];
     }
   }
 
@@ -349,48 +180,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  int _lerInteiro(
-      List<Map<String, Object?>> resultado,
-      ) {
-    if (resultado.isEmpty) {
-      return 0;
-    }
-
-    final valor = resultado.first['total'];
-
-    if (valor is int) {
-      return valor;
-    }
-
-    if (valor is num) {
-      return valor.toInt();
-    }
-
-    return int.tryParse(
-      valor?.toString() ?? '',
-    ) ??
-        0;
-  }
-
-  double _lerDouble(
-      List<Map<String, Object?>> resultado,
-      ) {
-    if (resultado.isEmpty) {
-      return 0;
-    }
-
-    final valor = resultado.first['total'];
-
-    if (valor is num) {
-      return valor.toDouble();
-    }
-
-    return double.tryParse(
-      valor?.toString() ?? '',
-    ) ??
-        0;
-  }
-
   Future<void> _abrirPagina(
       Widget pagina,
       ) async {
@@ -434,7 +223,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final lucroMes = _entradasMes - _saidasMes;
+    final lucroMes = _faturamentoMes - _saidasMes;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0E0E0E),
@@ -514,7 +303,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 22),
             _SaldoPrincipalCard(
-              saldo: _saldo,
+              saldo: _saldoTotal,
               lucroMes: lucroMes,
               formatoMoeda: _formatoMoeda,
             ),
@@ -523,7 +312,7 @@ class _DashboardPageState extends State<DashboardPage> {
               receitaHoje: _receitaHoje,
               agendamentosHoje: _agendamentosHoje,
               lucroMes: lucroMes,
-              saldo: _saldo,
+              saldo: _saldoTotal,
               formatoMoeda: _formatoMoeda,
               onAbrirAgenda: () {
                 _abrirPagina(const AgendaPage());
@@ -539,7 +328,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: _ResumoCard(
                     titulo: 'Entradas do mês',
                     valor: _formatoMoeda.format(
-                      _entradasMes,
+                      _faturamentoMes,
                     ),
                     icone:
                     Icons.south_west_rounded,
@@ -570,7 +359,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 22),
             _DashboardPremiumCard(
-              entradasMes: _entradasMes,
+              entradasMes: _faturamentoMes,
               lucroMes: lucroMes,
               crescimentoMes: _crescimentoMes,
               ticketMedio: _ticketMedio,
@@ -604,6 +393,34 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 22),
             const Text(
+              'Top 5 serviços deste mês',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _RankingCard(
+              itens: _servicosTop5,
+              descricao: 'Serviço',
+              formatoMoeda: null,
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Top 5 clientes deste mês',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _RankingCard(
+              itens: _clientesTop5,
+              descricao: 'Cliente',
+              formatoMoeda: _formatoMoeda,
+            ),
+            const SizedBox(height: 22),
+            const Text(
               'Visão geral',
               style: TextStyle(
                 fontSize: 20,
@@ -632,14 +449,14 @@ class _DashboardPageState extends State<DashboardPage> {
                   Icons.directions_car_outlined,
                 ),
                 _IndicadorCard(
-                  titulo: 'Agendamentos',
-                  valor: '$_totalAgendamentos',
-                  icone: Icons.calendar_month,
+                  titulo: 'Ordens finalizadas',
+                  valor: '$_ordensFinalizadasMes',
+                  icone: Icons.check_circle_outline,
                 ),
                 _IndicadorCard(
-                  titulo: 'Hoje',
-                  valor: '$_agendamentosHoje',
-                  icone: Icons.today_rounded,
+                  titulo: 'Veículos atendidos',
+                  valor: '$_veiculosAtendidos',
+                  icone: Icons.car_repair_outlined,
                 ),
               ],
             ),
@@ -1585,8 +1402,7 @@ class _MiniIndicadorPremium
   }
 }
 
-class _GraficoFaturamentoCard
-    extends StatelessWidget {
+class _GraficoFaturamentoCard extends StatelessWidget {
   const _GraficoFaturamentoCard({
     required this.dados,
     required this.formatoMoeda,
@@ -1599,7 +1415,7 @@ class _GraficoFaturamentoCard
   Widget build(BuildContext context) {
     final total = dados.fold<double>(
       0,
-          (soma, item) => soma + item.valor,
+      (soma, item) => soma + item.valor,
     );
 
     return Container(
@@ -1609,8 +1425,7 @@ class _GraficoFaturamentoCard
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             formatoMoeda.format(total),
@@ -1630,21 +1445,72 @@ class _GraficoFaturamentoCard
           SizedBox(
             height: 170,
             width: double.infinity,
-            child: CustomPaint(
-              painter: _DashboardGraficoPainter(
-                dados,
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.white.withOpacity(0.08),
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: false,
+                    ),
+                  ),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: false,
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: List.generate(
+                      dados.length,
+                      (index) => FlSpot(
+                        index.toDouble(),
+                        dados[index].valor,
+                      ),
+                    ),
+                    isCurved: true,
+                    color: const Color(0xFFD6A84B),
+                    barWidth: 3,
+                    dotData: FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          const Color(0xFFD6A84B).withOpacity(0.35),
+                          const Color(0xFFD6A84B).withOpacity(0.06),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                minY: 0,
               ),
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: dados.map(
-                  (item) {
+              (item) {
                 return Expanded(
                   child: Text(
-                    DateFormat('dd/MM').format(
-                      item.data,
-                    ),
+                    DateFormat('dd/MM').format(item.data),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white54,
@@ -1661,99 +1527,78 @@ class _GraficoFaturamentoCard
   }
 }
 
-class _DashboardGraficoPainter
-    extends CustomPainter {
-  _DashboardGraficoPainter(this.dados);
+class _RankingCard extends StatelessWidget {
+  const _RankingCard({
+    required this.itens,
+    required this.descricao,
+    required this.formatoMoeda,
+  });
 
-  final List<_FaturamentoDia> dados;
+  final List<Map<String, Object?>> itens;
+  final String descricao;
+  final NumberFormat? formatoMoeda;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    if (dados.isEmpty) {
-      return;
-    }
-
-    final maior = dados.fold<double>(
-      0,
-          (atual, item) =>
-          math.max(atual, item.valor),
-    );
-
-    final grade = Paint()
-      ..color =
-      Colors.white.withValues(alpha: 0.07)
-      ..strokeWidth = 1;
-
-    for (var i = 0; i <= 4; i++) {
-      final y = size.height * i / 4;
-
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(size.width, y),
-        grade,
-      );
-    }
-
-    final larguraColuna =
-        size.width / dados.length;
-    final larguraBarra =
-        larguraColuna * 0.48;
-
-    for (var i = 0; i < dados.length; i++) {
-      final valor = dados[i].valor;
-
-      final altura = maior <= 0
-          ? 4.0
-          : math.max(
-        4.0,
-        (valor / maior) *
-            (size.height - 8),
-      );
-
-      final esquerda =
-          larguraColuna * i +
-              (larguraColuna -
-                  larguraBarra) /
-                  2;
-
-      final barra =
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          esquerda,
-          size.height - altura,
-          larguraBarra,
-          altura,
+  Widget build(BuildContext context) {
+    if (itens.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(20),
         ),
-        const Radius.circular(7),
+        child: const Text(
+          'Sem dados suficientes para exibir.',
+          style: TextStyle(color: Colors.white60),
+        ),
       );
-
-      final paint = Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [
-            Color(0xFF8D6B28),
-            Color(0xFFD6A84B),
-          ],
-        ).createShader(
-          Rect.fromLTWH(
-            esquerda,
-            0,
-            larguraBarra,
-            size.height,
-          ),
-        );
-
-      canvas.drawRRect(barra, paint);
     }
-  }
 
-  @override
-  bool shouldRepaint(
-      covariant _DashboardGraficoPainter
-      oldDelegate,
-      ) {
-    return oldDelegate.dados != dados;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: itens.map(
+              (item) {
+            final nome = item['nome']?.toString() ?? '-';
+            final total = item['total'];
+            final valor = total is num
+                ? total.toDouble()
+                : double.tryParse(total?.toString() ?? '0') ?? 0;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      nome,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    formatoMoeda != null
+                        ? formatoMoeda!.format(valor)
+                        : valor.toInt().toString(),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ).toList(),
+      ),
+    );
   }
 }
 

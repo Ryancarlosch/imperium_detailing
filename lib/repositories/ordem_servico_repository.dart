@@ -5,23 +5,39 @@ import '../models/ordem_servico.dart';
 import '../models/ordem_servico_item.dart';
 import '../models/movimentacao_estoque.dart';
 import '../models/produto_ordem_servico.dart';
+import '../repositories/agendamento_repository.dart';
 import '../repositories/estoque_repository.dart';
 import '../repositories/produto_ordem_servico_repository.dart';
 
-
 class OrdemServicoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
-  final EstoqueRepository _estoqueRepository =
-  EstoqueRepository();
+  final EstoqueRepository _estoqueRepository = EstoqueRepository();
 
-  final ProdutoOrdemServicoRepository
-  _produtoRepository =
-  ProdutoOrdemServicoRepository();
+  final ProdutoOrdemServicoRepository _produtoRepository =
+      ProdutoOrdemServicoRepository();
+
+  final AgendamentoRepository _agendamentoRepository = AgendamentoRepository();
+
+  int? _converterInt(dynamic valor) {
+    if (valor == null) {
+      return null;
+    }
+
+    if (valor is int) {
+      return valor;
+    }
+
+    if (valor is num) {
+      return valor.toInt();
+    }
+
+    return int.tryParse(valor.toString().trim());
+  }
 
   Future<int> inserirOrdemServico(
-      OrdemServico ordemServico, {
-        List<OrdemServicoItem> itens = const [],
-      }) async {
+    OrdemServico ordemServico, {
+    List<OrdemServicoItem> itens = const [],
+  }) async {
     final database = await _appDatabase.database;
 
     return database.transaction((transaction) async {
@@ -38,28 +54,30 @@ class OrdemServicoRepository {
         final item = itens[indice];
 
         final dadosItem = item
-            .copyWith(
-          ordemServicoId: ordemServicoId,
-          ordem: indice,
-        )
+            .copyWith(ordemServicoId: ordemServicoId, ordem: indice)
             .toMap();
 
         dadosItem.remove('id');
 
-        await transaction.insert(
-          'ordem_servico_itens',
-          dadosItem,
+        await transaction.insert('ordem_servico_itens', dadosItem);
+      }
+
+      final agendamentoId = _converterInt(ordemServico.agendamentoId);
+
+      if (agendamentoId != null) {
+        await _agendamentoRepository.atualizarStatusComTransacao(
+          transaction,
+          agendamentoId,
+          'Em andamento',
         );
       }
 
       return ordemServicoId;
     });
   }
-  Future<int?> buscarIdOrdemPorAgendamento(
-      int agendamentoId,
-      ) async {
-    final database =
-    await _appDatabase.database;
+
+  Future<int?> buscarIdOrdemPorAgendamento(int agendamentoId) async {
+    final database = await _appDatabase.database;
 
     final resultado = await database.query(
       'ordens_servico',
@@ -84,26 +102,19 @@ class OrdemServicoRepository {
       return valor.toInt();
     }
 
-    return int.tryParse(
-      valor?.toString() ?? '',
-    );
+    return int.tryParse(valor?.toString() ?? '');
   }
 
-  Future<bool> existeOrdemParaAgendamento(
-      int agendamentoId,
-      ) async {
-    final ordemId =
-    await buscarIdOrdemPorAgendamento(
-      agendamentoId,
-    );
+  Future<bool> existeOrdemParaAgendamento(int agendamentoId) async {
+    final ordemId = await buscarIdOrdemPorAgendamento(agendamentoId);
 
     return ordemId != null;
   }
 
   Future<void> atualizarOrdemServico(
-      OrdemServico ordemServico, {
-        List<OrdemServicoItem>? itens,
-      }) async {
+    OrdemServico ordemServico, {
+    List<OrdemServicoItem>? itens,
+  }) async {
     final id = ordemServico.id;
 
     if (id == null) {
@@ -136,18 +147,12 @@ class OrdemServicoRepository {
           final item = itens[indice];
 
           final dadosItem = item
-              .copyWith(
-            ordemServicoId: id,
-            ordem: indice,
-          )
+              .copyWith(ordemServicoId: id, ordem: indice)
               .toMap();
 
           dadosItem.remove('id');
 
-          await transaction.insert(
-            'ordem_servico_itens',
-            dadosItem,
-          );
+          await transaction.insert('ordem_servico_itens', dadosItem);
         }
       }
     });
@@ -164,8 +169,7 @@ class OrdemServicoRepository {
 
     final statusLimpo = status?.trim() ?? '';
 
-    if (statusLimpo.isNotEmpty &&
-        statusLimpo.toLowerCase() != 'todos') {
+    if (statusLimpo.isNotEmpty && statusLimpo.toLowerCase() != 'todos') {
       filtros.add('os.status = ?');
       argumentos.add(statusLimpo);
     }
@@ -186,18 +190,10 @@ class OrdemServicoRepository {
 
       final termo = '%$pesquisaLimpa%';
 
-      argumentos.addAll([
-        termo,
-        termo,
-        termo,
-        termo,
-        termo,
-        termo,
-      ]);
+      argumentos.addAll([termo, termo, termo, termo, termo, termo]);
     }
 
-    final resultado = await database.rawQuery(
-      '''
+    final resultado = await database.rawQuery('''
       SELECT
         os.*,
         clientes.nome AS cliente_nome,
@@ -216,21 +212,14 @@ class OrdemServicoRepository {
       ORDER BY
         os.data_abertura DESC,
         os.id DESC
-      ''',
-      argumentos,
-    );
+      ''', argumentos);
 
     return resultado
-        .map(
-          (mapa) => OrdemServico.fromMap(
-        Map<String, dynamic>.from(mapa),
-      ),
-    )
+        .map((mapa) => OrdemServico.fromMap(Map<String, dynamic>.from(mapa)))
         .toList();
   }
 
-  Future<List<Map<String, dynamic>>>
-  listarOrdensServicoComDetalhes({
+  Future<List<Map<String, dynamic>>> listarOrdensServicoComDetalhes({
     String? status,
     String? pesquisa,
   }) async {
@@ -241,8 +230,7 @@ class OrdemServicoRepository {
 
     final statusLimpo = status?.trim() ?? '';
 
-    if (statusLimpo.isNotEmpty &&
-        statusLimpo.toLowerCase() != 'todos') {
+    if (statusLimpo.isNotEmpty && statusLimpo.toLowerCase() != 'todos') {
       filtros.add('os.status = ?');
       argumentos.add(statusLimpo);
     }
@@ -264,19 +252,10 @@ class OrdemServicoRepository {
 
       final termo = '%$pesquisaLimpa%';
 
-      argumentos.addAll([
-        termo,
-        termo,
-        termo,
-        termo,
-        termo,
-        termo,
-        termo,
-      ]);
+      argumentos.addAll([termo, termo, termo, termo, termo, termo, termo]);
     }
 
-    final resultado = await database.rawQuery(
-      '''
+    final resultado = await database.rawQuery('''
       SELECT
         os.*,
         clientes.nome AS cliente_nome,
@@ -314,20 +293,12 @@ class OrdemServicoRepository {
         END,
         os.data_abertura DESC,
         os.id DESC
-      ''',
-      argumentos,
-    );
+      ''', argumentos);
 
-    return resultado
-        .map(
-          (mapa) => Map<String, dynamic>.from(mapa),
-    )
-        .toList();
+    return resultado.map((mapa) => Map<String, dynamic>.from(mapa)).toList();
   }
 
-  Future<OrdemServico?> buscarOrdemServicoPorId(
-      int id,
-      ) async {
+  Future<OrdemServico?> buscarOrdemServicoPorId(int id) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -341,15 +312,10 @@ class OrdemServicoRepository {
       return null;
     }
 
-    return OrdemServico.fromMap(
-      Map<String, dynamic>.from(resultado.first),
-    );
+    return OrdemServico.fromMap(Map<String, dynamic>.from(resultado.first));
   }
 
-  Future<Map<String, dynamic>?>
-  buscarOrdemServicoCompletaPorId(
-      int id,
-      ) async {
+  Future<Map<String, dynamic>?> buscarOrdemServicoCompletaPorId(int id) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -380,24 +346,16 @@ class OrdemServicoRepository {
       return null;
     }
 
-    final ordem = Map<String, dynamic>.from(
-      resultado.first,
-    );
+    final ordem = Map<String, dynamic>.from(resultado.first);
 
     final itens = await listarItens(id);
 
-    ordem['itens'] = itens
-        .map(
-          (item) => item.toMap(),
-    )
-        .toList();
+    ordem['itens'] = itens.map((item) => item.toMap()).toList();
 
     return ordem;
   }
 
-  Future<List<OrdemServicoItem>> listarItens(
-      int ordemServicoId,
-      ) async {
+  Future<List<OrdemServicoItem>> listarItens(int ordemServicoId) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -409,36 +367,25 @@ class OrdemServicoRepository {
 
     return resultado
         .map(
-          (mapa) => OrdemServicoItem.fromMap(
-        Map<String, dynamic>.from(mapa),
-      ),
-    )
+          (mapa) => OrdemServicoItem.fromMap(Map<String, dynamic>.from(mapa)),
+        )
         .toList();
   }
 
-  Future<int> inserirItem(
-      OrdemServicoItem item,
-      ) async {
+  Future<int> inserirItem(OrdemServicoItem item) async {
     final database = await _appDatabase.database;
 
     final dados = item.toMap();
     dados.remove('id');
 
-    return database.insert(
-      'ordem_servico_itens',
-      dados,
-    );
+    return database.insert('ordem_servico_itens', dados);
   }
 
-  Future<void> atualizarItem(
-      OrdemServicoItem item,
-      ) async {
+  Future<void> atualizarItem(OrdemServicoItem item) async {
     final id = item.id;
 
     if (id == null) {
-      throw ArgumentError(
-        'Não é possível atualizar um item sem ID.',
-      );
+      throw ArgumentError('Não é possível atualizar um item sem ID.');
     }
 
     final database = await _appDatabase.database;
@@ -462,17 +409,13 @@ class OrdemServicoRepository {
 
     await database.update(
       'ordem_servico_itens',
-      {
-        'concluido': concluido ? 1 : 0,
-      },
+      {'concluido': concluido ? 1 : 0},
       where: 'id = ?',
       whereArgs: [itemId],
     );
   }
 
-  Future<void> excluirItem(
-      int itemId,
-      ) async {
+  Future<void> excluirItem(int itemId) async {
     final database = await _appDatabase.database;
 
     await database.delete(
@@ -492,9 +435,7 @@ class OrdemServicoRepository {
   }) async {
     final database = await _appDatabase.database;
 
-    final dados = <String, dynamic>{
-      'status': status,
-    };
+    final dados = <String, dynamic>{'status': status};
 
     if (dataInicio != null) {
       dados['data_inicio'] = dataInicio;
@@ -520,17 +461,57 @@ class OrdemServicoRepository {
     );
   }
 
-  Future<void> iniciarOrdemServico(
-      int ordemServicoId,
-      ) async {
+  Future<void> iniciarOrdemServico(int ordemServicoId) async {
     final agora = DateTime.now();
+    final database = await _appDatabase.database;
 
-    await alterarStatus(
-      ordemServicoId: ordemServicoId,
-      status: 'Em andamento',
-      dataInicio: _formatarData(agora),
-      horaEntrada: _formatarHora(agora),
-    );
+    await database.transaction((transaction) async {
+      final resultado = await transaction.query(
+        'ordens_servico',
+        columns: ['id', 'status', 'agendamento_id'],
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+        limit: 1,
+      );
+
+      if (resultado.isEmpty) {
+        throw StateError('Ordem de Serviço não encontrada.');
+      }
+
+      final ordem = resultado.first;
+      final statusAtual = (ordem['status'] ?? '').toString().trim();
+
+      if (statusAtual == 'Em andamento') {
+        return;
+      }
+
+      if (statusAtual == 'Finalizada') {
+        throw StateError(
+          'Uma Ordem de Serviço finalizada não pode ser iniciada.',
+        );
+      }
+
+      await transaction.update(
+        'ordens_servico',
+        {
+          'status': 'Em andamento',
+          'data_inicio': _formatarData(agora),
+          'hora_entrada': _formatarHora(agora),
+        },
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+      );
+
+      final agendamentoId = _converterInt(ordem['agendamento_id']);
+
+      if (agendamentoId != null) {
+        await _agendamentoRepository.atualizarStatusComTransacao(
+          transaction,
+          agendamentoId,
+          'Em andamento',
+        );
+      }
+    });
   }
 
   Future<void> finalizarOrdemServico({
@@ -539,8 +520,7 @@ class OrdemServicoRepository {
   }) async {
     final database = await _appDatabase.database;
     final agora = DateTime.now();
-    final formaPagamentoLimpa =
-        formaPagamento?.trim() ?? '';
+    final formaPagamentoLimpa = formaPagamento?.trim() ?? '';
 
     await database.transaction((transaction) async {
       final resultado = await transaction.query(
@@ -553,6 +533,7 @@ class OrdemServicoRepository {
           'valor_total',
           'desconto',
           'lancado_financeiro',
+          'agendamento_id',
         ],
         where: 'id = ?',
         whereArgs: [ordemServicoId],
@@ -560,15 +541,12 @@ class OrdemServicoRepository {
       );
 
       if (resultado.isEmpty) {
-        throw StateError(
-          'Ordem de Serviço não encontrada.',
-        );
+        throw StateError('Ordem de Serviço não encontrada.');
       }
 
       final ordem = resultado.first;
 
-      final statusAtual =
-      (ordem['status'] ?? '').toString().trim();
+      final statusAtual = (ordem['status'] ?? '').toString().trim();
 
       if (statusAtual == 'Finalizada') {
         return;
@@ -580,51 +558,38 @@ class OrdemServicoRepository {
         );
       }
 
-      final valorTotal =
-          (ordem['valor_total'] as num?)?.toDouble() ?? 0;
+      final valorTotal = (ordem['valor_total'] as num?)?.toDouble() ?? 0;
 
-      final desconto =
-          (ordem['desconto'] as num?)?.toDouble() ?? 0;
+      final desconto = (ordem['desconto'] as num?)?.toDouble() ?? 0;
 
       final valorFinal = (valorTotal - desconto)
           .clamp(0, double.infinity)
           .toDouble();
 
       final lancadoFinanceiro =
-          (ordem['lancado_financeiro'] as num?)
-              ?.toInt() ==
-              1;
+          (ordem['lancado_financeiro'] as num?)?.toInt() == 1;
 
-      final numero =
-      (ordem['numero'] ?? ordemServicoId)
-          .toString()
-          .trim();
+      final numero = (ordem['numero'] ?? ordemServicoId).toString().trim();
 
-      final clienteId =
-      (ordem['cliente_id'] as num?)?.toInt();
+      final clienteId = (ordem['cliente_id'] as num?)?.toInt();
 
       final produtos = await transaction.query(
         'ordem_servico_produtos',
-        where:
-        'ordem_servico_id = ? AND baixado_estoque = 0',
+        where: 'ordem_servico_id = ? AND baixado_estoque = 0',
         whereArgs: [ordemServicoId],
         orderBy: 'id ASC',
       );
 
       // Primeiro valida o estoque de todos os produtos.
       for (final produtoOs in produtos) {
-        final produtoId =
-        (produtoOs['produto_id'] as num?)?.toInt();
+        final produtoId = (produtoOs['produto_id'] as num?)?.toInt();
 
-        final produtoNome =
-        (produtoOs['produto_nome'] ?? 'Produto')
+        final produtoNome = (produtoOs['produto_nome'] ?? 'Produto')
             .toString()
             .trim();
 
         final quantidadeUtilizada =
-            (produtoOs['quantidade'] as num?)
-                ?.toDouble() ??
-                0;
+            (produtoOs['quantidade'] as num?)?.toDouble() ?? 0;
 
         if (produtoId == null || quantidadeUtilizada <= 0) {
           continue;
@@ -632,12 +597,7 @@ class OrdemServicoRepository {
 
         final resultadoItem = await transaction.query(
           'itens_estoque',
-          columns: [
-            'id',
-            'nome',
-            'quantidade',
-            'custo_unitario',
-          ],
+          columns: ['id', 'nome', 'quantidade', 'custo_unitario'],
           where: 'id = ?',
           whereArgs: [produtoId],
           limit: 1,
@@ -650,39 +610,31 @@ class OrdemServicoRepository {
         }
 
         final quantidadeDisponivel =
-            (resultadoItem.first['quantidade'] as num?)
-                ?.toDouble() ??
-                0;
+            (resultadoItem.first['quantidade'] as num?)?.toDouble() ?? 0;
 
         if (quantidadeUtilizada > quantidadeDisponivel) {
           throw StateError(
             'Estoque insuficiente para "$produtoNome". '
-                'Disponível: $quantidadeDisponivel. '
-                'Necessário: $quantidadeUtilizada.',
+            'Disponível: $quantidadeDisponivel. '
+            'Necessário: $quantidadeUtilizada.',
           );
         }
       }
 
       // Depois realiza todas as baixas.
       for (final produtoOs in produtos) {
-        final produtoOsId =
-        (produtoOs['id'] as num?)?.toInt();
+        final produtoOsId = (produtoOs['id'] as num?)?.toInt();
 
-        final produtoId =
-        (produtoOs['produto_id'] as num?)?.toInt();
+        final produtoId = (produtoOs['produto_id'] as num?)?.toInt();
 
         final quantidadeUtilizada =
-            (produtoOs['quantidade'] as num?)
-                ?.toDouble() ??
-                0;
+            (produtoOs['quantidade'] as num?)?.toDouble() ?? 0;
 
         if (produtoId == null || quantidadeUtilizada <= 0) {
           if (produtoOsId != null) {
             await transaction.update(
               'ordem_servico_produtos',
-              {
-                'baixado_estoque': 1,
-              },
+              {'baixado_estoque': 1},
               where: 'id = ?',
               whereArgs: [produtoOsId],
             );
@@ -693,42 +645,30 @@ class OrdemServicoRepository {
 
         final resultadoItem = await transaction.query(
           'itens_estoque',
-          columns: [
-            'quantidade',
-            'custo_unitario',
-          ],
+          columns: ['quantidade', 'custo_unitario'],
           where: 'id = ?',
           whereArgs: [produtoId],
           limit: 1,
         );
 
         if (resultadoItem.isEmpty) {
-          throw StateError(
-            'Produto não encontrado no estoque.',
-          );
+          throw StateError('Produto não encontrado no estoque.');
         }
 
         final quantidadeAnterior =
-            (resultadoItem.first['quantidade'] as num?)
-                ?.toDouble() ??
-                0;
+            (resultadoItem.first['quantidade'] as num?)?.toDouble() ?? 0;
 
         final custoUnitarioEstoque =
-            (resultadoItem.first['custo_unitario'] as num?)
-                ?.toDouble() ??
-                0;
+            (resultadoItem.first['custo_unitario'] as num?)?.toDouble() ?? 0;
 
         final custoUnitarioOs =
-            (produtoOs['custo_unitario'] as num?)
-                ?.toDouble() ??
-                0;
+            (produtoOs['custo_unitario'] as num?)?.toDouble() ?? 0;
 
         final custoUnitario = custoUnitarioOs > 0
             ? custoUnitarioOs
             : custoUnitarioEstoque;
 
-        final quantidadePosterior =
-            quantidadeAnterior - quantidadeUtilizada;
+        final quantidadePosterior = quantidadeAnterior - quantidadeUtilizada;
 
         await transaction.update(
           'itens_estoque',
@@ -740,30 +680,23 @@ class OrdemServicoRepository {
           whereArgs: [produtoId],
         );
 
-        await transaction.insert(
-          'movimentacoes_estoque',
-          {
-            'item_estoque_id': produtoId,
-            'tipo': 'SAIDA',
-            'quantidade': quantidadeUtilizada,
-            'quantidade_anterior': quantidadeAnterior,
-            'quantidade_posterior': quantidadePosterior,
-            'custo_unitario': custoUnitario,
-            'observacoes':
-            'Baixa automática da Ordem de Serviço $numero',
-            'origem': 'Ordem de Serviço',
-            'ordem_servico_id': ordemServicoId,
-            'data': agora.toIso8601String(),
-          },
-          conflictAlgorithm: ConflictAlgorithm.abort,
-        );
+        await transaction.insert('movimentacoes_estoque', {
+          'item_estoque_id': produtoId,
+          'tipo': 'SAIDA',
+          'quantidade': quantidadeUtilizada,
+          'quantidade_anterior': quantidadeAnterior,
+          'quantidade_posterior': quantidadePosterior,
+          'custo_unitario': custoUnitario,
+          'observacoes': 'Baixa automática da Ordem de Serviço $numero',
+          'origem': 'Ordem de Serviço',
+          'ordem_servico_id': ordemServicoId,
+          'data': agora.toIso8601String(),
+        }, conflictAlgorithm: ConflictAlgorithm.abort);
 
         if (produtoOsId != null) {
           await transaction.update(
             'ordem_servico_produtos',
-            {
-              'baixado_estoque': 1,
-            },
+            {'baixado_estoque': 1},
             where: 'id = ?',
             whereArgs: [produtoOsId],
           );
@@ -771,36 +704,38 @@ class OrdemServicoRepository {
       }
 
       if (!lancadoFinanceiro && valorFinal > 0) {
-        await transaction.insert(
-          'movimentos_financeiros',
-          {
-            'tipo': 'entrada',
-            'descricao':
-            'Ordem de Serviço finalizada: $numero',
-            'valor': valorFinal,
-            'forma_pagamento':
-            formaPagamentoLimpa.isEmpty
-                ? 'Não informado'
-                : formaPagamentoLimpa,
-            'data': agora.toIso8601String(),
-            'cliente_id': clienteId,
-            'agendamento_id': null,
-          },
-          conflictAlgorithm: ConflictAlgorithm.abort,
-        );
+        await transaction.insert('movimentos_financeiros', {
+          'tipo': 'entrada',
+          'descricao': 'Ordem de Serviço finalizada: $numero',
+          'valor': valorFinal,
+          'forma_pagamento': formaPagamentoLimpa.isEmpty
+              ? 'Não informado'
+              : formaPagamentoLimpa,
+          'data': agora.toIso8601String(),
+          'cliente_id': clienteId,
+          'agendamento_id': null,
+        }, conflictAlgorithm: ConflictAlgorithm.abort);
       }
 
       final dados = <String, dynamic>{
         'status': 'Finalizada',
         'data_finalizacao': _formatarData(agora),
         'hora_saida': _formatarHora(agora),
-        'lancado_financeiro':
-        lancadoFinanceiro || valorFinal > 0 ? 1 : 0,
+        'lancado_financeiro': lancadoFinanceiro || valorFinal > 0 ? 1 : 0,
       };
 
+      final agendamentoId = _converterInt(ordem['agendamento_id']);
+
+      if (agendamentoId != null) {
+        await _agendamentoRepository.atualizarStatusComTransacao(
+          transaction,
+          agendamentoId,
+          'Finalizado',
+        );
+      }
+
       if (formaPagamentoLimpa.isNotEmpty) {
-        dados['forma_pagamento'] =
-            formaPagamentoLimpa;
+        dados['forma_pagamento'] = formaPagamentoLimpa;
       }
 
       await transaction.update(
@@ -812,11 +747,7 @@ class OrdemServicoRepository {
     });
   }
 
-
-
-  Future<Map<String, dynamic>> obterResumoDoCliente(
-    int clienteId,
-  ) async {
+  Future<Map<String, dynamic>> obterResumoDoCliente(int clienteId) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -861,29 +792,19 @@ class OrdemServicoRepository {
 
     final linha = resultado.first;
 
-    final quantidade =
-        (linha['quantidade_ordens'] as num?)
-                ?.toInt() ??
-            0;
+    final quantidade = (linha['quantidade_ordens'] as num?)?.toInt() ?? 0;
 
-    final total =
-        (linha['total_gasto'] as num?)
-                ?.toDouble() ??
-            0.0;
+    final total = (linha['total_gasto'] as num?)?.toDouble() ?? 0.0;
 
     return {
       'quantidade_ordens': quantidade,
       'total_gasto': total,
-      'ticket_medio':
-          quantidade > 0 ? total / quantidade : 0.0,
-      'ultimo_atendimento':
-          (linha['ultimo_atendimento'] ?? '')
-              .toString(),
+      'ticket_medio': quantidade > 0 ? total / quantidade : 0.0,
+      'ultimo_atendimento': (linha['ultimo_atendimento'] ?? '').toString(),
     };
   }
 
-  Future<List<Map<String, dynamic>>>
-      listarHistoricoDoCliente(
+  Future<List<Map<String, dynamic>>> listarHistoricoDoCliente(
     int clienteId,
   ) async {
     final database = await _appDatabase.database;
@@ -931,9 +852,7 @@ class OrdemServicoRepository {
     );
   }
 
-  Future<Map<String, dynamic>> obterResumoDoVeiculo(
-    int veiculoId,
-  ) async {
+  Future<Map<String, dynamic>> obterResumoDoVeiculo(int veiculoId) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -986,22 +905,13 @@ class OrdemServicoRepository {
     final linha = resultado.first;
 
     return {
-      'quantidade_ordens':
-          (linha['quantidade_ordens'] as num?)
-                  ?.toInt() ??
-              0,
-      'total_investido':
-          (linha['total_investido'] as num?)
-                  ?.toDouble() ??
-              0.0,
-      'ultimo_atendimento':
-          (linha['ultimo_atendimento'] ?? '')
-              .toString(),
+      'quantidade_ordens': (linha['quantidade_ordens'] as num?)?.toInt() ?? 0,
+      'total_investido': (linha['total_investido'] as num?)?.toDouble() ?? 0.0,
+      'ultimo_atendimento': (linha['ultimo_atendimento'] ?? '').toString(),
     };
   }
 
-  Future<List<Map<String, dynamic>>>
-      listarHistoricoDoVeiculo(
+  Future<List<Map<String, dynamic>>> listarHistoricoDoVeiculo(
     int veiculoId,
   ) async {
     final database = await _appDatabase.database;
@@ -1081,8 +991,7 @@ class OrdemServicoRepository {
     );
   }
 
-  Future<Map<String, dynamic>?>
-      buscarUltimoServicoDoVeiculo(
+  Future<Map<String, dynamic>?> buscarUltimoServicoDoVeiculo(
     int veiculoId,
   ) async {
     final database = await _appDatabase.database;
@@ -1122,38 +1031,53 @@ class OrdemServicoRepository {
       return null;
     }
 
-    return Map<String, dynamic>.from(
-      resultado.first,
-    );
+    return Map<String, dynamic>.from(resultado.first);
   }
 
-  Future<void> cancelarOrdemServico(
-      int ordemServicoId,
-      ) async {
-    await alterarStatus(
-      ordemServicoId: ordemServicoId,
-      status: 'Cancelada',
-    );
+  Future<void> cancelarOrdemServico(int ordemServicoId) async {
+    final database = await _appDatabase.database;
+
+    await database.transaction((transaction) async {
+      final resultado = await transaction.query(
+        'ordens_servico',
+        columns: ['id', 'status', 'agendamento_id'],
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+        limit: 1,
+      );
+
+      if (resultado.isEmpty) {
+        throw StateError('Ordem de Serviço não encontrada.');
+      }
+
+      final ordem = resultado.first;
+      final statusAtual = (ordem['status'] ?? '').toString().trim();
+
+      if (statusAtual == 'Cancelada') {
+        return;
+      }
+
+      await transaction.update(
+        'ordens_servico',
+        {'status': 'Cancelada'},
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+      );
+    });
   }
 
-  Future<void> marcarComoLancadaNoFinanceiro(
-      int ordemServicoId,
-      ) async {
+  Future<void> marcarComoLancadaNoFinanceiro(int ordemServicoId) async {
     final database = await _appDatabase.database;
 
     await database.update(
       'ordens_servico',
-      {
-        'lancado_financeiro': 1,
-      },
+      {'lancado_financeiro': 1},
       where: 'id = ?',
       whereArgs: [ordemServicoId],
     );
   }
 
-  Future<bool> existeOrdemParaOrcamento(
-      int orcamentoId,
-      ) async {
+  Future<bool> existeOrdemParaOrcamento(int orcamentoId) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -1176,24 +1100,19 @@ class OrdemServicoRepository {
     final agora = DateTime.now();
     final ano = agora.year.toString();
 
-    final resultado = await database.rawQuery(
-      '''
+    final resultado = await database.rawQuery('''
       SELECT MAX(id) AS ultimo_id
       FROM ordens_servico
-      ''',
-    );
+      ''');
 
-    final ultimoId =
-        Sqflite.firstIntValue(resultado) ?? 0;
+    final ultimoId = Sqflite.firstIntValue(resultado) ?? 0;
 
     final proximo = ultimoId + 1;
 
     return 'OS-$ano-${proximo.toString().padLeft(4, '0')}';
   }
 
-  Future<void> excluirOrdemServico(
-      int ordemServicoId,
-      ) async {
+  Future<void> excluirOrdemServico(int ordemServicoId) async {
     final database = await _appDatabase.database;
 
     await database.delete(
@@ -1203,9 +1122,7 @@ class OrdemServicoRepository {
     );
   }
 
-  Future<String?> buscarAssinaturaCliente(
-      int ordemServicoId,
-      ) async {
+  Future<String?> buscarAssinaturaCliente(int ordemServicoId) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -1220,8 +1137,7 @@ class OrdemServicoRepository {
       return null;
     }
 
-    final assinatura =
-    resultado.first['assinatura_cliente']?.toString().trim();
+    final assinatura = resultado.first['assinatura_cliente']?.toString().trim();
 
     if (assinatura == null || assinatura.isEmpty) {
       return null;
@@ -1237,47 +1153,35 @@ class OrdemServicoRepository {
     final caminho = caminhoAssinatura.trim();
 
     if (caminho.isEmpty) {
-      throw ArgumentError(
-        'O caminho da assinatura não pode estar vazio.',
-      );
+      throw ArgumentError('O caminho da assinatura não pode estar vazio.');
     }
 
     final database = await _appDatabase.database;
 
     final linhasAlteradas = await database.update(
       'ordens_servico',
-      {
-        'assinatura_cliente': caminho,
-      },
+      {'assinatura_cliente': caminho},
       where: 'id = ?',
       whereArgs: [ordemServicoId],
     );
 
     if (linhasAlteradas == 0) {
-      throw StateError(
-        'Ordem de Serviço não encontrada.',
-      );
+      throw StateError('Ordem de Serviço não encontrada.');
     }
   }
 
-  Future<void> removerAssinaturaCliente(
-      int ordemServicoId,
-      ) async {
+  Future<void> removerAssinaturaCliente(int ordemServicoId) async {
     final database = await _appDatabase.database;
 
     final linhasAlteradas = await database.update(
       'ordens_servico',
-      {
-        'assinatura_cliente': null,
-      },
+      {'assinatura_cliente': null},
       where: 'id = ?',
       whereArgs: [ordemServicoId],
     );
 
     if (linhasAlteradas == 0) {
-      throw StateError(
-        'Ordem de Serviço não encontrada.',
-      );
+      throw StateError('Ordem de Serviço não encontrada.');
     }
   }
 
@@ -1291,8 +1195,7 @@ class OrdemServicoRepository {
 
   String _formatarHora(DateTime data) {
     final hora = data.hour.toString().padLeft(2, '0');
-    final minuto =
-    data.minute.toString().padLeft(2, '0');
+    final minuto = data.minute.toString().padLeft(2, '0');
 
     return '$hora:$minuto';
   }
