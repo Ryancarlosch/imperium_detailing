@@ -9,8 +9,7 @@ import '../models/agendamento.dart';
 class NotificationService {
   NotificationService._();
 
-  static final NotificationService instance =
-      NotificationService._();
+  static final NotificationService instance = NotificationService._();
 
   static const int _idBase = 100000;
   static const int _idLimite = 200000;
@@ -28,12 +27,15 @@ class NotificationService {
     tz_data.initializeTimeZones();
 
     try {
-      final fuso =
-          await FlutterTimezone.getLocalTimezone();
+      final fuso = await FlutterTimezone.getLocalTimezone();
+      final identificador = fuso.identifier;
 
-      tz.setLocalLocation(
-          tz.getLocation(fuso.identifier),
-      );
+      if (identificador.isEmpty ||
+          !tz.timeZoneDatabase.locations.containsKey(identificador)) {
+        throw StateError('Fuso horário inválido: $identificador');
+      }
+
+      tz.setLocalLocation(tz.getLocation(identificador));
     } catch (erro) {
       debugPrint(
         'Não foi possível identificar o fuso horário: '
@@ -41,15 +43,10 @@ class NotificationService {
       );
 
       // Fuso padrão da região de Itaiópolis/SC.
-      tz.setLocalLocation(
-        tz.getLocation('America/Sao_Paulo'),
-      );
+      tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
     }
 
-    const android =
-        AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const ios = DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -57,15 +54,9 @@ class NotificationService {
       requestSoundPermission: false,
     );
 
-    const configuracoes =
-        InitializationSettings(
-      android: android,
-      iOS: ios,
-    );
+    const configuracoes = InitializationSettings(android: android, iOS: ios);
 
-    await _plugin.initialize(
-      settings: configuracoes,
-    );
+    await _plugin.initialize(settings: configuracoes);
 
     _inicializado = true;
   }
@@ -75,41 +66,33 @@ class NotificationService {
 
     final android = _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
 
-    final androidPermitido =
-        await android?.requestNotificationsPermission();
+    final androidPermitido = await android?.requestNotificationsPermission();
 
     final ios = _plugin
         .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
+          IOSFlutterLocalNotificationsPlugin
+        >();
 
-    final iosPermitido =
-        await ios?.requestPermissions(
+    final iosPermitido = await ios?.requestPermissions(
       alert: true,
       badge: true,
       sound: true,
     );
 
-    return androidPermitido ??
-        iosPermitido ??
-        true;
+    return androidPermitido ?? iosPermitido ?? true;
   }
 
-  Future<void> sincronizarAgendamentos(
-    List<Agendamento> agendamentos,
-  ) async {
+  Future<void> sincronizarAgendamentos(List<Agendamento> agendamentos) async {
     await inicializar();
 
-    final pendentes =
-        await _plugin.pendingNotificationRequests();
+    final pendentes = await _plugin.pendingNotificationRequests();
 
     for (final notificacao in pendentes) {
-      if (notificacao.id >= _idBase &&
-          notificacao.id < _idLimite) {
-        await _plugin.cancel(
-          id: notificacao.id,
-        );
+      if (notificacao.id >= _idBase && notificacao.id < _idLimite) {
+        await _plugin.cancel(id: notificacao.id);
       }
     }
 
@@ -123,23 +106,18 @@ class NotificationService {
         continue;
       }
 
-      await agendarLembrete(
-        agendamento,
-      );
+      await agendarLembrete(agendamento);
     }
   }
 
-  Future<void> agendarLembrete(
-    Agendamento agendamento,
-  ) async {
+  Future<void> agendarLembrete(Agendamento agendamento) async {
     await inicializar();
 
     if (agendamento.id == null) {
       return;
     }
 
-    final dataDoServico =
-        _converterDataHora(
+    final dataDoServico = _converterDataHora(
       agendamento.data,
       agendamento.hora,
     );
@@ -159,10 +137,7 @@ class NotificationService {
       return;
     }
 
-    var dataDoLembrete =
-        dataDoServico.subtract(
-      const Duration(days: 1),
-    );
+    var dataDoLembrete = dataDoServico.subtract(const Duration(days: 1));
 
     String titulo = 'Agendamento amanhã';
     String corpo =
@@ -171,9 +146,7 @@ class NotificationService {
         '${agendamento.hora}.';
 
     if (!dataDoLembrete.isAfter(agora)) {
-      dataDoLembrete = agora.add(
-        const Duration(seconds: 10),
-      );
+      dataDoLembrete = agora.add(const Duration(seconds: 10));
       titulo = 'Agendamento em breve';
       corpo =
           '${agendamento.servico} está marcado para '
@@ -181,27 +154,23 @@ class NotificationService {
           '${agendamento.hora}.';
     }
 
-    const detalhesAndroid =
-        AndroidNotificationDetails(
+    const detalhesAndroid = AndroidNotificationDetails(
       'lembretes_agendamentos',
       'Lembretes de agendamentos',
-      channelDescription:
-          'Avisos um dia antes dos serviços agendados',
+      channelDescription: 'Avisos um dia antes dos serviços agendados',
       importance: Importance.high,
       priority: Priority.high,
       category: AndroidNotificationCategory.reminder,
       icon: '@mipmap/ic_launcher',
     );
 
-    const detalhesIos =
-        DarwinNotificationDetails(
+    const detalhesIos = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
     );
 
-    const detalhes =
-        NotificationDetails(
+    const detalhes = NotificationDetails(
       android: detalhesAndroid,
       iOS: detalhesIos,
     );
@@ -212,43 +181,30 @@ class NotificationService {
       body: corpo,
       scheduledDate: dataDoLembrete,
       notificationDetails: detalhes,
-      androidScheduleMode:
-          AndroidScheduleMode.inexactAllowWhileIdle,
-      payload:
-          'agendamento:${agendamento.id}',
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: 'agendamento:${agendamento.id}',
     );
   }
 
-  Future<void> cancelarLembrete(
-    int agendamentoId,
-  ) async {
+  Future<void> cancelarLembrete(int agendamentoId) async {
     await inicializar();
 
-    await _plugin.cancel(
-      id: _idDaNotificacao(agendamentoId),
-    );
+    await _plugin.cancel(id: _idDaNotificacao(agendamentoId));
   }
 
   int _idDaNotificacao(int agendamentoId) {
-    return _idBase +
-        (agendamentoId % (_idLimite - _idBase));
+    return _idBase + (agendamentoId % (_idLimite - _idBase));
   }
 
-  tz.TZDateTime? _converterDataHora(
-    String data,
-    String hora,
-  ) {
-    final partesHora =
-        hora.trim().split(':');
+  tz.TZDateTime? _converterDataHora(String data, String hora) {
+    final partesHora = hora.trim().split(':');
 
     if (partesHora.length < 2) {
       return null;
     }
 
-    final horas =
-        int.tryParse(partesHora[0]);
-    final minutos =
-        int.tryParse(partesHora[1]);
+    final horas = int.tryParse(partesHora[0]);
+    final minutos = int.tryParse(partesHora[1]);
 
     if (horas == null ||
         minutos == null ||
@@ -261,9 +217,9 @@ class NotificationService {
 
     final dataLimpa = data.trim();
 
-    final formatoBrasileiro =
-        RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$')
-            .firstMatch(dataLimpa);
+    final formatoBrasileiro = RegExp(
+      r'^(\d{1,2})/(\d{1,2})/(\d{4})$',
+    ).firstMatch(dataLimpa);
 
     if (formatoBrasileiro != null) {
       return _criarDataValida(
@@ -275,9 +231,9 @@ class NotificationService {
       );
     }
 
-    final formatoIso =
-        RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})')
-            .firstMatch(dataLimpa);
+    final formatoIso = RegExp(
+      r'^(\d{4})-(\d{1,2})-(\d{1,2})',
+    ).firstMatch(dataLimpa);
 
     if (formatoIso != null) {
       return _criarDataValida(
@@ -300,14 +256,7 @@ class NotificationService {
     int minuto,
   ) {
     try {
-      final resultado = tz.TZDateTime(
-        tz.local,
-        ano,
-        mes,
-        dia,
-        hora,
-        minuto,
-      );
+      final resultado = tz.TZDateTime(tz.local, ano, mes, dia, hora, minuto);
 
       if (resultado.year != ano ||
           resultado.month != mes ||

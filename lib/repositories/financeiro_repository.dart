@@ -2,40 +2,25 @@ import '../database/app_database.dart';
 import '../models/movimento_financeiro.dart';
 
 class FinanceiroRepository {
-  Future<int> inserirMovimento(
-      MovimentoFinanceiro movimento,
-      ) async {
-    final database =
-    await AppDatabase.instance.database;
+  Future<int> inserirMovimento(MovimentoFinanceiro movimento) async {
+    final database = await AppDatabase.instance.database;
 
-    return database.insert(
-      'movimentos_financeiros',
-      movimento.toMap(),
-    );
+    return database.insert('movimentos_financeiros', movimento.toMap());
   }
 
-  Future<List<MovimentoFinanceiro>>
-  listarMovimentos() async {
-    final database =
-    await AppDatabase.instance.database;
+  Future<List<MovimentoFinanceiro>> listarMovimentos() async {
+    final database = await AppDatabase.instance.database;
 
     final resultado = await database.query(
       'movimentos_financeiros',
       orderBy: 'data DESC, id DESC',
     );
 
-    return resultado
-        .map(
-          (map) =>
-          MovimentoFinanceiro.fromMap(map),
-    )
-        .toList();
+    return resultado.map((map) => MovimentoFinanceiro.fromMap(map)).toList();
   }
 
-  Future<List<Map<String, dynamic>>>
-  listarMovimentosComCliente() async {
-    final database =
-    await AppDatabase.instance.database;
+  Future<List<Map<String, dynamic>>> listarMovimentosComCliente() async {
+    final database = await AppDatabase.instance.database;
 
     return database.rawQuery('''
       SELECT
@@ -58,38 +43,24 @@ class FinanceiroRepository {
     ''');
   }
 
-  Future<List<MovimentoFinanceiro>>
-  listarMovimentosPorPeriodo({
+  Future<List<MovimentoFinanceiro>> listarMovimentosPorPeriodo({
     required String dataInicial,
     required String dataFinal,
   }) async {
-    final database =
-    await AppDatabase.instance.database;
+    final database = await AppDatabase.instance.database;
 
     final resultado = await database.query(
       'movimentos_financeiros',
       where: 'data BETWEEN ? AND ?',
-      whereArgs: [
-        dataInicial,
-        dataFinal,
-      ],
+      whereArgs: [dataInicial, dataFinal],
       orderBy: 'data DESC, id DESC',
     );
 
-    return resultado
-        .map(
-          (map) =>
-          MovimentoFinanceiro.fromMap(map),
-    )
-        .toList();
+    return resultado.map((map) => MovimentoFinanceiro.fromMap(map)).toList();
   }
 
-  Future<MovimentoFinanceiro?>
-  buscarMovimentoPorId(
-      int id,
-      ) async {
-    final database =
-    await AppDatabase.instance.database;
+  Future<MovimentoFinanceiro?> buscarMovimentoPorId(int id) async {
+    final database = await AppDatabase.instance.database;
 
     final resultado = await database.query(
       'movimentos_financeiros',
@@ -102,22 +73,15 @@ class FinanceiroRepository {
       return null;
     }
 
-    return MovimentoFinanceiro.fromMap(
-      resultado.first,
-    );
+    return MovimentoFinanceiro.fromMap(resultado.first);
   }
 
-  Future<int> atualizarMovimento(
-      MovimentoFinanceiro movimento,
-      ) async {
+  Future<int> atualizarMovimento(MovimentoFinanceiro movimento) async {
     if (movimento.id == null) {
-      throw Exception(
-        'Não foi possível atualizar o movimento sem ID.',
-      );
+      throw Exception('Não foi possível atualizar o movimento sem ID.');
     }
 
-    final database =
-    await AppDatabase.instance.database;
+    final database = await AppDatabase.instance.database;
 
     return database.update(
       'movimentos_financeiros',
@@ -127,11 +91,8 @@ class FinanceiroRepository {
     );
   }
 
-  Future<int> excluirMovimento(
-      int id,
-      ) async {
-    final database =
-    await AppDatabase.instance.database;
+  Future<int> excluirMovimento(int id) async {
+    final database = await AppDatabase.instance.database;
 
     return database.delete(
       'movimentos_financeiros',
@@ -140,12 +101,8 @@ class FinanceiroRepository {
     );
   }
 
-  Future<double> somarEntradas({
-    String? dataInicial,
-    String? dataFinal,
-  }) async {
-    final database =
-    await AppDatabase.instance.database;
+  Future<double> somarEntradas({String? dataInicial, String? dataFinal}) async {
+    final database = await AppDatabase.instance.database;
 
     String consulta = '''
       SELECT
@@ -154,78 +111,51 @@ class FinanceiroRepository {
       WHERE LOWER(tipo) = ?
     ''';
 
-    final argumentos = <dynamic>[
-      'entrada',
-    ];
+    final argumentos = <dynamic>['entrada'];
 
-    if (dataInicial != null &&
-        dataFinal != null) {
+    if (dataInicial != null && dataFinal != null) {
       consulta += '''
         AND data BETWEEN ? AND ?
       ''';
 
-      argumentos.addAll([
-        dataInicial,
-        dataFinal,
-      ]);
+      argumentos.addAll([dataInicial, dataFinal]);
     }
 
-    final resultado =
-    await database.rawQuery(
-      consulta,
-      argumentos,
-    );
+    final resultado = await database.rawQuery(consulta, argumentos);
 
     final total = resultado.first['total'];
 
     return (total as num).toDouble();
   }
 
-  Future<double> somarSaidas({
-    String? dataInicial,
-    String? dataFinal,
-  }) async {
-    final database =
-    await AppDatabase.instance.database;
+  Future<double> somarSaidas({String? dataInicial, String? dataFinal}) async {
+    final database = await AppDatabase.instance.database;
 
     String consulta = '''
       SELECT
         COALESCE(SUM(valor), 0) AS total
       FROM movimentos_financeiros
-      WHERE LOWER(tipo) = ?
+      WHERE LOWER(tipo) IN (?, ?)
     ''';
 
-    final argumentos = <dynamic>[
-      'saida',
-    ];
+    final argumentos = <dynamic>['saída', 'saida'];
 
-    if (dataInicial != null &&
-        dataFinal != null) {
+    if (dataInicial != null && dataFinal != null) {
       consulta += '''
         AND data BETWEEN ? AND ?
       ''';
 
-      argumentos.addAll([
-        dataInicial,
-        dataFinal,
-      ]);
+      argumentos.addAll([dataInicial, dataFinal]);
     }
 
-    final resultado =
-    await database.rawQuery(
-      consulta,
-      argumentos,
-    );
+    final resultado = await database.rawQuery(consulta, argumentos);
 
     final total = resultado.first['total'];
 
     return (total as num).toDouble();
   }
 
-  Future<double> calcularSaldo({
-    String? dataInicial,
-    String? dataFinal,
-  }) async {
+  Future<double> calcularSaldo({String? dataInicial, String? dataFinal}) async {
     final entradas = await somarEntradas(
       dataInicial: dataInicial,
       dataFinal: dataFinal,
@@ -239,8 +169,7 @@ class FinanceiroRepository {
     return entradas - saidas;
   }
 
-  Future<Map<String, double>>
-  obterResumoFinanceiro({
+  Future<Map<String, double>> obterResumoFinanceiro({
     String? dataInicial,
     String? dataFinal,
   }) async {
@@ -254,18 +183,11 @@ class FinanceiroRepository {
       dataFinal: dataFinal,
     );
 
-    return {
-      'entradas': entradas,
-      'saidas': saidas,
-      'saldo': entradas - saidas,
-    };
+    return {'entradas': entradas, 'saidas': saidas, 'saldo': entradas - saidas};
   }
 
-  Future<bool> existeMovimentoDoAgendamento(
-      int agendamentoId,
-      ) async {
-    final database =
-    await AppDatabase.instance.database;
+  Future<bool> existeMovimentoDoAgendamento(int agendamentoId) async {
+    final database = await AppDatabase.instance.database;
 
     final resultado = await database.query(
       'movimentos_financeiros',
