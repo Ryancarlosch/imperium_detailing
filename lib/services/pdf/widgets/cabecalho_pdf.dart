@@ -19,7 +19,7 @@ class CabecalhoPdf {
 
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.all(18),
+      padding: const pw.EdgeInsets.all(15),
       decoration: pw.BoxDecoration(
         color: contexto.corSecundaria,
         borderRadius: pw.BorderRadius.circular(9),
@@ -29,7 +29,7 @@ class CabecalhoPdf {
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
           _criarLogo(contexto: contexto),
-          pw.SizedBox(width: 15),
+          pw.SizedBox(width: 12),
           pw.Expanded(
             child: _criarDadosEmpresa(
               contexto: contexto,
@@ -37,7 +37,7 @@ class CabecalhoPdf {
               subtitulo: subtitulo,
             ),
           ),
-          pw.SizedBox(width: 15),
+          pw.SizedBox(width: 12),
           _criarDadosDocumento(
             contexto: contexto,
             tipoDocumento: tipoDocumento,
@@ -58,8 +58,8 @@ class CabecalhoPdf {
     final nomeEmpresa = _nomeEmpresa(contexto.configuracao);
 
     return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 16),
-      padding: const pw.EdgeInsets.only(bottom: 8),
+      margin: const pw.EdgeInsets.only(bottom: 12),
+      padding: const pw.EdgeInsets.only(bottom: 6),
       decoration: const pw.BoxDecoration(
         border: pw.Border(
           bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.7),
@@ -70,8 +70,8 @@ class CabecalhoPdf {
         children: [
           if (contexto.logo != null) ...[
             pw.Container(
-              width: 28,
-              height: 28,
+              width: 26,
+              height: 26,
               padding: const pw.EdgeInsets.all(2),
               decoration: pw.BoxDecoration(
                 borderRadius: pw.BorderRadius.circular(5),
@@ -86,7 +86,7 @@ class CabecalhoPdf {
               nomeEmpresa.toUpperCase(),
               maxLines: 1,
               style: pw.TextStyle(
-                fontSize: 9,
+                fontSize: 8.5,
                 fontWeight: pw.FontWeight.bold,
                 color: PdfColors.grey700,
               ),
@@ -97,7 +97,7 @@ class CabecalhoPdf {
               tipoDocumento: tipoDocumento,
               numeroDocumento: numeroDocumento,
             ),
-            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+            style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700),
           ),
         ],
       ),
@@ -106,9 +106,9 @@ class CabecalhoPdf {
 
   static pw.Widget _criarLogo({required DocumentoPdfContexto contexto}) {
     return pw.Container(
-      width: 78,
-      height: 78,
-      padding: const pw.EdgeInsets.all(7),
+      width: 70,
+      height: 70,
+      padding: const pw.EdgeInsets.all(6),
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(9),
@@ -123,7 +123,7 @@ class CabecalhoPdf {
                   pw.Text(
                     'ID',
                     style: pw.TextStyle(
-                      fontSize: 23,
+                      fontSize: 21,
                       fontWeight: pw.FontWeight.bold,
                       color: contexto.corPrincipal,
                     ),
@@ -132,7 +132,7 @@ class CabecalhoPdf {
                   pw.Text(
                     'IMPERIUM',
                     style: pw.TextStyle(
-                      fontSize: 5.5,
+                      fontSize: 5,
                       fontWeight: pw.FontWeight.bold,
                       letterSpacing: 1,
                       color: PdfColors.grey800,
@@ -160,35 +160,35 @@ class CabecalhoPdf {
           nome.toUpperCase(),
           maxLines: 2,
           style: pw.TextStyle(
-            fontSize: 19,
+            fontSize: 18,
             fontWeight: pw.FontWeight.bold,
             color: contexto.corPrincipal,
             letterSpacing: 1,
           ),
         ),
         if (subtitulo.trim().isNotEmpty) ...[
-          pw.SizedBox(height: 3),
+          pw.SizedBox(height: 2),
           pw.Text(
             subtitulo.toUpperCase(),
             style: const pw.TextStyle(
-              fontSize: 7,
+              fontSize: 6.5,
               color: PdfColors.grey300,
               letterSpacing: 1.3,
             ),
           ),
         ],
         if (linhas.isNotEmpty) ...[
-          pw.SizedBox(height: 9),
+          pw.SizedBox(height: 6),
           ...linhas.map(
             (linha) => pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 2),
+              padding: const pw.EdgeInsets.only(bottom: 1),
               child: pw.Text(
                 linha,
                 maxLines: 2,
                 style: const pw.TextStyle(
-                  fontSize: 7.5,
+                  fontSize: 7,
                   color: PdfColors.grey300,
-                  lineSpacing: 1,
+                  lineSpacing: 0.9,
                 ),
               ),
             ),
@@ -215,24 +215,24 @@ class CabecalhoPdf {
           tipoDocumento.toUpperCase(),
           textAlign: pw.TextAlign.right,
           style: pw.TextStyle(
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: pw.FontWeight.bold,
             color: PdfColors.white,
           ),
         ),
         if (numeroDocumento.trim().isNotEmpty) ...[
-          pw.SizedBox(height: 4),
+          pw.SizedBox(height: 3),
           pw.Text(
             'Nº ${numeroDocumento.trim()}',
-            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey300),
+            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey300),
           ),
         ],
         if (status.trim().isNotEmpty) ...[
-          pw.SizedBox(height: 7),
+          pw.SizedBox(height: 5),
           _criarStatus(status),
         ],
         if (mostrarQrCode && possuiWhatsApp) ...[
-          pw.SizedBox(height: 9),
+          pw.SizedBox(height: 7),
           _criarQrCode(contexto: contexto),
         ],
       ],
@@ -267,7 +267,7 @@ class CabecalhoPdf {
     final link = 'https://wa.me/$numero';
 
     return pw.Container(
-      padding: const pw.EdgeInsets.all(5),
+      padding: const pw.EdgeInsets.all(4),
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(5),
@@ -278,15 +278,15 @@ class CabecalhoPdf {
           pw.BarcodeWidget(
             barcode: pw.Barcode.qrCode(),
             data: link,
-            width: 42,
-            height: 42,
+            width: 38,
+            height: 38,
             color: PdfColors.black,
           ),
-          pw.SizedBox(height: 2),
+          pw.SizedBox(height: 1),
           pw.Text(
             'WhatsApp',
             style: pw.TextStyle(
-              fontSize: 5.5,
+              fontSize: 5,
               fontWeight: pw.FontWeight.bold,
               color: PdfColors.grey800,
             ),

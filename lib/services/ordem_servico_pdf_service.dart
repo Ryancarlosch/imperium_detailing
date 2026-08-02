@@ -89,7 +89,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
     documento.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.fromLTRB(26, 20, 26, 24),
+        margin: const pw.EdgeInsets.fromLTRB(22, 16, 22, 18),
         header: (context) {
           if (context.pageNumber == 1) {
             return pw.SizedBox();
@@ -113,13 +113,13 @@ class OrdemServicoPdfService extends DocumentoPdfService {
               status: status,
               mostrarQrCode: false,
             ),
-            pw.SizedBox(height: 9),
+            pw.SizedBox(height: 6),
             _secaoInformacoesOs(dados: dados, emissao: emissao),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 5),
             _secaoClienteVeiculo(cliente: cliente, veiculo: veiculo),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 5),
             _secaoItens(itens),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 5),
             _secaoTotais(
               subtotal: subtotalItens,
               desconto: desconto,
@@ -127,22 +127,22 @@ class OrdemServicoPdfService extends DocumentoPdfService {
               formaPagamento: formaPagamento,
             ),
             if (checklist.isNotEmpty) ...[
-              pw.SizedBox(height: 8),
+              pw.SizedBox(height: 5),
               _secaoChecklistResumo(checklist),
             ],
             if (produtos.isNotEmpty) ...[
-              pw.SizedBox(height: 8),
+              pw.SizedBox(height: 5),
               _secaoProdutos(produtos),
             ],
             if (observacoes.isNotEmpty) ...[
-              pw.SizedBox(height: 8),
+              pw.SizedBox(height: 5),
               _secaoObservacoes(observacoes),
             ],
             if (fotos.isNotEmpty) ...[
-              pw.SizedBox(height: 8),
+              pw.SizedBox(height: 5),
               _secaoFotos(fotos),
             ],
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 7),
             _secaoAssinaturas(
               contexto: contexto,
               nomeCliente: cliente['nome'] ?? '',
@@ -224,7 +224,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
         children: [
           _tituloSecao('INFORMAÇÕES DA ORDEM'),
           pw.Padding(
-            padding: const pw.EdgeInsets.all(10),
+            padding: const pw.EdgeInsets.all(8),
             child: _gridCampos(campos),
           ),
         ],
@@ -290,7 +290,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
         children: [
           _tituloSecao('DADOS DO CLIENTE E VEÍCULO'),
           pw.Padding(
-            padding: const pw.EdgeInsets.all(10),
+            padding: const pw.EdgeInsets.all(8),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
@@ -299,9 +299,9 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                 else
                   _gridCampos(camposCliente),
                 if (camposVeiculo.isNotEmpty) ...[
-                  pw.SizedBox(height: 6),
+                    pw.SizedBox(height: 4),
                   pw.Divider(color: PdfColors.grey300, thickness: 0.6),
-                  pw.SizedBox(height: 5),
+                    pw.SizedBox(height: 3),
                   _gridCampos(camposVeiculo),
                 ],
               ],
@@ -353,7 +353,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
         children: [
           _tituloSecao('ITENS E SERVIÇOS'),
           pw.Padding(
-            padding: const pw.EdgeInsets.fromLTRB(7, 7, 7, 7),
+            padding: const pw.EdgeInsets.fromLTRB(6, 5, 6, 5),
             child: pw.TableHelper.fromTextArray(
               headers: const ['Descrição', 'Qtd.', 'Unitário', 'Subtotal'],
               data: linhas,
@@ -388,8 +388,8 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                 color: PdfColors.grey100,
               ),
               cellPadding: const pw.EdgeInsets.symmetric(
-                horizontal: 6,
-                vertical: 5,
+                 horizontal: 5,
+                 vertical: 3,
               ),
             ),
           ),
@@ -685,14 +685,14 @@ class OrdemServicoPdfService extends DocumentoPdfService {
         children: [
           _tituloSecao('OBSERVAÇÕES'),
           pw.Padding(
-            padding: const pw.EdgeInsets.all(10),
+              padding: const pw.EdgeInsets.all(8),
             child: pw.Text(
               observacoes,
               textAlign: pw.TextAlign.justify,
               style: const pw.TextStyle(
-                fontSize: 8,
+                  fontSize: 7.5,
                 color: PdfColors.grey900,
-                lineSpacing: 2,
+                  lineSpacing: 1.6,
               ),
             ),
           ),
@@ -716,7 +716,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
         children: [
           _tituloSecao('REGISTRO FOTOGRÁFICO'),
           pw.Padding(
-            padding: const pw.EdgeInsets.all(8),
+            padding: const pw.EdgeInsets.all(6),
             child: pw.Column(children: cards),
           ),
         ],
@@ -727,7 +727,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
   pw.Widget _cartaoComparativoFoto(_FotoPdfRegistro foto) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 6),
-      padding: const pw.EdgeInsets.all(7),
+        padding: const pw.EdgeInsets.all(6),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey300, width: 0.6),
         borderRadius: pw.BorderRadius.circular(5),
@@ -746,7 +746,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                           ? 'Registro do serviço'
                           : foto.descricao,
                       style: pw.TextStyle(
-                        fontSize: 8,
+                          fontSize: 7.5,
                         fontWeight: pw.FontWeight.bold,
                         color: PdfColors.grey800,
                       ),
@@ -756,7 +756,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                     pw.Text(
                       foto.data,
                       style: const pw.TextStyle(
-                        fontSize: 7,
+                          fontSize: 6.5,
                         color: PdfColors.grey600,
                       ),
                     ),
@@ -781,21 +781,21 @@ class OrdemServicoPdfService extends DocumentoPdfService {
       children: [
         pw.Container(
           width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(vertical: 3),
+          padding: const pw.EdgeInsets.symmetric(vertical: 2),
           color: PdfColors.grey800,
           child: pw.Text(
             titulo,
             textAlign: pw.TextAlign.center,
             style: pw.TextStyle(
               color: PdfColors.white,
-              fontSize: 7,
+              fontSize: 6.5,
               fontWeight: pw.FontWeight.bold,
             ),
           ),
         ),
         pw.Container(
           width: double.infinity,
-          height: 120,
+          height: 108,
           decoration: pw.BoxDecoration(
             color: PdfColors.grey100,
             border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
@@ -831,10 +831,10 @@ class OrdemServicoPdfService extends DocumentoPdfService {
             alignment: pw.Alignment.centerRight,
             child: pw.Text(
               'Data: $data',
-              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700),
             ),
           ),
-        pw.SizedBox(height: 9),
+        pw.SizedBox(height: 4),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
@@ -843,59 +843,59 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                 titulo: 'Assinatura do cliente',
                 nome: nomeCliente,
                 bytes: assinaturaCliente,
-              ),
+                    height: 34,
             ),
             pw.SizedBox(width: 22),
             pw.Expanded(
               child: _blocoAssinatura(
                 titulo: 'Assinatura da empresa',
                 nome: contexto.nomeEmpresa,
-                bytes: assinaturaEmpresa,
+                            height: 30,
               ),
             ),
           ],
         ),
-      ],
+                  pw.SizedBox(height: 2),
     );
   }
 
   pw.Widget _blocoAssinatura({
-    required String titulo,
+                      fontSize: 6.5,
     required String nome,
     required Uint8List? bytes,
   }) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,
-      children: [
+                    pw.SizedBox(height: 1),
         pw.Container(
-          height: 42,
+            height: 34,
           width: double.infinity,
-          alignment: pw.Alignment.bottomCenter,
+                      style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey800),
           child: bytes == null
               ? pw.SizedBox()
               : pw.Image(
                   pw.MemoryImage(bytes),
-                  height: 38,
+                    height: 30,
                   fit: pw.BoxFit.contain,
                 ),
         ),
         pw.Container(height: 1, color: PdfColors.grey700),
-        pw.SizedBox(height: 3),
+          pw.SizedBox(height: 2),
         pw.Text(
           titulo,
           textAlign: pw.TextAlign.center,
           style: pw.TextStyle(
-            fontSize: 7,
+              fontSize: 6.5,
             color: PdfColors.grey700,
             fontWeight: pw.FontWeight.bold,
           ),
         ),
         if (nome.trim().isNotEmpty) ...[
-          pw.SizedBox(height: 1.5),
+            pw.SizedBox(height: 1),
           pw.Text(
             nome,
             textAlign: pw.TextAlign.center,
-            style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey800),
+              style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey800),
           ),
         ],
       ],
@@ -905,13 +905,13 @@ class OrdemServicoPdfService extends DocumentoPdfService {
   pw.Widget _tituloSecao(String titulo) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: const pw.BoxDecoration(color: PdfColors.grey800),
       child: pw.Text(
         titulo,
         style: pw.TextStyle(
           color: PdfColors.white,
-          fontSize: 8,
+          fontSize: 7.5,
           fontWeight: pw.FontWeight.bold,
           letterSpacing: 0.6,
         ),
@@ -960,7 +960,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
         pw.Text(
           campo.rotulo.toUpperCase(),
           style: pw.TextStyle(
-            fontSize: 6.5,
+            fontSize: 6,
             color: PdfColors.grey600,
             fontWeight: pw.FontWeight.bold,
             letterSpacing: 0.4,
@@ -971,9 +971,9 @@ class OrdemServicoPdfService extends DocumentoPdfService {
           campo.valor,
           maxLines: campo.maxLinhas,
           style: const pw.TextStyle(
-            fontSize: 8.5,
+            fontSize: 7.5,
             color: PdfColors.grey900,
-            lineSpacing: 1.5,
+            lineSpacing: 1.2,
           ),
         ),
       ],

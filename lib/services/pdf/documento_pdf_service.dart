@@ -278,7 +278,7 @@ abstract class DocumentoPdfService {
       mainAxisSize: pw.MainAxisSize.min,
       children: [
         pw.Divider(color: PdfColors.grey400, thickness: 0.6),
-        pw.SizedBox(height: 3),
+        pw.SizedBox(height: 2),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
@@ -287,19 +287,16 @@ abstract class DocumentoPdfService {
                 textoRodape,
                 maxLines: 2,
                 style: const pw.TextStyle(
-                  fontSize: 7.5,
+                  fontSize: 7,
                   color: PdfColors.grey600,
                 ),
               ),
             ),
-            pw.SizedBox(width: 12),
+            pw.SizedBox(width: 10),
             pw.Text(
               'Página ${context.pageNumber} '
               'de ${context.pagesCount}',
-              style: const pw.TextStyle(
-                fontSize: 7.5,
-                color: PdfColors.grey600,
-              ),
+              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600),
             ),
           ],
         ),
