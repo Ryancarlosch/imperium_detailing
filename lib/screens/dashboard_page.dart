@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
+import '../repositories/configuracao_repository.dart';
 import '../repositories/dashboard_repository.dart';
 import 'agenda_page.dart';
 import 'clientes_page.dart';
@@ -23,6 +28,8 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final DashboardRepository _dashboardRepository = DashboardRepository();
+  final ConfiguracaoRepository _configuracaoRepository =
+      ConfiguracaoRepository();
   final NumberFormat _formatoMoeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
@@ -30,6 +37,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   bool _carregando = true;
   String? _mensagemErro;
+  String _nomeEmpresa = 'Imperium Detailing';
+  bool _assistenteExibido = false;
 
   DashboardPeriodo _periodoSelecionado = DashboardPeriodo.mesAtual;
   DateTimeRange? _periodoPersonalizado;
@@ -39,6 +48,128 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _carregarResumo();
+    _carregarNomeEmpresa();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _mostrarAssistentePrimeiroUso();
+    });
+  }
+
+  Future<void> _carregarNomeEmpresa() async {
+    try {
+      final configuracao = await _configuracaoRepository.obterConfiguracao();
+
+      if (!mounted) {
+        return;
+      }
+
+      final nome = configuracao.nomeFantasia.trim().isEmpty
+          ? 'Imperium Detailing'
+          : configuracao.nomeFantasia.trim();
+
+      setState(() {
+        _nomeEmpresa = nome;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _nomeEmpresa = 'Imperium Detailing';
+      });
+    }
+  }
+
+  Future<void> _mostrarAssistentePrimeiroUso() async {
+    if (_assistenteExibido) {
+      return;
+    }
+
+    _assistenteExibido = true;
+
+    try {
+      final diretorio = await getApplicationDocumentsDirectory();
+      final arquivoPrimeiroUso = File(
+        path.join(diretorio.path, 'imperium_primeiro_uso_assistente.flag'),
+      );
+
+      if (await arquivoPrimeiroUso.exists()) {
+        return;
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Primeiros passos'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Siga esta sequência para configurar o sistema e começar a trabalhar:',
+                    style: TextStyle(color: Colors.white70, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+                  _PassoPrimeiroUso(
+                    numero: '1',
+                    titulo: 'Configurações da empresa',
+                  ),
+                  const _SetaPrimeiroUso(),
+                  _PassoPrimeiroUso(
+                    numero: '2',
+                    titulo: 'Cadastro de serviços',
+                  ),
+                  const _SetaPrimeiroUso(),
+                  _PassoPrimeiroUso(
+                    numero: '3',
+                    titulo: 'Cadastro de clientes',
+                  ),
+                  const _SetaPrimeiroUso(),
+                  _PassoPrimeiroUso(
+                    numero: '4',
+                    titulo: 'Cadastro de veículos',
+                  ),
+                  const _SetaPrimeiroUso(),
+                  _PassoPrimeiroUso(
+                    numero: '5',
+                    titulo: 'Criar primeiro agendamento',
+                  ),
+                  const _SetaPrimeiroUso(),
+                  _PassoPrimeiroUso(
+                    numero: '6',
+                    titulo: 'Criar primeira Ordem de Serviço',
+                  ),
+                  const _SetaPrimeiroUso(),
+                  _PassoPrimeiroUso(numero: '7', titulo: 'Gerar PDF'),
+                  const _SetaPrimeiroUso(),
+                  _PassoPrimeiroUso(numero: '8', titulo: 'Pronto para usar'),
+                ],
+              ),
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Começar'),
+              ),
+            ],
+          );
+        },
+      );
+
+      await arquivoPrimeiroUso.create(recursive: true);
+      await arquivoPrimeiroUso.writeAsString(
+        DateTime.now().toIso8601String(),
+        flush: true,
+      );
+    } catch (_) {
+      // Se o marcador falhar, o assistente pode aparecer novamente na próxima execução.
+    }
   }
 
   Future<void> _carregarResumo() async {
@@ -189,13 +320,15 @@ class _DashboardPageState extends State<DashboardPage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'IMPERIUM',
+            Text(
+              _nomeEmpresa,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                letterSpacing: 2,
+                letterSpacing: 0.2,
                 color: Color(0xFFD6A84B),
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
               _labelPeriodo(),
@@ -217,7 +350,11 @@ class _DashboardPageState extends State<DashboardPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
           children: [
-            _HeroCabecalho(saudacao: _saudacao(), periodo: _labelPeriodo()),
+            _HeroCabecalho(
+              saudacao: _saudacao(),
+              periodo: _labelPeriodo(),
+              empresa: _nomeEmpresa,
+            ),
             const SizedBox(height: 14),
             _FiltrosPeriodo(
               periodoSelecionado: _periodoSelecionado,
@@ -299,10 +436,15 @@ class _DashboardPageState extends State<DashboardPage> {
 }
 
 class _HeroCabecalho extends StatelessWidget {
-  const _HeroCabecalho({required this.saudacao, required this.periodo});
+  const _HeroCabecalho({
+    required this.saudacao,
+    required this.periodo,
+    required this.empresa,
+  });
 
   final String saudacao;
   final String periodo;
+  final String empresa;
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +466,9 @@ class _HeroCabecalho extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            saudacao,
+            '$saudacao, $empresa',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
@@ -1177,6 +1321,64 @@ class _AtalhoItem {
   final String titulo;
   final IconData icone;
   final VoidCallback onTap;
+}
+
+class _PassoPrimeiroUso extends StatelessWidget {
+  const _PassoPrimeiroUso({required this.numero, required this.titulo});
+
+  final String numero;
+  final String titulo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFFD6A84B).withValues(alpha: 0.14),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: const Color(0xFFD6A84B).withValues(alpha: 0.45),
+            ),
+          ),
+          child: Text(
+            numero,
+            style: const TextStyle(
+              color: Color(0xFFD6A84B),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            titulo,
+            style: const TextStyle(fontWeight: FontWeight.w600, height: 1.3),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SetaPrimeiroUso extends StatelessWidget {
+  const _SetaPrimeiroUso();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 6),
+      child: Icon(
+        Icons.keyboard_arrow_down_rounded,
+        color: Colors.white38,
+        size: 22,
+      ),
+    );
+  }
 }
 
 class _PontoGrafico {

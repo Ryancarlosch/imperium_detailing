@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:signature/signature.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/configuracao.dart';
@@ -27,6 +30,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   bool _carregando = true;
   bool _salvando = false;
   bool _processandoBackup = false;
+  bool _processandoAssinaturaEmpresa = false;
 
   Configuracao _configuracao = Configuracao.padrao();
 
@@ -240,16 +244,107 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
     );
   }
 
-  Future<void> _selecionarAssinaturaEmpresa() async {
-    await _selecionarImagemConfiguracao(
-      pastaNome: 'assinaturas_empresa',
-      prefixoArquivo: 'assinatura_empresa',
-      aoAtualizar: (novo) {
-        _caminhoAssinaturaEmpresa = novo;
+  Future<void> _editarAssinaturaEmpresa() async {
+    if (_processandoAssinaturaEmpresa || _salvando) {
+      return;
+    }
+
+    final bytes = await showDialog<Uint8List>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return _EditorAssinaturaEmpresaDialog(
+          caminhoAtual: _caminhoAssinaturaEmpresa,
+        );
       },
-      sucesso: 'Assinatura da empresa atualizada com sucesso.',
-      erro: 'Não foi possível selecionar a assinatura da empresa.',
     );
+
+    if (bytes == null || bytes.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _processandoAssinaturaEmpresa = true;
+    });
+
+    String? novoCaminho;
+    final caminhoAnterior = _caminhoAssinaturaEmpresa;
+
+    try {
+      novoCaminho = await _salvarAssinaturaEmpresaPng(bytes);
+
+      final configuracaoAtualizada = _configuracao.copyWith(
+        caminhoAssinaturaEmpresa: novoCaminho,
+        removerAssinaturaEmpresa: false,
+      );
+
+      await _repository.salvarConfiguracao(configuracaoAtualizada);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _configuracao = configuracaoAtualizada;
+        _caminhoAssinaturaEmpresa = novoCaminho;
+        _processandoAssinaturaEmpresa = false;
+      });
+
+      if (caminhoAnterior != null &&
+          caminhoAnterior.trim().isNotEmpty &&
+          caminhoAnterior != novoCaminho) {
+        try {
+          final arquivoAnterior = File(caminhoAnterior);
+          if (await arquivoAnterior.exists()) {
+            await arquivoAnterior.delete();
+          }
+        } catch (_) {
+          // Mantém a nova assinatura mesmo se a anterior não puder ser removida.
+        }
+      }
+
+      _mostrarMensagem('Assinatura da empresa salva com sucesso.');
+    } catch (erro) {
+      if (novoCaminho != null) {
+        try {
+          final arquivoNovo = File(novoCaminho);
+          if (await arquivoNovo.exists()) {
+            await arquivoNovo.delete();
+          }
+        } catch (_) {
+          // Limpeza best-effort.
+        }
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _processandoAssinaturaEmpresa = false;
+      });
+
+      _mostrarMensagem(
+        'Não foi possível salvar a assinatura da empresa: $erro',
+        erro: true,
+      );
+    }
+  }
+
+  Future<String> _salvarAssinaturaEmpresaPng(Uint8List bytes) async {
+    final diretorio = await getApplicationDocumentsDirectory();
+    final pasta = Directory(path.join(diretorio.path, 'assinaturas_empresa'));
+
+    if (!await pasta.exists()) {
+      await pasta.create(recursive: true);
+    }
+
+    final nomeArquivo =
+        'assinatura_empresa_${DateTime.now().millisecondsSinceEpoch}.png';
+    final arquivo = File(path.join(pasta.path, nomeArquivo));
+
+    await arquivo.writeAsBytes(bytes, flush: true);
+    return arquivo.path;
   }
 
   Future<void> _selecionarImagemConfiguracao({
@@ -872,8 +967,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                       caminhoAssinaturaEmpresa: _caminhoAssinaturaEmpresa,
                       onSelecionarLogo: _selecionarLogo,
                       onRemoverLogo: _removerLogo,
-                      onSelecionarAssinaturaEmpresa:
-                          _selecionarAssinaturaEmpresa,
+                      onEditarAssinaturaEmpresa: _editarAssinaturaEmpresa,
                       onRemoverAssinaturaEmpresa: _removerAssinaturaEmpresa,
                     ),
                     const SizedBox(height: 16),
@@ -1461,7 +1555,7 @@ class _CabecalhoConfiguracoes extends StatelessWidget {
     required this.caminhoAssinaturaEmpresa,
     required this.onSelecionarLogo,
     required this.onRemoverLogo,
-    required this.onSelecionarAssinaturaEmpresa,
+    required this.onEditarAssinaturaEmpresa,
     required this.onRemoverAssinaturaEmpresa,
   });
 
@@ -1470,7 +1564,7 @@ class _CabecalhoConfiguracoes extends StatelessWidget {
   final String? caminhoAssinaturaEmpresa;
   final VoidCallback onSelecionarLogo;
   final VoidCallback onRemoverLogo;
-  final VoidCallback onSelecionarAssinaturaEmpresa;
+  final VoidCallback onEditarAssinaturaEmpresa;
   final VoidCallback onRemoverAssinaturaEmpresa;
 
   @override
@@ -1542,6 +1636,45 @@ class _CabecalhoConfiguracoes extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF101010),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 74,
+                  height: 56,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD6A84B).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: possuiAssinatura
+                      ? Image.file(
+                          File(caminhoAssinaturaEmpresa!),
+                          fit: BoxFit.contain,
+                        )
+                      : const Icon(
+                          Icons.draw_outlined,
+                          color: Color(0xFFD6A84B),
+                        ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Desenhe a assinatura com o dedo ou mouse e salve em PNG para usar nos PDFs.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -1558,70 +1691,20 @@ class _CabecalhoConfiguracoes extends StatelessWidget {
                   icon: const Icon(Icons.delete_outline, size: 18),
                   label: const Text('Remover logo'),
                 ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1D1D1D),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: const Color(0xFFD6A84B).withValues(alpha: 0.30),
+              OutlinedButton.icon(
+                onPressed: onEditarAssinaturaEmpresa,
+                icon: const Icon(Icons.draw_outlined, size: 18),
+                label: Text(
+                  possuiAssinatura ? 'Editar assinatura' : 'Criar assinatura',
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Assinatura da empresa',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+              if (possuiAssinatura)
+                OutlinedButton.icon(
+                  onPressed: onRemoverAssinaturaEmpresa,
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  label: const Text('Remover assinatura'),
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 84,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF101010),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white12),
-                  ),
-                  child: possuiAssinatura
-                      ? Image.file(
-                          File(caminhoAssinaturaEmpresa!),
-                          fit: BoxFit.contain,
-                        )
-                      : const Text(
-                          'Nenhuma assinatura selecionada',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: onSelecionarAssinaturaEmpresa,
-                      icon: const Icon(Icons.draw_outlined, size: 18),
-                      label: Text(
-                        possuiAssinatura
-                            ? 'Substituir assinatura'
-                            : 'Selecionar assinatura',
-                      ),
-                    ),
-                    if (possuiAssinatura)
-                      OutlinedButton.icon(
-                        onPressed: onRemoverAssinaturaEmpresa,
-                        icon: const Icon(Icons.delete_outline, size: 18),
-                        label: const Text('Remover assinatura'),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+            ],
           ),
         ],
       ),
@@ -1722,6 +1805,271 @@ class _BackupInfoCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _EditorAssinaturaEmpresaDialog extends StatefulWidget {
+  const _EditorAssinaturaEmpresaDialog({required this.caminhoAtual});
+
+  final String? caminhoAtual;
+
+  @override
+  State<_EditorAssinaturaEmpresaDialog> createState() =>
+      _EditorAssinaturaEmpresaDialogState();
+}
+
+class _EditorAssinaturaEmpresaDialogState
+    extends State<_EditorAssinaturaEmpresaDialog> {
+  final ImagePicker _imagePicker = ImagePicker();
+  late final SignatureController _signatureController;
+
+  Uint8List? _imagemImportada;
+  String? _mensagem;
+  bool _salvando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _signatureController = SignatureController(
+      penStrokeWidth: 3.2,
+      penColor: Colors.black,
+      exportBackgroundColor: Colors.white,
+      exportPenColor: Colors.black,
+    );
+  }
+
+  @override
+  void dispose() {
+    _signatureController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _importarImagem() async {
+    if (_salvando) {
+      return;
+    }
+
+    final imagem = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 95,
+    );
+
+    if (imagem == null) {
+      return;
+    }
+
+    final bytes = await File(imagem.path).readAsBytes();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _imagemImportada = bytes;
+      _signatureController.clear();
+      _mensagem = 'Imagem importada pronta para salvar.';
+    });
+  }
+
+  void _limpar() {
+    if (_salvando) {
+      return;
+    }
+
+    setState(() {
+      _imagemImportada = null;
+      _signatureController.clear();
+      _mensagem = null;
+    });
+  }
+
+  Future<Uint8List?> _gerarBytesPng() async {
+    if (_signatureController.isNotEmpty) {
+      final bytes = await _signatureController.toPngBytes();
+      if (bytes == null || bytes.isEmpty) {
+        throw Exception('Não foi possível gerar a assinatura.');
+      }
+
+      return bytes;
+    }
+
+    if (_imagemImportada != null) {
+      final codec = await ui.instantiateImageCodec(_imagemImportada!);
+      final frame = await codec.getNextFrame();
+      final data = await frame.image.toByteData(format: ui.ImageByteFormat.png);
+
+      if (data == null) {
+        throw Exception('Não foi possível converter a imagem para PNG.');
+      }
+
+      return data.buffer.asUint8List();
+    }
+
+    return null;
+  }
+
+  Future<void> _salvar() async {
+    if (_salvando) {
+      return;
+    }
+
+    final bytes = await _gerarBytesPng();
+
+    if (bytes == null || bytes.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _mensagem =
+            'Desenhe uma assinatura ou importe uma imagem antes de salvar.';
+      });
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _salvando = true;
+      _mensagem = null;
+    });
+
+    try {
+      Navigator.of(context).pop(bytes);
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _salvando = false;
+        _mensagem = 'Não foi possível salvar a assinatura.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final possuiAtual =
+        widget.caminhoAtual != null &&
+        widget.caminhoAtual!.trim().isNotEmpty &&
+        File(widget.caminhoAtual!).existsSync();
+
+    return AlertDialog(
+      title: const Text('Assinatura da empresa'),
+      content: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Desenhe com o dedo ou mouse. Se preferir, importe uma imagem e o sistema vai salvá-la em PNG.',
+                style: TextStyle(color: Colors.white70, height: 1.35),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF101010),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFFD6A84B).withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Prévia',
+                      style: TextStyle(fontSize: 12, color: Colors.white60),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      height: 96,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: _imagemImportada != null
+                          ? Image.memory(_imagemImportada!, fit: BoxFit.contain)
+                          : possuiAtual
+                          ? Image.file(
+                              File(widget.caminhoAtual!),
+                              fit: BoxFit.contain,
+                            )
+                          : const Text(
+                              'Nenhuma assinatura salva ainda',
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontSize: 12,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                height: 220,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFD6A84B).withValues(alpha: 0.22),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Signature(
+                    controller: _signatureController,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (_mensagem != null)
+                Text(
+                  _mensagem!,
+                  style: const TextStyle(color: Colors.orangeAccent),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _salvando ? null : _limpar,
+          child: const Text('Limpar'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _salvando ? null : _importarImagem,
+          icon: const Icon(Icons.upload_file_outlined, size: 18),
+          label: const Text('Importar imagem'),
+        ),
+        TextButton(
+          onPressed: _salvando ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _salvando ? null : _salvar,
+          child: _salvando
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Salvar PNG'),
+        ),
+      ],
     );
   }
 }
