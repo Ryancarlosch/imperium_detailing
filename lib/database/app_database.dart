@@ -5,6 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
+  static const int schemaVersion = 14;
 
   static Database? _database;
 
@@ -24,7 +25,7 @@ class AppDatabase {
 
     return openDatabase(
       caminho,
-      version: 13,
+      version: 14,
       onConfigure: (database) async {
         await database.execute('PRAGMA foreign_keys = ON');
       },
@@ -90,6 +91,10 @@ class AppDatabase {
 
         if (versaoAntiga < 13) {
           await _atualizarConfiguracoesParaVersao13(database);
+        }
+
+        if (versaoAntiga < 14) {
+          await _atualizarConfiguracoesParaVersao14(database);
         }
       },
     );
@@ -895,6 +900,9 @@ class AppDatabase {
           mensagem_confirmacao TEXT NOT NULL DEFAULT '',
           mensagem_entrega TEXT NOT NULL DEFAULT '',
           mensagem_cobranca TEXT NOT NULL DEFAULT '',
+          ultimo_backup_em TEXT,
+          ultimo_backup_caminho TEXT,
+          ultimo_backup_tamanho_bytes INTEGER NOT NULL DEFAULT 0,
           atualizado_em TEXT NOT NULL
         )
       ''');
@@ -928,6 +936,31 @@ class AppDatabase {
       tabela: 'configuracoes',
       coluna: 'caminho_assinatura_empresa',
       definicao: 'TEXT',
+    );
+  }
+
+  Future<void> _atualizarConfiguracoesParaVersao14(Database database) async {
+    await _criarTabelaConfiguracoes(database);
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes',
+      coluna: 'ultimo_backup_em',
+      definicao: 'TEXT',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes',
+      coluna: 'ultimo_backup_caminho',
+      definicao: 'TEXT',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes',
+      coluna: 'ultimo_backup_tamanho_bytes',
+      definicao: 'INTEGER NOT NULL DEFAULT 0',
     );
   }
 

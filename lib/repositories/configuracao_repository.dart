@@ -164,6 +164,22 @@ class ConfiguracaoRepository {
     await salvarConfiguracao(atualizada);
   }
 
+  Future<void> atualizarMetadadosBackup({
+    required String dataCriacao,
+    required String caminhoBackup,
+    required int tamanhoBytes,
+  }) async {
+    final configuracao = await obterConfiguracao();
+
+    final atualizada = configuracao.copyWith(
+      ultimoBackupEm: dataCriacao,
+      ultimoBackupCaminho: caminhoBackup,
+      ultimoBackupTamanhoBytes: tamanhoBytes,
+    );
+
+    await salvarConfiguracao(atualizada);
+  }
+
   Future<void> restaurarPadrao() async {
     final configuracaoPadrao = Configuracao.padrao();
 

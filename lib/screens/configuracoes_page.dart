@@ -1,12 +1,16 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/configuracao.dart';
 import '../repositories/configuracao_repository.dart';
+import '../services/backup_service.dart';
 
 class ConfiguracoesPage extends StatefulWidget {
   const ConfiguracoesPage({super.key});
@@ -22,6 +26,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
 
   bool _carregando = true;
   bool _salvando = false;
+  bool _processandoBackup = false;
 
   Configuracao _configuracao = Configuracao.padrao();
 
@@ -505,6 +510,177 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
 
       _mostrarMensagem('Não foi possível restaurar: $erro', erro: true);
     }
+  }
+
+  Future<void> _criarBackup() async {
+    if (_processandoBackup) {
+      return;
+    }
+
+    setState(() {
+      _processandoBackup = true;
+    });
+
+    try {
+      final resumo = await BackupService.instance.criarBackup();
+      final configuracaoAtualizada = _configuracao.copyWith(
+        ultimoBackupEm: resumo.dataCriacao.toIso8601String(),
+        ultimoBackupCaminho: resumo.caminhoArquivo,
+        ultimoBackupTamanhoBytes: resumo.tamanhoBytes,
+      );
+
+      await _repository.salvarConfiguracao(configuracaoAtualizada);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _configuracao = configuracaoAtualizada;
+      });
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(resumo.caminhoArquivo)],
+          text:
+              'Backup do Imperium Detailing criado em ${_formatarDataIso(resumo.dataCriacao.toIso8601String())}.',
+        ),
+      );
+
+      final mensagem = resumo.avisos.isEmpty
+          ? 'Backup criado com sucesso.'
+          : 'Backup criado com sucesso, com ${resumo.avisos.length} aviso(s) de arquivos ausentes.';
+
+      _mostrarMensagem(mensagem);
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      _mostrarMensagem('Não foi possível criar o backup: $erro', erro: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _processandoBackup = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _restaurarBackup() async {
+    if (_processandoBackup) {
+      return;
+    }
+
+    final resultado = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['zip'],
+      allowMultiple: false,
+      dialogTitle: 'Selecionar backup do Imperium Detailing',
+    );
+
+    final caminhoArquivo = resultado?.files.single.path;
+    if (caminhoArquivo == null || caminhoArquivo.trim().isEmpty) {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Restaurar backup'),
+          content: const Text(
+            'Os dados atuais serão substituídos pelo conteúdo do backup selecionado. '
+            'O aplicativo criará uma cópia de segurança antes de aplicar a restauração.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Restaurar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) {
+      return;
+    }
+
+    setState(() {
+      _processandoBackup = true;
+    });
+
+    try {
+      final resumo = await BackupService.instance.restaurarBackup(
+        caminhoArquivo,
+      );
+      await _carregarConfiguracoes();
+
+      if (!mounted) {
+        return;
+      }
+
+      final mensagem = resumo.avisos.isEmpty
+          ? 'Backup restaurado com sucesso. Reinicie o aplicativo se algo ainda não atualizar.'
+          : 'Backup restaurado com sucesso. Reinicie o aplicativo se algo ainda não atualizar. '
+                'Alguns arquivos não foram encontrados no backup.';
+
+      _mostrarMensagem(mensagem);
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      _mostrarMensagem(
+        'Não foi possível restaurar o backup: $erro',
+        erro: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _processandoBackup = false;
+        });
+      }
+    }
+  }
+
+  String _formatarDataIso(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Nunca';
+    }
+
+    final data = DateTime.tryParse(valor);
+    if (data == null) {
+      return valor;
+    }
+
+    return DateFormat('dd/MM/yyyy HH:mm').format(data.toLocal());
+  }
+
+  String _formatarTamanhoBackup(int bytes) {
+    if (bytes <= 0) {
+      return '0 B';
+    }
+
+    const unidades = ['B', 'KB', 'MB', 'GB'];
+    var valor = bytes.toDouble();
+    var indice = 0;
+
+    while (valor >= 1024 && indice < unidades.length - 1) {
+      valor /= 1024;
+      indice++;
+    }
+
+    return '${valor.toStringAsFixed(valor >= 10 || indice == 0 ? 0 : 1)} ${unidades[indice]}';
   }
 
   void _mostrarMensagem(String mensagem, {bool erro = false}) {
@@ -1007,6 +1183,114 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 14),
+                    _SecaoConfiguracao(
+                      titulo: 'Backup e restauração',
+                      subtitulo:
+                          'Crie um backup local compartilhável ou restaure um arquivo válido com segurança.',
+                      icone: Icons.backup_outlined,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF121212),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: const Color(
+                                0xFFD6A84B,
+                              ).withValues(alpha: 0.18),
+                            ),
+                          ),
+                          child: const Text(
+                            'Os dados atuais serão substituídos na restauração. O aplicativo cria automaticamente uma cópia de segurança antes de aplicar o backup selecionado.',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: _processandoBackup
+                                  ? null
+                                  : _criarBackup,
+                              icon: _processandoBackup
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF101010),
+                                      ),
+                                    )
+                                  : const Icon(Icons.backup_outlined),
+                              label: Text(
+                                _processandoBackup
+                                    ? 'Processando...'
+                                    : 'Criar backup',
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFD6A84B),
+                                foregroundColor: const Color(0xFF101010),
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: _processandoBackup
+                                  ? null
+                                  : _restaurarBackup,
+                              icon: const Icon(Icons.restore_outlined),
+                              label: const Text('Restaurar backup'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _BackupInfoCard(
+                                titulo: 'Último backup',
+                                valor: _configuracao.possuiUltimoBackup
+                                    ? _formatarDataIso(
+                                        _configuracao.ultimoBackupEm,
+                                      )
+                                    : 'Nenhum backup registrado',
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _BackupInfoCard(
+                                titulo: 'Tamanho',
+                                valor: _configuracao.possuiUltimoBackup
+                                    ? _formatarTamanhoBackup(
+                                        _configuracao.ultimoBackupTamanhoBytes,
+                                      )
+                                    : '—',
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_configuracao.ultimoBackupCaminho != null &&
+                            _configuracao.ultimoBackupCaminho!
+                                .trim()
+                                .isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            _configuracao.ultimoBackupCaminho!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     const SizedBox(height: 18),
                     FilledButton.icon(
                       onPressed: _salvando ? null : _salvarConfiguracoes,
@@ -1403,4 +1687,41 @@ class _OpcaoCor {
 
   final String nome;
   final int valor;
+}
+
+class _BackupInfoCard extends StatelessWidget {
+  const _BackupInfoCard({required this.titulo, required this.valor});
+
+  final String titulo;
+  final String valor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFD6A84B).withValues(alpha: 0.12),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            titulo,
+            style: const TextStyle(color: Colors.white60, fontSize: 11),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            valor,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -41,6 +41,10 @@ class Configuracao {
   final String mensagemEntrega;
   final String mensagemCobranca;
 
+  final String? ultimoBackupEm;
+  final String? ultimoBackupCaminho;
+  final int ultimoBackupTamanhoBytes;
+
   final String atualizadoEm;
 
   const Configuracao({
@@ -78,6 +82,9 @@ class Configuracao {
     this.mensagemConfirmacao = '',
     this.mensagemEntrega = '',
     this.mensagemCobranca = '',
+    this.ultimoBackupEm,
+    this.ultimoBackupCaminho,
+    this.ultimoBackupTamanhoBytes = 0,
     this.atualizadoEm = '',
   });
 
@@ -132,6 +139,12 @@ class Configuracao {
       mensagemConfirmacao: _lerTexto(mapa['mensagem_confirmacao']),
       mensagemEntrega: _lerTexto(mapa['mensagem_entrega']),
       mensagemCobranca: _lerTexto(mapa['mensagem_cobranca']),
+      ultimoBackupEm: _lerTextoOpcional(mapa['ultimo_backup_em']),
+      ultimoBackupCaminho: _lerTextoOpcional(mapa['ultimo_backup_caminho']),
+      ultimoBackupTamanhoBytes: _lerInteiro(
+        mapa['ultimo_backup_tamanho_bytes'],
+        padrao: 0,
+      ),
       atualizadoEm: _lerTexto(mapa['atualizado_em']),
     );
   }
@@ -172,6 +185,9 @@ class Configuracao {
       'mensagem_confirmacao': mensagemConfirmacao.trim(),
       'mensagem_entrega': mensagemEntrega.trim(),
       'mensagem_cobranca': mensagemCobranca.trim(),
+      'ultimo_backup_em': ultimoBackupEm,
+      'ultimo_backup_caminho': ultimoBackupCaminho,
+      'ultimo_backup_tamanho_bytes': ultimoBackupTamanhoBytes,
       'atualizado_em': atualizadoEm.isEmpty
           ? DateTime.now().toIso8601String()
           : atualizadoEm,
@@ -224,6 +240,9 @@ class Configuracao {
     String? mensagemConfirmacao,
     String? mensagemEntrega,
     String? mensagemCobranca,
+    String? ultimoBackupEm,
+    String? ultimoBackupCaminho,
+    int? ultimoBackupTamanhoBytes,
     String? atualizadoEm,
   }) {
     return Configuracao(
@@ -265,6 +284,10 @@ class Configuracao {
       mensagemConfirmacao: mensagemConfirmacao ?? this.mensagemConfirmacao,
       mensagemEntrega: mensagemEntrega ?? this.mensagemEntrega,
       mensagemCobranca: mensagemCobranca ?? this.mensagemCobranca,
+      ultimoBackupEm: ultimoBackupEm ?? this.ultimoBackupEm,
+      ultimoBackupCaminho: ultimoBackupCaminho ?? this.ultimoBackupCaminho,
+      ultimoBackupTamanhoBytes:
+          ultimoBackupTamanhoBytes ?? this.ultimoBackupTamanhoBytes,
       atualizadoEm: atualizadoEm ?? DateTime.now().toIso8601String(),
     );
   }
@@ -319,6 +342,13 @@ class Configuracao {
   bool get possuiAssinaturaEmpresa {
     return caminhoAssinaturaEmpresa != null &&
         caminhoAssinaturaEmpresa!.trim().isNotEmpty;
+  }
+
+  bool get possuiUltimoBackup {
+    return ultimoBackupEm != null &&
+        ultimoBackupEm!.trim().isNotEmpty &&
+        ultimoBackupCaminho != null &&
+        ultimoBackupCaminho!.trim().isNotEmpty;
   }
 
   bool get temaEscuro {
