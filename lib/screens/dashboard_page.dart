@@ -1,18 +1,18 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../repositories/dashboard_repository.dart';
 import 'agenda_page.dart';
 import 'clientes_page.dart';
+import 'configuracoes_page.dart';
+import 'estoque_page.dart';
 import 'financeiro_page.dart';
 import 'fotos_page.dart';
 import 'orcamentos_page.dart';
-import 'veiculos_page.dart';
 import 'ordens_servico_page.dart';
-import 'configuracoes_page.dart';
-import 'estoque_page.dart';
 import 'servicos_page.dart';
+import 'veiculos_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -31,31 +31,9 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _carregando = true;
   String? _mensagemErro;
 
-  double _receitaHoje = 0;
-  double _faturamentoSemana = 0;
-  double _faturamentoMes = 0;
-  double _saidasMes = 0;
-  double _saldoMes = 0;
-  double _lucroBrutoEstimadoMes = 0;
-  double _custoProdutosMes = 0;
-  double _saldoTotal = 0;
-
-  int _totalClientes = 0;
-  int _totalVeiculos = 0;
-  int _totalAgendamentos = 0;
-  int _agendamentosHoje = 0;
-  int _ordensAbertas = 0;
-  int _ordensEmAndamento = 0;
-  int _ordensFinalizadasMes = 0;
-  int _estoqueBaixo = 0;
-  int _veiculosAtendidos = 0;
-
-  double _crescimentoMes = 0;
-  double _ticketMedio = 0;
-
-  List<Map<String, Object?>> _servicosTop5 = [];
-  List<Map<String, Object?>> _clientesTop5 = [];
-  List<_FaturamentoDia> _faturamentoDias = [];
+  DashboardPeriodo _periodoSelecionado = DashboardPeriodo.mesAtual;
+  DateTimeRange? _periodoPersonalizado;
+  DashboardData? _dados;
 
   @override
   void initState() {
@@ -74,48 +52,18 @@ class _DashboardPageState extends State<DashboardPage> {
     });
 
     try {
-      final dados = await _dashboardRepository.carregarDashboard();
+      final dados = await _dashboardRepository.carregarDashboard(
+        periodo: _periodoSelecionado,
+        inicioPersonalizado: _periodoPersonalizado?.start,
+        fimPersonalizado: _periodoPersonalizado?.end,
+      );
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _totalClientes = dados['totalClientes'] as int? ?? 0;
-        _totalVeiculos = dados['totalVeiculos'] as int? ?? 0;
-        _totalAgendamentos = dados['totalAgendamentos'] as int? ?? 0;
-        _agendamentosHoje = dados['agendamentosHoje'] as int? ?? 0;
-        _receitaHoje = (dados['faturamentoHoje'] as num?)?.toDouble() ?? 0;
-        _faturamentoSemana =
-            (dados['faturamentoSemana'] as num?)?.toDouble() ?? 0;
-        _faturamentoMes = (dados['faturamentoMes'] as num?)?.toDouble() ?? 0;
-        _saidasMes = (dados['saidasMes'] as num?)?.toDouble() ?? 0;
-        _saldoMes = (dados['saldoMes'] as num?)?.toDouble() ?? 0;
-        _lucroBrutoEstimadoMes =
-            (dados['lucroBrutoEstimadoMes'] as num?)?.toDouble() ?? 0;
-        _custoProdutosMes =
-            (dados['custoProdutosMes'] as num?)?.toDouble() ?? 0;
-        _ticketMedio = (dados['ticketMedioMes'] as num?)?.toDouble() ?? 0;
-        _veiculosAtendidos = dados['veiculosAtendidosMes'] as int? ?? 0;
-        _ordensAbertas = dados['ordensAbertas'] as int? ?? 0;
-        _ordensEmAndamento = dados['ordensEmAndamento'] as int? ?? 0;
-        _ordensFinalizadasMes = dados['ordensFinalizadasMes'] as int? ?? 0;
-        _estoqueBaixo = dados['estoqueBaixo'] as int? ?? 0;
-        _saldoTotal = (dados['saldoTotal'] as num?)?.toDouble() ?? 0;
-        _crescimentoMes = (dados['crescimentoMes'] as num?)?.toDouble() ?? 0;
-        _servicosTop5 =
-            (dados['servicosTop5'] as List<dynamic>?)
-                ?.cast<Map<String, Object?>>() ??
-            [];
-        _clientesTop5 =
-            (dados['clientesTop5'] as List<dynamic>?)
-                ?.cast<Map<String, Object?>>() ??
-            [];
-        _faturamentoDias = _montarFaturamentoDias(
-          (dados['faturamentoUltimos7Dias'] as List<dynamic>?)
-                  ?.cast<Map<String, Object?>>() ??
-              [],
-        );
+        _dados = dados;
         _carregando = false;
       });
     } catch (erro) {
@@ -125,65 +73,63 @@ class _DashboardPageState extends State<DashboardPage> {
 
       setState(() {
         _carregando = false;
-        _mensagemErro =
-            'Não foi possível carregar o dashboard. Tente novamente.';
+        _mensagemErro = 'Não foi possível carregar o dashboard.';
       });
 
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text('Não foi possível carregar o dashboard: $erro'),
+            content: Text('Falha ao carregar o dashboard: $erro'),
             backgroundColor: Colors.red.shade700,
           ),
         );
     }
   }
 
-  List<_FaturamentoDia> _montarFaturamentoDias(
-    List<Map<String, Object?>> resultado,
-  ) {
-    final agora = DateTime.now();
-    final inicio = DateTime(
-      agora.year,
-      agora.month,
-      agora.day,
-    ).subtract(const Duration(days: 6));
-
-    final valores = <String, double>{};
-
-    for (final linha in resultado) {
-      final dia = linha['dia']?.toString() ?? '';
-      final valor = linha['total'];
-
-      valores[dia] = valor is num
-          ? valor.toDouble()
-          : double.tryParse(valor?.toString() ?? '') ?? 0;
+  Future<void> _selecionarPeriodo(DashboardPeriodo periodo) async {
+    if (_periodoSelecionado == periodo &&
+        periodo != DashboardPeriodo.personalizado) {
+      return;
     }
 
-    return List.generate(7, (indice) {
-      final data = inicio.add(Duration(days: indice));
+    if (periodo == DashboardPeriodo.personalizado) {
+      final resultado = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(2020),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+        initialDateRange:
+            _periodoPersonalizado ??
+            DateTimeRange(
+              start: DateTime.now().subtract(const Duration(days: 6)),
+              end: DateTime.now(),
+            ),
+        helpText: 'Selecionar período personalizado',
+        saveText: 'Aplicar',
+        cancelText: 'Cancelar',
+      );
 
-      final chave = data.toIso8601String().substring(0, 10);
+      if (resultado == null) {
+        return;
+      }
 
-      return _FaturamentoDia(data: data, valor: valores[chave] ?? 0);
-    });
-  }
-
-  Future<void> _abrirPagina(Widget pagina) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => pagina));
+      setState(() {
+        _periodoSelecionado = periodo;
+        _periodoPersonalizado = resultado;
+      });
+    } else {
+      setState(() {
+        _periodoSelecionado = periodo;
+        _periodoPersonalizado = null;
+      });
+    }
 
     await _carregarResumo();
   }
 
-  void _mostrarEmDesenvolvimento(String modulo) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$modulo será desenvolvido nas próximas etapas.'),
-        ),
-      );
+  Future<void> _abrirPagina(Widget pagina) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => pagina));
+    await _carregarResumo();
   }
 
   String _saudacao() {
@@ -200,18 +146,50 @@ class _DashboardPageState extends State<DashboardPage> {
     return 'Boa noite';
   }
 
+  String _labelPeriodo() {
+    switch (_periodoSelecionado) {
+      case DashboardPeriodo.hoje:
+        return 'Hoje';
+      case DashboardPeriodo.ultimos7Dias:
+        return 'Últimos 7 dias';
+      case DashboardPeriodo.mesAtual:
+        return 'Mês atual';
+      case DashboardPeriodo.anoAtual:
+        return 'Ano atual';
+      case DashboardPeriodo.personalizado:
+        if (_periodoPersonalizado == null) {
+          return 'Período personalizado';
+        }
+
+        final formato = DateFormat('dd/MM/yyyy');
+        return '${formato.format(_periodoPersonalizado!.start)} - ${formato.format(_periodoPersonalizado!.end)}';
+    }
+  }
+
+  List<_PontoGrafico> _montarPontosGrafico(DashboardData dados) {
+    return dados.serieFinanceira
+        .map(
+          (item) => _PontoGrafico(
+            data: item.data,
+            valor: item.entradas - item.saidas,
+          ),
+        )
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final lucroMes = _faturamentoMes - _saidasMes;
+    final dados = _dados;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0E0E0E),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF151515),
-        title: const Column(
+        backgroundColor: const Color(0xFF141414),
+        elevation: 0,
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'IMPERIUM',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -220,351 +198,154 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
             Text(
-              'Detailing',
-              style: TextStyle(fontSize: 12, color: Colors.white70),
+              _labelPeriodo(),
+              style: const TextStyle(fontSize: 12, color: Colors.white60),
             ),
           ],
         ),
         actions: [
           IconButton(
-            onPressed: _carregando ? null : _carregarResumo,
-            tooltip: 'Atualizar',
+            onPressed: _carregarResumo,
             icon: const Icon(Icons.refresh_rounded),
           ),
-          IconButton(
-            onPressed: () {
-              _mostrarEmDesenvolvimento('Notificações');
-            },
-            tooltip: 'Notificações',
-            icon: const Icon(Icons.notifications_outlined),
-          ),
+          const SizedBox(width: 6),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _carregarResumo,
-        child: _carregando
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 30),
+        color: const Color(0xFFD6A84B),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          children: [
+            _HeroCabecalho(saudacao: _saudacao(), periodo: _labelPeriodo()),
+            const SizedBox(height: 14),
+            _FiltrosPeriodo(
+              periodoSelecionado: _periodoSelecionado,
+              onSelecionar: _selecionarPeriodo,
+            ),
+            const SizedBox(height: 14),
+            if (_carregando)
+              const _LoadingCard()
+            else if (_mensagemErro != null)
+              _ErroCard(
+                mensagem: _mensagemErro!,
+                onTentarNovamente: _carregarResumo,
+              )
+            else if (dados != null) ...[
+              _IndicadoresPrincipais(dados: dados, formatoMoeda: _formatoMoeda),
+              const SizedBox(height: 14),
+              _ResumoExecutivoCard(dados: dados),
+              const SizedBox(height: 14),
+              _GraficoReceitaCard(
+                pontos: _montarPontosGrafico(dados),
+                formatoMoeda: _formatoMoeda,
+              ),
+              const SizedBox(height: 14),
+              _AlertaCard(dados: dados),
+              const SizedBox(height: 14),
+              Row(
                 children: [
-                  Text(
-                    '${_saudacao()}, Ryan!',
-                    style: const TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: _RankingCard(
+                      titulo: 'Top serviços',
+                      itens: dados.topServicos
+                          .map(
+                            (item) => _RankingLinha(
+                              nome: item.nome,
+                              quantidade: item.quantidade,
+                              total: item.total,
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Veja o resumo da Imperium Detailing',
-                    style: TextStyle(color: Colors.white60),
-                  ),
-                  const SizedBox(height: 22),
-                  _SaldoPrincipalCard(
-                    saldo: _saldoTotal,
-                    lucroMes: lucroMes,
-                    formatoMoeda: _formatoMoeda,
-                  ),
-                  const SizedBox(height: 14),
-                  _ResumoDiaCard(
-                    receitaHoje: _receitaHoje,
-                    agendamentosHoje: _agendamentosHoje,
-                    lucroMes: lucroMes,
-                    saldo: _saldoTotal,
-                    formatoMoeda: _formatoMoeda,
-                    onAbrirAgenda: () {
-                      _abrirPagina(const AgendaPage());
-                    },
-                    onAbrirFinanceiro: () {
-                      _abrirPagina(const FinanceiroPage());
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ResumoCard(
-                          titulo: 'Entradas do mês',
-                          valor: _formatoMoeda.format(_faturamentoMes),
-                          icone: Icons.south_west_rounded,
-                          cor: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ResumoCard(
-                          titulo: 'Saídas do mês',
-                          valor: _formatoMoeda.format(_saidasMes),
-                          icone: Icons.north_east_rounded,
-                          cor: Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  _AtencaoCard(
-                    agendamentosHoje: _agendamentosHoje,
-                    lucroMes: lucroMes,
-                    onAbrirAgenda: () {
-                      _abrirPagina(const AgendaPage());
-                    },
-                  ),
-                  const SizedBox(height: 22),
-                  _DashboardPremiumCard(
-                    entradasMes: _faturamentoMes,
-                    lucroMes: lucroMes,
-                    crescimentoMes: _crescimentoMes,
-                    ticketMedio: _ticketMedio,
-                    ordensAbertas: _ordensAbertas,
-                    ordensEmAndamento: _ordensEmAndamento,
-                    formatoMoeda: _formatoMoeda,
-                    onAbrirFinanceiro: () {
-                      _abrirPagina(const FinanceiroPage());
-                    },
-                    onAbrirOrdens: () {
-                      _abrirPagina(const OrdensServicoPage());
-                    },
-                  ),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'Faturamento dos últimos 7 dias',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  _GraficoFaturamentoCard(
-                    dados: _faturamentoDias,
-                    formatoMoeda: _formatoMoeda,
-                  ),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'Top 5 serviços deste mês',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  _RankingCard(
-                    itens: _servicosTop5,
-                    descricao: 'Serviço',
-                    formatoMoeda: null,
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Top 5 clientes deste mês',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  _RankingCard(
-                    itens: _clientesTop5,
-                    descricao: 'Cliente',
-                    formatoMoeda: _formatoMoeda,
-                  ),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'Visão geral',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.55,
-                    children: [
-                      _IndicadorCard(
-                        titulo: 'Clientes',
-                        valor: '$_totalClientes',
-                        icone: Icons.people_alt_outlined,
-                      ),
-                      _IndicadorCard(
-                        titulo: 'Veículos',
-                        valor: '$_totalVeiculos',
-                        icone: Icons.directions_car_outlined,
-                      ),
-                      _IndicadorCard(
-                        titulo: 'Ordens finalizadas',
-                        valor: '$_ordensFinalizadasMes',
-                        icone: Icons.check_circle_outline,
-                      ),
-                      _IndicadorCard(
-                        titulo: 'Veículos atendidos',
-                        valor: '$_veiculosAtendidos',
-                        icone: Icons.car_repair_outlined,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Acesso rápido',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 14),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.25,
-                    children: [
-                      _MenuCard(
-                        titulo: 'Agenda',
-                        icone: Icons.calendar_month,
-                        onTap: () {
-                          _abrirPagina(const AgendaPage());
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Clientes',
-                        icone: Icons.people_alt_outlined,
-                        onTap: () {
-                          _abrirPagina(const ClientesPage());
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Veículos',
-                        icone: Icons.directions_car_outlined,
-                        onTap: () {
-                          _abrirPagina(const VeiculosPage());
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Financeiro',
-                        icone: Icons.account_balance_wallet_outlined,
-                        onTap: () {
-                          _abrirPagina(const FinanceiroPage());
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Estoque',
-                        icone: Icons.inventory_2_outlined,
-                        onTap: () {
-                          _abrirPagina(const EstoquePage());
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Fotos',
-                        icone: Icons.photo_camera_outlined,
-                        onTap: () {
-                          _abrirPagina(const FotosPage());
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Orçamentos',
-                        icone: Icons.description_outlined,
-                        onTap: () {
-                          _abrirPagina(const OrcamentosPage());
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Ordens de Serviço',
-                        icone: Icons.build_circle_outlined,
-                        onTap: () {
-                          _abrirPagina(const OrdensServicoPage());
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Serviços',
-                        icone: Icons.design_services_outlined,
-                        onTap: () {
-                          _abrirPagina(const ServicosPage());
-                        },
-                      ),
-                      _MenuCard(
-                        titulo: 'Configurações',
-                        icone: Icons.settings_outlined,
-                        onTap: () {
-                          _abrirPagina(const ConfiguracoesPage());
-                        },
-                      ),
-                    ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _RankingCard(
+                      titulo: 'Top clientes',
+                      itens: dados.topClientes
+                          .map(
+                            (item) => _RankingLinha(
+                              nome: item.nome,
+                              quantidade: item.quantidade,
+                              total: item.total,
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ),
                 ],
               ),
+              const SizedBox(height: 14),
+              _AtalhosRapidos(
+                onAbrirAgenda: () => _abrirPagina(const AgendaPage()),
+                onAbrirClientes: () => _abrirPagina(const ClientesPage()),
+                onAbrirVeiculos: () => _abrirPagina(const VeiculosPage()),
+                onAbrirFinanceiro: () => _abrirPagina(const FinanceiroPage()),
+                onAbrirEstoque: () => _abrirPagina(const EstoquePage()),
+                onAbrirFotos: () => _abrirPagina(const FotosPage()),
+                onAbrirOrcamentos: () => _abrirPagina(const OrcamentosPage()),
+                onAbrirOrdens: () => _abrirPagina(const OrdensServicoPage()),
+                onAbrirServicos: () => _abrirPagina(const ServicosPage()),
+                onAbrirConfiguracoes: () =>
+                    _abrirPagina(const ConfiguracoesPage()),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SaldoPrincipalCard extends StatelessWidget {
-  const _SaldoPrincipalCard({
-    required this.saldo,
-    required this.lucroMes,
-    required this.formatoMoeda,
-  });
+class _HeroCabecalho extends StatelessWidget {
+  const _HeroCabecalho({required this.saudacao, required this.periodo});
 
-  final double saldo;
-  final double lucroMes;
-  final NumberFormat formatoMoeda;
+  final String saudacao;
+  final String periodo;
 
   @override
   Widget build(BuildContext context) {
-    final saldoPositivo = saldo >= 0;
-    final lucroPositivo = lucroMes >= 0;
-
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF252525), Color(0xFF171717)],
+          colors: [Color(0xFF1E1E1E), Color(0xFF121212)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: const Color(0xFFD6A84B).withValues(alpha: 0.45),
+          color: const Color(0xFFD6A84B).withValues(alpha: 0.35),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(
-                Icons.account_balance_wallet_outlined,
-                color: Color(0xFFD6A84B),
-              ),
-              SizedBox(width: 8),
-              Text(
-                'Saldo financeiro',
-                style: TextStyle(color: Colors.white70, fontSize: 15),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Text(
-            formatoMoeda.format(saldo),
+            saudacao,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Dashboard premium pronta para uso diário.',
             style: TextStyle(
-              color: saldoPositivo ? Colors.white : Colors.redAccent.shade100,
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
+              color: Colors.white.withValues(alpha: 0.72),
+              height: 1.2,
             ),
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: (lucroPositivo ? Colors.green : Colors.red).withValues(
-                alpha: 0.13,
-              ),
-              borderRadius: BorderRadius.circular(30),
+              color: const Color(0xFFD6A84B).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              'Resultado do mês: '
-              '${formatoMoeda.format(lucroMes)}',
-              style: TextStyle(
-                color: lucroPositivo
-                    ? Colors.greenAccent.shade100
-                    : Colors.redAccent.shade100,
+              periodo,
+              style: const TextStyle(
+                color: Color(0xFFD6A84B),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -575,250 +356,99 @@ class _SaldoPrincipalCard extends StatelessWidget {
   }
 }
 
-class _ResumoDiaCard extends StatelessWidget {
-  const _ResumoDiaCard({
-    required this.receitaHoje,
-    required this.agendamentosHoje,
-    required this.lucroMes,
-    required this.saldo,
-    required this.formatoMoeda,
-    required this.onAbrirAgenda,
-    required this.onAbrirFinanceiro,
+class _FiltrosPeriodo extends StatelessWidget {
+  const _FiltrosPeriodo({
+    required this.periodoSelecionado,
+    required this.onSelecionar,
   });
 
-  final double receitaHoje;
-  final int agendamentosHoje;
-  final double lucroMes;
-  final double saldo;
-  final NumberFormat formatoMoeda;
-  final VoidCallback onAbrirAgenda;
-  final VoidCallback onAbrirFinanceiro;
+  final DashboardPeriodo periodoSelecionado;
+  final Future<void> Function(DashboardPeriodo periodo) onSelecionar;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFFD6A84B).withValues(alpha: 0.22),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.today_rounded, color: Color(0xFFD6A84B)),
-              SizedBox(width: 9),
-              Text(
-                'Resumo do dia',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
+    final opcoes = <DashboardPeriodo, String>{
+      DashboardPeriodo.hoje: 'Hoje',
+      DashboardPeriodo.ultimos7Dias: 'Últimos 7 dias',
+      DashboardPeriodo.mesAtual: 'Mês atual',
+      DashboardPeriodo.anoAtual: 'Ano atual',
+      DashboardPeriodo.personalizado: 'Período personalizado',
+    };
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: opcoes.entries.map((entry) {
+        final selecionado = entry.key == periodoSelecionado;
+        return ChoiceChip(
+          label: Text(entry.value),
+          selected: selecionado,
+          selectedColor: const Color(0xFFD6A84B),
+          backgroundColor: const Color(0xFF1B1B1B),
+          labelStyle: TextStyle(
+            color: selecionado ? Colors.black : Colors.white70,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _ResumoDiaItem(
-                  titulo: 'Receita hoje',
-                  valor: formatoMoeda.format(receitaHoje),
-                  icone: Icons.payments_outlined,
-                  onTap: onAbrirFinanceiro,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _ResumoDiaItem(
-                  titulo: 'Agendamentos',
-                  valor: '$agendamentosHoje',
-                  icone: Icons.event_available_outlined,
-                  onTap: onAbrirAgenda,
-                ),
-              ),
-            ],
+          side: BorderSide(
+            color: selecionado
+                ? const Color(0xFFD6A84B)
+                : Colors.white.withValues(alpha: 0.12),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _ResumoDiaItem(
-                  titulo: 'Lucro do mês',
-                  valor: formatoMoeda.format(lucroMes),
-                  icone: Icons.trending_up_rounded,
-                  onTap: onAbrirFinanceiro,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _ResumoDiaItem(
-                  titulo: 'Saldo total',
-                  valor: formatoMoeda.format(saldo),
-                  icone: Icons.account_balance_wallet_outlined,
-                  onTap: onAbrirFinanceiro,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+          onSelected: (_) => onSelecionar(entry.key),
+        );
+      }).toList(),
     );
   }
 }
 
-class _ResumoDiaItem extends StatelessWidget {
-  const _ResumoDiaItem({
-    required this.titulo,
-    required this.valor,
-    required this.icone,
-    required this.onTap,
-  });
-
-  final String titulo;
-  final String valor;
-  final IconData icone;
-  final VoidCallback onTap;
+class _LoadingCard extends StatelessWidget {
+  const _LoadingCard();
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFF222222),
-      borderRadius: BorderRadius.circular(15),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(15),
-        child: Padding(
-          padding: const EdgeInsets.all(13),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icone, size: 21, color: const Color(0xFFD6A84B)),
-              const SizedBox(height: 10),
-              Text(
-                titulo,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white60, fontSize: 11),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                valor,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AtencaoCard extends StatelessWidget {
-  const _AtencaoCard({
-    required this.agendamentosHoje,
-    required this.lucroMes,
-    required this.onAbrirAgenda,
-  });
-
-  final int agendamentosHoje;
-  final double lucroMes;
-  final VoidCallback onAbrirAgenda;
-
-  @override
-  Widget build(BuildContext context) {
-    final mensagemAgenda = agendamentosHoje == 0
-        ? 'Nenhum agendamento marcado para hoje.'
-        : agendamentosHoje == 1
-        ? 'Você tem 1 agendamento para hoje.'
-        : 'Você tem $agendamentosHoje agendamentos para hoje.';
-
-    final resultadoPositivo = lucroMes >= 0;
-
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(17),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: (resultadoPositivo ? Colors.green : Colors.orange).withValues(
-            alpha: 0.22,
-          ),
-        ),
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: Color(0xFFD6A84B)),
+      ),
+    );
+  }
+}
+
+class _ErroCard extends StatelessWidget {
+  const _ErroCard({required this.mensagem, required this.onTentarNovamente});
+
+  final String mensagem;
+  final VoidCallback onTentarNovamente;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B1717),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(
-                Icons.notifications_active_outlined,
-                color: Color(0xFFD6A84B),
-              ),
-              SizedBox(width: 9),
-              Text(
-                'Atenção',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-            ],
+          const Text(
+            'Falha ao carregar',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 13),
-          InkWell(
-            onTap: onAbrirAgenda,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_today_outlined,
-                    size: 19,
-                    color: Colors.white70,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      mensagemAgenda,
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: Colors.white38,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                resultadoPositivo
-                    ? Icons.check_circle_outline_rounded
-                    : Icons.warning_amber_rounded,
-                size: 20,
-                color: resultadoPositivo
-                    ? Colors.greenAccent.shade100
-                    : Colors.orangeAccent.shade100,
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Text(
-                  resultadoPositivo
-                      ? 'O resultado financeiro do mês está positivo.'
-                      : 'As saídas do mês estão maiores que as entradas.',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ),
-            ],
+          const SizedBox(height: 6),
+          Text(mensagem, style: const TextStyle(color: Colors.white70)),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: onTentarNovamente,
+            child: const Text('Tentar novamente'),
           ),
         ],
       ),
@@ -826,75 +456,138 @@ class _AtencaoCard extends StatelessWidget {
   }
 }
 
-class _ResumoCard extends StatelessWidget {
-  const _ResumoCard({
-    required this.titulo,
-    required this.valor,
-    required this.icone,
-    required this.cor,
+class _IndicadoresPrincipais extends StatelessWidget {
+  const _IndicadoresPrincipais({
+    required this.dados,
+    required this.formatoMoeda,
   });
+
+  final DashboardData dados;
+  final NumberFormat formatoMoeda;
+
+  @override
+  Widget build(BuildContext context) {
+    final indicadores = <_IndicadorResumo>[
+      _IndicadorResumo(
+        'Faturamento',
+        formatoMoeda.format(dados.faturamento),
+        Icons.payments_outlined,
+        const Color(0xFFD6A84B),
+      ),
+      _IndicadorResumo(
+        'Saídas',
+        formatoMoeda.format(dados.saidas),
+        Icons.remove_circle_outline,
+        Colors.redAccent,
+      ),
+      _IndicadorResumo(
+        'Saldo',
+        formatoMoeda.format(dados.saldo),
+        Icons.account_balance_wallet_outlined,
+        dados.saldo >= 0 ? Colors.greenAccent : Colors.orangeAccent,
+      ),
+      _IndicadorResumo(
+        'Lucro bruto estimado',
+        formatoMoeda.format(dados.lucroBrutoEstimado),
+        Icons.trending_up_rounded,
+        Colors.lightGreenAccent,
+      ),
+      _IndicadorResumo(
+        'Ticket médio',
+        formatoMoeda.format(dados.ticketMedio),
+        Icons.confirmation_number_outlined,
+        const Color(0xFFD6A84B),
+      ),
+      _IndicadorResumo(
+        'Clientes atendidos',
+        dados.clientesAtendidos.toString(),
+        Icons.people_outline,
+        Colors.lightBlueAccent,
+      ),
+      _IndicadorResumo(
+        'Veículos atendidos',
+        dados.veiculosAtendidos.toString(),
+        Icons.directions_car_outlined,
+        Colors.tealAccent,
+      ),
+      _IndicadorResumo(
+        'OS abertas',
+        dados.ordensAbertas.toString(),
+        Icons.assignment_outlined,
+        Colors.blueAccent,
+      ),
+      _IndicadorResumo(
+        'Em andamento',
+        dados.ordensEmAndamento.toString(),
+        Icons.car_repair_outlined,
+        Colors.orangeAccent,
+      ),
+      _IndicadorResumo(
+        'Finalizadas',
+        dados.ordensFinalizadas.toString(),
+        Icons.verified_outlined,
+        Colors.greenAccent,
+      ),
+      _IndicadorResumo(
+        'Agendamentos',
+        dados.agendamentos.toString(),
+        Icons.event_available_outlined,
+        Colors.purpleAccent,
+      ),
+      _IndicadorResumo(
+        'Clientes novos',
+        dados.clientesNovos.toString(),
+        Icons.person_add_alt_1_outlined,
+        Colors.cyanAccent,
+      ),
+      _IndicadorResumo(
+        'Clientes recorrentes',
+        dados.clientesRecorrentes.toString(),
+        Icons.repeat_rounded,
+        Colors.deepPurpleAccent,
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: indicadores.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 1.9,
+      ),
+      itemBuilder: (context, index) {
+        final item = indicadores[index];
+        return _IndicadorCard(item: item);
+      },
+    );
+  }
+}
+
+class _IndicadorResumo {
+  const _IndicadorResumo(this.titulo, this.valor, this.icone, this.cor);
 
   final String titulo;
   final String valor;
   final IconData icone;
   final Color cor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cor.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: cor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(icone, color: cor, size: 21),
-          ),
-          const SizedBox(height: 13),
-          Text(
-            titulo,
-            style: const TextStyle(color: Colors.white60, fontSize: 12),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            valor,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _IndicadorCard extends StatelessWidget {
-  const _IndicadorCard({
-    required this.titulo,
-    required this.valor,
-    required this.icone,
-  });
+  const _IndicadorCard({required this.item});
 
-  final String titulo;
-  final String valor;
-  final IconData icone;
+  final _IndicadorResumo item;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(17),
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: item.cor.withValues(alpha: 0.22)),
       ),
       child: Row(
         children: [
@@ -902,27 +595,29 @@ class _IndicadorCard extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFFD6A84B).withValues(alpha: 0.12),
+              color: item.cor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(13),
             ),
-            child: Icon(icone, color: const Color(0xFFD6A84B), size: 23),
+            child: Icon(item.icone, color: item.cor, size: 22),
           ),
-          const SizedBox(width: 11),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  valor,
+                  item.valor,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
-                  titulo,
-                  maxLines: 1,
+                  item.titulo,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
@@ -935,178 +630,51 @@ class _IndicadorCard extends StatelessWidget {
   }
 }
 
-class _MenuCard extends StatelessWidget {
-  const _MenuCard({
-    required this.titulo,
-    required this.icone,
-    required this.onTap,
-  });
+class _ResumoExecutivoCard extends StatelessWidget {
+  const _ResumoExecutivoCard({required this.dados});
 
-  final String titulo;
-  final IconData icone;
-  final VoidCallback onTap;
+  final DashboardData dados;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: const Color(0xFFD6A84B).withValues(alpha: 0.11),
-                borderRadius: BorderRadius.circular(17),
-              ),
-              child: Icon(icone, size: 30, color: const Color(0xFFD6A84B)),
-            ),
-            const SizedBox(height: 11),
-            Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DashboardPremiumCard extends StatelessWidget {
-  const _DashboardPremiumCard({
-    required this.entradasMes,
-    required this.lucroMes,
-    required this.crescimentoMes,
-    required this.ticketMedio,
-    required this.ordensAbertas,
-    required this.ordensEmAndamento,
-    required this.formatoMoeda,
-    required this.onAbrirFinanceiro,
-    required this.onAbrirOrdens,
-  });
-
-  final double entradasMes;
-  final double lucroMes;
-  final double crescimentoMes;
-  final double ticketMedio;
-  final int ordensAbertas;
-  final int ordensEmAndamento;
-  final NumberFormat formatoMoeda;
-  final VoidCallback onAbrirFinanceiro;
-  final VoidCallback onAbrirOrdens;
-
-  @override
-  Widget build(BuildContext context) {
-    final crescimentoPositivo = crescimentoMes >= 0;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(21),
-        border: Border.all(
-          color: const Color(0xFFD6A84B).withValues(alpha: 0.22),
-        ),
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.insights_rounded, color: Color(0xFFD6A84B)),
-              SizedBox(width: 9),
-              Text(
-                'Painel executivo',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
+          const Text(
+            'Resumo executivo',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 16),
-          InkWell(
-            onTap: onAbrirFinanceiro,
-            borderRadius: BorderRadius.circular(15),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF292929), Color(0xFF202020)],
-                ),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Faturamento do mês',
-                    style: TextStyle(color: Colors.white60),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    formatoMoeda.format(entradasMes),
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        crescimentoPositivo
-                            ? Icons.trending_up_rounded
-                            : Icons.trending_down_rounded,
-                        size: 18,
-                        color: crescimentoPositivo
-                            ? Colors.greenAccent
-                            : Colors.redAccent,
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          '${crescimentoPositivo ? '+' : ''}'
-                          '${crescimentoMes.toStringAsFixed(1)}% '
-                          'em relação ao mês anterior',
-                          style: TextStyle(
-                            color: crescimentoPositivo
-                                ? Colors.greenAccent
-                                : Colors.redAccent,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
-                child: _MiniIndicadorPremium(
-                  titulo: 'Resultado',
-                  valor: formatoMoeda.format(lucroMes),
-                  icone: Icons.savings_outlined,
-                  cor: lucroMes >= 0 ? Colors.green : Colors.orange,
-                  onTap: onAbrirFinanceiro,
+                child: _ResumoPequeno(
+                  titulo: 'Clientes',
+                  valor: dados.clientesTotal.toString(),
+                  icone: Icons.groups_outlined,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _MiniIndicadorPremium(
-                  titulo: 'Ticket médio',
-                  valor: formatoMoeda.format(ticketMedio),
-                  icone: Icons.confirmation_number_outlined,
-                  cor: const Color(0xFFD6A84B),
-                  onTap: onAbrirFinanceiro,
+                child: _ResumoPequeno(
+                  titulo: 'Veículos',
+                  valor: dados.veiculosTotal.toString(),
+                  icone: Icons.directions_car_outlined,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ResumoPequeno(
+                  titulo: 'OS antigas abertas',
+                  valor: dados.ordensAbertasAntigas.toString(),
+                  icone: Icons.warning_amber_rounded,
                 ),
               ),
             ],
@@ -1115,22 +683,26 @@ class _DashboardPremiumCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _MiniIndicadorPremium(
-                  titulo: 'OS abertas',
-                  valor: '$ordensAbertas',
-                  icone: Icons.assignment_outlined,
-                  cor: Colors.blue,
-                  onTap: onAbrirOrdens,
+                child: _ResumoPequeno(
+                  titulo: 'OS antigas em andamento',
+                  valor: dados.ordensEmAndamentoAntigas.toString(),
+                  icone: Icons.timelapse_rounded,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _MiniIndicadorPremium(
-                  titulo: 'Em serviço',
-                  valor: '$ordensEmAndamento',
-                  icone: Icons.car_repair_outlined,
-                  cor: Colors.orange,
-                  onTap: onAbrirOrdens,
+                child: _ResumoPequeno(
+                  titulo: 'Produtos baixo estoque',
+                  valor: dados.produtosBaixoEstoque.toString(),
+                  icone: Icons.inventory_2_outlined,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ResumoPequeno(
+                  titulo: 'Produtos zerados',
+                  valor: dados.produtosZerados.toString(),
+                  icone: Icons.do_not_disturb_on_outlined,
                 ),
               ),
             ],
@@ -1141,157 +713,163 @@ class _DashboardPremiumCard extends StatelessWidget {
   }
 }
 
-class _MiniIndicadorPremium extends StatelessWidget {
-  const _MiniIndicadorPremium({
+class _ResumoPequeno extends StatelessWidget {
+  const _ResumoPequeno({
     required this.titulo,
     required this.valor,
     required this.icone,
-    required this.cor,
-    required this.onTap,
   });
 
   final String titulo;
   final String valor;
   final IconData icone;
-  final Color cor;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFF222222),
-      borderRadius: BorderRadius.circular(15),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(15),
-        child: Padding(
-          padding: const EdgeInsets.all(13),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icone, color: cor, size: 21),
-              const SizedBox(height: 9),
-              Text(
-                titulo,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white54, fontSize: 11),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                valor,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icone, color: const Color(0xFFD6A84B), size: 20),
+          const SizedBox(height: 10),
+          Text(
+            valor,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-        ),
+          const SizedBox(height: 2),
+          Text(
+            titulo,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white60, fontSize: 11),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _GraficoFaturamentoCard extends StatelessWidget {
-  const _GraficoFaturamentoCard({
-    required this.dados,
-    required this.formatoMoeda,
-  });
+class _GraficoReceitaCard extends StatelessWidget {
+  const _GraficoReceitaCard({required this.pontos, required this.formatoMoeda});
 
-  final List<_FaturamentoDia> dados;
+  final List<_PontoGrafico> pontos;
   final NumberFormat formatoMoeda;
 
   @override
   Widget build(BuildContext context) {
-    final total = dados.fold<double>(0, (soma, item) => soma + item.valor);
+    final total = pontos.fold<double>(0, (soma, item) => soma + item.valor);
 
     return Container(
-      padding: const EdgeInsets.all(17),
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             formatoMoeda.format(total),
-            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
+          const SizedBox(height: 4),
           const Text(
-            'Total faturado no período',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            'Faturamento líquido do período',
+            style: TextStyle(color: Colors.white60, fontSize: 12),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           SizedBox(
-            height: 170,
-            width: double.infinity,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.white.withOpacity(0.08),
-                    strokeWidth: 1,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: List.generate(
-                      dados.length,
-                      (index) => FlSpot(index.toDouble(), dados[index].valor),
+            height: 190,
+            child: pontos.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Sem movimentação para o período selecionado.',
+                      style: TextStyle(color: Colors.white60),
                     ),
-                    isCurved: true,
-                    color: const Color(0xFFD6A84B),
-                    barWidth: 3,
-                    dotData: FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          const Color(0xFFD6A84B).withOpacity(0.35),
-                          const Color(0xFFD6A84B).withOpacity(0.06),
-                        ],
+                  )
+                : LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        getDrawingHorizontalLine: (value) => FlLine(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          strokeWidth: 1,
+                        ),
                       ),
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(
+                        leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 24,
+                            getTitlesWidget: (value, meta) {
+                              final index = value.toInt();
+                              if (index < 0 || index >= pontos.length) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final data = pontos[index].data;
+                              final texto = pontos.length > 7
+                                  ? DateFormat('MM/yy').format(data)
+                                  : DateFormat('dd/MM').format(data);
+
+                              return SideTitleWidget(
+                                meta: meta,
+                                child: Text(
+                                  texto,
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      minY: 0,
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: [
+                            for (var i = 0; i < pontos.length; i++)
+                              FlSpot(i.toDouble(), pontos[i].valor),
+                          ],
+                          isCurved: true,
+                          color: const Color(0xFFD6A84B),
+                          barWidth: 3,
+                          dotData: const FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                const Color(0xFFD6A84B).withValues(alpha: 0.35),
+                                const Color(0xFFD6A84B).withValues(alpha: 0.03),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-                minY: 0,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: dados.map((item) {
-              return Expanded(
-                child: Text(
-                  DateFormat('dd/MM').format(item.data),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54, fontSize: 10),
-                ),
-              );
-            }).toList(),
           ),
         ],
       ),
@@ -1299,30 +877,24 @@ class _GraficoFaturamentoCard extends StatelessWidget {
   }
 }
 
-class _RankingCard extends StatelessWidget {
-  const _RankingCard({
-    required this.itens,
-    required this.descricao,
-    required this.formatoMoeda,
-  });
+class _AlertaCard extends StatelessWidget {
+  const _AlertaCard({required this.dados});
 
-  final List<Map<String, Object?>> itens;
-  final String descricao;
-  final NumberFormat? formatoMoeda;
+  final DashboardData dados;
 
   @override
   Widget build(BuildContext context) {
-    if (itens.isEmpty) {
+    if (!dados.temAlertas) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF171717),
+          borderRadius: BorderRadius.circular(22),
         ),
         child: const Text(
-          'Sem dados suficientes para exibir.',
-          style: TextStyle(color: Colors.white60),
+          'Nenhum alerta relevante para o momento.',
+          style: TextStyle(color: Colors.white70),
         ),
       );
     }
@@ -1331,47 +903,284 @@ class _RankingCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
-        children: itens.map((item) {
-          final nome = item['nome']?.toString() ?? '-';
-          final total = item['total'];
-          final valor = total is num
-              ? total.toDouble()
-              : double.tryParse(total?.toString() ?? '0') ?? 0;
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    nome,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Alertas operacionais',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          ...dados.alertas.map(
+            (alerta) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: alerta.tipo == DashboardAlertaTipo.estoque
+                      ? Colors.orange.withValues(alpha: 0.12)
+                      : Colors.red.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: alerta.tipo == DashboardAlertaTipo.estoque
+                        ? Colors.orange.withValues(alpha: 0.22)
+                        : Colors.red.withValues(alpha: 0.22),
                   ),
                 ),
-                Text(
-                  formatoMoeda != null
-                      ? formatoMoeda!.format(valor)
-                      : valor.toInt().toString(),
-                  style: const TextStyle(color: Colors.white70),
+                child: Row(
+                  children: [
+                    Icon(
+                      alerta.tipo == DashboardAlertaTipo.agendamento
+                          ? Icons.event_available_outlined
+                          : alerta.tipo == DashboardAlertaTipo.estoque
+                          ? Icons.inventory_2_outlined
+                          : Icons.warning_amber_rounded,
+                      color: const Color(0xFFD6A84B),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            alerta.titulo,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            alerta.descricao,
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      alerta.quantidade.toString(),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD6A84B),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _FaturamentoDia {
-  const _FaturamentoDia({required this.data, required this.valor});
+class _RankingCard extends StatelessWidget {
+  const _RankingCard({required this.titulo, required this.itens});
+
+  final String titulo;
+  final List<_RankingLinha> itens;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            titulo,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          if (itens.isEmpty)
+            const Text(
+              'Sem dados suficientes.',
+              style: TextStyle(color: Colors.white60),
+            )
+          else
+            ...itens.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.nome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      item.quantidade.toString(),
+                      style: const TextStyle(color: Colors.white60),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      NumberFormat.currency(
+                        locale: 'pt_BR',
+                        symbol: 'R\$',
+                      ).format(item.total),
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RankingLinha {
+  const _RankingLinha({
+    required this.nome,
+    required this.quantidade,
+    required this.total,
+  });
+
+  final String nome;
+  final int quantidade;
+  final double total;
+}
+
+class _AtalhosRapidos extends StatelessWidget {
+  const _AtalhosRapidos({
+    required this.onAbrirAgenda,
+    required this.onAbrirClientes,
+    required this.onAbrirVeiculos,
+    required this.onAbrirFinanceiro,
+    required this.onAbrirEstoque,
+    required this.onAbrirFotos,
+    required this.onAbrirOrcamentos,
+    required this.onAbrirOrdens,
+    required this.onAbrirServicos,
+    required this.onAbrirConfiguracoes,
+  });
+
+  final VoidCallback onAbrirAgenda;
+  final VoidCallback onAbrirClientes;
+  final VoidCallback onAbrirVeiculos;
+  final VoidCallback onAbrirFinanceiro;
+  final VoidCallback onAbrirEstoque;
+  final VoidCallback onAbrirFotos;
+  final VoidCallback onAbrirOrcamentos;
+  final VoidCallback onAbrirOrdens;
+  final VoidCallback onAbrirServicos;
+  final VoidCallback onAbrirConfiguracoes;
+
+  @override
+  Widget build(BuildContext context) {
+    final itens = <_AtalhoItem>[
+      _AtalhoItem('Agenda', Icons.calendar_month_outlined, onAbrirAgenda),
+      _AtalhoItem('Clientes', Icons.people_outline, onAbrirClientes),
+      _AtalhoItem('Veículos', Icons.directions_car_outlined, onAbrirVeiculos),
+      _AtalhoItem('Financeiro', Icons.payments_outlined, onAbrirFinanceiro),
+      _AtalhoItem('Estoque', Icons.inventory_2_outlined, onAbrirEstoque),
+      _AtalhoItem('Fotos', Icons.photo_library_outlined, onAbrirFotos),
+      _AtalhoItem(
+        'Orçamentos',
+        Icons.request_quote_outlined,
+        onAbrirOrcamentos,
+      ),
+      _AtalhoItem('Ordens', Icons.assignment_outlined, onAbrirOrdens),
+      _AtalhoItem(
+        'Serviços',
+        Icons.miscellaneous_services_outlined,
+        onAbrirServicos,
+      ),
+      _AtalhoItem(
+        'Configurações',
+        Icons.settings_outlined,
+        onAbrirConfiguracoes,
+      ),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Acesso rápido',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: itens.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 2.5,
+            ),
+            itemBuilder: (context, index) {
+              final item = itens[index];
+              return InkWell(
+                onTap: item.onTap,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.07),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(item.icone, color: const Color(0xFFD6A84B)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          item.titulo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AtalhoItem {
+  const _AtalhoItem(this.titulo, this.icone, this.onTap);
+
+  final String titulo;
+  final IconData icone;
+  final VoidCallback onTap;
+}
+
+class _PontoGrafico {
+  const _PontoGrafico({required this.data, required this.valor});
 
   final DateTime data;
   final double valor;
