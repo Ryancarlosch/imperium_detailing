@@ -76,9 +76,14 @@ class OrdemServicoPdfService extends DocumentoPdfService {
 
     final assinaturaEmpresa = await _carregarImagemSegura(
       _primeiroValorTexto(dados, [
-        'assinatura_empresa',
-        'caminho_assinatura_empresa',
-      ]),
+            'assinatura_empresa',
+            'caminho_assinatura_empresa',
+          ]).isNotEmpty
+          ? _primeiroValorTexto(dados, [
+              'assinatura_empresa',
+              'caminho_assinatura_empresa',
+            ])
+          : (contexto.configuracao.caminhoAssinaturaEmpresa ?? ''),
     );
 
     documento.addPage(

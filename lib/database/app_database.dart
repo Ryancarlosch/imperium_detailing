@@ -1,141 +1,126 @@
-  import 'package:path/path.dart';
-  import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 
-  class AppDatabase {
-    AppDatabase._();
+class AppDatabase {
+  AppDatabase._();
 
-    static final AppDatabase instance = AppDatabase._();
+  static final AppDatabase instance = AppDatabase._();
 
-    static Database? _database;
+  static Database? _database;
 
-    Future<Database> get database async {
-      if (_database != null) {
-        return _database!;
-      }
-
-      _database = await _abrirBanco();
+  Future<Database> get database async {
+    if (_database != null) {
       return _database!;
     }
 
-    Future<Database> _abrirBanco() async {
-      final pastaBanco = await getDatabasesPath();
+    _database = await _abrirBanco();
+    return _database!;
+  }
 
-      final caminho = join(
-        pastaBanco,
-        'imperium_detailing.db',
-      );
+  Future<Database> _abrirBanco() async {
+    final pastaBanco = await getDatabasesPath();
 
-      return openDatabase(
-        caminho,
-        version: 12,
-        onConfigure: (database) async {
-          await database.execute(
-            'PRAGMA foreign_keys = ON',
-          );
-        },
-        onCreate: (database, version) async {
-          await _criarTabelas(database);
-        },
-        onUpgrade: (
-            database,
-            versaoAntiga,
-            versaoNova,
-            ) async {
-          if (versaoAntiga < 2) {
-            await _criarTabelaVeiculos(database);
-          }
+    final caminho = join(pastaBanco, 'imperium_detailing.db');
 
-          if (versaoAntiga < 3) {
-            await _criarTabelaAgendamentos(database);
-          }
+    return openDatabase(
+      caminho,
+      version: 13,
+      onConfigure: (database) async {
+        await database.execute('PRAGMA foreign_keys = ON');
+      },
+      onCreate: (database, version) async {
+        await _criarTabelas(database);
+      },
+      onUpgrade: (database, versaoAntiga, versaoNova) async {
+        if (versaoAntiga < 2) {
+          await _criarTabelaVeiculos(database);
+        }
 
-          if (versaoAntiga < 4) {
-            await _criarTabelaFotos(database);
-          }
+        if (versaoAntiga < 3) {
+          await _criarTabelaAgendamentos(database);
+        }
 
-          if (versaoAntiga < 5) {
-            await _criarTabelaMovimentosFinanceiros(
-              database,
-            );
-          }
+        if (versaoAntiga < 4) {
+          await _criarTabelaFotos(database);
+        }
 
-          if (versaoAntiga < 6) {
-            await _criarTabelaOrcamentos(database);
-            await _criarTabelaItensOrcamento(database);
-            await _migrarOrcamentosAntigos(database);
-          }
+        if (versaoAntiga < 5) {
+          await _criarTabelaMovimentosFinanceiros(database);
+        }
 
-          if (versaoAntiga < 7) {
-            await _criarTabelaOrdensServico(database);
-            await _criarTabelaItensOrdemServico(database);
-            await _criarTabelaChecklistOrdemServico(database);
-            await _criarTabelaFotosOrdemServico(database);
-            await _criarTabelaProdutosOrdemServico(database);
-          }
+        if (versaoAntiga < 6) {
+          await _criarTabelaOrcamentos(database);
+          await _criarTabelaItensOrcamento(database);
+          await _migrarOrcamentosAntigos(database);
+        }
 
-          if (versaoAntiga < 8) {
-            await _atualizarChecklistParaVersao8(database);
-          }
+        if (versaoAntiga < 7) {
+          await _criarTabelaOrdensServico(database);
+          await _criarTabelaItensOrdemServico(database);
+          await _criarTabelaChecklistOrdemServico(database);
+          await _criarTabelaFotosOrdemServico(database);
+          await _criarTabelaProdutosOrdemServico(database);
+        }
 
-          if (versaoAntiga < 9) {
-            await _criarTabelaConfiguracoes(database);
-            await _inserirConfiguracaoPadrao(database);
-          }
+        if (versaoAntiga < 8) {
+          await _atualizarChecklistParaVersao8(database);
+        }
 
-          if (versaoAntiga < 10) {
-            await _criarTabelaItensEstoque(database);
-            await _criarTabelaMovimentacoesEstoque(database);
-            await _criarTabelaConfiguracoesEstoque(database);
-            await _inserirConfiguracaoEstoquePadrao(database);
-          }
+        if (versaoAntiga < 9) {
+          await _criarTabelaConfiguracoes(database);
+          await _inserirConfiguracaoPadrao(database);
+        }
 
-          if (versaoAntiga < 11) {
-            await _atualizarConfiguracoesEstoqueParaVersao11(
-              database,
-            );
-          }
+        if (versaoAntiga < 10) {
+          await _criarTabelaItensEstoque(database);
+          await _criarTabelaMovimentacoesEstoque(database);
+          await _criarTabelaConfiguracoesEstoque(database);
+          await _inserirConfiguracaoEstoquePadrao(database);
+        }
 
-          if (versaoAntiga < 12) {
-            await _criarTabelaServicosCatalogo(database);
-            await _criarTabelaServicoProdutos(database);
-            await _criarTabelaServicosRelacionados(database);
-          }
-        },
-      );
-    }
+        if (versaoAntiga < 11) {
+          await _atualizarConfiguracoesEstoqueParaVersao11(database);
+        }
 
-    Future<void> _criarTabelas(
-        Database database,
-        ) async {
-      await _criarTabelaClientes(database);
-      await _criarTabelaVeiculos(database);
-      await _criarTabelaAgendamentos(database);
-      await _criarTabelaFotos(database);
-      await _criarTabelaMovimentosFinanceiros(
-        database,
-      );
-      await _criarTabelaOrcamentos(database);
-      await _criarTabelaItensOrcamento(database);
-      await _criarTabelaOrdensServico(database);
-      await _criarTabelaItensOrdemServico(database);
-      await _criarTabelaChecklistOrdemServico(database);
-      await _criarTabelaFotosOrdemServico(database);
-      await _criarTabelaProdutosOrdemServico(database);
-      await _criarTabelaConfiguracoes(database);
-      await _inserirConfiguracaoPadrao(database);
-      await _criarTabelaItensEstoque(database);
-      await _criarTabelaMovimentacoesEstoque(database);
-      await _criarTabelaConfiguracoesEstoque(database);
-      await _inserirConfiguracaoEstoquePadrao(database);
-      await _criarTabelaServicosCatalogo(database);
-      await _criarTabelaServicoProdutos(database);
-      await _criarTabelaServicosRelacionados(database);
-    }
+        if (versaoAntiga < 12) {
+          await _criarTabelaServicosCatalogo(database);
+          await _criarTabelaServicoProdutos(database);
+          await _criarTabelaServicosRelacionados(database);
+        }
 
-    Future<void> _criarTabelaClientes(
-        Database database,
-        ) async {
-      await database.execute('''
+        if (versaoAntiga < 13) {
+          await _atualizarConfiguracoesParaVersao13(database);
+        }
+      },
+    );
+  }
+
+  Future<void> _criarTabelas(Database database) async {
+    await _criarTabelaClientes(database);
+    await _criarTabelaVeiculos(database);
+    await _criarTabelaAgendamentos(database);
+    await _criarTabelaFotos(database);
+    await _criarTabelaMovimentosFinanceiros(database);
+    await _criarTabelaOrcamentos(database);
+    await _criarTabelaItensOrcamento(database);
+    await _criarTabelaOrdensServico(database);
+    await _criarTabelaItensOrdemServico(database);
+    await _criarTabelaChecklistOrdemServico(database);
+    await _criarTabelaFotosOrdemServico(database);
+    await _criarTabelaProdutosOrdemServico(database);
+    await _criarTabelaConfiguracoes(database);
+    await _inserirConfiguracaoPadrao(database);
+    await _criarTabelaItensEstoque(database);
+    await _criarTabelaMovimentacoesEstoque(database);
+    await _criarTabelaConfiguracoesEstoque(database);
+    await _inserirConfiguracaoEstoquePadrao(database);
+    await _criarTabelaServicosCatalogo(database);
+    await _criarTabelaServicoProdutos(database);
+    await _criarTabelaServicosRelacionados(database);
+  }
+
+  Future<void> _criarTabelaClientes(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS clientes (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           nome TEXT NOT NULL,
@@ -145,12 +130,10 @@
           observacoes TEXT
         )
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaVeiculos(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaVeiculos(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS veiculos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           cliente_id INTEGER NOT NULL,
@@ -166,17 +149,15 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_veiculos_cliente_id
         ON veiculos (cliente_id)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaAgendamentos(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaAgendamentos(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS agendamentos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           cliente_id INTEGER NOT NULL,
@@ -196,29 +177,27 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_agendamentos_cliente_id
         ON agendamentos (cliente_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_agendamentos_veiculo_id
         ON agendamentos (veiculo_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_agendamentos_data
         ON agendamentos (data)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaFotos(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaFotos(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS fotos_servico (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           cliente_id INTEGER NOT NULL,
@@ -236,23 +215,21 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_fotos_cliente_id
         ON fotos_servico (cliente_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_fotos_veiculo_id
         ON fotos_servico (veiculo_id)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaMovimentosFinanceiros(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaMovimentosFinanceiros(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS movimentos_financeiros (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           tipo TEXT NOT NULL,
@@ -271,29 +248,27 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_movimentos_cliente_id
         ON movimentos_financeiros (cliente_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_movimentos_agendamento_id
         ON movimentos_financeiros (agendamento_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_movimentos_data
         ON movimentos_financeiros (data)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaOrcamentos(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaOrcamentos(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS orcamentos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           cliente_id INTEGER NOT NULL,
@@ -315,42 +290,40 @@
         )
       ''');
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'orcamentos',
-        coluna: 'desconto',
-        definicao: 'REAL NOT NULL DEFAULT 0',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'orcamentos',
+      coluna: 'desconto',
+      definicao: 'REAL NOT NULL DEFAULT 0',
+    );
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_orcamentos_cliente_id
         ON orcamentos (cliente_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_orcamentos_veiculo_id
         ON orcamentos (veiculo_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_orcamentos_status
         ON orcamentos (status)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_orcamentos_data_emissao
         ON orcamentos (data_emissao)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaItensOrcamento(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaItensOrcamento(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS orcamento_itens (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           orcamento_id INTEGER NOT NULL,
@@ -365,17 +338,15 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_orcamento_itens_orcamento_id
         ON orcamento_itens (orcamento_id)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaOrdensServico(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaOrdensServico(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS ordens_servico (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           orcamento_id INTEGER,
@@ -411,47 +382,45 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE UNIQUE INDEX IF NOT EXISTS
         idx_ordens_servico_numero
         ON ordens_servico (numero)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordens_servico_orcamento_id
         ON ordens_servico (orcamento_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordens_servico_cliente_id
         ON ordens_servico (cliente_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordens_servico_veiculo_id
         ON ordens_servico (veiculo_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordens_servico_status
         ON ordens_servico (status)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordens_servico_data_abertura
         ON ordens_servico (data_abertura)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaItensOrdemServico(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaItensOrdemServico(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS ordem_servico_itens (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           ordem_servico_id INTEGER NOT NULL,
@@ -471,17 +440,15 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordem_servico_itens_os_id
         ON ordem_servico_itens (ordem_servico_id)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaChecklistOrdemServico(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaChecklistOrdemServico(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS ordem_servico_checklist (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           ordem_servico_id INTEGER NOT NULL,
@@ -498,49 +465,45 @@
         )
       ''');
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'ordem_servico_checklist',
-        coluna: 'status',
-        definicao: 'INTEGER NOT NULL DEFAULT 0',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_checklist',
+      coluna: 'status',
+      definicao: 'INTEGER NOT NULL DEFAULT 0',
+    );
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'ordem_servico_checklist',
-        coluna: 'foto_avaria',
-        definicao: 'TEXT',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_checklist',
+      coluna: 'foto_avaria',
+      definicao: 'TEXT',
+    );
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordem_servico_checklist_os_id
         ON ordem_servico_checklist (ordem_servico_id)
       ''');
-    }
+  }
 
-    Future<void> _atualizarChecklistParaVersao8(
-        Database database,
-        ) async {
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'ordem_servico_checklist',
-        coluna: 'status',
-        definicao: 'INTEGER NOT NULL DEFAULT 0',
-      );
+  Future<void> _atualizarChecklistParaVersao8(Database database) async {
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_checklist',
+      coluna: 'status',
+      definicao: 'INTEGER NOT NULL DEFAULT 0',
+    );
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'ordem_servico_checklist',
-        coluna: 'foto_avaria',
-        definicao: 'TEXT',
-      );
-    }
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_checklist',
+      coluna: 'foto_avaria',
+      definicao: 'TEXT',
+    );
+  }
 
-    Future<void> _criarTabelaFotosOrdemServico(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaFotosOrdemServico(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS ordem_servico_fotos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           ordem_servico_id INTEGER NOT NULL,
@@ -555,23 +518,21 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordem_servico_fotos_os_id
         ON ordem_servico_fotos (ordem_servico_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordem_servico_fotos_etapa
         ON ordem_servico_fotos (etapa)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaProdutosOrdemServico(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaProdutosOrdemServico(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS ordem_servico_produtos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           ordem_servico_id INTEGER NOT NULL,
@@ -587,24 +548,21 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordem_servico_produtos_os_id
         ON ordem_servico_produtos (ordem_servico_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_ordem_servico_produtos_produto_id
         ON ordem_servico_produtos (produto_id)
       ''');
-    }
+  }
 
-
-    Future<void> _criarTabelaItensEstoque(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaItensEstoque(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS itens_estoque (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           nome TEXT NOT NULL,
@@ -619,23 +577,21 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_itens_estoque_nome
         ON itens_estoque (nome)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_itens_estoque_categoria
         ON itens_estoque (categoria)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaMovimentacoesEstoque(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaMovimentacoesEstoque(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS movimentacoes_estoque (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           item_estoque_id INTEGER NOT NULL,
@@ -657,35 +613,33 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_movimentacoes_estoque_item_id
         ON movimentacoes_estoque (item_estoque_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_movimentacoes_estoque_data
         ON movimentacoes_estoque (data)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_movimentacoes_estoque_tipo
         ON movimentacoes_estoque (tipo)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_movimentacoes_estoque_os_id
         ON movimentacoes_estoque (ordem_servico_id)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaConfiguracoesEstoque(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaConfiguracoesEstoque(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS configuracoes_estoque (
           id INTEGER PRIMARY KEY CHECK (id = 1),
           controlar_estoque INTEGER NOT NULL DEFAULT 1,
@@ -699,93 +653,87 @@
           atualizado_em TEXT NOT NULL
         )
       ''');
-    }
+  }
 
-    Future<void> _inserirConfiguracaoEstoquePadrao(
-        Database database,
-        ) async {
-      await database.insert(
-        'configuracoes_estoque',
-        {
-          'id': 1,
-          'controlar_estoque': 1,
-          'controlar_produtos_ordem_servico': 1,
-          'baixa_automatica': 1,
-          'exigir_quantidade': 1,
-          'alertar_estoque_baixo': 1,
-          'estoque_minimo_padrao': 2,
-          'controlar_produtos_os': 1,
-          'baixar_automaticamente': 1,
-          'atualizado_em': DateTime.now().toIso8601String(),
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
-    }
+  Future<void> _inserirConfiguracaoEstoquePadrao(Database database) async {
+    await database.insert('configuracoes_estoque', {
+      'id': 1,
+      'controlar_estoque': 1,
+      'controlar_produtos_ordem_servico': 1,
+      'baixa_automatica': 1,
+      'exigir_quantidade': 1,
+      'alertar_estoque_baixo': 1,
+      'estoque_minimo_padrao': 2,
+      'controlar_produtos_os': 1,
+      'baixar_automaticamente': 1,
+      'atualizado_em': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
 
-    Future<void> _atualizarConfiguracoesEstoqueParaVersao11(
-        Database database,
-        ) async {
-      await _criarTabelaConfiguracoesEstoque(database);
+  Future<void> _atualizarConfiguracoesEstoqueParaVersao11(
+    Database database,
+  ) async {
+    await _criarTabelaConfiguracoesEstoque(database);
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'configuracoes_estoque',
-        coluna: 'controlar_estoque',
-        definicao: 'INTEGER NOT NULL DEFAULT 1',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'controlar_estoque',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'configuracoes_estoque',
-        coluna: 'controlar_produtos_ordem_servico',
-        definicao: 'INTEGER NOT NULL DEFAULT 1',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'controlar_produtos_ordem_servico',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'configuracoes_estoque',
-        coluna: 'baixa_automatica',
-        definicao: 'INTEGER NOT NULL DEFAULT 1',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'baixa_automatica',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'configuracoes_estoque',
-        coluna: 'exigir_quantidade',
-        definicao: 'INTEGER NOT NULL DEFAULT 1',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'exigir_quantidade',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'configuracoes_estoque',
-        coluna: 'alertar_estoque_baixo',
-        definicao: 'INTEGER NOT NULL DEFAULT 1',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'alertar_estoque_baixo',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'configuracoes_estoque',
-        coluna: 'estoque_minimo_padrao',
-        definicao: 'REAL NOT NULL DEFAULT 2',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'estoque_minimo_padrao',
+      definicao: 'REAL NOT NULL DEFAULT 2',
+    );
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'configuracoes_estoque',
-        coluna: 'controlar_produtos_os',
-        definicao: 'INTEGER NOT NULL DEFAULT 1',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'controlar_produtos_os',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
 
-      await _adicionarColunaSeNecessario(
-        database: database,
-        tabela: 'configuracoes_estoque',
-        coluna: 'baixar_automaticamente',
-        definicao: 'INTEGER NOT NULL DEFAULT 1',
-      );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes_estoque',
+      coluna: 'baixar_automaticamente',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
 
-      await _inserirConfiguracaoEstoquePadrao(database);
+    await _inserirConfiguracaoEstoquePadrao(database);
 
-      await database.execute('''
+    await database.execute('''
         UPDATE configuracoes_estoque
         SET
           controlar_estoque = 1,
@@ -812,13 +760,10 @@
           atualizado_em = '${DateTime.now().toIso8601String()}'
         WHERE id = 1
       ''');
-    }
+  }
 
-
-    Future<void> _criarTabelaServicosCatalogo(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaServicosCatalogo(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS servicos_catalogo (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           nome TEXT NOT NULL,
@@ -835,29 +780,27 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_servicos_catalogo_nome
         ON servicos_catalogo (nome)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_servicos_catalogo_categoria
         ON servicos_catalogo (categoria)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_servicos_catalogo_ativo
         ON servicos_catalogo (ativo)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaServicoProdutos(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaServicoProdutos(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS servico_produtos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           servico_id INTEGER NOT NULL,
@@ -877,23 +820,21 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_servico_produtos_servico_id
         ON servico_produtos (servico_id)
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_servico_produtos_item_id
         ON servico_produtos (item_estoque_id)
       ''');
-    }
+  }
 
-    Future<void> _criarTabelaServicosRelacionados(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaServicosRelacionados(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS servicos_relacionados (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           servico_id INTEGER NOT NULL,
@@ -910,18 +851,15 @@
         )
       ''');
 
-      await database.execute('''
+    await database.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_servicos_relacionados_servico_id
         ON servicos_relacionados (servico_id)
       ''');
-    }
+  }
 
-
-    Future<void> _criarTabelaConfiguracoes(
-        Database database,
-        ) async {
-      await database.execute('''
+  Future<void> _criarTabelaConfiguracoes(Database database) async {
+    await database.execute('''
         CREATE TABLE IF NOT EXISTS configuracoes (
           id INTEGER PRIMARY KEY CHECK (id = 1),
           nome_fantasia TEXT NOT NULL DEFAULT 'Imperium Detailing',
@@ -933,6 +871,7 @@
           email TEXT NOT NULL DEFAULT '',
           site TEXT NOT NULL DEFAULT '',
           instagram TEXT NOT NULL DEFAULT '',
+          facebook TEXT NOT NULL DEFAULT '',
           endereco TEXT NOT NULL DEFAULT '',
           numero TEXT NOT NULL DEFAULT '',
           complemento TEXT NOT NULL DEFAULT '',
@@ -941,6 +880,7 @@
           estado TEXT NOT NULL DEFAULT '',
           cep TEXT NOT NULL DEFAULT '',
           caminho_logo TEXT,
+          caminho_assinatura_empresa TEXT,
           nome_aplicativo TEXT NOT NULL DEFAULT 'Imperium Detailing',
           cor_principal INTEGER NOT NULL DEFAULT 4292257867,
           cor_secundaria INTEGER NOT NULL DEFAULT 4280295456,
@@ -958,40 +898,47 @@
           atualizado_em TEXT NOT NULL
         )
       ''');
+  }
+
+  Future<void> _inserirConfiguracaoPadrao(Database database) async {
+    await database.insert('configuracoes', {
+      'id': 1,
+      'nome_fantasia': 'Imperium Detailing',
+      'nome_aplicativo': 'Imperium Detailing',
+      'cor_principal': 0xFFD6A84B,
+      'cor_secundaria': 0xFF1A1A1A,
+      'tema': 'escuro',
+      'validade_orcamento_dias': 15,
+      'atualizado_em': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  Future<void> _atualizarConfiguracoesParaVersao13(Database database) async {
+    await _criarTabelaConfiguracoes(database);
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes',
+      coluna: 'facebook',
+      definicao: "TEXT NOT NULL DEFAULT ''",
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'configuracoes',
+      coluna: 'caminho_assinatura_empresa',
+      definicao: 'TEXT',
+    );
+  }
+
+  Future<void> _migrarOrcamentosAntigos(Database database) async {
+    final tabelaExiste = await _tabelaExiste(database, 'orcamentos');
+
+    if (!tabelaExiste) {
+      return;
     }
 
-    Future<void> _inserirConfiguracaoPadrao(
-        Database database,
-        ) async {
-      await database.insert(
-        'configuracoes',
-        {
-          'id': 1,
-          'nome_fantasia': 'Imperium Detailing',
-          'nome_aplicativo': 'Imperium Detailing',
-          'cor_principal': 0xFFD6A84B,
-          'cor_secundaria': 0xFF1A1A1A,
-          'tema': 'escuro',
-          'validade_orcamento_dias': 15,
-          'atualizado_em': DateTime.now().toIso8601String(),
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
-    }
-
-    Future<void> _migrarOrcamentosAntigos(
-        Database database,
-        ) async {
-      final tabelaExiste = await _tabelaExiste(
-        database,
-        'orcamentos',
-      );
-
-      if (!tabelaExiste) {
-        return;
-      }
-
-      await database.execute('''
+    await database.execute('''
         INSERT INTO orcamento_itens (
           orcamento_id,
           servico,
@@ -1018,67 +965,59 @@
           WHERE i.orcamento_id = o.id
         )
       ''');
-    }
+  }
 
-    Future<bool> _tabelaExiste(
-        Database database,
-        String tabela,
-        ) async {
-      final resultado = await database.rawQuery(
-        '''
+  Future<bool> _tabelaExiste(Database database, String tabela) async {
+    final resultado = await database.rawQuery(
+      '''
         SELECT name
         FROM sqlite_master
         WHERE type = 'table'
           AND name = ?
         LIMIT 1
         ''',
-        [tabela],
-      );
+      [tabela],
+    );
 
-      return resultado.isNotEmpty;
-    }
-
-    Future<void> _adicionarColunaSeNecessario({
-      required Database database,
-      required String tabela,
-      required String coluna,
-      required String definicao,
-    }) async {
-      final tabelaExiste = await _tabelaExiste(
-        database,
-        tabela,
-      );
-
-      if (!tabelaExiste) {
-        return;
-      }
-
-      final colunas = await database.rawQuery(
-        'PRAGMA table_info($tabela)',
-      );
-
-      final colunaExiste = colunas.any(
-            (item) => item['name']?.toString() == coluna,
-      );
-
-      if (colunaExiste) {
-        return;
-      }
-
-      await database.execute(
-        'ALTER TABLE $tabela '
-            'ADD COLUMN $coluna $definicao',
-      );
-    }
-
-    Future<void> fecharBanco() async {
-      final database = _database;
-
-      if (database == null) {
-        return;
-      }
-
-      await database.close();
-      _database = null;
-    }
+    return resultado.isNotEmpty;
   }
+
+  Future<void> _adicionarColunaSeNecessario({
+    required Database database,
+    required String tabela,
+    required String coluna,
+    required String definicao,
+  }) async {
+    final tabelaExiste = await _tabelaExiste(database, tabela);
+
+    if (!tabelaExiste) {
+      return;
+    }
+
+    final colunas = await database.rawQuery('PRAGMA table_info($tabela)');
+
+    final colunaExiste = colunas.any(
+      (item) => item['name']?.toString() == coluna,
+    );
+
+    if (colunaExiste) {
+      return;
+    }
+
+    await database.execute(
+      'ALTER TABLE $tabela '
+      'ADD COLUMN $coluna $definicao',
+    );
+  }
+
+  Future<void> fecharBanco() async {
+    final database = _database;
+
+    if (database == null) {
+      return;
+    }
+
+    await database.close();
+    _database = null;
+  }
+}

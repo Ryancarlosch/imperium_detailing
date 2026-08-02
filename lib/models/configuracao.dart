@@ -11,6 +11,7 @@ class Configuracao {
   final String email;
   final String site;
   final String instagram;
+  final String facebook;
 
   final String endereco;
   final String numero;
@@ -21,6 +22,7 @@ class Configuracao {
   final String cep;
 
   final String? caminhoLogo;
+  final String? caminhoAssinaturaEmpresa;
 
   final String nomeAplicativo;
   final int corPrincipal;
@@ -52,6 +54,7 @@ class Configuracao {
     this.email = '',
     this.site = '',
     this.instagram = '',
+    this.facebook = '',
     this.endereco = '',
     this.numero = '',
     this.complemento = '',
@@ -60,6 +63,7 @@ class Configuracao {
     this.estado = '',
     this.cep = '',
     this.caminhoLogo,
+    this.caminhoAssinaturaEmpresa,
     this.nomeAplicativo = 'Imperium Detailing',
     this.corPrincipal = 0xFFD6A84B,
     this.corSecundaria = 0xFF1A1A1A,
@@ -78,121 +82,57 @@ class Configuracao {
   });
 
   factory Configuracao.padrao() {
-    return Configuracao(
-      atualizadoEm: DateTime.now().toIso8601String(),
-    );
+    return Configuracao(atualizadoEm: DateTime.now().toIso8601String());
   }
 
-  factory Configuracao.fromMap(
-      Map<String, Object?> mapa,
-      ) {
+  factory Configuracao.fromMap(Map<String, Object?> mapa) {
     return Configuracao(
-      id: _lerInteiro(
-        mapa['id'],
-        padrao: 1,
-      ),
+      id: _lerInteiro(mapa['id'], padrao: 1),
       nomeFantasia: _lerTexto(
         mapa['nome_fantasia'],
         padrao: 'Imperium Detailing',
       ),
-      razaoSocial: _lerTexto(
-        mapa['razao_social'],
-      ),
-      cnpj: _lerTexto(
-        mapa['cnpj'],
-      ),
-      inscricaoEstadual: _lerTexto(
-        mapa['inscricao_estadual'],
-      ),
-      telefone: _lerTexto(
-        mapa['telefone'],
-      ),
-      whatsapp: _lerTexto(
-        mapa['whatsapp'],
-      ),
-      email: _lerTexto(
-        mapa['email'],
-      ),
-      site: _lerTexto(
-        mapa['site'],
-      ),
-      instagram: _lerTexto(
-        mapa['instagram'],
-      ),
-      endereco: _lerTexto(
-        mapa['endereco'],
-      ),
-      numero: _lerTexto(
-        mapa['numero'],
-      ),
-      complemento: _lerTexto(
-        mapa['complemento'],
-      ),
-      bairro: _lerTexto(
-        mapa['bairro'],
-      ),
-      cidade: _lerTexto(
-        mapa['cidade'],
-      ),
-      estado: _lerTexto(
-        mapa['estado'],
-      ),
-      cep: _lerTexto(
-        mapa['cep'],
-      ),
-      caminhoLogo: _lerTextoOpcional(
-        mapa['caminho_logo'],
+      razaoSocial: _lerTexto(mapa['razao_social']),
+      cnpj: _lerTexto(mapa['cnpj']),
+      inscricaoEstadual: _lerTexto(mapa['inscricao_estadual']),
+      telefone: _lerTexto(mapa['telefone']),
+      whatsapp: _lerTexto(mapa['whatsapp']),
+      email: _lerTexto(mapa['email']),
+      site: _lerTexto(mapa['site']),
+      instagram: _lerTexto(mapa['instagram']),
+      facebook: _lerTexto(mapa['facebook']),
+      endereco: _lerTexto(mapa['endereco']),
+      numero: _lerTexto(mapa['numero']),
+      complemento: _lerTexto(mapa['complemento']),
+      bairro: _lerTexto(mapa['bairro']),
+      cidade: _lerTexto(mapa['cidade']),
+      estado: _lerTexto(mapa['estado']),
+      cep: _lerTexto(mapa['cep']),
+      caminhoLogo: _lerTextoOpcional(mapa['caminho_logo']),
+      caminhoAssinaturaEmpresa: _lerTextoOpcional(
+        mapa['caminho_assinatura_empresa'],
       ),
       nomeAplicativo: _lerTexto(
         mapa['nome_aplicativo'],
         padrao: 'Imperium Detailing',
       ),
-      corPrincipal: _lerInteiro(
-        mapa['cor_principal'],
-        padrao: 0xFFD6A84B,
-      ),
-      corSecundaria: _lerInteiro(
-        mapa['cor_secundaria'],
-        padrao: 0xFF1A1A1A,
-      ),
-      tema: _lerTexto(
-        mapa['tema'],
-        padrao: 'escuro',
-      ),
+      corPrincipal: _lerInteiro(mapa['cor_principal'], padrao: 0xFFD6A84B),
+      corSecundaria: _lerInteiro(mapa['cor_secundaria'], padrao: 0xFF1A1A1A),
+      tema: _lerTexto(mapa['tema'], padrao: 'escuro'),
       validadeOrcamentoDias: _lerInteiro(
         mapa['validade_orcamento_dias'],
         padrao: 15,
       ),
-      rodapeDocumentos: _lerTexto(
-        mapa['rodape_documentos'],
-      ),
-      termosOrcamento: _lerTexto(
-        mapa['termos_orcamento'],
-      ),
-      termosOrdemServico: _lerTexto(
-        mapa['termos_ordem_servico'],
-      ),
-      observacaoPadrao: _lerTexto(
-        mapa['observacao_padrao'],
-      ),
-      mensagemAgradecimento: _lerTexto(
-        mapa['mensagem_agradecimento'],
-      ),
-      mensagemOrcamento: _lerTexto(
-        mapa['mensagem_orcamento'],
-      ),
-      mensagemConfirmacao: _lerTexto(
-        mapa['mensagem_confirmacao'],
-      ),
-      mensagemEntrega: _lerTexto(
-        mapa['mensagem_entrega'],
-      ),
-      mensagemCobranca: _lerTexto(
-        mapa['mensagem_cobranca'],
-      ),
-      atualizadoEm: _lerTexto(
-        mapa['atualizado_em'],
-      ),
+      rodapeDocumentos: _lerTexto(mapa['rodape_documentos']),
+      termosOrcamento: _lerTexto(mapa['termos_orcamento']),
+      termosOrdemServico: _lerTexto(mapa['termos_ordem_servico']),
+      observacaoPadrao: _lerTexto(mapa['observacao_padrao']),
+      mensagemAgradecimento: _lerTexto(mapa['mensagem_agradecimento']),
+      mensagemOrcamento: _lerTexto(mapa['mensagem_orcamento']),
+      mensagemConfirmacao: _lerTexto(mapa['mensagem_confirmacao']),
+      mensagemEntrega: _lerTexto(mapa['mensagem_entrega']),
+      mensagemCobranca: _lerTexto(mapa['mensagem_cobranca']),
+      atualizadoEm: _lerTexto(mapa['atualizado_em']),
     );
   }
 
@@ -202,13 +142,13 @@ class Configuracao {
       'nome_fantasia': nomeFantasia.trim(),
       'razao_social': razaoSocial.trim(),
       'cnpj': cnpj.trim(),
-      'inscricao_estadual':
-      inscricaoEstadual.trim(),
+      'inscricao_estadual': inscricaoEstadual.trim(),
       'telefone': telefone.trim(),
       'whatsapp': whatsapp.trim(),
       'email': email.trim(),
       'site': site.trim(),
       'instagram': instagram.trim(),
+      'facebook': facebook.trim(),
       'endereco': endereco.trim(),
       'numero': numero.trim(),
       'complemento': complemento.trim(),
@@ -217,30 +157,21 @@ class Configuracao {
       'estado': estado.trim(),
       'cep': cep.trim(),
       'caminho_logo': caminhoLogo,
+      'caminho_assinatura_empresa': caminhoAssinaturaEmpresa,
       'nome_aplicativo': nomeAplicativo.trim(),
       'cor_principal': corPrincipal,
       'cor_secundaria': corSecundaria,
       'tema': tema.trim(),
-      'validade_orcamento_dias':
-      validadeOrcamentoDias,
-      'rodape_documentos':
-      rodapeDocumentos.trim(),
-      'termos_orcamento':
-      termosOrcamento.trim(),
-      'termos_ordem_servico':
-      termosOrdemServico.trim(),
-      'observacao_padrao':
-      observacaoPadrao.trim(),
-      'mensagem_agradecimento':
-      mensagemAgradecimento.trim(),
-      'mensagem_orcamento':
-      mensagemOrcamento.trim(),
-      'mensagem_confirmacao':
-      mensagemConfirmacao.trim(),
-      'mensagem_entrega':
-      mensagemEntrega.trim(),
-      'mensagem_cobranca':
-      mensagemCobranca.trim(),
+      'validade_orcamento_dias': validadeOrcamentoDias,
+      'rodape_documentos': rodapeDocumentos.trim(),
+      'termos_orcamento': termosOrcamento.trim(),
+      'termos_ordem_servico': termosOrdemServico.trim(),
+      'observacao_padrao': observacaoPadrao.trim(),
+      'mensagem_agradecimento': mensagemAgradecimento.trim(),
+      'mensagem_orcamento': mensagemOrcamento.trim(),
+      'mensagem_confirmacao': mensagemConfirmacao.trim(),
+      'mensagem_entrega': mensagemEntrega.trim(),
+      'mensagem_cobranca': mensagemCobranca.trim(),
       'atualizado_em': atualizadoEm.isEmpty
           ? DateTime.now().toIso8601String()
           : atualizadoEm,
@@ -251,8 +182,7 @@ class Configuracao {
     final mapa = toMap();
 
     mapa['id'] = 1;
-    mapa['atualizado_em'] =
-        DateTime.now().toIso8601String();
+    mapa['atualizado_em'] = DateTime.now().toIso8601String();
 
     return mapa;
   }
@@ -268,6 +198,7 @@ class Configuracao {
     String? email,
     String? site,
     String? instagram,
+    String? facebook,
     String? endereco,
     String? numero,
     String? complemento,
@@ -276,7 +207,9 @@ class Configuracao {
     String? estado,
     String? cep,
     String? caminhoLogo,
+    String? caminhoAssinaturaEmpresa,
     bool removerLogo = false,
+    bool removerAssinaturaEmpresa = false,
     String? nomeAplicativo,
     int? corPrincipal,
     int? corSecundaria,
@@ -295,70 +228,44 @@ class Configuracao {
   }) {
     return Configuracao(
       id: id ?? this.id,
-      nomeFantasia:
-      nomeFantasia ?? this.nomeFantasia,
-      razaoSocial:
-      razaoSocial ?? this.razaoSocial,
+      nomeFantasia: nomeFantasia ?? this.nomeFantasia,
+      razaoSocial: razaoSocial ?? this.razaoSocial,
       cnpj: cnpj ?? this.cnpj,
-      inscricaoEstadual:
-      inscricaoEstadual ??
-          this.inscricaoEstadual,
+      inscricaoEstadual: inscricaoEstadual ?? this.inscricaoEstadual,
       telefone: telefone ?? this.telefone,
       whatsapp: whatsapp ?? this.whatsapp,
       email: email ?? this.email,
       site: site ?? this.site,
       instagram: instagram ?? this.instagram,
+      facebook: facebook ?? this.facebook,
       endereco: endereco ?? this.endereco,
       numero: numero ?? this.numero,
-      complemento:
-      complemento ?? this.complemento,
+      complemento: complemento ?? this.complemento,
       bairro: bairro ?? this.bairro,
       cidade: cidade ?? this.cidade,
       estado: estado ?? this.estado,
       cep: cep ?? this.cep,
-      caminhoLogo: removerLogo
+      caminhoLogo: removerLogo ? null : caminhoLogo ?? this.caminhoLogo,
+      caminhoAssinaturaEmpresa: removerAssinaturaEmpresa
           ? null
-          : caminhoLogo ?? this.caminhoLogo,
-      nomeAplicativo:
-      nomeAplicativo ?? this.nomeAplicativo,
-      corPrincipal:
-      corPrincipal ?? this.corPrincipal,
-      corSecundaria:
-      corSecundaria ?? this.corSecundaria,
+          : caminhoAssinaturaEmpresa ?? this.caminhoAssinaturaEmpresa,
+      nomeAplicativo: nomeAplicativo ?? this.nomeAplicativo,
+      corPrincipal: corPrincipal ?? this.corPrincipal,
+      corSecundaria: corSecundaria ?? this.corSecundaria,
       tema: tema ?? this.tema,
       validadeOrcamentoDias:
-      validadeOrcamentoDias ??
-          this.validadeOrcamentoDias,
-      rodapeDocumentos:
-      rodapeDocumentos ??
-          this.rodapeDocumentos,
-      termosOrcamento:
-      termosOrcamento ??
-          this.termosOrcamento,
-      termosOrdemServico:
-      termosOrdemServico ??
-          this.termosOrdemServico,
-      observacaoPadrao:
-      observacaoPadrao ??
-          this.observacaoPadrao,
+          validadeOrcamentoDias ?? this.validadeOrcamentoDias,
+      rodapeDocumentos: rodapeDocumentos ?? this.rodapeDocumentos,
+      termosOrcamento: termosOrcamento ?? this.termosOrcamento,
+      termosOrdemServico: termosOrdemServico ?? this.termosOrdemServico,
+      observacaoPadrao: observacaoPadrao ?? this.observacaoPadrao,
       mensagemAgradecimento:
-      mensagemAgradecimento ??
-          this.mensagemAgradecimento,
-      mensagemOrcamento:
-      mensagemOrcamento ??
-          this.mensagemOrcamento,
-      mensagemConfirmacao:
-      mensagemConfirmacao ??
-          this.mensagemConfirmacao,
-      mensagemEntrega:
-      mensagemEntrega ??
-          this.mensagemEntrega,
-      mensagemCobranca:
-      mensagemCobranca ??
-          this.mensagemCobranca,
-      atualizadoEm:
-      atualizadoEm ??
-          DateTime.now().toIso8601String(),
+          mensagemAgradecimento ?? this.mensagemAgradecimento,
+      mensagemOrcamento: mensagemOrcamento ?? this.mensagemOrcamento,
+      mensagemConfirmacao: mensagemConfirmacao ?? this.mensagemConfirmacao,
+      mensagemEntrega: mensagemEntrega ?? this.mensagemEntrega,
+      mensagemCobranca: mensagemCobranca ?? this.mensagemCobranca,
+      atualizadoEm: atualizadoEm ?? DateTime.now().toIso8601String(),
     );
   }
 
@@ -406,18 +313,19 @@ class Configuracao {
   }
 
   bool get possuiLogo {
-    return caminhoLogo != null &&
-        caminhoLogo!.trim().isNotEmpty;
+    return caminhoLogo != null && caminhoLogo!.trim().isNotEmpty;
+  }
+
+  bool get possuiAssinaturaEmpresa {
+    return caminhoAssinaturaEmpresa != null &&
+        caminhoAssinaturaEmpresa!.trim().isNotEmpty;
   }
 
   bool get temaEscuro {
     return tema.toLowerCase().trim() == 'escuro';
   }
 
-  static String _lerTexto(
-      Object? valor, {
-        String padrao = '',
-      }) {
+  static String _lerTexto(Object? valor, {String padrao = ''}) {
     final texto = valor?.toString().trim() ?? '';
 
     if (texto.isEmpty) {
@@ -427,9 +335,7 @@ class Configuracao {
     return texto;
   }
 
-  static String? _lerTextoOpcional(
-      Object? valor,
-      ) {
+  static String? _lerTextoOpcional(Object? valor) {
     final texto = valor?.toString().trim() ?? '';
 
     if (texto.isEmpty) {
@@ -439,10 +345,7 @@ class Configuracao {
     return texto;
   }
 
-  static int _lerInteiro(
-      Object? valor, {
-        required int padrao,
-      }) {
+  static int _lerInteiro(Object? valor, {required int padrao}) {
     if (valor is int) {
       return valor;
     }
@@ -451,9 +354,6 @@ class Configuracao {
       return valor.toInt();
     }
 
-    return int.tryParse(
-      valor?.toString() ?? '',
-    ) ??
-        padrao;
+    return int.tryParse(valor?.toString() ?? '') ?? padrao;
   }
 }

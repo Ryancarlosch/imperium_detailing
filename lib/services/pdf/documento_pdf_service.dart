@@ -9,34 +9,23 @@ import '../../repositories/configuracao_repository.dart';
 
 abstract class DocumentoPdfService {
   final ConfiguracaoRepository configuracaoRepository =
-  ConfiguracaoRepository();
+      ConfiguracaoRepository();
 
-  Future<DocumentoPdfContexto>
-  carregarContextoPdf() async {
-    final configuracao =
-    await configuracaoRepository.obterConfiguracao();
+  Future<DocumentoPdfContexto> carregarContextoPdf() async {
+    final configuracao = await configuracaoRepository.obterConfiguracao();
 
-    final logo = await _carregarLogo(
-      configuracao.caminhoLogo,
-    );
+    final logo = await _carregarLogo(configuracao.caminhoLogo);
 
     return DocumentoPdfContexto(
       configuracao: configuracao,
       logo: logo,
-      corPrincipal: converterCor(
-        configuracao.corPrincipal,
-      ),
-      corSecundaria: converterCor(
-        configuracao.corSecundaria,
-      ),
+      corPrincipal: converterCor(configuracao.corPrincipal),
+      corSecundaria: converterCor(configuracao.corSecundaria),
     );
   }
 
-  Future<pw.MemoryImage?> _carregarLogo(
-      String? caminho,
-      ) async {
-    if (caminho == null ||
-        caminho.trim().isEmpty) {
+  Future<pw.MemoryImage?> _carregarLogo(String? caminho) async {
+    if (caminho == null || caminho.trim().isEmpty) {
       return null;
     }
 
@@ -65,21 +54,15 @@ abstract class DocumentoPdfService {
     final verde = (valor >> 8) & 0xFF;
     final azul = valor & 0xFF;
 
-    return PdfColor(
-      vermelho / 255,
-      verde / 255,
-      azul / 255,
-      alpha / 255,
-    );
+    return PdfColor(vermelho / 255, verde / 255, azul / 255, alpha / 255);
   }
 
   String textoDoMapa(
-      Map<dynamic, dynamic> mapa,
-      String chave, {
-        String padrao = '',
-      }) {
-    final valor =
-    (mapa[chave] ?? '').toString().trim();
+    Map<dynamic, dynamic> mapa,
+    String chave, {
+    String padrao = '',
+  }) {
+    final valor = (mapa[chave] ?? '').toString().trim();
 
     if (valor.isEmpty) {
       return padrao;
@@ -88,46 +71,33 @@ abstract class DocumentoPdfService {
     return valor;
   }
 
-  double numeroDoMapa(
-      Map<dynamic, dynamic> mapa,
-      String chave,
-      ) {
+  double numeroDoMapa(Map<dynamic, dynamic> mapa, String chave) {
     final valor = mapa[chave];
 
     if (valor is num) {
       return valor.toDouble();
     }
 
-    var texto =
-        valor?.toString().trim() ?? '';
+    var texto = valor?.toString().trim() ?? '';
 
     if (texto.isEmpty) {
       return 0;
     }
 
-    texto = texto
-        .replaceAll('R\$', '')
-        .replaceAll(' ', '');
+    texto = texto.replaceAll('R\$', '').replaceAll(' ', '');
 
     if (texto.contains(',')) {
-      texto = texto
-          .replaceAll('.', '')
-          .replaceAll(',', '.');
+      texto = texto.replaceAll('.', '').replaceAll(',', '.');
     }
 
     return double.tryParse(texto) ?? 0;
   }
 
   String somenteNumeros(String texto) {
-    return texto.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
+    return texto.replaceAll(RegExp(r'[^0-9]'), '');
   }
 
-  String montarNumeroWhatsApp(
-      String telefone,
-      ) {
+  String montarNumeroWhatsApp(String telefone) {
     var numero = somenteNumeros(telefone);
 
     if (numero.isEmpty) {
@@ -145,9 +115,7 @@ abstract class DocumentoPdfService {
     return numero;
   }
 
-  String montarLinkWhatsApp(
-      Configuracao configuracao,
-      ) {
+  String montarLinkWhatsApp(Configuracao configuracao) {
     final numero = montarNumeroWhatsApp(
       configuracao.whatsapp.isNotEmpty
           ? configuracao.whatsapp
@@ -161,11 +129,8 @@ abstract class DocumentoPdfService {
     return 'https://wa.me/$numero';
   }
 
-  String nomeEmpresa(
-      Configuracao configuracao,
-      ) {
-    final nome =
-    configuracao.nomeFantasia.trim();
+  String nomeEmpresa(Configuracao configuracao) {
+    final nome = configuracao.nomeFantasia.trim();
 
     if (nome.isNotEmpty) {
       return nome;
@@ -174,61 +139,42 @@ abstract class DocumentoPdfService {
     return 'Imperium Detailing';
   }
 
-  List<String> montarDadosEmpresa(
-      Configuracao configuracao,
-      ) {
+  List<String> montarDadosEmpresa(Configuracao configuracao) {
     final dados = <String>[];
 
-    if (configuracao.razaoSocial
-        .trim()
-        .isNotEmpty) {
-      dados.add(
-        configuracao.razaoSocial.trim(),
-      );
+    if (configuracao.razaoSocial.trim().isNotEmpty) {
+      dados.add(configuracao.razaoSocial.trim());
     }
 
     if (configuracao.cnpj.trim().isNotEmpty) {
-      dados.add(
-        'CNPJ: ${configuracao.cnpj.trim()}',
-      );
+      dados.add('CNPJ: ${configuracao.cnpj.trim()}');
     }
 
-    if (configuracao.inscricaoEstadual
-        .trim()
-        .isNotEmpty) {
+    if (configuracao.inscricaoEstadual.trim().isNotEmpty) {
       dados.add(
         'Inscrição Estadual: '
-            '${configuracao.inscricaoEstadual.trim()}',
+        '${configuracao.inscricaoEstadual.trim()}',
       );
     }
 
-    if (configuracao.enderecoCompleto
-        .trim()
-        .isNotEmpty) {
-      dados.add(
-        configuracao.enderecoCompleto.trim(),
-      );
+    if (configuracao.enderecoCompleto.trim().isNotEmpty) {
+      dados.add(configuracao.enderecoCompleto.trim());
     }
 
     final contatos = <String>[];
 
-    if (configuracao.telefone
-        .trim()
-        .isNotEmpty) {
+    if (configuracao.telefone.trim().isNotEmpty) {
       contatos.add(
         'Telefone: '
-            '${configuracao.telefone.trim()}',
+        '${configuracao.telefone.trim()}',
       );
     }
 
-    if (configuracao.whatsapp
-        .trim()
-        .isNotEmpty &&
-        configuracao.whatsapp.trim() !=
-            configuracao.telefone.trim()) {
+    if (configuracao.whatsapp.trim().isNotEmpty &&
+        configuracao.whatsapp.trim() != configuracao.telefone.trim()) {
       contatos.add(
         'WhatsApp: '
-            '${configuracao.whatsapp.trim()}',
+        '${configuracao.whatsapp.trim()}',
       );
     }
 
@@ -239,28 +185,25 @@ abstract class DocumentoPdfService {
     final internet = <String>[];
 
     if (configuracao.email.trim().isNotEmpty) {
-      internet.add(
-        configuracao.email.trim(),
-      );
+      internet.add(configuracao.email.trim());
     }
 
     if (configuracao.site.trim().isNotEmpty) {
-      internet.add(
-        configuracao.site.trim(),
-      );
+      internet.add(configuracao.site.trim());
     }
 
-    if (configuracao.instagram
-        .trim()
-        .isNotEmpty) {
-      var instagram =
-      configuracao.instagram.trim();
+    if (configuracao.instagram.trim().isNotEmpty) {
+      var instagram = configuracao.instagram.trim();
 
       if (!instagram.startsWith('@')) {
         instagram = '@$instagram';
       }
 
       internet.add(instagram);
+    }
+
+    if (configuracao.facebook.trim().isNotEmpty) {
+      internet.add(configuracao.facebook.trim());
     }
 
     if (internet.isNotEmpty) {
@@ -270,33 +213,21 @@ abstract class DocumentoPdfService {
     return dados;
   }
 
-  String montarRodape(
-      Configuracao configuracao,
-      ) {
-    final rodapePersonalizado =
-    configuracao.rodapeDocumentos.trim();
+  String montarRodape(Configuracao configuracao) {
+    final rodapePersonalizado = configuracao.rodapeDocumentos.trim();
 
     if (rodapePersonalizado.isNotEmpty) {
       return rodapePersonalizado;
     }
 
-    final partes = <String>[
-      nomeEmpresa(configuracao),
-    ];
+    final partes = <String>[nomeEmpresa(configuracao)];
 
-    if (configuracao.telefonePrincipal
-        .trim()
-        .isNotEmpty) {
-      partes.add(
-        configuracao.telefonePrincipal.trim(),
-      );
+    if (configuracao.telefonePrincipal.trim().isNotEmpty) {
+      partes.add(configuracao.telefonePrincipal.trim());
     }
 
-    if (configuracao.instagram
-        .trim()
-        .isNotEmpty) {
-      var instagram =
-      configuracao.instagram.trim();
+    if (configuracao.instagram.trim().isNotEmpty) {
+      var instagram = configuracao.instagram.trim();
 
       if (!instagram.startsWith('@')) {
         instagram = '@$instagram';
@@ -312,9 +243,7 @@ abstract class DocumentoPdfService {
     required DocumentoPdfContexto contexto,
     double tamanho = 58,
   }) {
-    final link = montarLinkWhatsApp(
-      contexto.configuracao,
-    );
+    final link = montarLinkWhatsApp(contexto.configuracao);
 
     if (link.isEmpty) {
       return pw.SizedBox();
@@ -333,10 +262,7 @@ abstract class DocumentoPdfService {
         pw.SizedBox(height: 4),
         pw.Text(
           'WhatsApp',
-          style: const pw.TextStyle(
-            fontSize: 7,
-            color: PdfColors.grey700,
-          ),
+          style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
         ),
       ],
     );
@@ -346,21 +272,15 @@ abstract class DocumentoPdfService {
     required pw.Context context,
     required DocumentoPdfContexto documento,
   }) {
-    final textoRodape = montarRodape(
-      documento.configuracao,
-    );
+    final textoRodape = montarRodape(documento.configuracao);
 
     return pw.Column(
       mainAxisSize: pw.MainAxisSize.min,
       children: [
-        pw.Divider(
-          color: PdfColors.grey400,
-          thickness: 0.6,
-        ),
+        pw.Divider(color: PdfColors.grey400, thickness: 0.6),
         pw.SizedBox(height: 3),
         pw.Row(
-          crossAxisAlignment:
-          pw.CrossAxisAlignment.center,
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
             pw.Expanded(
               child: pw.Text(
@@ -375,7 +295,7 @@ abstract class DocumentoPdfService {
             pw.SizedBox(width: 12),
             pw.Text(
               'Página ${context.pageNumber} '
-                  'de ${context.pagesCount}',
+              'de ${context.pagesCount}',
               style: const pw.TextStyle(
                 fontSize: 7.5,
                 color: PdfColors.grey600,
@@ -387,9 +307,7 @@ abstract class DocumentoPdfService {
     );
   }
 
-  Uint8List? bytesDaLogo(
-      DocumentoPdfContexto contexto,
-      ) {
+  Uint8List? bytesDaLogo(DocumentoPdfContexto contexto) {
     return contexto.logo?.bytes;
   }
 }
@@ -412,8 +330,7 @@ class DocumentoPdfContexto {
   }
 
   String get nomeEmpresa {
-    final nome =
-    configuracao.nomeFantasia.trim();
+    final nome = configuracao.nomeFantasia.trim();
 
     if (nome.isNotEmpty) {
       return nome;

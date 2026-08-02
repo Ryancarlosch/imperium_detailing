@@ -2,7 +2,6 @@ import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
 import '../models/configuracao.dart';
 
-
 class ConfiguracaoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
 
@@ -17,31 +16,23 @@ class ConfiguracaoRepository {
     );
 
     if (resultado.isNotEmpty) {
-      return Configuracao.fromMap(
-        resultado.first,
-      );
+      return Configuracao.fromMap(resultado.first);
     }
 
-    final configuracaoPadrao =
-    Configuracao.padrao();
+    final configuracaoPadrao = Configuracao.padrao();
 
-    await salvarConfiguracao(
-      configuracaoPadrao,
-    );
+    await salvarConfiguracao(configuracaoPadrao);
 
     return configuracaoPadrao;
   }
 
-  Future<void> salvarConfiguracao(
-      Configuracao configuracao,
-      ) async {
+  Future<void> salvarConfiguracao(Configuracao configuracao) async {
     final database = await _appDatabase.database;
 
     await database.insert(
       'configuracoes',
       configuracao.toMapParaSalvar(),
-      conflictAlgorithm:
-      ConflictAlgorithm.replace,
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
@@ -55,6 +46,7 @@ class ConfiguracaoRepository {
     required String email,
     required String site,
     required String instagram,
+    required String facebook,
     required String endereco,
     required String numero,
     required String complemento,
@@ -63,20 +55,19 @@ class ConfiguracaoRepository {
     required String estado,
     required String cep,
   }) async {
-    final configuracao =
-    await obterConfiguracao();
+    final configuracao = await obterConfiguracao();
 
     final atualizada = configuracao.copyWith(
       nomeFantasia: nomeFantasia,
       razaoSocial: razaoSocial,
       cnpj: cnpj,
-      inscricaoEstadual:
-      inscricaoEstadual,
+      inscricaoEstadual: inscricaoEstadual,
       telefone: telefone,
       whatsapp: whatsapp,
       email: email,
       site: site,
       instagram: instagram,
+      facebook: facebook,
       endereco: endereco,
       numero: numero,
       complemento: complemento,
@@ -89,20 +80,28 @@ class ConfiguracaoRepository {
     await salvarConfiguracao(atualizada);
   }
 
-  Future<void> atualizarLogo(
-      String? caminhoLogo,
-      ) async {
-    final configuracao =
-    await obterConfiguracao();
+  Future<void> atualizarLogo(String? caminhoLogo) async {
+    final configuracao = await obterConfiguracao();
 
-    final atualizada = caminhoLogo == null ||
-        caminhoLogo.trim().isEmpty
-        ? configuracao.copyWith(
-      removerLogo: true,
-    )
+    final atualizada = caminhoLogo == null || caminhoLogo.trim().isEmpty
+        ? configuracao.copyWith(removerLogo: true)
+        : configuracao.copyWith(caminhoLogo: caminhoLogo);
+
+    await salvarConfiguracao(atualizada);
+  }
+
+  Future<void> atualizarAssinaturaEmpresa(
+    String? caminhoAssinaturaEmpresa,
+  ) async {
+    final configuracao = await obterConfiguracao();
+
+    final atualizada =
+        caminhoAssinaturaEmpresa == null ||
+            caminhoAssinaturaEmpresa.trim().isEmpty
+        ? configuracao.copyWith(removerAssinaturaEmpresa: true)
         : configuracao.copyWith(
-      caminhoLogo: caminhoLogo,
-    );
+            caminhoAssinaturaEmpresa: caminhoAssinaturaEmpresa,
+          );
 
     await salvarConfiguracao(atualizada);
   }
@@ -113,8 +112,7 @@ class ConfiguracaoRepository {
     required int corSecundaria,
     required String tema,
   }) async {
-    final configuracao =
-    await obterConfiguracao();
+    final configuracao = await obterConfiguracao();
 
     final atualizada = configuracao.copyWith(
       nomeAplicativo: nomeAplicativo,
@@ -134,22 +132,15 @@ class ConfiguracaoRepository {
     required String observacaoPadrao,
     required String mensagemAgradecimento,
   }) async {
-    final configuracao =
-    await obterConfiguracao();
+    final configuracao = await obterConfiguracao();
 
     final atualizada = configuracao.copyWith(
-      validadeOrcamentoDias:
-      validadeOrcamentoDias,
-      rodapeDocumentos:
-      rodapeDocumentos,
-      termosOrcamento:
-      termosOrcamento,
-      termosOrdemServico:
-      termosOrdemServico,
-      observacaoPadrao:
-      observacaoPadrao,
-      mensagemAgradecimento:
-      mensagemAgradecimento,
+      validadeOrcamentoDias: validadeOrcamentoDias,
+      rodapeDocumentos: rodapeDocumentos,
+      termosOrcamento: termosOrcamento,
+      termosOrdemServico: termosOrdemServico,
+      observacaoPadrao: observacaoPadrao,
+      mensagemAgradecimento: mensagemAgradecimento,
     );
 
     await salvarConfiguracao(atualizada);
@@ -161,29 +152,21 @@ class ConfiguracaoRepository {
     required String mensagemEntrega,
     required String mensagemCobranca,
   }) async {
-    final configuracao =
-    await obterConfiguracao();
+    final configuracao = await obterConfiguracao();
 
     final atualizada = configuracao.copyWith(
-      mensagemOrcamento:
-      mensagemOrcamento,
-      mensagemConfirmacao:
-      mensagemConfirmacao,
-      mensagemEntrega:
-      mensagemEntrega,
-      mensagemCobranca:
-      mensagemCobranca,
+      mensagemOrcamento: mensagemOrcamento,
+      mensagemConfirmacao: mensagemConfirmacao,
+      mensagemEntrega: mensagemEntrega,
+      mensagemCobranca: mensagemCobranca,
     );
 
     await salvarConfiguracao(atualizada);
   }
 
   Future<void> restaurarPadrao() async {
-    final configuracaoPadrao =
-    Configuracao.padrao();
+    final configuracaoPadrao = Configuracao.padrao();
 
-    await salvarConfiguracao(
-      configuracaoPadrao,
-    );
+    await salvarConfiguracao(configuracaoPadrao);
   }
 }

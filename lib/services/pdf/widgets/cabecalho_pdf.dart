@@ -356,6 +356,10 @@ class CabecalhoPdf {
       digitais.add(instagram);
     }
 
+    if (configuracao.facebook.trim().isNotEmpty) {
+      digitais.add(configuracao.facebook.trim());
+    }
+
     if (digitais.isNotEmpty) {
       linhas.add(digitais.join(' • '));
     }

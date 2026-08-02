@@ -34,9 +34,18 @@ class WhatsAppService {
     return nomeLimpo.split(RegExp(r'\s+')).first;
   }
 
-  static String _valorComPadrao(String valor, String padrao) {
-    final valorLimpo = valor.trim();
-    return valorLimpo.isEmpty ? padrao : valorLimpo;
+  static String _assinaturaEmpresa(Configuracao? config) {
+    final fantasia = config?.nomeFantasia.trim() ?? '';
+    if (fantasia.isNotEmpty) {
+      return fantasia;
+    }
+
+    final razao = config?.razaoSocial.trim() ?? '';
+    if (razao.isNotEmpty) {
+      return razao;
+    }
+
+    return _assinaturaPadrao;
   }
 
   static String _formatarVeiculo({
@@ -161,10 +170,7 @@ class WhatsAppService {
 
     final textoPersonalizado = mensagemPersonalizada.trim();
 
-    final assinatura = _valorComPadrao(
-      config?.nomeFantasia ?? '',
-      _assinaturaPadrao,
-    );
+    final assinatura = _assinaturaEmpresa(config);
 
     final veiculoComPlaca = _formatarVeiculo(veiculo: veiculo, placa: placa);
 
@@ -204,10 +210,7 @@ ${textoPersonalizado.isEmpty ? '' : '$textoPersonalizado\n'}
 
     final textoPersonalizado = mensagemPersonalizada.trim();
 
-    final assinatura = _valorComPadrao(
-      config?.nomeFantasia ?? '',
-      _assinaturaPadrao,
-    );
+    final assinatura = _assinaturaEmpresa(config);
 
     final veiculoComPlaca = _formatarVeiculo(veiculo: veiculo, placa: placa);
 
@@ -239,10 +242,7 @@ ${textoPersonalizado.isEmpty ? 'Aguardamos você!' : textoPersonalizado}
   }) async {
     final config = await _carregarConfiguracao();
 
-    final assinatura = _valorComPadrao(
-      config?.nomeFantasia ?? '',
-      _assinaturaPadrao,
-    );
+    final assinatura = _assinaturaEmpresa(config);
 
     final mensagemConfig = config?.mensagemOrcamento.trim() ?? '';
 
@@ -275,10 +275,7 @@ ${textoPersonalizado.isEmpty ? '' : '$textoPersonalizado\n'}
   }) async {
     final config = await _carregarConfiguracao();
 
-    final assinatura = _valorComPadrao(
-      config?.nomeFantasia ?? '',
-      _assinaturaPadrao,
-    );
+    final assinatura = _assinaturaEmpresa(config);
 
     final textoPersonalizado = mensagemPersonalizada.trim();
 
@@ -310,10 +307,7 @@ ${textoPersonalizado.isEmpty ? 'Seguimos à disposição para qualquer dúvida.'
   }) async {
     final config = await _carregarConfiguracao();
 
-    final assinatura = _valorComPadrao(
-      config?.nomeFantasia ?? '',
-      _assinaturaPadrao,
-    );
+    final assinatura = _assinaturaEmpresa(config);
 
     final previsaoLimpa = previsao.trim();
     final textoPersonalizado = mensagemPersonalizada.trim();
@@ -345,10 +339,7 @@ ${textoPersonalizado.isEmpty ? '' : '$textoPersonalizado\n'}
   }) async {
     final config = await _carregarConfiguracao();
 
-    final assinatura = _valorComPadrao(
-      config?.nomeFantasia ?? '',
-      _assinaturaPadrao,
-    );
+    final assinatura = _assinaturaEmpresa(config);
 
     final mensagemConfig = config?.mensagemEntrega.trim() ?? '';
 
@@ -382,10 +373,7 @@ ${textoPersonalizado.isEmpty ? '' : '$textoPersonalizado\n'}
   }) async {
     final config = await _carregarConfiguracao();
 
-    final assinatura = _valorComPadrao(
-      config?.nomeFantasia ?? '',
-      _assinaturaPadrao,
-    );
+    final assinatura = _assinaturaEmpresa(config);
 
     final mensagemConfig = config?.mensagemCobranca.trim() ?? '';
 
@@ -416,10 +404,7 @@ ${textoPersonalizado.isEmpty ? '' : '$textoPersonalizado\n'}
   }) async {
     final config = await _carregarConfiguracao();
 
-    final assinatura = _valorComPadrao(
-      config?.nomeFantasia ?? '',
-      _assinaturaPadrao,
-    );
+    final assinatura = _assinaturaEmpresa(config);
 
     final mensagemConfig = config?.mensagemAgradecimento.trim() ?? '';
     final textoPersonalizado = mensagemPersonalizada.trim();

@@ -53,9 +53,14 @@ class OrcamentoPdfService extends DocumentoPdfService {
 
     final assinaturaEmpresaBytes = await _carregarImagemSegura(
       _primeiroValorTexto(dados, [
-        'assinatura_empresa',
-        'caminho_assinatura_empresa',
-      ]),
+            'assinatura_empresa',
+            'caminho_assinatura_empresa',
+          ]).isNotEmpty
+          ? _primeiroValorTexto(dados, [
+              'assinatura_empresa',
+              'caminho_assinatura_empresa',
+            ])
+          : (contexto.configuracao.caminhoAssinaturaEmpresa ?? ''),
     );
 
     final tipoDocumento = recibo ? 'RECIBO' : 'ORÇAMENTO';
