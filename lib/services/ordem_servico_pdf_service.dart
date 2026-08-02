@@ -299,9 +299,9 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                 else
                   _gridCampos(camposCliente),
                 if (camposVeiculo.isNotEmpty) ...[
-                    pw.SizedBox(height: 4),
+                  pw.SizedBox(height: 4),
                   pw.Divider(color: PdfColors.grey300, thickness: 0.6),
-                    pw.SizedBox(height: 3),
+                  pw.SizedBox(height: 3),
                   _gridCampos(camposVeiculo),
                 ],
               ],
@@ -388,8 +388,8 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                 color: PdfColors.grey100,
               ),
               cellPadding: const pw.EdgeInsets.symmetric(
-                 horizontal: 5,
-                 vertical: 3,
+                horizontal: 5,
+                vertical: 3,
               ),
             ),
           ),
@@ -685,14 +685,14 @@ class OrdemServicoPdfService extends DocumentoPdfService {
         children: [
           _tituloSecao('OBSERVAÇÕES'),
           pw.Padding(
-              padding: const pw.EdgeInsets.all(8),
+            padding: const pw.EdgeInsets.all(8),
             child: pw.Text(
               observacoes,
               textAlign: pw.TextAlign.justify,
               style: const pw.TextStyle(
-                  fontSize: 7.5,
+                fontSize: 7.5,
                 color: PdfColors.grey900,
-                  lineSpacing: 1.6,
+                lineSpacing: 1.6,
               ),
             ),
           ),
@@ -727,7 +727,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
   pw.Widget _cartaoComparativoFoto(_FotoPdfRegistro foto) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 6),
-        padding: const pw.EdgeInsets.all(6),
+      padding: const pw.EdgeInsets.all(6),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey300, width: 0.6),
         borderRadius: pw.BorderRadius.circular(5),
@@ -746,7 +746,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                           ? 'Registro do serviço'
                           : foto.descricao,
                       style: pw.TextStyle(
-                          fontSize: 7.5,
+                        fontSize: 7.5,
                         fontWeight: pw.FontWeight.bold,
                         color: PdfColors.grey800,
                       ),
@@ -756,7 +756,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                     pw.Text(
                       foto.data,
                       style: const pw.TextStyle(
-                          fontSize: 6.5,
+                        fontSize: 6.5,
                         color: PdfColors.grey600,
                       ),
                     ),
@@ -831,7 +831,10 @@ class OrdemServicoPdfService extends DocumentoPdfService {
             alignment: pw.Alignment.centerRight,
             child: pw.Text(
               'Data: $data',
-              style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700),
+              style: const pw.TextStyle(
+                fontSize: 7.5,
+                color: PdfColors.grey700,
+              ),
             ),
           ),
         pw.SizedBox(height: 4),
@@ -843,59 +846,63 @@ class OrdemServicoPdfService extends DocumentoPdfService {
                 titulo: 'Assinatura do cliente',
                 nome: nomeCliente,
                 bytes: assinaturaCliente,
-                    height: 34,
+                alturaImagem: 34,
+              ),
             ),
             pw.SizedBox(width: 22),
             pw.Expanded(
               child: _blocoAssinatura(
                 titulo: 'Assinatura da empresa',
                 nome: contexto.nomeEmpresa,
-                            height: 30,
+                bytes: assinaturaEmpresa,
+                alturaImagem: 30,
               ),
             ),
           ],
         ),
-                  pw.SizedBox(height: 2),
+        pw.SizedBox(height: 2),
+      ],
     );
   }
 
   pw.Widget _blocoAssinatura({
-                      fontSize: 6.5,
+    required String titulo,
     required String nome,
     required Uint8List? bytes,
+    required double alturaImagem,
   }) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,
-                    pw.SizedBox(height: 1),
+      children: [
         pw.Container(
-            height: 34,
+          height: alturaImagem,
           width: double.infinity,
-                      style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey800),
+          alignment: pw.Alignment.bottomCenter,
           child: bytes == null
               ? pw.SizedBox()
               : pw.Image(
                   pw.MemoryImage(bytes),
-                    height: 30,
+                  height: alturaImagem,
                   fit: pw.BoxFit.contain,
                 ),
         ),
         pw.Container(height: 1, color: PdfColors.grey700),
-          pw.SizedBox(height: 2),
+        pw.SizedBox(height: 2),
         pw.Text(
           titulo,
           textAlign: pw.TextAlign.center,
           style: pw.TextStyle(
-              fontSize: 6.5,
+            fontSize: 6.5,
             color: PdfColors.grey700,
             fontWeight: pw.FontWeight.bold,
           ),
         ),
         if (nome.trim().isNotEmpty) ...[
-            pw.SizedBox(height: 1),
+          pw.SizedBox(height: 1),
           pw.Text(
             nome,
             textAlign: pw.TextAlign.center,
-              style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey800),
+            style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey800),
           ),
         ],
       ],
