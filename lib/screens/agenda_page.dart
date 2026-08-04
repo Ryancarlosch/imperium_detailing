@@ -171,10 +171,7 @@ class _AgendaPageState extends State<AgendaPage> {
       final mensagem = erro.toString().replaceFirst('Exception: ', '');
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensagem),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text(mensagem), backgroundColor: Colors.red.shade700),
       );
     } finally {
       if (mounted) {
@@ -184,7 +181,6 @@ class _AgendaPageState extends State<AgendaPage> {
       }
     }
   }
-
 
   Future<void> abrirOpcoesWhatsApp(Agendamento agendamento) async {
     final opcao = await showModalBottomSheet<String>(
@@ -282,11 +278,11 @@ class _AgendaPageState extends State<AgendaPage> {
         SnackBar(content: Text(mensagem), backgroundColor: Colors.red.shade700),
       );
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _agendamentoAbrindoWhatsAppId = null;
-      });
+      if (mounted) {
+        setState(() {
+          _agendamentoAbrindoWhatsAppId = null;
+        });
+      }
     }
   }
 
