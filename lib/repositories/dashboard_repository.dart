@@ -593,7 +593,7 @@ class DashboardRepository {
     final resultado = await database.rawQuery(
       '''
       SELECT
-        item.servico AS nome,
+        TRIM(item.servico) AS nome,
         COUNT(*) AS quantidade,
         COALESCE(SUM(item.quantidade * item.valor_unitario), 0) AS total
       FROM ordem_servico_itens item
@@ -603,8 +603,8 @@ class DashboardRepository {
         AND os.data_finalizacao >= ?
         AND os.data_finalizacao < ?
         AND TRIM(COALESCE(item.servico, '')) != ''
-      GROUP BY item.servico
-      ORDER BY quantidade DESC, total DESC
+      GROUP BY TRIM(item.servico)
+      ORDER BY quantidade DESC, total DESC, nome ASC
       LIMIT 5
       ''',
       [_toIsoDateString(inicio), _toIsoDateString(fimExclusivo)],
@@ -775,7 +775,19 @@ class DashboardRepository {
   ) async {
     final resultado = await database.rawQuery(
       '''
-      SELECT COALESCE(SUM(produtos.quantidade * produtos.custo_unitario), 0) AS total
+      SELECT COALESCE(
+        SUM(
+          COALESCE(
+            NULLIF(produtos.custo_total_no_momento, 0),
+            produtos.quantidade * COALESCE(
+              produtos.custo_unitario_no_momento,
+              produtos.custo_unitario,
+              0
+            )
+          )
+        ),
+        0
+      ) AS total
       FROM ordem_servico_produtos produtos
       INNER JOIN ordens_servico os
         ON os.id = produtos.ordem_servico_id

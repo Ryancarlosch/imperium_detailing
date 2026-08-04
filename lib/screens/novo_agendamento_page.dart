@@ -11,29 +11,21 @@ class NovoAgendamentoPage extends StatefulWidget {
   const NovoAgendamentoPage({super.key});
 
   @override
-  State<NovoAgendamentoPage> createState() =>
-      _NovoAgendamentoPageState();
+  State<NovoAgendamentoPage> createState() => _NovoAgendamentoPageState();
 }
 
-class _NovoAgendamentoPageState
-    extends State<NovoAgendamentoPage> {
-  final ClienteRepository _clienteRepository =
-  ClienteRepository();
+class _NovoAgendamentoPageState extends State<NovoAgendamentoPage> {
+  final ClienteRepository _clienteRepository = ClienteRepository();
 
-  final VeiculoRepository _veiculoRepository =
-  VeiculoRepository();
+  final VeiculoRepository _veiculoRepository = VeiculoRepository();
 
-  final AgendamentoRepository _agendamentoRepository =
-  AgendamentoRepository();
+  final AgendamentoRepository _agendamentoRepository = AgendamentoRepository();
 
-  final TextEditingController _servicoController =
-  TextEditingController();
+  final TextEditingController _servicoController = TextEditingController();
 
-  final TextEditingController _valorController =
-  TextEditingController();
+  final TextEditingController _valorController = TextEditingController();
 
-  final TextEditingController _observacoesController =
-  TextEditingController();
+  final TextEditingController _observacoesController = TextEditingController();
 
   List<Cliente> clientes = [];
   List<Veiculo> veiculos = [];
@@ -43,10 +35,7 @@ class _NovoAgendamentoPageState
 
   DateTime dataSelecionada = DateTime.now();
 
-  TimeOfDay horaSelecionada = const TimeOfDay(
-    hour: 8,
-    minute: 0,
-  );
+  TimeOfDay horaSelecionada = const TimeOfDay(hour: 8, minute: 0);
 
   String statusSelecionado = 'Agendado';
 
@@ -76,8 +65,7 @@ class _NovoAgendamentoPageState
 
   Future<void> carregarClientes() async {
     try {
-      final lista =
-      await _clienteRepository.listarClientes();
+      final lista = await _clienteRepository.listarClientes();
 
       if (!mounted) return;
 
@@ -93,18 +81,12 @@ class _NovoAgendamentoPageState
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Erro ao carregar clientes: $erro',
-          ),
-        ),
+        SnackBar(content: Text('Erro ao carregar clientes: $erro')),
       );
     }
   }
 
-  Future<void> carregarVeiculosDoCliente(
-      Cliente? cliente,
-      ) async {
+  Future<void> carregarVeiculosDoCliente(Cliente? cliente) async {
     setState(() {
       clienteSelecionado = cliente;
       veiculoSelecionado = null;
@@ -116,8 +98,7 @@ class _NovoAgendamentoPageState
     }
 
     try {
-      final lista =
-      await _veiculoRepository.listarVeiculosDoCliente(
+      final lista = await _veiculoRepository.listarVeiculosDoCliente(
         cliente!.id!,
       );
 
@@ -130,11 +111,7 @@ class _NovoAgendamentoPageState
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Erro ao carregar veículos: $erro',
-          ),
-        ),
+        SnackBar(content: Text('Erro ao carregar veículos: $erro')),
       );
     }
   }
@@ -143,12 +120,8 @@ class _NovoAgendamentoPageState
     final data = await showDatePicker(
       context: context,
       initialDate: dataSelecionada,
-      firstDate: DateTime.now().subtract(
-        const Duration(days: 365),
-      ),
-      lastDate: DateTime.now().add(
-        const Duration(days: 3650),
-      ),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
     );
 
     if (data == null) return;
@@ -181,8 +154,7 @@ class _NovoAgendamentoPageState
 
   String formatarHora(TimeOfDay hora) {
     final horas = hora.hour.toString().padLeft(2, '0');
-    final minutos =
-    hora.minute.toString().padLeft(2, '0');
+    final minutos = hora.minute.toString().padLeft(2, '0');
 
     return '$horas:$minutos';
   }
@@ -207,23 +179,17 @@ class _NovoAgendamentoPageState
     final servico = _servicoController.text.trim();
 
     if (cliente?.id == null) {
-      mostrarMensagem(
-        'Selecione um cliente.',
-      );
+      mostrarMensagem('Selecione um cliente.');
       return;
     }
 
     if (veiculo?.id == null) {
-      mostrarMensagem(
-        'Selecione um veículo.',
-      );
+      mostrarMensagem('Selecione um veículo.');
       return;
     }
 
     if (servico.isEmpty) {
-      mostrarMensagem(
-        'Informe o serviço.',
-      );
+      mostrarMensagem('Informe o serviço.');
       return;
     }
 
@@ -238,20 +204,16 @@ class _NovoAgendamentoPageState
         servico: servico,
         data: formatarData(dataSelecionada),
         hora: formatarHora(horaSelecionada),
-        valor: converterValor(
-          _valorController.text,
-        ),
+        valor: converterValor(_valorController.text),
         status: statusSelecionado,
-        observacoes:
-        _observacoesController.text.trim(),
+        observacoes: _observacoesController.text.trim(),
       );
 
-      await _agendamentoRepository
-          .inserirAgendamento(agendamento);
+      await _agendamentoRepository.inserirAgendamento(agendamento);
 
       if (!mounted) return;
 
-      Navigator.pop(context, true);
+      Navigator.pop(context, agendamento.data);
     } catch (erro) {
       if (!mounted) return;
 
@@ -259,18 +221,14 @@ class _NovoAgendamentoPageState
         salvando = false;
       });
 
-      mostrarMensagem(
-        'Erro ao salvar agendamento: $erro',
-      );
+      mostrarMensagem('Erro ao salvar agendamento: $erro');
     }
   }
 
   void mostrarMensagem(String mensagem) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensagem),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
   InputDecoration criarDecoracao({
@@ -287,185 +245,147 @@ class _NovoAgendamentoPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Novo agendamento',
-        ),
-      ),
+      appBar: AppBar(title: const Text('Novo agendamento')),
       body: carregando
-          ? const Center(
-        child: CircularProgressIndicator(),
-      )
+          ? const Center(child: CircularProgressIndicator())
           : ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          DropdownButtonFormField<Cliente>(
-            value: clienteSelecionado,
-            decoration: criarDecoracao(
-              label: 'Cliente',
-              icone: Icons.person_outline,
-            ),
-            items: clientes.map((cliente) {
-              return DropdownMenuItem<Cliente>(
-                value: cliente,
-                child: Text(cliente.nome),
-              );
-            }).toList(),
-            onChanged: carregarVeiculosDoCliente,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<Veiculo>(
-            value: veiculoSelecionado,
-            decoration: criarDecoracao(
-              label: 'Veículo',
-              icone:
-              Icons.directions_car_outlined,
-            ),
-            items: veiculos.map((veiculo) {
-              final placa = veiculo.placa.isEmpty
-                  ? ''
-                  : ' • ${veiculo.placa}';
-
-              return DropdownMenuItem<Veiculo>(
-                value: veiculo,
-                child: Text(
-                  '${veiculo.marca} '
-                      '${veiculo.modelo}$placa',
+              padding: const EdgeInsets.all(16),
+              children: [
+                DropdownButtonFormField<Cliente>(
+                  value: clienteSelecionado,
+                  decoration: criarDecoracao(
+                    label: 'Cliente',
+                    icone: Icons.person_outline,
+                  ),
+                  items: clientes.map((cliente) {
+                    return DropdownMenuItem<Cliente>(
+                      value: cliente,
+                      child: Text(cliente.nome),
+                    );
+                  }).toList(),
+                  onChanged: carregarVeiculosDoCliente,
                 ),
-              );
-            }).toList(),
-            onChanged: clienteSelecionado == null
-                ? null
-                : (veiculo) {
-              setState(() {
-                veiculoSelecionado =
-                    veiculo;
-              });
-            },
-          ),
-          if (clienteSelecionado != null &&
-              veiculos.isEmpty) ...[
-            const SizedBox(height: 8),
-            const Text(
-              'Este cliente não possui veículos cadastrados.',
-              style: TextStyle(
-                color: Colors.orange,
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          TextField(
-            controller: _servicoController,
-            textCapitalization:
-            TextCapitalization.sentences,
-            decoration: criarDecoracao(
-              label: 'Serviço',
-              icone:
-              Icons.cleaning_services_outlined,
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _valorController,
-            keyboardType:
-            const TextInputType.numberWithOptions(
-              decimal: true,
-            ),
-            decoration: criarDecoracao(
-              label: 'Valor em R\$',
-              icone:
-              Icons.attach_money_outlined,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: ListTile(
-              onTap: selecionarData,
-              leading: const Icon(
-                Icons.calendar_month_outlined,
-              ),
-              title: const Text('Data'),
-              subtitle: Text(
-                formatarData(dataSelecionada),
-              ),
-              trailing: const Icon(
-                Icons.chevron_right,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: ListTile(
-              onTap: selecionarHora,
-              leading: const Icon(
-                Icons.access_time_outlined,
-              ),
-              title: const Text('Horário'),
-              subtitle: Text(
-                formatarHora(horaSelecionada),
-              ),
-              trailing: const Icon(
-                Icons.chevron_right,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: statusSelecionado,
-            decoration: criarDecoracao(
-              label: 'Status',
-              icone:
-              Icons.info_outline,
-            ),
-            items: statusDisponiveis.map((status) {
-              return DropdownMenuItem<String>(
-                value: status,
-                child: Text(status),
-              );
-            }).toList(),
-            onChanged: (status) {
-              if (status == null) return;
+                const SizedBox(height: 16),
+                DropdownButtonFormField<Veiculo>(
+                  value: veiculoSelecionado,
+                  decoration: criarDecoracao(
+                    label: 'Veículo',
+                    icone: Icons.directions_car_outlined,
+                  ),
+                  items: veiculos.map((veiculo) {
+                    final placa = veiculo.placa.isEmpty
+                        ? ''
+                        : ' • ${veiculo.placa}';
 
-              setState(() {
-                statusSelecionado = status;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller:
-            _observacoesController,
-            maxLines: 4,
-            textCapitalization:
-            TextCapitalization.sentences,
-            decoration: criarDecoracao(
-              label: 'Observações',
-              icone: Icons.notes_outlined,
+                    return DropdownMenuItem<Veiculo>(
+                      value: veiculo,
+                      child: Text(
+                        '${veiculo.marca} '
+                        '${veiculo.modelo}$placa',
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: clienteSelecionado == null
+                      ? null
+                      : (veiculo) {
+                          setState(() {
+                            veiculoSelecionado = veiculo;
+                          });
+                        },
+                ),
+                if (clienteSelecionado != null && veiculos.isEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Este cliente não possui veículos cadastrados.',
+                    style: TextStyle(color: Colors.orange),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _servicoController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: criarDecoracao(
+                    label: 'Serviço',
+                    icone: Icons.cleaning_services_outlined,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _valorController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: criarDecoracao(
+                    label: 'Valor em R\$',
+                    icone: Icons.attach_money_outlined,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  child: ListTile(
+                    onTap: selecionarData,
+                    leading: const Icon(Icons.calendar_month_outlined),
+                    title: const Text('Data'),
+                    subtitle: Text(formatarData(dataSelecionada)),
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  child: ListTile(
+                    onTap: selecionarHora,
+                    leading: const Icon(Icons.access_time_outlined),
+                    title: const Text('Horário'),
+                    subtitle: Text(formatarHora(horaSelecionada)),
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: statusSelecionado,
+                  decoration: criarDecoracao(
+                    label: 'Status',
+                    icone: Icons.info_outline,
+                  ),
+                  items: statusDisponiveis.map((status) {
+                    return DropdownMenuItem<String>(
+                      value: status,
+                      child: Text(status),
+                    );
+                  }).toList(),
+                  onChanged: (status) {
+                    if (status == null) return;
+
+                    setState(() {
+                      statusSelecionado = status;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _observacoesController,
+                  maxLines: 4,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: criarDecoracao(
+                    label: 'Observações',
+                    icone: Icons.notes_outlined,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: salvando ? null : salvarAgendamento,
+                  icon: salvando
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(salvando ? 'Salvando...' : 'Salvar agendamento'),
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed:
-            salvando ? null : salvarAgendamento,
-            icon: salvando
-                ? const SizedBox(
-              width: 20,
-              height: 20,
-              child:
-              CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
-            )
-                : const Icon(Icons.save_outlined),
-            label: Text(
-              salvando
-                  ? 'Salvando...'
-                  : 'Salvar agendamento',
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
-      ),
     );
   }
 }

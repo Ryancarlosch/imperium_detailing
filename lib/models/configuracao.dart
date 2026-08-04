@@ -49,7 +49,7 @@ class Configuracao {
 
   const Configuracao({
     this.id = 1,
-    this.nomeFantasia = 'Imperium Detailing',
+    this.nomeFantasia = 'Sua empresa',
     this.razaoSocial = '',
     this.cnpj = '',
     this.inscricaoEstadual = '',
@@ -95,10 +95,7 @@ class Configuracao {
   factory Configuracao.fromMap(Map<String, Object?> mapa) {
     return Configuracao(
       id: _lerInteiro(mapa['id'], padrao: 1),
-      nomeFantasia: _lerTexto(
-        mapa['nome_fantasia'],
-        padrao: 'Imperium Detailing',
-      ),
+      nomeFantasia: _lerTexto(mapa['nome_fantasia'], padrao: 'Sua empresa'),
       razaoSocial: _lerTexto(mapa['razao_social']),
       cnpj: _lerTexto(mapa['cnpj']),
       inscricaoEstadual: _lerTexto(mapa['inscricao_estadual']),

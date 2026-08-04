@@ -136,7 +136,7 @@ abstract class DocumentoPdfService {
       return nome;
     }
 
-    return 'Imperium Detailing';
+    return 'Sua empresa';
   }
 
   List<String> montarDadosEmpresa(Configuracao configuracao) {

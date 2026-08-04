@@ -14,6 +14,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/configuracao.dart';
 import '../repositories/configuracao_repository.dart';
 import '../services/backup_service.dart';
+import '../services/primeiro_uso_assistente.dart';
 
 class ConfiguracoesPage extends StatefulWidget {
   const ConfiguracoesPage({super.key});
@@ -31,6 +32,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   bool _salvando = false;
   bool _processandoBackup = false;
   bool _processandoAssinaturaEmpresa = false;
+  bool _abrindoAssistentePrimeiroUso = false;
 
   Configuracao _configuracao = Configuracao.padrao();
 
@@ -328,6 +330,26 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
         'Não foi possível salvar a assinatura da empresa: $erro',
         erro: true,
       );
+    }
+  }
+
+  Future<void> _abrirAssistentePrimeiroUso() async {
+    if (_abrindoAssistentePrimeiroUso) {
+      return;
+    }
+
+    setState(() {
+      _abrindoAssistentePrimeiroUso = true;
+    });
+
+    try {
+      await mostrarAssistentePrimeiroUso(context, forcarExibicao: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _abrindoAssistentePrimeiroUso = false;
+        });
+      }
     }
   }
 
@@ -938,6 +960,19 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
         title: const Text('Configurações da Empresa'),
         actions: [
           IconButton(
+            onPressed: _salvando || _abrindoAssistentePrimeiroUso
+                ? null
+                : _abrirAssistentePrimeiroUso,
+            tooltip: 'Abrir primeiro uso',
+            icon: _abrindoAssistentePrimeiroUso
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.school_outlined),
+          ),
+          IconButton(
             onPressed: _salvando ? null : _restaurarPadrao,
             tooltip: 'Restaurar padrão',
             icon: const Icon(Icons.restart_alt_rounded),
@@ -961,7 +996,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                   children: [
                     _CabecalhoConfiguracoes(
                       nomeEmpresa: _nomeFantasiaController.text.trim().isEmpty
-                          ? 'Imperium Detailing'
+                          ? 'Sua empresa'
                           : _nomeFantasiaController.text.trim(),
                       caminhoLogo: _caminhoLogo,
                       caminhoAssinaturaEmpresa: _caminhoAssinaturaEmpresa,
@@ -1569,15 +1604,9 @@ class _CabecalhoConfiguracoes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final possuiLogo =
-        caminhoLogo != null &&
-        caminhoLogo!.trim().isNotEmpty &&
-        File(caminhoLogo!).existsSync();
+    final possuiLogo = _arquivoExiste(caminhoLogo);
 
-    final possuiAssinatura =
-        caminhoAssinaturaEmpresa != null &&
-        caminhoAssinaturaEmpresa!.trim().isNotEmpty &&
-        File(caminhoAssinaturaEmpresa!).existsSync();
+    final possuiAssinatura = _arquivoExiste(caminhoAssinaturaEmpresa);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1605,7 +1634,7 @@ class _CabecalhoConfiguracoes extends StatelessWidget {
                   ),
                 ),
                 child: possuiLogo
-                    ? Image.file(File(caminhoLogo!), fit: BoxFit.cover)
+                    ? Image.file(File(caminhoLogo!.trim()), fit: BoxFit.cover)
                     : const Icon(
                         Icons.business_outlined,
                         size: 38,
@@ -1657,7 +1686,7 @@ class _CabecalhoConfiguracoes extends StatelessWidget {
                   ),
                   child: possuiAssinatura
                       ? Image.file(
-                          File(caminhoAssinaturaEmpresa!),
+                          File(caminhoAssinaturaEmpresa!.trim()),
                           fit: BoxFit.contain,
                         )
                       : const Icon(
@@ -1709,6 +1738,18 @@ class _CabecalhoConfiguracoes extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _arquivoExiste(String? caminho) {
+    if (caminho == null || caminho.trim().isEmpty) {
+      return false;
+    }
+
+    try {
+      return File(caminho.trim()).existsSync();
+    } catch (_) {
+      return false;
+    }
   }
 }
 
@@ -1953,10 +1994,7 @@ class _EditorAssinaturaEmpresaDialogState
 
   @override
   Widget build(BuildContext context) {
-    final possuiAtual =
-        widget.caminhoAtual != null &&
-        widget.caminhoAtual!.trim().isNotEmpty &&
-        File(widget.caminhoAtual!).existsSync();
+    final possuiAtual = _arquivoExiste(widget.caminhoAtual);
 
     return AlertDialog(
       title: const Text('Assinatura da empresa'),
@@ -2002,7 +2040,7 @@ class _EditorAssinaturaEmpresaDialogState
                           ? Image.memory(_imagemImportada!, fit: BoxFit.contain)
                           : possuiAtual
                           ? Image.file(
-                              File(widget.caminhoAtual!),
+                              File(widget.caminhoAtual!.trim()),
                               fit: BoxFit.contain,
                             )
                           : const Text(
@@ -2071,5 +2109,17 @@ class _EditorAssinaturaEmpresaDialogState
         ),
       ],
     );
+  }
+
+  bool _arquivoExiste(String? caminho) {
+    if (caminho == null || caminho.trim().isEmpty) {
+      return false;
+    }
+
+    try {
+      return File(caminho.trim()).existsSync();
+    } catch (_) {
+      return false;
+    }
   }
 }

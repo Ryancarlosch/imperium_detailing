@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
 
 import '../models/item_estoque.dart';
 import '../models/produto_ordem_servico.dart';
@@ -42,6 +43,8 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
   );
 
   List<ProdutoOrdemServico> _produtos = [];
+  Map<int, ItemEstoque> _itensEstoquePorId = {};
+  Map<int, EstimativaConsumoFifo> _estimativasPorProdutoOsId = {};
 
   bool _carregando = true;
   bool _executandoAcao = false;
@@ -90,6 +93,37 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
       final produtos = await _produtoRepository.listarProdutosPorOrdemServico(
         widget.ordemServicoId,
       );
+      final precisaConsultarEstoque = produtos.any(
+        (produto) => !produto.baixadoEstoque && produto.produtoId != null,
+      );
+      final itensEstoque = precisaConsultarEstoque
+          ? await _estoqueRepository.listarItens()
+          : <ItemEstoque>[];
+      final estimativas = <int, EstimativaConsumoFifo>{};
+
+      for (final produto in produtos) {
+        if (produto.baixadoEstoque || produto.id == null) {
+          continue;
+        }
+
+        final produtoId = produto.produtoId;
+
+        if (produtoId == null || produto.quantidade <= 0) {
+          continue;
+        }
+
+        final estimativa = await _estoqueRepository.estimarConsumoFifo(
+          itemId: produtoId,
+          quantidadeNecessaria: produto.quantidade,
+        );
+
+        estimativas[produto.id!] = estimativa;
+      }
+
+      final itensEstoquePorId = <int, ItemEstoque>{
+        for (final item in itensEstoque)
+          if (item.id != null) item.id!: item,
+      };
 
       if (!mounted) {
         return;
@@ -97,6 +131,8 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
 
       setState(() {
         _produtos = produtos;
+        _itensEstoquePorId = itensEstoquePorId;
+        _estimativasPorProdutoOsId = estimativas;
         _carregando = false;
       });
     } catch (erro) {
@@ -130,10 +166,111 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
     }).toList();
   }
 
+  ItemEstoque? _obterItemEstoqueAtual(ProdutoOrdemServico produto) {
+    final produtoId = produto.produtoId;
+
+    if (produtoId == null) {
+      return null;
+    }
+
+    return _itensEstoquePorId[produtoId];
+  }
+
+  double _custoUnitarioExibido(ProdutoOrdemServico produto) {
+    if (produto.baixadoEstoque) {
+      return produto.custoUnitarioNoMomento;
+    }
+
+    final estimativa = produto.id == null
+        ? null
+        : _estimativasPorProdutoOsId[produto.id!];
+
+    if (estimativa != null && estimativa.quantidadeSolicitada > 0) {
+      return estimativa.custoUnitarioEstimado;
+    }
+
+    final item = _obterItemEstoqueAtual(produto);
+
+    if (item != null) {
+      return item.custoUnitarioEfetivo;
+    }
+
+    return produto.custoUnitarioNoMomento;
+  }
+
+  double _custoTotalExibido(ProdutoOrdemServico produto) {
+    if (produto.baixadoEstoque) {
+      return produto.custoTotalNoMomento;
+    }
+
+    final estimativa = produto.id == null
+        ? null
+        : _estimativasPorProdutoOsId[produto.id!];
+
+    if (estimativa != null) {
+      return estimativa.suficiente
+          ? estimativa.custoTotalEstimado
+          : produto.quantidade * _custoUnitarioExibido(produto);
+    }
+
+    return produto.quantidade * _custoUnitarioExibido(produto);
+  }
+
+  double? _estoqueRestanteEstimado(ProdutoOrdemServico produto) {
+    if (produto.baixadoEstoque) {
+      return null;
+    }
+
+    final item = _obterItemEstoqueAtual(produto);
+
+    if (item == null) {
+      return null;
+    }
+
+    final estimativa = produto.id == null
+        ? null
+        : _estimativasPorProdutoOsId[produto.id!];
+
+    if (estimativa != null) {
+      return estimativa.quantidadeDisponivel - estimativa.quantidadeSolicitada;
+    }
+
+    return item.quantidade - produto.quantidade;
+  }
+
+  double? _estoqueDisponivel(ProdutoOrdemServico produto) {
+    if (produto.baixadoEstoque) {
+      return null;
+    }
+
+    final estimativa = produto.id == null
+        ? null
+        : _estimativasPorProdutoOsId[produto.id!];
+
+    if (estimativa != null) {
+      return estimativa.quantidadeDisponivel;
+    }
+
+    final item = _obterItemEstoqueAtual(produto);
+    return item?.quantidade;
+  }
+
+  bool _estoqueSuficiente(ProdutoOrdemServico produto) {
+    if (produto.baixadoEstoque) {
+      return true;
+    }
+
+    final estimativa = produto.id == null
+        ? null
+        : _estimativasPorProdutoOsId[produto.id!];
+
+    return estimativa?.suficiente ?? true;
+  }
+
   double get _custoTotal {
     return _produtos.fold<double>(
       0,
-      (total, produto) => total + produto.custoTotal,
+      (total, produto) => total + _custoTotalExibido(produto),
     );
   }
 
@@ -261,7 +398,7 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
         produtoNome: itemSelecionado.nome,
         quantidade: quantidade,
         unidade: itemSelecionado.unidade,
-        custoUnitario: itemSelecionado.custoUnitario,
+        custoUnitario: itemSelecionado.custoUnitarioEfetivo,
       );
 
       await _produtoRepository.adicionarOuSomarProduto(produto);
@@ -398,7 +535,7 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
                         : ListView.separated(
                             padding: const EdgeInsets.fromLTRB(12, 10, 12, 30),
                             itemCount: itensFiltrados.length,
-                            separatorBuilder: (_, __) {
+                            separatorBuilder: (context, index) {
                               return const SizedBox(height: 7);
                             },
                             itemBuilder: (context, index) {
@@ -537,7 +674,7 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
                     const SizedBox(height: 10),
                     Text(
                       'Custo unitário: '
-                      '${_moeda.format(item.custoUnitario)}',
+                      '${_moeda.format(item.custoUnitarioEfetivo)}',
                       style: TextStyle(color: Colors.grey.shade700),
                     ),
                   ],
@@ -613,7 +750,7 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
           quantidade: novaQuantidade,
           produtoNome: item.nome,
           unidade: item.unidade,
-          custoUnitario: item.custoUnitario,
+          custoUnitario: item.custoUnitarioEfetivo,
         ),
       );
 
@@ -734,6 +871,10 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
   }
 
   Widget _construirResumo() {
+    final possuiProdutosEmAberto = _produtos.any(
+      (produto) => !produto.baixadoEstoque,
+    );
+
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -742,7 +883,7 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
           children: [
             const CircleAvatar(child: Icon(Icons.payments_outlined)),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -752,7 +893,9 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
                   ),
                   SizedBox(height: 3),
                   Text(
-                    'Valor interno utilizado nesta OS',
+                    possuiProdutosEmAberto
+                        ? 'Estimativa com base no custo atual do estoque'
+                        : 'Valor interno histórico salvo nesta OS',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -770,6 +913,28 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
 
   Widget _construirProduto(ProdutoOrdemServico produto) {
     final baixado = produto.baixadoEstoque;
+    final itemEstoque = _obterItemEstoqueAtual(produto);
+    final custoUnitario = _custoUnitarioExibido(produto);
+    final custoTotal = _custoTotalExibido(produto);
+    final estoqueDisponivel = _estoqueDisponivel(produto);
+    final estoqueRestante = _estoqueRestanteEstimado(produto);
+    final estoqueSuficiente = _estoqueSuficiente(produto);
+    final lotesConsumidos = (() {
+      if (produto.composicaoLotesJson.trim().isEmpty) {
+        return 0;
+      }
+
+      try {
+        final json = jsonDecode(produto.composicaoLotesJson);
+        if (json is List) {
+          return json.length;
+        }
+      } catch (_) {
+        return 0;
+      }
+
+      return 0;
+    })();
 
     return Card(
       margin: EdgeInsets.zero,
@@ -813,13 +978,68 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${_moeda.format(produto.custoUnitario)} '
-                      'por ${produto.unidade}',
+                      baixado
+                          ? '${_moeda.format(custoUnitario)} por ${produto.unidade}'
+                          : 'Custo unitário atual: ${_moeda.format(custoUnitario)}',
                       style: TextStyle(
                         color: Colors.grey.shade700,
                         fontSize: 12,
                       ),
                     ),
+                    if (!baixado) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        estoqueDisponivel == null
+                            ? 'Estoque disponível: indisponível'
+                            : 'Estoque disponível: '
+                                  '${_formatarQuantidade(estoqueDisponivel)} '
+                                  '${itemEstoque?.unidade ?? produto.unidade}',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Quantidade utilizada: '
+                        '${_formatarQuantidade(produto.quantidade)} ${produto.unidade}',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Custo total estimado: ${_moeda.format(custoTotal)}',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        estoqueRestante == null
+                            ? 'Estoque restante estimado indisponível'
+                            : 'Estoque restante estimado: '
+                                  '${_formatarQuantidade(estoqueRestante.clamp(0, double.infinity))} '
+                                  '${itemEstoque?.unidade ?? produto.unidade}',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (!estoqueSuficiente) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Estoque insuficiente para esta quantidade.',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ],
                     if (baixado) ...[
                       const SizedBox(height: 7),
                       Row(
@@ -831,7 +1051,7 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            'Baixado do estoque',
+                            'Custo histórico salvo na finalização',
                             style: TextStyle(
                               color: Colors.green.shade700,
                               fontSize: 12,
@@ -840,6 +1060,17 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
                           ),
                         ],
                       ),
+                      if (lotesConsumidos > 0) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Lotes utilizados: $lotesConsumidos',
+                          style: TextStyle(
+                            color: Colors.green.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -849,7 +1080,7 @@ class _OrdemServicoProdutosPageState extends State<OrdemServicoProdutosPage> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    _moeda.format(produto.custoTotal),
+                    _moeda.format(custoTotal),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   if (!widget.somenteLeitura && !baixado)

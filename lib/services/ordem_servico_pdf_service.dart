@@ -47,6 +47,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
       ordemServicoId,
     );
     final fotos = await _carregarFotosParaPdf(dados);
+    final avarias = await _carregarAvariasParaPdf(checklist);
 
     final documento = pw.Document();
 
@@ -60,12 +61,7 @@ class OrdemServicoPdfService extends DocumentoPdfService {
     final itens = _itens(dados['itens']);
     final subtotalItens = _subtotal(itens);
     final desconto = _numero(dados, 'desconto');
-    final totalBanco = _numero(dados, 'valor_total');
-    final totalFallback = (subtotalItens - desconto).clamp(
-      0.0,
-      double.infinity,
-    );
-    final totalFinal = totalBanco > 0 ? totalBanco : totalFallback;
+    final totalFinal = (subtotalItens - desconto).clamp(0.0, double.infinity);
 
     final formaPagamento = _texto(dados, 'forma_pagamento');
     final observacoes = _texto(dados, 'observacoes');
@@ -142,6 +138,10 @@ class OrdemServicoPdfService extends DocumentoPdfService {
               pw.SizedBox(height: 5),
               _secaoFotos(fotos),
             ],
+            if (avarias.isNotEmpty) ...[
+              pw.SizedBox(height: 5),
+              _secaoFotosAvarias(avarias),
+            ],
             pw.SizedBox(height: 7),
             _secaoAssinaturas(
               contexto: contexto,
@@ -192,7 +192,8 @@ class OrdemServicoPdfService extends DocumentoPdfService {
 
     final responsavel = _texto(dados, 'funcionario_responsavel');
 
-    final quilometragem = _texto(dados, 'quilometragem');
+    final quilometragem = _texto(dados, 'quilometragem_entrada');
+    final combustivel = _texto(dados, 'combustivel_entrada');
 
     final campos = <_CampoPdf>[_CampoPdf('Data de emissão', emissao)];
 
@@ -210,6 +211,10 @@ class OrdemServicoPdfService extends DocumentoPdfService {
 
     if (quilometragem.isNotEmpty) {
       campos.add(_CampoPdf('Quilometragem', quilometragem));
+    }
+
+    if (combustivel.isNotEmpty) {
+      campos.add(_CampoPdf('Combustível', combustivel));
     }
 
     return pw.Container(
@@ -724,6 +729,115 @@ class OrdemServicoPdfService extends DocumentoPdfService {
     );
   }
 
+  pw.Widget _secaoFotosAvarias(List<_AvariaPdfRegistro> avarias) {
+    final cards = avarias.take(6).map(_cartaoAvariaFoto).toList();
+
+    return pw.Container(
+      width: double.infinity,
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _tituloSecao('AVARIAS (CHECKLIST)'),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(6),
+            child: pw.Column(children: cards),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _cartaoAvariaFoto(_AvariaPdfRegistro avaria) {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(bottom: 6),
+      padding: const pw.EdgeInsets.all(6),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.6),
+        borderRadius: pw.BorderRadius.circular(5),
+      ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Expanded(
+            flex: 2,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  avaria.item,
+                  style: pw.TextStyle(
+                    fontSize: 8,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.grey800,
+                  ),
+                ),
+                if (avaria.localizacao.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    'Local: ${avaria.localizacao}',
+                    style: const pw.TextStyle(
+                      fontSize: 7,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ],
+                if (avaria.observacao.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    avaria.observacao,
+                    style: const pw.TextStyle(
+                      fontSize: 7,
+                      color: PdfColors.grey800,
+                    ),
+                  ),
+                ],
+                if (avaria.data.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    avaria.data,
+                    style: const pw.TextStyle(
+                      fontSize: 6.5,
+                      color: PdfColors.grey600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          pw.SizedBox(width: 8),
+          pw.Expanded(
+            child: pw.Container(
+              height: 90,
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey100,
+                border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+              ),
+              child: avaria.foto == null
+                  ? pw.Center(
+                      child: pw.Text(
+                        'Sem foto',
+                        style: const pw.TextStyle(
+                          fontSize: 7,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                    )
+                  : pw.Image(
+                      pw.MemoryImage(avaria.foto!),
+                      fit: pw.BoxFit.cover,
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   pw.Widget _cartaoComparativoFoto(_FotoPdfRegistro foto) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 6),
@@ -1112,6 +1226,34 @@ class OrdemServicoPdfService extends DocumentoPdfService {
     return fotos;
   }
 
+  Future<List<_AvariaPdfRegistro>> _carregarAvariasParaPdf(
+    List<Map<String, dynamic>> checklist,
+  ) async {
+    final avarias = <_AvariaPdfRegistro>[];
+
+    for (final item in checklist) {
+      final status = _paraInt(item['status']) ?? 0;
+
+      if (status != OrdemServicoChecklistRepository.statusAvaria) {
+        continue;
+      }
+
+      final caminhoFoto = _texto(item, 'foto_avaria');
+
+      avarias.add(
+        _AvariaPdfRegistro(
+          item: _texto(item, 'item', padrao: 'Avaria'),
+          localizacao: _texto(item, 'avaria_localizacao'),
+          observacao: _texto(item, 'observacao'),
+          data: _formatarData(_texto(item, 'avaria_data_registro')),
+          foto: await _carregarImagemSegura(caminhoFoto),
+        ),
+      );
+    }
+
+    return avarias;
+  }
+
   Future<Uint8List?> _carregarImagemSegura(String caminho) async {
     if (caminho.trim().isEmpty) {
       return null;
@@ -1290,4 +1432,20 @@ class _FotoPdfRegistro {
   final Uint8List? depois;
   final String descricao;
   final String data;
+}
+
+class _AvariaPdfRegistro {
+  const _AvariaPdfRegistro({
+    required this.item,
+    required this.localizacao,
+    required this.observacao,
+    required this.data,
+    required this.foto,
+  });
+
+  final String item;
+  final String localizacao;
+  final String observacao;
+  final String data;
+  final Uint8List? foto;
 }

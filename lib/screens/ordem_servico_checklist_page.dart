@@ -28,13 +28,15 @@ class OrdemServicoChecklistPage extends StatefulWidget {
       _OrdemServicoChecklistPageState();
 }
 
-class _OrdemServicoChecklistPageState
-    extends State<OrdemServicoChecklistPage> {
+class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
   final OrdemServicoChecklistRepository _repository =
-  OrdemServicoChecklistRepository();
+      OrdemServicoChecklistRepository();
 
   final ImagePicker _imagePicker = ImagePicker();
   final List<_ItemChecklistFormulario> _itens = [];
+  final TextEditingController _quilometragemController =
+      TextEditingController();
+  final TextEditingController _combustivelController = TextEditingController();
 
   bool _carregando = true;
   bool _salvando = false;
@@ -52,14 +54,21 @@ class _OrdemServicoChecklistPageState
       item.dispose();
     }
 
+    _quilometragemController.dispose();
+    _combustivelController.dispose();
+
     super.dispose();
   }
 
   Future<void> _carregar() async {
     try {
-      final resultado = await _repository.listarChecklist(
-        widget.ordemServicoId,
-      );
+      final resultados = await Future.wait([
+        _repository.listarChecklist(widget.ordemServicoId),
+        _repository.buscarDadosEntrada(widget.ordemServicoId),
+      ]);
+
+      final resultado = resultados[0] as List<Map<String, dynamic>>;
+      final dadosEntrada = resultados[1] as Map<String, String>;
 
       if (!mounted) {
         return;
@@ -73,10 +82,11 @@ class _OrdemServicoChecklistPageState
         _itens
           ..clear()
           ..addAll(
-            resultado.map(
-                  (item) => _ItemChecklistFormulario.fromMap(item),
-            ),
+            resultado.map((item) => _ItemChecklistFormulario.fromMap(item)),
           );
+
+        _quilometragemController.text = dadosEntrada['quilometragem'] ?? '';
+        _combustivelController.text = dadosEntrada['combustivel'] ?? '';
 
         _carregando = false;
       });
@@ -108,6 +118,12 @@ class _OrdemServicoChecklistPageState
     });
 
     try {
+      await _repository.salvarDadosEntrada(
+        ordemServicoId: widget.ordemServicoId,
+        quilometragem: _quilometragemController.text,
+        combustivel: _combustivelController.text,
+      );
+
       await _repository.salvarChecklist(
         _itens.map((item) => item.toMap()).toList(),
       );
@@ -117,9 +133,7 @@ class _OrdemServicoChecklistPageState
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Checklist salvo com sucesso.'),
-        ),
+        const SnackBar(content: Text('Checklist salvo com sucesso.')),
       );
 
       Navigator.of(context).pop(true);
@@ -138,9 +152,9 @@ class _OrdemServicoChecklistPageState
   }
 
   Future<void> _selecionarFoto(
-      _ItemChecklistFormulario item,
-      ImageSource origem,
-      ) async {
+    _ItemChecklistFormulario item,
+    ImageSource origem,
+  ) async {
     if (widget.somenteLeitura || _itemProcessandoFotoId != null) {
       return;
     }
@@ -160,10 +174,7 @@ class _OrdemServicoChecklistPageState
         return;
       }
 
-      final caminhoSalvo = await _salvarImagemPermanentemente(
-        imagem,
-        item.id,
-      );
+      final caminhoSalvo = await _salvarImagemPermanentemente(imagem, item.id);
 
       if (!mounted) {
         return;
@@ -174,6 +185,7 @@ class _OrdemServicoChecklistPageState
       setState(() {
         item.status = OrdemServicoChecklistRepository.statusAvaria;
         item.fotoAvaria = caminhoSalvo;
+        item.dataAvariaRegistro ??= DateTime.now().toIso8601String();
       });
 
       await _excluirArquivoSeForFotoDoChecklist(
@@ -181,10 +193,7 @@ class _OrdemServicoChecklistPageState
         ignorarCaminho: caminhoSalvo,
       );
     } catch (erro) {
-      _mostrarMensagem(
-        'Não foi possível adicionar a foto.\n$erro',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível adicionar a foto.\n$erro', erro: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -195,9 +204,9 @@ class _OrdemServicoChecklistPageState
   }
 
   Future<String> _salvarImagemPermanentemente(
-      XFile imagem,
-      int checklistId,
-      ) async {
+    XFile imagem,
+    int checklistId,
+  ) async {
     final diretorioBase = await getApplicationDocumentsDirectory();
 
     final diretorioFotos = Directory(
@@ -219,19 +228,14 @@ class _OrdemServicoChecklistPageState
     final nomeArquivo =
         'avaria_${checklistId}_${DateTime.now().millisecondsSinceEpoch}$extensao';
 
-    final destino = path.join(
-      diretorioFotos.path,
-      nomeArquivo,
-    );
+    final destino = path.join(diretorioFotos.path, nomeArquivo);
 
     final arquivoCopiado = await File(imagem.path).copy(destino);
 
     return arquivoCopiado.path;
   }
 
-  Future<void> _removerFoto(
-      _ItemChecklistFormulario item,
-      ) async {
+  Future<void> _removerFoto(_ItemChecklistFormulario item) async {
     if (widget.somenteLeitura) {
       return;
     }
@@ -272,9 +276,9 @@ class _OrdemServicoChecklistPageState
   }
 
   Future<void> _excluirArquivoSeForFotoDoChecklist(
-      String? caminho, {
-        String? ignorarCaminho,
-      }) async {
+    String? caminho, {
+    String? ignorarCaminho,
+  }) async {
     final caminhoLimpo = caminho?.trim() ?? '';
 
     if (caminhoLimpo.isEmpty || caminhoLimpo == ignorarCaminho) {
@@ -292,10 +296,7 @@ class _OrdemServicoChecklistPageState
     }
   }
 
-  void _alterarStatus(
-      _ItemChecklistFormulario item,
-      int novoStatus,
-      ) {
+  void _alterarStatus(_ItemChecklistFormulario item, int novoStatus) {
     if (widget.somenteLeitura) {
       return;
     }
@@ -303,17 +304,17 @@ class _OrdemServicoChecklistPageState
     setState(() {
       item.status = novoStatus;
 
-      if (novoStatus !=
-          OrdemServicoChecklistRepository.statusAvaria) {
+      if (novoStatus != OrdemServicoChecklistRepository.statusAvaria) {
         item.fotoAvaria = null;
+        item.localizacaoAvariaController.clear();
+        item.dataAvariaRegistro = null;
+      } else {
+        item.dataAvariaRegistro ??= DateTime.now().toIso8601String();
       }
     });
   }
 
-  void _mostrarMensagem(
-      String mensagem, {
-        bool erro = false,
-      }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
@@ -328,15 +329,11 @@ class _OrdemServicoChecklistPageState
       );
   }
 
-  Map<String, List<_ItemChecklistFormulario>>
-  get _itensPorCategoria {
-    final resultado =
-    <String, List<_ItemChecklistFormulario>>{};
+  Map<String, List<_ItemChecklistFormulario>> get _itensPorCategoria {
+    final resultado = <String, List<_ItemChecklistFormulario>>{};
 
     for (final item in _itens) {
-      resultado
-          .putIfAbsent(item.categoria, () => [])
-          .add(item);
+      resultado.putIfAbsent(item.categoria, () => []).add(item);
     }
 
     return resultado;
@@ -345,17 +342,14 @@ class _OrdemServicoChecklistPageState
   int get _quantidadeConferida => _itens
       .where(
         (item) =>
-    item.status !=
-        OrdemServicoChecklistRepository.statusNaoVerificado,
-  )
+            item.status != OrdemServicoChecklistRepository.statusNaoVerificado,
+      )
       .length;
 
   int get _quantidadeAvarias => _itens
       .where(
-        (item) =>
-    item.status ==
-        OrdemServicoChecklistRepository.statusAvaria,
-  )
+        (item) => item.status == OrdemServicoChecklistRepository.statusAvaria,
+      )
       .length;
 
   @override
@@ -365,73 +359,49 @@ class _OrdemServicoChecklistPageState
         : _quantidadeConferida / _itens.length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Checklist de entrada'),
-      ),
+      appBar: AppBar(title: const Text('Checklist de entrada')),
       body: _carregando
-          ? const Center(
-        child: CircularProgressIndicator(),
-      )
+          ? const Center(child: CircularProgressIndicator())
           : ListView(
-        padding:
-        const EdgeInsets.fromLTRB(14, 14, 14, 120),
-        children: [
-          _construirCabecalho(progresso),
-          const SizedBox(height: 12),
-          _construirAviso(),
-          const SizedBox(height: 12),
-          ..._itensPorCategoria.entries.map(
-                (entrada) => Padding(
-              padding:
-              const EdgeInsets.only(bottom: 12),
-              child: _construirCategoria(
-                entrada.key,
-                entrada.value,
-              ),
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 120),
+              children: [
+                _construirCabecalho(progresso),
+                const SizedBox(height: 12),
+                _construirCardDadosEntrada(),
+                const SizedBox(height: 12),
+                _construirAviso(),
+                const SizedBox(height: 12),
+                ..._itensPorCategoria.entries.map(
+                  (entrada) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _construirCategoria(entrada.key, entrada.value),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar:
-      _carregando || widget.somenteLeitura
+      bottomNavigationBar: _carregando || widget.somenteLeitura
           ? null
           : SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            14,
-            10,
-            14,
-            12,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context)
-                .scaffoldBackgroundColor,
-            border: Border(
-              top: BorderSide(
-                color: Colors.grey.shade300,
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                ),
+                child: FilledButton.icon(
+                  onPressed: _salvando ? null : _salvar,
+                  icon: _salvando
+                      ? const SizedBox(
+                          width: 19,
+                          height: 19,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(_salvando ? 'Salvando...' : 'Salvar checklist'),
+                ),
               ),
             ),
-          ),
-          child: FilledButton.icon(
-            onPressed: _salvando ? null : _salvar,
-            icon: _salvando
-                ? const SizedBox(
-              width: 19,
-              height: 19,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
-            )
-                : const Icon(Icons.save_outlined),
-            label: Text(
-              _salvando
-                  ? 'Salvando...'
-                  : 'Salvar checklist',
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -445,20 +415,12 @@ class _OrdemServicoChecklistPageState
           children: [
             Text(
               widget.numeroOrdem,
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(widget.cliente),
             const SizedBox(height: 3),
-            Text(
-              widget.veiculo,
-              style: TextStyle(
-                color: Colors.grey.shade700,
-              ),
-            ),
+            Text(widget.veiculo, style: TextStyle(color: Colors.grey.shade700)),
             const SizedBox(height: 16),
             LinearProgressIndicator(value: progresso),
             const SizedBox(height: 8),
@@ -479,9 +441,7 @@ class _OrdemServicoChecklistPageState
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.red.shade200,
-                      ),
+                      border: Border.all(color: Colors.red.shade200),
                     ),
                     child: Text(
                       '$_quantidadeAvarias avaria(s)',
@@ -508,16 +468,54 @@ class _OrdemServicoChecklistPageState
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.info_outline,
-              color: Colors.blue.shade700,
-            ),
+            Icon(Icons.info_outline, color: Colors.blue.shade700),
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
                 'Marque cada item como OK ou Avaria. '
-                    'Quando houver avaria, registre a observação '
-                    'e, sempre que possível, adicione uma foto.',
+                'Quando houver avaria, registre a observação '
+                'e, sempre que possível, adicione uma foto.',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirCardDadosEntrada() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Dados de entrada',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _quilometragemController,
+              enabled: !widget.somenteLeitura,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Quilometragem',
+                hintText: 'Ex.: 125430 km',
+                prefixIcon: Icon(Icons.speed_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _combustivelController,
+              enabled: !widget.somenteLeitura,
+              decoration: const InputDecoration(
+                labelText: 'Nível de combustível',
+                hintText: 'Ex.: 1/2 tanque',
+                prefixIcon: Icon(Icons.local_gas_station_outlined),
+                border: OutlineInputBorder(),
               ),
             ),
           ],
@@ -527,9 +525,9 @@ class _OrdemServicoChecklistPageState
   }
 
   Widget _construirCategoria(
-      String categoria,
-      List<_ItemChecklistFormulario> itens,
-      ) {
+    String categoria,
+    List<_ItemChecklistFormulario> itens,
+  ) {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -539,52 +537,38 @@ class _OrdemServicoChecklistPageState
           children: [
             Text(
               categoria,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            ...List.generate(
-              itens.length,
-                  (indice) {
-                final item = itens[indice];
+            ...List.generate(itens.length, (indice) {
+              final item = itens[indice];
 
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom:
-                    indice == itens.length - 1 ? 0 : 10,
-                  ),
-                  child: _construirItem(item),
-                );
-              },
-            ),
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: indice == itens.length - 1 ? 0 : 10,
+                ),
+                child: _construirItem(item),
+              );
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _construirItem(
-      _ItemChecklistFormulario item,
-      ) {
+  Widget _construirItem(_ItemChecklistFormulario item) {
     final possuiAvaria =
-        item.status ==
-            OrdemServicoChecklistRepository.statusAvaria;
+        item.status == OrdemServicoChecklistRepository.statusAvaria;
 
     final corBorda = switch (item.status) {
-      OrdemServicoChecklistRepository.statusOk =>
-      Colors.green.shade300,
-      OrdemServicoChecklistRepository.statusAvaria =>
-      Colors.red.shade300,
+      OrdemServicoChecklistRepository.statusOk => Colors.green.shade300,
+      OrdemServicoChecklistRepository.statusAvaria => Colors.red.shade300,
       _ => Colors.grey.shade300,
     };
 
     final corFundo = switch (item.status) {
-      OrdemServicoChecklistRepository.statusOk =>
-      Colors.green.shade50,
-      OrdemServicoChecklistRepository.statusAvaria =>
-      Colors.red.shade50,
+      OrdemServicoChecklistRepository.statusOk => Colors.green.shade50,
+      OrdemServicoChecklistRepository.statusAvaria => Colors.red.shade50,
       _ => Colors.transparent,
     };
 
@@ -601,29 +585,23 @@ class _OrdemServicoChecklistPageState
         children: [
           Text(
             item.item,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 10),
           SegmentedButton<int>(
             segments: const [
               ButtonSegment<int>(
-                value: OrdemServicoChecklistRepository
-                    .statusNaoVerificado,
+                value: OrdemServicoChecklistRepository.statusNaoVerificado,
                 icon: Icon(Icons.remove_circle_outline),
                 label: Text('Pendente'),
               ),
               ButtonSegment<int>(
-                value:
-                OrdemServicoChecklistRepository.statusOk,
+                value: OrdemServicoChecklistRepository.statusOk,
                 icon: Icon(Icons.check_circle_outline),
                 label: Text('OK'),
               ),
               ButtonSegment<int>(
-                value: OrdemServicoChecklistRepository
-                    .statusAvaria,
+                value: OrdemServicoChecklistRepository.statusAvaria,
                 icon: Icon(Icons.warning_amber_rounded),
                 label: Text('Avaria'),
               ),
@@ -633,11 +611,8 @@ class _OrdemServicoChecklistPageState
             onSelectionChanged: widget.somenteLeitura
                 ? null
                 : (selecionados) {
-              _alterarStatus(
-                item,
-                selecionados.first,
-              );
-            },
+                    _alterarStatus(item, selecionados.first);
+                  },
           ),
           if (possuiAvaria) ...[
             const SizedBox(height: 12),
@@ -646,29 +621,41 @@ class _OrdemServicoChecklistPageState
               enabled: !widget.somenteLeitura,
               minLines: 2,
               maxLines: 4,
-              textCapitalization:
-              TextCapitalization.sentences,
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 labelText: 'Descrição da avaria',
-                hintText:
-                'Ex.: risco profundo na porta dianteira',
+                hintText: 'Ex.: risco profundo na porta dianteira',
                 prefixIcon: Icon(Icons.notes_outlined),
                 border: OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: item.localizacaoAvariaController,
+              enabled: !widget.somenteLeitura,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Local da avaria',
+                hintText: 'Ex.: porta dianteira esquerda',
+                prefixIcon: Icon(Icons.place_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (item.dataAvariaRegistro != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Registrada em ${_formatarDataHora(item.dataAvariaRegistro!)}',
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+              ),
+            ],
             const SizedBox(height: 12),
             _construirAreaFoto(item),
-          ] else if (item.observacaoController.text
-              .trim()
-              .isNotEmpty) ...[
+          ] else if (item.observacaoController.text.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(
               'Observação registrada: '
-                  '${item.observacaoController.text.trim()}',
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontSize: 13,
-              ),
+              '${item.observacaoController.text.trim()}',
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
             ),
           ],
         ],
@@ -676,16 +663,11 @@ class _OrdemServicoChecklistPageState
     );
   }
 
-  Widget _construirAreaFoto(
-      _ItemChecklistFormulario item,
-      ) {
+  Widget _construirAreaFoto(_ItemChecklistFormulario item) {
     final caminho = item.fotoAvaria?.trim() ?? '';
-    final arquivo =
-    caminho.isEmpty ? null : File(caminho);
-    final fotoExiste =
-        arquivo != null && arquivo.existsSync();
-    final processando =
-        _itemProcessandoFotoId == item.id;
+    final arquivo = caminho.isEmpty ? null : File(caminho);
+    final fotoExiste = arquivo != null && arquivo.existsSync();
+    final processando = _itemProcessandoFotoId == item.id;
 
     if (fotoExiste) {
       return Column(
@@ -693,9 +675,7 @@ class _OrdemServicoChecklistPageState
         children: [
           const Text(
             'Foto da avaria',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           ClipRRect(
@@ -705,14 +685,12 @@ class _OrdemServicoChecklistPageState
               width: double.infinity,
               height: 210,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) {
+              errorBuilder: (_, _, _) {
                 return Container(
                   height: 120,
                   alignment: Alignment.center,
                   color: Colors.grey.shade200,
-                  child: const Text(
-                    'Não foi possível abrir a foto.',
-                  ),
+                  child: const Text('Não foi possível abrir a foto.'),
                 );
               },
             ),
@@ -732,8 +710,7 @@ class _OrdemServicoChecklistPageState
                 ),
                 const SizedBox(width: 8),
                 IconButton.filledTonal(
-                  onPressed:
-                  processando ? null : () => _removerFoto(item),
+                  onPressed: processando ? null : () => _removerFoto(item),
                   tooltip: 'Remover foto',
                   icon: const Icon(Icons.delete_outline),
                 ),
@@ -751,18 +728,14 @@ class _OrdemServicoChecklistPageState
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: Colors.grey.shade300,
-          ),
+          border: Border.all(color: Colors.grey.shade300),
         ),
         child: const Row(
           children: [
             Icon(Icons.image_not_supported_outlined),
             SizedBox(width: 10),
             Expanded(
-              child: Text(
-                'Nenhuma foto foi registrada para esta avaria.',
-              ),
+              child: Text('Nenhuma foto foi registrada para esta avaria.'),
             ),
           ],
         ),
@@ -770,28 +743,21 @@ class _OrdemServicoChecklistPageState
     }
 
     return OutlinedButton.icon(
-      onPressed:
-      processando ? null : () => _mostrarOpcoesFoto(item),
+      onPressed: processando ? null : () => _mostrarOpcoesFoto(item),
       icon: processando
           ? const SizedBox(
-        width: 18,
-        height: 18,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-        ),
-      )
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
           : const Icon(Icons.add_a_photo_outlined),
       label: Text(
-        processando
-            ? 'Processando foto...'
-            : 'Adicionar foto da avaria',
+        processando ? 'Processando foto...' : 'Adicionar foto da avaria',
       ),
     );
   }
 
-  Future<void> _mostrarOpcoesFoto(
-      _ItemChecklistFormulario item,
-      ) async {
+  Future<void> _mostrarOpcoesFoto(_ItemChecklistFormulario item) async {
     if (widget.somenteLeitura) {
       return;
     }
@@ -802,47 +768,29 @@ class _OrdemServicoChecklistPageState
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              4,
-              16,
-              18,
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
                   'Adicionar foto da avaria',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 ListTile(
-                  leading: const Icon(
-                    Icons.photo_camera_outlined,
-                  ),
+                  leading: const Icon(Icons.photo_camera_outlined),
                   title: const Text('Tirar foto'),
                   onTap: () {
                     Navigator.of(context).pop();
-                    _selecionarFoto(
-                      item,
-                      ImageSource.camera,
-                    );
+                    _selecionarFoto(item, ImageSource.camera);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
-                    Icons.photo_library_outlined,
-                  ),
+                  leading: const Icon(Icons.photo_library_outlined),
                   title: const Text('Escolher da galeria'),
                   onTap: () {
                     Navigator.of(context).pop();
-                    _selecionarFoto(
-                      item,
-                      ImageSource.gallery,
-                    );
+                    _selecionarFoto(item, ImageSource.gallery);
                   },
                 ),
               ],
@@ -851,6 +799,24 @@ class _OrdemServicoChecklistPageState
         );
       },
     );
+  }
+
+  String _formatarDataHora(String valor) {
+    final data = DateTime.tryParse(valor.trim());
+
+    if (data == null) {
+      return valor;
+    }
+
+    String doisDigitos(int numero) => numero.toString().padLeft(2, '0');
+
+    final dia = doisDigitos(data.day);
+    final mes = doisDigitos(data.month);
+    final ano = data.year.toString();
+    final hora = doisDigitos(data.hour);
+    final minuto = doisDigitos(data.minute);
+
+    return '$dia/$mes/$ano às $hora:$minuto';
   }
 }
 
@@ -861,37 +827,36 @@ class _ItemChecklistFormulario {
     required this.item,
     required this.status,
     required String observacao,
+    required String localizacaoAvaria,
+    required this.dataAvariaRegistro,
     required this.fotoAvaria,
-  }) : observacaoController =
-  TextEditingController(text: observacao);
+  }) : observacaoController = TextEditingController(text: observacao),
+       localizacaoAvariaController = TextEditingController(
+         text: localizacaoAvaria,
+       );
 
-  factory _ItemChecklistFormulario.fromMap(
-      Map<String, dynamic> mapa,
-      ) {
-    final statusBanco = _converterInt(
-      mapa['status'],
-    );
+  factory _ItemChecklistFormulario.fromMap(Map<String, dynamic> mapa) {
+    final statusBanco = _converterInt(mapa['status']);
 
     final status = statusBanco == 1 || statusBanco == 2
         ? statusBanco
         : _converterBool(mapa['marcado'])
         ? OrdemServicoChecklistRepository.statusOk
-        : OrdemServicoChecklistRepository
-        .statusNaoVerificado;
+        : OrdemServicoChecklistRepository.statusNaoVerificado;
 
-    final foto = mapa['foto_avaria']
-        ?.toString()
-        .trim() ??
-        '';
+    final foto = mapa['foto_avaria']?.toString().trim() ?? '';
 
     return _ItemChecklistFormulario(
       id: _converterInt(mapa['id']),
-      categoria:
-      (mapa['categoria'] ?? 'Geral').toString(),
+      categoria: (mapa['categoria'] ?? 'Geral').toString(),
       item: (mapa['item'] ?? '').toString(),
       status: status,
-      observacao:
-      (mapa['observacao'] ?? '').toString(),
+      observacao: (mapa['observacao'] ?? '').toString(),
+      localizacaoAvaria: (mapa['avaria_localizacao'] ?? '').toString(),
+      dataAvariaRegistro:
+          (mapa['avaria_data_registro'] ?? '').toString().trim().isEmpty
+          ? null
+          : (mapa['avaria_data_registro'] ?? '').toString().trim(),
       fotoAvaria: foto.isEmpty ? null : foto,
     );
   }
@@ -902,24 +867,26 @@ class _ItemChecklistFormulario {
   int status;
   String? fotoAvaria;
   final TextEditingController observacaoController;
+  final TextEditingController localizacaoAvariaController;
+  String? dataAvariaRegistro;
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'status': status,
-      'marcado': status !=
-          OrdemServicoChecklistRepository
-              .statusNaoVerificado
+      'marcado': status != OrdemServicoChecklistRepository.statusNaoVerificado
           ? 1
           : 0,
-      'observacao':
-      observacaoController.text.trim(),
+      'observacao': observacaoController.text.trim(),
       'foto_avaria': fotoAvaria,
+      'avaria_localizacao': localizacaoAvariaController.text.trim(),
+      'avaria_data_registro': dataAvariaRegistro,
     };
   }
 
   void dispose() {
     observacaoController.dispose();
+    localizacaoAvariaController.dispose();
   }
 
   static int _converterInt(dynamic valor) {
@@ -931,10 +898,7 @@ class _ItemChecklistFormulario {
       return valor.toInt();
     }
 
-    return int.tryParse(
-      valor?.toString() ?? '',
-    ) ??
-        0;
+    return int.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
   static bool _converterBool(dynamic valor) {
@@ -946,12 +910,8 @@ class _ItemChecklistFormulario {
       return valor != 0;
     }
 
-    final texto =
-        valor?.toString().trim().toLowerCase() ??
-            '';
+    final texto = valor?.toString().trim().toLowerCase() ?? '';
 
-    return texto == '1' ||
-        texto == 'true' ||
-        texto == 'sim';
+    return texto == '1' || texto == 'true' || texto == 'sim';
   }
 }

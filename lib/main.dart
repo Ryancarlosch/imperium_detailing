@@ -23,18 +23,14 @@ class ImperiumApp extends StatelessWidget {
 
       locale: const Locale('pt', 'BR'),
 
-      supportedLocales: const [
-        Locale('pt', 'BR'),
-      ],
+      supportedLocales: const [Locale('pt', 'BR')],
 
-      localizationsDelegates:
-      GlobalMaterialLocalizations.delegates,
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
 
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        scaffoldBackgroundColor:
-        const Color(0xFF0E0E0E),
+        scaffoldBackgroundColor: const Color(0xFF0E0E0E),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFD6A84B),
           brightness: Brightness.dark,
@@ -44,34 +40,21 @@ class ImperiumApp extends StatelessWidget {
           foregroundColor: Colors.white,
           centerTitle: false,
         ),
-        cardTheme: const CardThemeData(
-          color: Color(0xFF1A1A1A),
-        ),
-        inputDecorationTheme:
-        InputDecorationTheme(
+        cardTheme: const CardThemeData(color: Color(0xFF1A1A1A)),
+        inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: const Color(0xFF181818),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(
-              color: Colors.white.withValues(
-                alpha: 0.12,
-              ),
-            ),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(
-              color: Color(0xFFD6A84B),
-              width: 1.5,
-            ),
+            borderSide: const BorderSide(color: Color(0xFFD6A84B), width: 1.5),
           ),
         ),
-        floatingActionButtonTheme:
-        const FloatingActionButtonThemeData(
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
           backgroundColor: Color(0xFFD6A84B),
           foregroundColor: Colors.black,
         ),

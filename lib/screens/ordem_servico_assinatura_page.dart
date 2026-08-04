@@ -31,8 +31,7 @@ class OrdemServicoAssinaturaPage extends StatefulWidget {
 
 class _OrdemServicoAssinaturaPageState
     extends State<OrdemServicoAssinaturaPage> {
-  final OrdemServicoRepository _repository =
-  OrdemServicoRepository();
+  final OrdemServicoRepository _repository = OrdemServicoRepository();
 
   late final SignatureController _signatureController;
 
@@ -99,51 +98,34 @@ class _OrdemServicoAssinaturaPageState
 
       setState(() {
         _carregando = false;
-        _erroCarregamento =
-        'Não foi possível carregar a assinatura.';
+        _erroCarregamento = 'Não foi possível carregar a assinatura.';
       });
     }
   }
 
   Future<Directory> _obterPastaAssinaturas() async {
-    final pastaDocumentos =
-    await getApplicationDocumentsDirectory();
+    final pastaDocumentos = await getApplicationDocumentsDirectory();
 
     final pastaAssinaturas = Directory(
-      path.join(
-        pastaDocumentos.path,
-        'assinaturas_ordens_servico',
-      ),
+      path.join(pastaDocumentos.path, 'assinaturas_ordens_servico'),
     );
 
     if (!await pastaAssinaturas.exists()) {
-      await pastaAssinaturas.create(
-        recursive: true,
-      );
+      await pastaAssinaturas.create(recursive: true);
     }
 
     return pastaAssinaturas;
   }
 
-  Future<String> _salvarArquivoAssinatura(
-      Uint8List bytes,
-      ) async {
+  Future<String> _salvarArquivoAssinatura(Uint8List bytes) async {
     final pasta = await _obterPastaAssinaturas();
 
     final nomeArquivo =
-        'assinatura_os_${widget.ordemServicoId}.png';
+        'assinatura_os_${widget.ordemServicoId}_${DateTime.now().microsecondsSinceEpoch}.png';
 
-    final arquivo = File(
-      path.join(
-        pasta.path,
-        nomeArquivo,
-      ),
-    );
+    final arquivo = File(path.join(pasta.path, nomeArquivo));
 
-    await arquivo.writeAsBytes(
-      bytes,
-      flush: true,
-    );
+    await arquivo.writeAsBytes(bytes, flush: true);
 
     return arquivo.path;
   }
@@ -169,16 +151,12 @@ class _OrdemServicoAssinaturaPageState
       final bytes = await _signatureController.toPngBytes();
 
       if (bytes == null || bytes.isEmpty) {
-        throw Exception(
-          'Não foi possível gerar a imagem da assinatura.',
-        );
+        throw Exception('Não foi possível gerar a imagem da assinatura.');
       }
 
       final caminhoAnterior = _caminhoAssinatura;
 
-      final novoCaminho = await _salvarArquivoAssinatura(
-        bytes,
-      );
+      final novoCaminho = await _salvarArquivoAssinatura(bytes);
 
       await _repository.salvarAssinaturaCliente(
         ordemServicoId: widget.ordemServicoId,
@@ -207,9 +185,7 @@ class _OrdemServicoAssinaturaPageState
 
       _signatureController.clear();
 
-      _mostrarMensagem(
-        'Assinatura salva com sucesso.',
-      );
+      _mostrarMensagem('Assinatura salva com sucesso.');
     } catch (erro) {
       if (!mounted) {
         return;
@@ -219,10 +195,7 @@ class _OrdemServicoAssinaturaPageState
         _salvando = false;
       });
 
-      _mostrarMensagem(
-        'Não foi possível salvar a assinatura.',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível salvar a assinatura.', erro: true);
     }
   }
 
@@ -235,12 +208,10 @@ class _OrdemServicoAssinaturaPageState
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text(
-            'Remover assinatura',
-          ),
+          title: const Text('Remover assinatura'),
           content: const Text(
             'Deseja remover a assinatura salva? '
-                'O cliente precisará assinar novamente.',
+            'O cliente precisará assinar novamente.',
           ),
           actions: [
             TextButton(
@@ -253,9 +224,7 @@ class _OrdemServicoAssinaturaPageState
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
               child: const Text('Remover'),
             ),
           ],
@@ -276,12 +245,9 @@ class _OrdemServicoAssinaturaPageState
     try {
       final caminhoAnterior = _caminhoAssinatura;
 
-      await _repository.removerAssinaturaCliente(
-        widget.ordemServicoId,
-      );
+      await _repository.removerAssinaturaCliente(widget.ordemServicoId);
 
-      if (caminhoAnterior != null &&
-          caminhoAnterior.trim().isNotEmpty) {
+      if (caminhoAnterior != null && caminhoAnterior.trim().isNotEmpty) {
         final arquivo = File(caminhoAnterior);
 
         if (await arquivo.exists()) {
@@ -301,9 +267,7 @@ class _OrdemServicoAssinaturaPageState
 
       _signatureController.clear();
 
-      _mostrarMensagem(
-        'Assinatura removida.',
-      );
+      _mostrarMensagem('Assinatura removida.');
     } catch (erro) {
       if (!mounted) {
         return;
@@ -313,10 +277,7 @@ class _OrdemServicoAssinaturaPageState
         _salvando = false;
       });
 
-      _mostrarMensagem(
-        'Não foi possível remover a assinatura.',
-        erro: true,
-      );
+      _mostrarMensagem('Não foi possível remover a assinatura.', erro: true);
     }
   }
 
@@ -328,10 +289,7 @@ class _OrdemServicoAssinaturaPageState
     _signatureController.clear();
   }
 
-  void _mostrarMensagem(
-      String mensagem, {
-        bool erro = false,
-      }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
@@ -341,8 +299,7 @@ class _OrdemServicoAssinaturaPageState
       ..showSnackBar(
         SnackBar(
           content: Text(mensagem),
-          backgroundColor:
-          erro ? Colors.red.shade700 : null,
+          backgroundColor: erro ? Colors.red.shade700 : null,
         ),
       );
   }
@@ -362,12 +319,9 @@ class _OrdemServicoAssinaturaPageState
           children: [
             Text(
               widget.numeroOrdem,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             _construirInformacao(
@@ -395,10 +349,7 @@ class _OrdemServicoAssinaturaPageState
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icone,
-          size: 20,
-        ),
+        Icon(icone, size: 20),
         const SizedBox(width: 10),
         Expanded(
           child: RichText(
@@ -407,13 +358,9 @@ class _OrdemServicoAssinaturaPageState
               children: [
                 TextSpan(
                   text: '$titulo: ',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                TextSpan(
-                  text: valor,
-                ),
+                TextSpan(text: valor),
               ],
             ),
           ),
@@ -438,18 +385,12 @@ class _OrdemServicoAssinaturaPageState
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.verified_outlined,
-                  color: Colors.green,
-                ),
+                const Icon(Icons.verified_outlined, color: Colors.green),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Assinatura salva',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -462,19 +403,13 @@ class _OrdemServicoAssinaturaPageState
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border.all(
-                  color: Colors.grey.shade300,
-                ),
+                border: Border.all(color: Colors.grey.shade300),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Image.file(
                 File(caminho),
                 fit: BoxFit.contain,
-                errorBuilder: (
-                    context,
-                    error,
-                    stackTrace,
-                    ) {
+                errorBuilder: (context, error, stackTrace) {
                   return const Center(
                     child: Text(
                       'Não foi possível exibir a assinatura.',
@@ -487,17 +422,10 @@ class _OrdemServicoAssinaturaPageState
             if (!widget.somenteLeitura) ...[
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed:
-                _salvando ? null : _confirmarRemocao,
-                icon: const Icon(
-                  Icons.delete_outline,
-                ),
-                label: const Text(
-                  'Remover e assinar novamente',
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                ),
+                onPressed: _salvando ? null : _confirmarRemocao,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Remover e assinar novamente'),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
               ),
             ],
           ],
@@ -514,15 +442,11 @@ class _OrdemServicoAssinaturaPageState
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              Icon(
-                Icons.lock_outline,
-                size: 42,
-                color: Colors.grey.shade600,
-              ),
+              Icon(Icons.lock_outline, size: 42, color: Colors.grey.shade600),
               const SizedBox(height: 12),
               const Text(
                 'Esta Ordem de Serviço está bloqueada '
-                    'para alterações.',
+                'para alterações.',
                 textAlign: TextAlign.center,
               ),
             ],
@@ -542,20 +466,15 @@ class _OrdemServicoAssinaturaPageState
               _caminhoAssinatura == null
                   ? 'Assinatura do cliente'
                   : 'Nova assinatura',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
               'Peça ao cliente para assinar com o dedo '
-                  'dentro do espaço abaixo.',
-              style: TextStyle(
-                color: Colors.grey.shade700,
-              ),
+              'dentro do espaço abaixo.',
+              style: TextStyle(color: Colors.grey.shade700),
             ),
             const SizedBox(height: 16),
             ClipRRect(
@@ -564,10 +483,7 @@ class _OrdemServicoAssinaturaPageState
                 height: 260,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(
-                    color: Colors.grey.shade400,
-                    width: 1.5,
-                  ),
+                  border: Border.all(color: Colors.grey.shade400, width: 1.5),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Signature(
@@ -580,44 +496,33 @@ class _OrdemServicoAssinaturaPageState
             Text(
               'Assinatura',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed:
-                    _salvando ? null : _limparDesenho,
-                    icon: const Icon(
-                      Icons.refresh,
-                    ),
+                    onPressed: _salvando ? null : _limparDesenho,
+                    icon: const Icon(Icons.refresh),
                     label: const Text('Limpar'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed:
-                    _salvando ? null : _salvarAssinatura,
+                    onPressed: _salvando ? null : _salvarAssinatura,
                     icon: _salvando
                         ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                        : const Icon(
-                      Icons.save_outlined,
-                    ),
-                    label: Text(
-                      _salvando ? 'Salvando...' : 'Salvar',
-                    ),
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: Text(_salvando ? 'Salvando...' : 'Salvar'),
                   ),
                 ),
               ],
@@ -630,9 +535,7 @@ class _OrdemServicoAssinaturaPageState
 
   Widget _construirConteudo() {
     if (_carregando) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_erroCarregamento != null) {
@@ -642,16 +545,9 @@ class _OrdemServicoAssinaturaPageState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 52,
-                color: Colors.red,
-              ),
+              const Icon(Icons.error_outline, size: 52, color: Colors.red),
               const SizedBox(height: 12),
-              Text(
-                _erroCarregamento!,
-                textAlign: TextAlign.center,
-              ),
+              Text(_erroCarregamento!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _carregarAssinatura,
@@ -673,8 +569,7 @@ class _OrdemServicoAssinaturaPageState
           _construirAssinaturaSalva(),
         ],
         const SizedBox(height: 16),
-        if (_caminhoAssinatura == null ||
-            !widget.somenteLeitura)
+        if (_caminhoAssinatura == null || !widget.somenteLeitura)
           _construirAreaAssinatura(),
         const SizedBox(height: 24),
       ],
@@ -685,31 +580,24 @@ class _OrdemServicoAssinaturaPageState
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (
-          didPop,
-          result,
-          ) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
           await _aoTentarVoltar();
         }
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'Assinatura do Cliente',
-          ),
+          title: const Text('Assinatura do Cliente'),
           leading: IconButton(
             onPressed: _salvando
                 ? null
                 : () {
-              Navigator.of(context).pop(_alterou);
-            },
+                    Navigator.of(context).pop(_alterou);
+                  },
             icon: const Icon(Icons.arrow_back),
           ),
         ),
-        body: SafeArea(
-          child: _construirConteudo(),
-        ),
+        body: SafeArea(child: _construirConteudo()),
       ),
     );
   }

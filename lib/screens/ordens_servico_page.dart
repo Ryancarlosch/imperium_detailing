@@ -9,7 +9,9 @@ import '../services/ordem_servico_pdf_service.dart';
 import '../services/whatsapp_service.dart';
 
 class OrdensServicoPage extends StatefulWidget {
-  const OrdensServicoPage({super.key});
+  const OrdensServicoPage({super.key, this.statusInicial});
+
+  final String? statusInicial;
 
   @override
   State<OrdensServicoPage> createState() => _OrdensServicoPageState();
@@ -34,7 +36,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
   bool _carregando = true;
   bool _executandoAcao = false;
 
-  String _statusSelecionado = 'Todos';
+  late String _statusSelecionado;
 
   final List<String> _statusDisponiveis = const [
     'Todos',
@@ -47,6 +49,8 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
   @override
   void initState() {
     super.initState();
+
+    _statusSelecionado = widget.statusInicial ?? 'Todos';
 
     _pesquisaController.addListener(_aoAlterarPesquisa);
 
@@ -1281,6 +1285,18 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
       padrao: 'Não informada',
     );
 
+    final quilometragemEntrada = _obterTexto(
+      ordem,
+      'quilometragem_entrada',
+      padrao: '-',
+    );
+
+    final combustivelEntrada = _obterTexto(
+      ordem,
+      'combustivel_entrada',
+      padrao: '-',
+    );
+
     final valorTotal = _obterDouble(ordem, 'valor_total');
 
     final desconto = _obterDouble(ordem, 'desconto');
@@ -1362,6 +1378,14 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
               _LinhaInformacao(
                 titulo: 'Finalização',
                 valor: '$dataFinalizacao às $horaSaida',
+              ),
+              _LinhaInformacao(
+                titulo: 'Quilometragem entrada',
+                valor: quilometragemEntrada,
+              ),
+              _LinhaInformacao(
+                titulo: 'Combustível entrada',
+                valor: combustivelEntrada,
               ),
             ],
           ),
@@ -1634,7 +1658,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: _statusDisponiveis.length,
-            separatorBuilder: (_, __) {
+            separatorBuilder: (_, _) {
               return const SizedBox(width: 8);
             },
             itemBuilder: (context, index) {
@@ -1705,7 +1729,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 100),
         itemCount: _ordens.length,
-        separatorBuilder: (_, __) {
+        separatorBuilder: (_, _) {
           return const SizedBox(height: 10);
         },
         itemBuilder: (context, index) {

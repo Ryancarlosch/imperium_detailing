@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import 'dart:convert';
 
 import '../database/app_database.dart';
 import '../models/ordem_servico.dart';
@@ -60,7 +61,7 @@ class OrdemServicoRepository {
         await _agendamentoRepository.atualizarStatusComTransacao(
           transaction,
           agendamentoId,
-          'Em andamento',
+          'Agendado',
         );
       }
 
@@ -544,6 +545,12 @@ class OrdemServicoRepository {
         return;
       }
 
+      if (statusAtual == 'Aberta') {
+        throw StateError(
+          'A Ordem de Serviço precisa estar "Em andamento" para finalizar.',
+        );
+      }
+
       if (statusAtual == 'Cancelada') {
         throw StateError(
           'Uma Ordem de Serviço cancelada não pode ser finalizada.',
@@ -571,7 +578,6 @@ class OrdemServicoRepository {
         whereArgs: [ordemServicoId],
         orderBy: 'id ASC',
       );
-
       final consumoPorProduto = <int, double>{};
       final nomesPorProduto = <int, String>{};
 
@@ -586,39 +592,63 @@ class OrdemServicoRepository {
 
         consumoPorProduto[produtoId] =
             (consumoPorProduto[produtoId] ?? 0) + quantidadeUtilizada;
-
         nomesPorProduto[produtoId] = (produtoOs['produto_nome'] ?? 'Produto')
             .toString()
             .trim();
       }
 
       final estoquePorProduto = <int, Map<String, dynamic>>{};
+      final lotesPorProduto = <int, List<Map<String, dynamic>>>{};
 
       if (consumoPorProduto.isNotEmpty) {
         final ids = consumoPorProduto.keys.toList();
         final placeholders = List.filled(ids.length, '?').join(', ');
 
         final itensEstoque = await transaction.rawQuery('''
-          SELECT id, nome, quantidade, custo_unitario
+          SELECT id, nome, quantidade, custo_unitario, custo_unitario_calculado
           FROM itens_estoque
           WHERE id IN ($placeholders)
           ''', ids);
 
         for (final linha in itensEstoque) {
           final id = (linha['id'] as num?)?.toInt();
-
           if (id != null) {
             estoquePorProduto[id] = Map<String, dynamic>.from(linha);
           }
         }
+
+        final lotes = await transaction.rawQuery('''
+          SELECT
+            id,
+            item_estoque_id,
+            data_compra,
+            quantidade_disponivel,
+            custo_unitario
+          FROM estoque_lotes
+          WHERE item_estoque_id IN ($placeholders)
+            AND ativo = 1
+            AND quantidade_disponivel > 0
+          ORDER BY data_compra ASC, id ASC
+          ''', ids);
+
+        for (final lote in lotes) {
+          final itemId = (lote['item_estoque_id'] as num?)?.toInt();
+          if (itemId == null) {
+            continue;
+          }
+
+          lotesPorProduto.putIfAbsent(itemId, () => <Map<String, dynamic>>[]);
+          lotesPorProduto[itemId]!.add(Map<String, dynamic>.from(lote));
+        }
       }
 
-      // Primeiro valida o estoque de todos os produtos.
+      final planoFilaPorProduto = <int, List<Map<String, dynamic>>>{};
+
+      // Valida todo o estoque antes de qualquer baixa.
       for (final entry in consumoPorProduto.entries) {
         final produtoId = entry.key;
         final quantidadeNecessaria = entry.value;
         final itemEstoque = estoquePorProduto[produtoId];
-
         final produtoNome = nomesPorProduto[produtoId] ?? 'Produto';
 
         if (itemEstoque == null) {
@@ -627,16 +657,58 @@ class OrdemServicoRepository {
           );
         }
 
-        final quantidadeDisponivel =
-            (itemEstoque['quantidade'] as num?)?.toDouble() ?? 0;
+        final lotes = lotesPorProduto[produtoId] ?? <Map<String, dynamic>>[];
+        final disponivel = lotes.fold<double>(
+          0,
+          (total, lote) =>
+              total +
+              ((lote['quantidade_disponivel'] as num?)?.toDouble() ?? 0),
+        );
 
-        if (quantidadeNecessaria > quantidadeDisponivel) {
+        if (disponivel + 0.000001 < quantidadeNecessaria) {
           throw StateError(
             'Estoque insuficiente para "$produtoNome". '
-            'Disponível: ${_formatarQuantidadeMensagem(quantidadeDisponivel)}. '
+            'Disponível: ${_formatarQuantidadeMensagem(disponivel)}. '
             'Necessário: ${_formatarQuantidadeMensagem(quantidadeNecessaria)}.',
           );
         }
+
+        final fila = <Map<String, dynamic>>[];
+        var restante = quantidadeNecessaria;
+
+        for (final lote in lotes) {
+          if (restante <= 0) {
+            break;
+          }
+
+          final loteId = (lote['id'] as num?)?.toInt();
+          final saldo =
+              (lote['quantidade_disponivel'] as num?)?.toDouble() ?? 0;
+          final custoUnitario =
+              (lote['custo_unitario'] as num?)?.toDouble() ?? 0;
+
+          if (loteId == null || saldo <= 0) {
+            continue;
+          }
+
+          final usar = restante < saldo ? restante : saldo;
+
+          fila.add({
+            'lote_id': loteId,
+            'quantidade': usar,
+            'custo_unitario': custoUnitario,
+          });
+
+          restante -= usar;
+        }
+
+        if (restante > 0.000001) {
+          throw StateError(
+            'Não foi possível planejar a baixa FIFO para "$produtoNome".',
+          );
+        }
+
+        planoFilaPorProduto[produtoId] = fila;
       }
 
       final saldoAtualPorProduto = <int, double>{
@@ -644,95 +716,179 @@ class OrdemServicoRepository {
           entry.key: (entry.value['quantidade'] as num?)?.toDouble() ?? 0,
       };
 
-      // Depois realiza todas as baixas.
       for (final produtoOs in produtosPendentes) {
         final produtoOsId = (produtoOs['id'] as num?)?.toInt();
-
         final produtoId = (produtoOs['produto_id'] as num?)?.toInt();
-
         final quantidadeUtilizada =
             (produtoOs['quantidade'] as num?)?.toDouble() ?? 0;
 
-        if (produtoId == null || quantidadeUtilizada <= 0) {
-          if (produtoOsId != null) {
-            await transaction.update(
-              'ordem_servico_produtos',
-              {'baixado_estoque': 1},
-              where: 'id = ?',
-              whereArgs: [produtoOsId],
-            );
-          }
-
+        if (produtoOsId == null) {
           continue;
         }
 
-        final itemEstoque = estoquePorProduto[produtoId];
-
-        if (itemEstoque == null) {
-          throw StateError('Produto não encontrado no estoque.');
-        }
-
-        final quantidadeAnterior =
-            saldoAtualPorProduto[produtoId] ??
-            ((itemEstoque['quantidade'] as num?)?.toDouble() ?? 0);
-
-        final custoUnitarioEstoque =
-            (itemEstoque['custo_unitario'] as num?)?.toDouble() ?? 0;
-
-        final custoUnitarioOs =
-            (produtoOs['custo_unitario'] as num?)?.toDouble() ?? 0;
-
-        final custoUnitario = custoUnitarioOs > 0
-            ? custoUnitarioOs
-            : custoUnitarioEstoque;
-
-        final quantidadePosterior = quantidadeAnterior - quantidadeUtilizada;
-
-        if (quantidadePosterior < 0) {
-          final produtoNome = (produtoOs['produto_nome'] ?? 'Produto')
-              .toString()
-              .trim();
-
-          throw StateError(
-            'Estoque insuficiente para "$produtoNome". '
-            'Disponível: ${_formatarQuantidadeMensagem(quantidadeAnterior)}. '
-            'Necessário: ${_formatarQuantidadeMensagem(quantidadeUtilizada)}.',
-          );
-        }
-
-        await transaction.update(
-          'itens_estoque',
-          {
-            'quantidade': quantidadePosterior,
-            'atualizado_em': agora.toIso8601String(),
-          },
-          where: 'id = ?',
-          whereArgs: [produtoId],
-        );
-
-        saldoAtualPorProduto[produtoId] = quantidadePosterior;
-
-        await transaction.insert('movimentacoes_estoque', {
-          'item_estoque_id': produtoId,
-          'tipo': 'SAIDA',
-          'quantidade': quantidadeUtilizada,
-          'quantidade_anterior': quantidadeAnterior,
-          'quantidade_posterior': quantidadePosterior,
-          'custo_unitario': custoUnitario,
-          'observacoes': 'Baixa automática da Ordem de Serviço $numero',
-          'origem': 'Ordem de Serviço',
-          'ordem_servico_id': ordemServicoId,
-          'data': agora.toIso8601String(),
-        }, conflictAlgorithm: ConflictAlgorithm.abort);
-
-        if (produtoOsId != null) {
+        if (produtoId == null || quantidadeUtilizada <= 0) {
           await transaction.update(
             'ordem_servico_produtos',
             {'baixado_estoque': 1},
             where: 'id = ?',
             whereArgs: [produtoOsId],
           );
+          continue;
         }
+
+        final fila = planoFilaPorProduto[produtoId] ?? <Map<String, dynamic>>[];
+        var restanteProdutoOs = quantidadeUtilizada;
+        final composicao = <Map<String, dynamic>>[];
+        var custoTotalProdutoOs = 0.0;
+
+        while (restanteProdutoOs > 0.000001) {
+          if (fila.isEmpty) {
+            final nomeProduto = (produtoOs['produto_nome'] ?? 'Produto')
+                .toString();
+            throw StateError('Falha na baixa FIFO para "$nomeProduto".');
+          }
+
+          final atual = fila.first;
+          final disponivelNaFila =
+              (atual['quantidade'] as num?)?.toDouble() ?? 0;
+          final custoUnitario =
+              (atual['custo_unitario'] as num?)?.toDouble() ?? 0;
+          final loteId = (atual['lote_id'] as num?)?.toInt() ?? 0;
+
+          if (disponivelNaFila <= 0) {
+            fila.removeAt(0);
+            continue;
+          }
+
+          final consumo = restanteProdutoOs < disponivelNaFila
+              ? restanteProdutoOs
+              : disponivelNaFila;
+
+          final novoSaldoFila = disponivelNaFila - consumo;
+          atual['quantidade'] = novoSaldoFila;
+
+          if (novoSaldoFila <= 0.000001) {
+            fila.removeAt(0);
+          }
+
+          restanteProdutoOs -= consumo;
+          final custoTotalConsumo = consumo * custoUnitario;
+          custoTotalProdutoOs += custoTotalConsumo;
+
+          composicao.add({
+            'lote_id': loteId,
+            'quantidade': consumo,
+            'custo_unitario': custoUnitario,
+            'custo_total': custoTotalConsumo,
+          });
+        }
+
+        final custoUnitarioSnapshot = quantidadeUtilizada > 0
+            ? (custoTotalProdutoOs / quantidadeUtilizada)
+            : 0.0;
+
+        await transaction.update(
+          'ordem_servico_produtos',
+          {
+            'custo_unitario_no_momento': custoUnitarioSnapshot,
+            'custo_total_no_momento': custoTotalProdutoOs,
+            'composicao_lotes_json': jsonEncode(composicao),
+            'baixado_estoque': 1,
+          },
+          where: 'id = ?',
+          whereArgs: [produtoOsId],
+        );
+
+        for (final componente in composicao) {
+          final loteId = (componente['lote_id'] as num?)?.toInt() ?? 0;
+          final consumo = (componente['quantidade'] as num?)?.toDouble() ?? 0;
+          final custoUnitario =
+              (componente['custo_unitario'] as num?)?.toDouble() ?? 0;
+          final custoTotal =
+              (componente['custo_total'] as num?)?.toDouble() ?? 0;
+
+          final loteAtual = await transaction.query(
+            'estoque_lotes',
+            columns: ['quantidade_disponivel'],
+            where: 'id = ?',
+            whereArgs: [loteId],
+            limit: 1,
+          );
+
+          if (loteAtual.isEmpty) {
+            throw StateError('Lote de estoque não encontrado para baixa FIFO.');
+          }
+
+          final saldoLoteAnterior =
+              (loteAtual.first['quantidade_disponivel'] as num?)?.toDouble() ??
+              0;
+          final saldoLotePosterior = saldoLoteAnterior - consumo;
+
+          if (saldoLotePosterior < -0.000001) {
+            throw StateError('Tentativa de saldo negativo em lote de estoque.');
+          }
+
+          await transaction.update(
+            'estoque_lotes',
+            {
+              'quantidade_disponivel': saldoLotePosterior < 0
+                  ? 0
+                  : saldoLotePosterior,
+            },
+            where: 'id = ?',
+            whereArgs: [loteId],
+          );
+
+          await transaction.insert(
+            'ordem_servico_produto_lotes',
+            {
+              'ordem_servico_produto_id': produtoOsId,
+              'lote_id': loteId,
+              'quantidade': consumo,
+              'custo_unitario': custoUnitario,
+              'custo_total': custoTotal,
+              'criado_em': agora.toIso8601String(),
+            },
+            conflictAlgorithm: ConflictAlgorithm.abort,
+          );
+
+          final saldoItemAnterior = saldoAtualPorProduto[produtoId] ?? 0;
+          final saldoItemPosterior = saldoItemAnterior - consumo;
+
+          if (saldoItemPosterior < -0.000001) {
+            throw StateError(
+              'Tentativa de saldo negativo no estoque do produto.',
+            );
+          }
+
+          await transaction.insert('movimentacoes_estoque', {
+            'item_estoque_id': produtoId,
+            'tipo': 'SAIDA',
+            'quantidade': consumo,
+            'quantidade_anterior': saldoItemAnterior,
+            'quantidade_posterior': saldoItemPosterior,
+            'custo_unitario': custoUnitario,
+            'observacoes': 'Baixa automática FIFO da Ordem de Serviço $numero',
+            'origem': 'Ordem de Serviço',
+            'ordem_servico_id': ordemServicoId,
+            'lote_id': loteId,
+            'data': agora.toIso8601String(),
+          }, conflictAlgorithm: ConflictAlgorithm.abort);
+
+          saldoAtualPorProduto[produtoId] = saldoItemPosterior;
+        }
+      }
+
+      for (final entry in saldoAtualPorProduto.entries) {
+        await transaction.update(
+          'itens_estoque',
+          {
+            'quantidade': entry.value < 0 ? 0 : entry.value,
+            'atualizado_em': agora.toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [entry.key],
+        );
       }
 
       if (!lancadoFinanceiro && valorFinal > 0) {
@@ -1001,8 +1157,14 @@ class OrdemServicoRepository {
         (
           SELECT COALESCE(
             SUM(
-              produtos.quantidade *
-              produtos.custo_unitario
+              COALESCE(
+                NULLIF(produtos.custo_total_no_momento, 0),
+                produtos.quantidade * COALESCE(
+                  produtos.custo_unitario_no_momento,
+                  produtos.custo_unitario,
+                  0
+                )
+              )
             ),
             0
           )
@@ -1095,7 +1257,58 @@ class OrdemServicoRepository {
         where: 'id = ?',
         whereArgs: [ordemServicoId],
       );
+
+      final agendamentoId = _converterInt(ordem['agendamento_id']);
+
+      if (agendamentoId != null) {
+        await _agendamentoRepository.atualizarStatusComTransacao(
+          transaction,
+          agendamentoId,
+          'Cancelado',
+        );
+      }
     });
+  }
+
+  Future<void> atualizarDadosEntrada({
+    required int ordemServicoId,
+    String quilometragem = '',
+    String combustivel = '',
+  }) async {
+    final database = await _appDatabase.database;
+
+    await database.update(
+      'ordens_servico',
+      {
+        'quilometragem_entrada': quilometragem.trim(),
+        'combustivel_entrada': combustivel.trim(),
+      },
+      where: 'id = ?',
+      whereArgs: [ordemServicoId],
+    );
+  }
+
+  Future<Map<String, String>> buscarDadosEntrada(int ordemServicoId) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.query(
+      'ordens_servico',
+      columns: ['quilometragem_entrada', 'combustivel_entrada'],
+      where: 'id = ?',
+      whereArgs: [ordemServicoId],
+      limit: 1,
+    );
+
+    if (resultado.isEmpty) {
+      return {'quilometragem': '', 'combustivel': ''};
+    }
+
+    final item = resultado.first;
+
+    return {
+      'quilometragem': (item['quilometragem_entrada'] ?? '').toString().trim(),
+      'combustivel': (item['combustivel_entrada'] ?? '').toString().trim(),
+    };
   }
 
   Future<void> marcarComoLancadaNoFinanceiro(int ordemServicoId) async {
@@ -1147,11 +1360,49 @@ class OrdemServicoRepository {
   Future<void> excluirOrdemServico(int ordemServicoId) async {
     final database = await _appDatabase.database;
 
-    await database.delete(
-      'ordens_servico',
-      where: 'id = ?',
-      whereArgs: [ordemServicoId],
-    );
+    await database.transaction((transaction) async {
+      final resultado = await transaction.query(
+        'ordens_servico',
+        columns: ['status', 'agendamento_id'],
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+        limit: 1,
+      );
+
+      if (resultado.isEmpty) {
+        throw StateError('Ordem de Serviço não encontrada.');
+      }
+
+      final ordem = resultado.first;
+      final status = (ordem['status'] ?? '').toString().trim();
+      final agendamentoId = _converterInt(ordem['agendamento_id']);
+
+      await transaction.delete(
+        'ordens_servico',
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+      );
+
+      if (agendamentoId != null) {
+        await _agendamentoRepository.atualizarStatusComTransacao(
+          transaction,
+          agendamentoId,
+          _statusAgendamentoAposExcluirOrdem(status),
+        );
+      }
+    });
+  }
+
+  String _statusAgendamentoAposExcluirOrdem(String statusOrdem) {
+    if (statusOrdem == 'Finalizada') {
+      return 'Finalizado';
+    }
+
+    if (statusOrdem == 'Cancelada') {
+      return 'Cancelado';
+    }
+
+    return 'Agendado';
   }
 
   Future<String?> buscarAssinaturaCliente(int ordemServicoId) async {

@@ -5,10 +5,7 @@ import '../models/movimentacao_estoque.dart';
 import '../repositories/estoque_repository.dart';
 
 class NovaMovimentacaoEstoquePage extends StatefulWidget {
-  const NovaMovimentacaoEstoquePage({
-    super.key,
-    required this.itens,
-  });
+  const NovaMovimentacaoEstoquePage({super.key, required this.itens});
 
   final List<ItemEstoque> itens;
 
@@ -19,17 +16,20 @@ class NovaMovimentacaoEstoquePage extends StatefulWidget {
 
 class _NovaMovimentacaoEstoquePageState
     extends State<NovaMovimentacaoEstoquePage> {
-  final EstoqueRepository _repository =
-  EstoqueRepository();
+  final EstoqueRepository _repository = EstoqueRepository();
 
-  final GlobalKey<FormState> _formKey =
-  GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _quantidadeController =
-  TextEditingController();
+  final TextEditingController _quantidadeController = TextEditingController();
 
-  final TextEditingController _observacaoController =
-  TextEditingController();
+  final TextEditingController _observacaoController = TextEditingController();
+  final TextEditingController _motivoController = TextEditingController();
+
+  final TextEditingController _valorTotalPagoController =
+      TextEditingController();
+  final TextEditingController _fornecedorController = TextEditingController();
+
+  String _unidadeCompra = 'unidade';
 
   int? _itemIdSelecionado;
   String _tipoSelecionado = 'ENTRADA';
@@ -49,6 +49,9 @@ class _NovaMovimentacaoEstoquePageState
   void dispose() {
     _quantidadeController.dispose();
     _observacaoController.dispose();
+    _motivoController.dispose();
+    _valorTotalPagoController.dispose();
+    _fornecedorController.dispose();
     super.dispose();
   }
 
@@ -69,9 +72,7 @@ class _NovaMovimentacaoEstoquePageState
   }
 
   double? _lerQuantidade() {
-    final texto = _quantidadeController.text
-        .trim()
-        .replaceAll(',', '.');
+    final texto = _quantidadeController.text.trim().replaceAll(',', '.');
 
     return double.tryParse(texto);
   }
@@ -81,15 +82,10 @@ class _NovaMovimentacaoEstoquePageState
       return valor.toInt().toString();
     }
 
-    return valor
-        .toStringAsFixed(2)
-        .replaceAll('.', ',');
+    return valor.toStringAsFixed(2).replaceAll('.', ',');
   }
 
-  void _mostrarMensagem(
-      String mensagem, {
-        bool erro = false,
-      }) {
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
@@ -99,8 +95,7 @@ class _NovaMovimentacaoEstoquePageState
       ..showSnackBar(
         SnackBar(
           content: Text(mensagem),
-          backgroundColor:
-          erro ? Colors.red.shade700 : null,
+          backgroundColor: erro ? Colors.red.shade700 : null,
         ),
       );
   }
@@ -116,25 +111,18 @@ class _NovaMovimentacaoEstoquePageState
     final quantidade = _lerQuantidade();
 
     if (item == null || item.id == null) {
-      _mostrarMensagem(
-        'Selecione um produto válido.',
-        erro: true,
-      );
+      _mostrarMensagem('Selecione um produto válido.', erro: true);
 
       return;
     }
 
     if (quantidade == null) {
-      _mostrarMensagem(
-        'Informe uma quantidade válida.',
-        erro: true,
-      );
+      _mostrarMensagem('Informe uma quantidade válida.', erro: true);
 
       return;
     }
 
-    if (_tipoSelecionado == 'SAIDA' &&
-        quantidade > item.quantidade) {
+    if (_tipoSelecionado == 'SAIDA' && quantidade > item.quantidade) {
       _mostrarMensagem(
         'A quantidade de saída é maior que o estoque disponível.',
         erro: true,
@@ -143,23 +131,56 @@ class _NovaMovimentacaoEstoquePageState
       return;
     }
 
+    if (_tipoSelecionado == 'AJUSTE' && _motivoController.text.trim().isEmpty) {
+      _mostrarMensagem('Informe o motivo do ajuste manual.', erro: true);
+
+      return;
+    }
+
+    if (_tipoSelecionado == 'ENTRADA') {
+      final valorPago = double.tryParse(
+        _valorTotalPagoController.text.trim().replaceAll(',', '.'),
+      );
+
+      if (valorPago == null || valorPago <= 0) {
+        _mostrarMensagem('Informe o valor total pago da compra.', erro: true);
+
+        return;
+      }
+    }
+
     setState(() {
       _salvando = true;
     });
 
     try {
-      final movimentacao = MovimentacaoEstoque(
-        itemId: item.id!,
-        tipo: _tipoSelecionado,
-        quantidade: quantidade,
-        observacao:
-        _observacaoController.text.trim(),
-        data: DateTime.now().toIso8601String(),
-      );
+      if (_tipoSelecionado == 'ENTRADA') {
+        final valorPago =
+            double.tryParse(
+              _valorTotalPagoController.text.trim().replaceAll(',', '.'),
+            ) ??
+            0;
 
-      await _repository.registrarMovimentacao(
-        movimentacao,
-      );
+        await _repository.adicionarEntradaEstoque(
+          itemId: item.id!,
+          valorTotalPago: valorPago,
+          quantidadeTotal: quantidade,
+          unidadeInformada: _unidadeCompra,
+          fornecedor: _fornecedorController.text.trim(),
+          observacao: _observacaoController.text.trim(),
+        );
+      } else {
+        final movimentacao = MovimentacaoEstoque(
+          itemId: item.id!,
+          tipo: _tipoSelecionado,
+          quantidade: quantidade,
+          motivo: _motivoController.text.trim(),
+          observacao: _observacaoController.text.trim(),
+          data: DateTime.now().toIso8601String(),
+        );
+
+        await _repository.registrarMovimentacao(movimentacao);
+      }
 
       if (!mounted) {
         return;
@@ -175,10 +196,7 @@ class _NovaMovimentacaoEstoquePageState
         _salvando = false;
       });
 
-      _mostrarMensagem(
-        'Erro ao registrar movimentação: $erro',
-        erro: true,
-      );
+      _mostrarMensagem('Erro ao registrar movimentação: $erro', erro: true);
     }
   }
 
@@ -187,21 +205,12 @@ class _NovaMovimentacaoEstoquePageState
     final item = _itemSelecionado;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Nova movimentação',
-        ),
-      ),
+      appBar: AppBar(title: const Text('Nova movimentação de estoque')),
       body: SafeArea(
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              120,
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
             children: [
               Card(
                 child: Padding(
@@ -209,45 +218,32 @@ class _NovaMovimentacaoEstoquePageState
                   child: Column(
                     children: [
                       DropdownButtonFormField<int>(
-                        initialValue:
-                        _itemIdSelecionado,
+                        initialValue: _itemIdSelecionado,
                         isExpanded: true,
-                        decoration:
-                        const InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Produto',
-                          prefixIcon: Icon(
-                            Icons
-                                .inventory_2_outlined,
-                          ),
-                          border:
-                          OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.inventory_2_outlined),
+                          border: OutlineInputBorder(),
                         ),
                         items: widget.itens
-                            .where(
-                              (item) =>
-                          item.id != null,
-                        )
+                            .where((item) => item.id != null)
                             .map(
-                              (item) =>
-                              DropdownMenuItem<int>(
+                              (item) => DropdownMenuItem<int>(
                                 value: item.id!,
                                 child: Text(
                                   item.nome,
-                                  overflow:
-                                  TextOverflow
-                                      .ellipsis,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                        )
+                            )
                             .toList(),
                         onChanged: _salvando
                             ? null
                             : (valor) {
-                          setState(() {
-                            _itemIdSelecionado =
-                                valor;
-                          });
-                        },
+                                setState(() {
+                                  _itemIdSelecionado = valor;
+                                });
+                              },
                         validator: (valor) {
                           if (valor == null) {
                             return 'Selecione um produto.';
@@ -258,17 +254,11 @@ class _NovaMovimentacaoEstoquePageState
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        initialValue:
-                        _tipoSelecionado,
-                        decoration:
-                        const InputDecoration(
-                          labelText:
-                          'Tipo de movimentação',
-                          prefixIcon: Icon(
-                            Icons.swap_vert_rounded,
-                          ),
-                          border:
-                          OutlineInputBorder(),
+                        initialValue: _tipoSelecionado,
+                        decoration: const InputDecoration(
+                          labelText: 'Tipo de movimentação',
+                          prefixIcon: Icon(Icons.swap_vert_rounded),
+                          border: OutlineInputBorder(),
                         ),
                         items: const [
                           DropdownMenuItem<String>(
@@ -281,51 +271,42 @@ class _NovaMovimentacaoEstoquePageState
                           ),
                           DropdownMenuItem<String>(
                             value: 'AJUSTE',
-                            child: Text(
-                              'Ajustar quantidade total',
-                            ),
+                            child: Text('Ajustar quantidade total'),
                           ),
                         ],
                         onChanged: _salvando
                             ? null
                             : (valor) {
-                          if (valor == null) {
-                            return;
-                          }
+                                if (valor == null) {
+                                  return;
+                                }
 
-                          setState(() {
-                            _tipoSelecionado =
-                                valor;
-                          });
-                        },
+                                setState(() {
+                                  _tipoSelecionado = valor;
+                                });
+                              },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
-                        controller:
-                        _quantidadeController,
+                        controller: _quantidadeController,
                         enabled: !_salvando,
-                        keyboardType:
-                        const TextInputType
-                            .numberWithOptions(
+                        keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
                         decoration: InputDecoration(
-                          labelText:
-                          _tipoSelecionado ==
-                              'AJUSTE'
+                          labelText: _tipoSelecionado == 'AJUSTE'
                               ? 'Nova quantidade total'
+                              : _tipoSelecionado == 'ENTRADA'
+                              ? 'Quantidade da embalagem'
                               : 'Quantidade',
-                          prefixIcon: const Icon(
-                            Icons.numbers_rounded,
-                          ),
-                          suffixText:
-                          item?.unidade ?? '',
-                          border:
-                          const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.numbers_rounded),
+                          suffixText: _tipoSelecionado == 'ENTRADA'
+                              ? _unidadeCompra
+                              : item?.unidade ?? '',
+                          border: const OutlineInputBorder(),
                         ),
                         validator: (_) {
-                          final quantidade =
-                          _lerQuantidade();
+                          final quantidade = _lerQuantidade();
 
                           if (quantidade == null) {
                             return 'Informe a quantidade.';
@@ -335,54 +316,122 @@ class _NovaMovimentacaoEstoquePageState
                             return 'A quantidade não pode ser negativa.';
                           }
 
-                          if (_tipoSelecionado !=
-                              'AJUSTE' &&
-                              quantidade == 0) {
+                          if (_tipoSelecionado != 'AJUSTE' && quantidade == 0) {
                             return 'A quantidade deve ser maior que zero.';
                           }
 
                           return null;
                         },
                       ),
-                      if (_tipoSelecionado ==
-                          'SAIDA' &&
-                          item != null) ...[
+                      if (_tipoSelecionado == 'SAIDA' && item != null) ...[
                         const SizedBox(height: 10),
                         Align(
-                          alignment:
-                          Alignment.centerLeft,
+                          alignment: Alignment.centerLeft,
                           child: Text(
                             'Disponível: '
-                                '${_numero(item.quantidade)} '
-                                '${item.unidade}',
-                            style: TextStyle(
-                              color:
-                              Colors.grey.shade700,
-                            ),
+                            '${_numero(item.quantidade)} '
+                            '${item.unidade}',
+                            style: TextStyle(color: Colors.grey.shade700),
                           ),
                         ),
                       ],
                       const SizedBox(height: 16),
+                      if (_tipoSelecionado == 'AJUSTE') ...[
+                        TextFormField(
+                          controller: _motivoController,
+                          enabled: !_salvando,
+                          decoration: const InputDecoration(
+                            labelText: 'Motivo do ajuste',
+                            prefixIcon: Icon(Icons.rule_folder_outlined),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (valor) {
+                            if (_tipoSelecionado != 'AJUSTE') {
+                              return null;
+                            }
+
+                            if (valor == null || valor.trim().isEmpty) {
+                              return 'Informe o motivo do ajuste.';
+                            }
+
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       TextFormField(
-                        controller:
-                        _observacaoController,
+                        controller: _observacaoController,
                         enabled: !_salvando,
                         minLines: 3,
                         maxLines: 5,
-                        textCapitalization:
-                        TextCapitalization
-                            .sentences,
-                        decoration:
-                        const InputDecoration(
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(
                           labelText: 'Observação',
-                          prefixIcon: Icon(
-                            Icons.notes_rounded,
-                          ),
+                          prefixIcon: Icon(Icons.notes_rounded),
                           alignLabelWithHint: true,
-                          border:
-                          OutlineInputBorder(),
+                          border: OutlineInputBorder(),
                         ),
                       ),
+                      if (_tipoSelecionado == 'ENTRADA') ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _valorTotalPagoController,
+                          enabled: !_salvando,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Valor total pago',
+                            prefixText: 'R\$ ',
+                            prefixIcon: Icon(Icons.payments_outlined),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: _unidadeCompra,
+                          decoration: const InputDecoration(
+                            labelText: 'Unidade da embalagem',
+                            prefixIcon: Icon(Icons.straighten),
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'ml', child: Text('ml')),
+                            DropdownMenuItem(value: 'l', child: Text('L')),
+                            DropdownMenuItem(value: 'g', child: Text('g')),
+                            DropdownMenuItem(value: 'kg', child: Text('kg')),
+                            DropdownMenuItem(
+                              value: 'metro',
+                              child: Text('metro'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'unidade',
+                              child: Text('unidade'),
+                            ),
+                          ],
+                          onChanged: _salvando
+                              ? null
+                              : (valor) {
+                                  if (valor == null) {
+                                    return;
+                                  }
+
+                                  setState(() {
+                                    _unidadeCompra = valor;
+                                  });
+                                },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _fornecedorController,
+                          enabled: !_salvando,
+                          decoration: const InputDecoration(
+                            labelText: 'Fornecedor (opcional)',
+                            prefixIcon: Icon(Icons.local_shipping_outlined),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -393,12 +442,7 @@ class _NovaMovimentacaoEstoquePageState
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            12,
-            16,
-            12,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Row(
             children: [
               Expanded(
@@ -406,34 +450,23 @@ class _NovaMovimentacaoEstoquePageState
                   onPressed: _salvando
                       ? null
                       : () {
-                    Navigator.of(context)
-                        .pop(false);
-                  },
+                          Navigator.of(context).pop(false);
+                        },
                   child: const Text('Cancelar'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed:
-                  _salvando ? null : _salvar,
+                  onPressed: _salvando ? null : _salvar,
                   icon: _salvando
                       ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child:
-                    CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
-                  )
-                      : const Icon(
-                    Icons.save_outlined,
-                  ),
-                  label: Text(
-                    _salvando
-                        ? 'Salvando...'
-                        : 'Salvar',
-                  ),
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(_salvando ? 'Salvando...' : 'Salvar'),
                 ),
               ),
             ],

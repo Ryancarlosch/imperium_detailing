@@ -6,6 +6,86 @@ import '../models/agendamento.dart';
 class AgendamentoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
 
+  DateTime _parseData(String valor) {
+    final texto = valor.trim();
+
+    if (texto.isEmpty) {
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+
+    final iso = DateTime.tryParse(texto);
+    if (iso != null) {
+      return DateTime(iso.year, iso.month, iso.day);
+    }
+
+    final partes = texto.split('/');
+    if (partes.length == 3) {
+      final dia = int.tryParse(partes[0]) ?? 1;
+      final mes = int.tryParse(partes[1]) ?? 1;
+      final ano = int.tryParse(partes[2]) ?? 1970;
+
+      return DateTime(ano, mes, dia);
+    }
+
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  Duration _parseHora(String valor) {
+    final texto = valor.trim();
+
+    if (texto.isEmpty) {
+      return Duration.zero;
+    }
+
+    final partes = texto.split(':');
+    if (partes.length < 2) {
+      return Duration.zero;
+    }
+
+    final hora = int.tryParse(partes[0]) ?? 0;
+    final minuto = int.tryParse(partes[1]) ?? 0;
+
+    return Duration(hours: hora, minutes: minuto);
+  }
+
+  DateTime _momentoAgendamento(String data, String hora) {
+    final base = _parseData(data);
+    final horario = _parseHora(hora);
+
+    return DateTime(
+      base.year,
+      base.month,
+      base.day,
+      horario.inHours,
+      horario.inMinutes.remainder(60),
+    );
+  }
+
+  int _compararMapasAgendamento(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+  ) {
+    final momentoA = _momentoAgendamento(
+      (a['data'] ?? '').toString(),
+      (a['hora'] ?? '').toString(),
+    );
+
+    final momentoB = _momentoAgendamento(
+      (b['data'] ?? '').toString(),
+      (b['hora'] ?? '').toString(),
+    );
+
+    final comparacaoDataHora = momentoA.compareTo(momentoB);
+    if (comparacaoDataHora != 0) {
+      return comparacaoDataHora;
+    }
+
+    final idA = (a['id'] as num?)?.toInt() ?? 0;
+    final idB = (b['id'] as num?)?.toInt() ?? 0;
+
+    return idA.compareTo(idB);
+  }
+
   Future<int> inserirAgendamento(Agendamento agendamento) async {
     final database = await _appDatabase.database;
 
@@ -18,12 +98,37 @@ class AgendamentoRepository {
   Future<List<Agendamento>> listarAgendamentos() async {
     final database = await _appDatabase.database;
 
-    final resultado = await database.query(
-      'agendamentos',
-      orderBy: 'data ASC, hora ASC',
-    );
+    final resultado = await database.query('agendamentos');
 
-    return resultado.map((mapa) => Agendamento.fromMap(mapa)).toList();
+    final listaOrdenada =
+        resultado.map((mapa) => Map<String, dynamic>.from(mapa)).toList()
+          ..sort(_compararMapasAgendamento);
+
+    return listaOrdenada.map((mapa) => Agendamento.fromMap(mapa)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> listarAgendamentosComDetalhes() async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.rawQuery('''
+      SELECT
+        a.*,
+        c.nome AS cliente_nome,
+        v.marca AS veiculo_marca,
+        v.modelo AS veiculo_modelo,
+        v.placa AS veiculo_placa
+      FROM agendamentos a
+      INNER JOIN clientes c
+        ON c.id = a.cliente_id
+      INNER JOIN veiculos v
+        ON v.id = a.veiculo_id
+    ''');
+
+    final listaOrdenada =
+        resultado.map((mapa) => Map<String, dynamic>.from(mapa)).toList()
+          ..sort(_compararMapasAgendamento);
+
+    return listaOrdenada;
   }
 
   Future<Agendamento?> buscarAgendamentoPorId(int id) async {

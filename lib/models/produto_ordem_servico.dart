@@ -6,6 +6,9 @@ class ProdutoOrdemServico {
   final double quantidade;
   final String unidade;
   final double custoUnitario;
+  final double custoUnitarioNoMomento;
+  final double custoTotalNoMomento;
+  final String composicaoLotesJson;
   final bool baixadoEstoque;
 
   const ProdutoOrdemServico({
@@ -16,11 +19,17 @@ class ProdutoOrdemServico {
     required this.quantidade,
     required this.unidade,
     required this.custoUnitario,
+    double? custoUnitarioNoMomento,
+    double? custoTotalNoMomento,
+    this.composicaoLotesJson = '',
     this.baixadoEstoque = false,
-  });
+  }) : custoUnitarioNoMomento = custoUnitarioNoMomento ?? custoUnitario,
+       custoTotalNoMomento =
+           custoTotalNoMomento ??
+           quantidade * (custoUnitarioNoMomento ?? custoUnitario);
 
   double get custoTotal {
-    return quantidade * custoUnitario;
+    return custoTotalNoMomento;
   }
 
   Map<String, dynamic> toMap() {
@@ -32,35 +41,38 @@ class ProdutoOrdemServico {
       'quantidade': quantidade,
       'unidade': unidade,
       'custo_unitario': custoUnitario,
+      'custo_unitario_no_momento': custoUnitarioNoMomento,
+      'custo_total_no_momento': custoTotalNoMomento,
+      'composicao_lotes_json': composicaoLotesJson,
       'baixado_estoque': baixadoEstoque ? 1 : 0,
     };
   }
 
-  factory ProdutoOrdemServico.fromMap(
-      Map<String, dynamic> map,
-      ) {
+  factory ProdutoOrdemServico.fromMap(Map<String, dynamic> map) {
+    final custoUnitarioLegado = _converterDouble(map['custo_unitario']);
+    final custoUnitarioNoMomento = _converterDouble(
+      map['custo_unitario_no_momento'],
+    );
+    final custoTotalNoMomento = _converterDouble(map['custo_total_no_momento']);
+    final quantidade = _converterDouble(map['quantidade']);
+    final custoUnitarioEfetivo = map.containsKey('custo_unitario_no_momento')
+        ? custoUnitarioNoMomento
+        : custoUnitarioLegado;
+
     return ProdutoOrdemServico(
-      id: _converterIntNulo(
-        map['id'],
-      ),
-      ordemServicoId: _converterInt(
-        map['ordem_servico_id'],
-      ),
-      produtoId: _converterIntNulo(
-        map['produto_id'],
-      ),
-      produtoNome:
-      (map['produto_nome'] ?? '').toString(),
-      quantidade: _converterDouble(
-        map['quantidade'],
-      ),
+      id: _converterIntNulo(map['id']),
+      ordemServicoId: _converterInt(map['ordem_servico_id']),
+      produtoId: _converterIntNulo(map['produto_id']),
+      produtoNome: (map['produto_nome'] ?? '').toString(),
+      quantidade: quantidade,
       unidade: (map['unidade'] ?? '').toString(),
-      custoUnitario: _converterDouble(
-        map['custo_unitario'],
-      ),
-      baixadoEstoque: _converterBool(
-        map['baixado_estoque'],
-      ),
+      custoUnitario: custoUnitarioEfetivo,
+      custoUnitarioNoMomento: custoUnitarioEfetivo,
+      custoTotalNoMomento: custoTotalNoMomento > 0
+          ? custoTotalNoMomento
+          : quantidade * custoUnitarioEfetivo,
+      composicaoLotesJson: (map['composicao_lotes_json'] ?? '').toString(),
+      baixadoEstoque: _converterBool(map['baixado_estoque']),
     );
   }
 
@@ -73,30 +85,32 @@ class ProdutoOrdemServico {
     double? quantidade,
     String? unidade,
     double? custoUnitario,
+    double? custoUnitarioNoMomento,
+    double? custoTotalNoMomento,
+    String? composicaoLotesJson,
     bool? baixadoEstoque,
   }) {
+    final custoUnitarioEfetivo =
+        custoUnitarioNoMomento ?? custoUnitario ?? this.custoUnitarioNoMomento;
+    final quantidadeEfetiva = quantidade ?? this.quantidade;
+
     return ProdutoOrdemServico(
       id: id ?? this.id,
-      ordemServicoId:
-      ordemServicoId ?? this.ordemServicoId,
-      produtoId: removerProdutoId
-          ? null
-          : produtoId ?? this.produtoId,
-      produtoNome:
-      produtoNome ?? this.produtoNome,
-      quantidade:
-      quantidade ?? this.quantidade,
+      ordemServicoId: ordemServicoId ?? this.ordemServicoId,
+      produtoId: removerProdutoId ? null : produtoId ?? this.produtoId,
+      produtoNome: produtoNome ?? this.produtoNome,
+      quantidade: quantidadeEfetiva,
       unidade: unidade ?? this.unidade,
-      custoUnitario:
-      custoUnitario ?? this.custoUnitario,
-      baixadoEstoque:
-      baixadoEstoque ?? this.baixadoEstoque,
+      custoUnitario: custoUnitario ?? custoUnitarioEfetivo,
+      custoUnitarioNoMomento: custoUnitarioEfetivo,
+      custoTotalNoMomento:
+          custoTotalNoMomento ?? quantidadeEfetiva * custoUnitarioEfetivo,
+      composicaoLotesJson: composicaoLotesJson ?? this.composicaoLotesJson,
+      baixadoEstoque: baixadoEstoque ?? this.baixadoEstoque,
     );
   }
 
-  static int _converterInt(
-      dynamic valor,
-      ) {
+  static int _converterInt(dynamic valor) {
     if (valor is int) {
       return valor;
     }
@@ -105,15 +119,10 @@ class ProdutoOrdemServico {
       return valor.toInt();
     }
 
-    return int.tryParse(
-      valor?.toString().trim() ?? '',
-    ) ??
-        0;
+    return int.tryParse(valor?.toString().trim() ?? '') ?? 0;
   }
 
-  static int? _converterIntNulo(
-      dynamic valor,
-      ) {
+  static int? _converterIntNulo(dynamic valor) {
     if (valor == null) {
       return null;
     }
@@ -135,25 +144,17 @@ class ProdutoOrdemServico {
     return int.tryParse(texto);
   }
 
-  static double _converterDouble(
-      dynamic valor,
-      ) {
+  static double _converterDouble(dynamic valor) {
     if (valor is num) {
       return valor.toDouble();
     }
 
-    final texto = valor
-        ?.toString()
-        .trim()
-        .replaceAll(',', '.') ??
-        '';
+    final texto = valor?.toString().trim().replaceAll(',', '.') ?? '';
 
     return double.tryParse(texto) ?? 0;
   }
 
-  static bool _converterBool(
-      dynamic valor,
-      ) {
+  static bool _converterBool(dynamic valor) {
     if (valor is bool) {
       return valor;
     }
@@ -162,11 +163,8 @@ class ProdutoOrdemServico {
       return valor.toInt() == 1;
     }
 
-    final texto =
-    valor?.toString().trim().toLowerCase();
+    final texto = valor?.toString().trim().toLowerCase();
 
-    return texto == '1' ||
-        texto == 'true' ||
-        texto == 'sim';
+    return texto == '1' || texto == 'true' || texto == 'sim';
   }
 }

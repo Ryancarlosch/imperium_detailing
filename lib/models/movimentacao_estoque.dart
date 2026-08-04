@@ -7,8 +7,10 @@ class MovimentacaoEstoque {
   final double? quantidadePosterior;
   final double? custoUnitario;
   final String observacao;
+  final String motivo;
   final String origem;
   final int? ordemServicoId;
+  final int? loteId;
   final String data;
 
   const MovimentacaoEstoque({
@@ -20,8 +22,10 @@ class MovimentacaoEstoque {
     this.quantidadePosterior,
     this.custoUnitario,
     required this.observacao,
+    this.motivo = '',
     this.origem = 'Manual',
     this.ordemServicoId,
+    this.loteId,
     required this.data,
   });
 
@@ -36,8 +40,10 @@ class MovimentacaoEstoque {
         'quantidade_posterior': quantidadePosterior,
       if (custoUnitario != null) 'custo_unitario': custoUnitario,
       'observacoes': observacao,
+      'motivo': motivo,
       'origem': origem,
       'ordem_servico_id': ordemServicoId,
+      'lote_id': loteId,
       'data': data,
     };
   }
@@ -52,8 +58,10 @@ class MovimentacaoEstoque {
       quantidadePosterior: (map['quantidade_posterior'] as num?)?.toDouble(),
       custoUnitario: (map['custo_unitario'] as num?)?.toDouble(),
       observacao: map['observacoes']?.toString() ?? '',
+      motivo: map['motivo']?.toString() ?? '',
       origem: map['origem']?.toString() ?? 'Manual',
       ordemServicoId: (map['ordem_servico_id'] as num?)?.toInt(),
+      loteId: (map['lote_id'] as num?)?.toInt(),
       data: map['data']?.toString() ?? '',
     );
   }

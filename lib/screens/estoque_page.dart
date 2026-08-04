@@ -60,7 +60,7 @@ class _EstoquePageState extends State<EstoquePage>
   Future<void> _carregar() async {
     try {
       final resultados = await Future.wait([
-        _repository.listarItens(),
+        _repository.listarItens(incluirInativos: true),
         _repository.listarMovimentacoes(),
         _repository.obterConfiguracao(),
       ]);
@@ -122,7 +122,9 @@ class _EstoquePageState extends State<EstoquePage>
     }
 
     try {
-      final itensAtualizados = await _repository.listarItens();
+      final itensAtualizados = await _repository.listarItens(
+        incluirInativos: true,
+      );
 
       if (!mounted) {
         return;
@@ -196,6 +198,10 @@ class _EstoquePageState extends State<EstoquePage>
     String tipoSelecionado = 'ENTRADA';
 
     String quantidadeDigitada = '';
+    String valorPagoDigitado = '';
+    String unidadeCompra = 'unidade';
+    String fornecedorDigitado = '';
+    String motivoAjuste = '';
     String observacaoDigitada = '';
 
     final salvou = await showDialog<bool>(
@@ -207,7 +213,7 @@ class _EstoquePageState extends State<EstoquePage>
         return StatefulBuilder(
           builder: (dialogContext, setStateDialog) {
             return AlertDialog(
-              title: const Text('Nova movimentação'),
+              title: const Text('Nova movimentação de estoque'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -285,12 +291,89 @@ class _EstoquePageState extends State<EstoquePage>
                       decoration: InputDecoration(
                         labelText: tipoSelecionado == 'AJUSTE'
                             ? 'Nova quantidade total'
+                            : tipoSelecionado == 'ENTRADA'
+                            ? 'Quantidade da embalagem'
                             : 'Quantidade',
                         prefixIcon: const Icon(Icons.numbers_rounded),
-                        suffixText: itemSelecionado.unidade,
+                        suffixText: tipoSelecionado == 'ENTRADA'
+                            ? unidadeCompra
+                            : itemSelecionado.unidade,
                       ),
                     ),
+                    if (tipoSelecionado == 'ENTRADA') ...[
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        enabled: !salvando,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        onChanged: (valor) {
+                          valorPagoDigitado = valor;
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Valor total pago',
+                          prefixText: 'R\$ ',
+                          prefixIcon: Icon(Icons.payments_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String>(
+                        initialValue: unidadeCompra,
+                        decoration: const InputDecoration(
+                          labelText: 'Unidade da embalagem',
+                          prefixIcon: Icon(Icons.straighten),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'ml', child: Text('ml')),
+                          DropdownMenuItem(value: 'l', child: Text('L')),
+                          DropdownMenuItem(value: 'g', child: Text('g')),
+                          DropdownMenuItem(value: 'kg', child: Text('kg')),
+                          DropdownMenuItem(
+                            value: 'metro',
+                            child: Text('metro'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'unidade',
+                            child: Text('unidade'),
+                          ),
+                        ],
+                        onChanged: salvando
+                            ? null
+                            : (valor) {
+                                if (valor == null) {
+                                  return;
+                                }
+                                setStateDialog(() {
+                                  unidadeCompra = valor;
+                                });
+                              },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        enabled: !salvando,
+                        onChanged: (valor) {
+                          fornecedorDigitado = valor;
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Fornecedor (opcional)',
+                          prefixIcon: Icon(Icons.local_shipping_outlined),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 14),
+                    if (tipoSelecionado == 'AJUSTE') ...[
+                      TextFormField(
+                        enabled: !salvando,
+                        onChanged: (valor) {
+                          motivoAjuste = valor;
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Motivo do ajuste',
+                          prefixIcon: Icon(Icons.rule_folder_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     TextFormField(
                       enabled: !salvando,
                       maxLines: 3,
@@ -355,6 +438,25 @@ class _EstoquePageState extends State<EstoquePage>
                             return;
                           }
 
+                          if (tipoSelecionado == 'ENTRADA') {
+                            final valorPago = double.tryParse(
+                              valorPagoDigitado.trim().replaceAll(',', '.'),
+                            );
+
+                            if (valorPago == null || valorPago <= 0) {
+                              ScaffoldMessenger.of(dialogContext)
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Informe o valor total pago da compra.',
+                                    ),
+                                  ),
+                                );
+                              return;
+                            }
+                          }
+
                           if (tipoSelecionado == 'SAIDA' &&
                               quantidade > itemSelecionado.quantidade) {
                             ScaffoldMessenger.of(dialogContext)
@@ -363,6 +465,21 @@ class _EstoquePageState extends State<EstoquePage>
                                 const SnackBar(
                                   content: Text(
                                     'A quantidade de saída é maior que o estoque disponível.',
+                                  ),
+                                ),
+                              );
+
+                            return;
+                          }
+
+                          if (tipoSelecionado == 'AJUSTE' &&
+                              motivoAjuste.trim().isEmpty) {
+                            ScaffoldMessenger.of(dialogContext)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Informe o motivo do ajuste manual.',
                                   ),
                                 ),
                               );
@@ -391,15 +508,38 @@ class _EstoquePageState extends State<EstoquePage>
                           });
 
                           try {
-                            await _repository.registrarMovimentacao(
-                              MovimentacaoEstoque(
+                            if (tipoSelecionado == 'ENTRADA') {
+                              final valorPago =
+                                  double.tryParse(
+                                    valorPagoDigitado.trim().replaceAll(
+                                      ',',
+                                      '.',
+                                    ),
+                                  ) ??
+                                  0;
+
+                              await _repository.adicionarEntradaEstoque(
                                 itemId: itemId,
-                                tipo: tipoSelecionado,
-                                quantidade: quantidade,
+                                valorTotalPago: valorPago,
+                                quantidadeTotal: quantidade,
+                                unidadeInformada: unidadeCompra,
+                                fornecedor: fornecedorDigitado.trim(),
                                 observacao: observacaoDigitada.trim(),
-                                data: DateTime.now().toIso8601String(),
-                              ),
-                            );
+                              );
+                            } else {
+                              await _repository.registrarMovimentacao(
+                                MovimentacaoEstoque(
+                                  itemId: itemId,
+                                  tipo: tipoSelecionado,
+                                  quantidade: quantidade,
+                                  motivo: tipoSelecionado == 'AJUSTE'
+                                      ? motivoAjuste.trim()
+                                      : '',
+                                  observacao: observacaoDigitada.trim(),
+                                  data: DateTime.now().toIso8601String(),
+                                ),
+                              );
+                            }
 
                             if (!dialogContext.mounted) {
                               return;
@@ -456,7 +596,7 @@ class _EstoquePageState extends State<EstoquePage>
 
     try {
       final resultados = await Future.wait([
-        _repository.listarItens(),
+        _repository.listarItens(incluirInativos: true),
         _repository.listarMovimentacoes(),
         _repository.obterConfiguracao(),
       ]);

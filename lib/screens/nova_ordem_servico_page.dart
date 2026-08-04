@@ -367,50 +367,100 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
       showDragHandle: true,
       isScrollControlled: true,
       builder: (bottomContext) {
-        return SafeArea(
-          child: FractionallySizedBox(
-            heightFactor: 0.75,
-            child: Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(18, 4, 18, 12),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Selecionar serviço do catálogo',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+        final categorias =
+            _catalogoServicos
+                .map((servico) => servico.categoria.trim())
+                .where((categoria) => categoria.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
+
+        String? categoriaSelecionada;
+
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            final servicosFiltrados = _catalogoServicos.where((servico) {
+              if (categoriaSelecionada == null ||
+                  categoriaSelecionada!.isEmpty) {
+                return true;
+              }
+              return servico.categoria.trim().toLowerCase() ==
+                  categoriaSelecionada!.trim().toLowerCase();
+            }).toList();
+
+            return SafeArea(
+              child: FractionallySizedBox(
+                heightFactor: 0.75,
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(18, 4, 18, 12),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Selecionar serviço do catálogo',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _catalogoServicos.length,
-                    itemBuilder: (_, itemIndex) {
-                      final servico = _catalogoServicos[itemIndex];
-
-                      return ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.cleaning_services_outlined),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                      child: DropdownButtonFormField<String?>(
+                        initialValue: categoriaSelecionada,
+                        decoration: const InputDecoration(
+                          labelText: 'Categoria',
+                          prefixIcon: Icon(Icons.category_outlined),
                         ),
-                        title: Text(servico.nome),
-                        subtitle: Text(
-                          '${servico.categoria.isEmpty ? "Sem categoria" : servico.categoria}'
-                          ' • ${_moeda.format(servico.precoPadrao)}'
-                          ' • ${servico.duracaoFormatada}',
-                        ),
-                        onTap: () {
-                          Navigator.pop(bottomContext, servico);
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Todas as categorias'),
+                          ),
+                          ...categorias.map(
+                            (categoria) => DropdownMenuItem<String?>(
+                              value: categoria,
+                              child: Text(categoria),
+                            ),
+                          ),
+                        ],
+                        onChanged: (valor) {
+                          setStateModal(() {
+                            categoriaSelecionada = valor;
+                          });
                         },
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: servicosFiltrados.length,
+                        itemBuilder: (_, itemIndex) {
+                          final servico = servicosFiltrados[itemIndex];
+
+                          return ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.cleaning_services_outlined),
+                            ),
+                            title: Text(servico.nome),
+                            subtitle: Text(
+                              '${servico.categoria.isEmpty ? "Sem categoria" : servico.categoria}'
+                              ' • ${_moeda.format(servico.precoPadrao)}'
+                              ' • ${servico.duracaoFormatada}',
+                            ),
+                            onTap: () {
+                              Navigator.pop(bottomContext, servico);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -602,7 +652,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
         return total;
       }
 
-      return total + (quantidade * produto.item.custoUnitario);
+      return total + (quantidade * produto.item.custoUnitarioEfetivo);
     });
   }
 
@@ -756,7 +806,10 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
           'produto_nome': item.nome,
           'quantidade': quantidade,
           'unidade': item.unidade,
-          'custo_unitario': item.custoUnitario,
+          'custo_unitario': item.custoUnitarioEfetivo,
+          'custo_unitario_no_momento': item.custoUnitarioEfetivo,
+          'custo_total_no_momento': quantidade * item.custoUnitarioEfetivo,
+          'composicao_lotes_json': '',
           'baixado_estoque': 0,
         });
       }
@@ -1157,7 +1210,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                   produto.quantidadeController.text,
                 );
 
-                final custo = quantidade * produto.item.custoUnitario;
+                final custo = quantidade * produto.item.custoUnitarioEfetivo;
 
                 final estoqueInsuficiente =
                     produto.selecionado && quantidade > produto.item.quantidade;
@@ -1271,7 +1324,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                           Expanded(
                             child: Text(
                               'Custo unitário: '
-                              '${_moeda.format(produto.item.custoUnitario)}',
+                              '${_moeda.format(produto.item.custoUnitarioEfetivo)}',
                               style: const TextStyle(
                                 color: Colors.white60,
                                 fontSize: 12,

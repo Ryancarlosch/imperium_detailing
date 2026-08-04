@@ -2,12 +2,11 @@ class ServicoCatalogo {
   const ServicoCatalogo({
     this.id,
     required this.nome,
+    this.categoriaId,
     required this.categoria,
     required this.descricao,
     required this.observacoesPadrao,
-    required this.precoMinimo,
     required this.precoPadrao,
-    required this.precoMaximo,
     required this.duracaoMinutos,
     required this.ativo,
     required this.criadoEm,
@@ -16,12 +15,11 @@ class ServicoCatalogo {
 
   final int? id;
   final String nome;
+  final int? categoriaId;
   final String categoria;
   final String descricao;
   final String observacoesPadrao;
-  final double precoMinimo;
   final double precoPadrao;
-  final double precoMaximo;
   final int duracaoMinutos;
   final bool ativo;
   final String criadoEm;
@@ -42,17 +40,17 @@ class ServicoCatalogo {
     return '${horas}h ${minutos}min';
   }
 
-  Map<String, dynamic> toMap({
-    bool incluirId = true,
-  }) {
+  Map<String, dynamic> toMap({bool incluirId = true}) {
     final mapa = <String, dynamic>{
       'nome': nome,
+      'categoria_id': categoriaId,
       'categoria': categoria,
       'descricao': descricao,
       'observacoes_padrao': observacoesPadrao,
-      'preco_minimo': precoMinimo,
       'preco_padrao': precoPadrao,
-      'preco_maximo': precoMaximo,
+      // Mantemos colunas legadas preenchidas para compatibilidade de bancos antigos.
+      'preco_minimo': precoPadrao,
+      'preco_maximo': precoPadrao,
       'duracao_minutos': duracaoMinutos,
       'ativo': ativo ? 1 : 0,
       'criado_em': criadoEm,
@@ -66,19 +64,19 @@ class ServicoCatalogo {
     return mapa;
   }
 
-  factory ServicoCatalogo.fromMap(
-    Map<String, dynamic> map,
-  ) {
+  factory ServicoCatalogo.fromMap(Map<String, dynamic> map) {
     return ServicoCatalogo(
       id: _int(map['id']),
       nome: map['nome']?.toString() ?? '',
+      categoriaId: _int(map['categoria_id']),
       categoria: map['categoria']?.toString() ?? '',
       descricao: map['descricao']?.toString() ?? '',
-      observacoesPadrao:
-          map['observacoes_padrao']?.toString() ?? '',
-      precoMinimo: _double(map['preco_minimo']),
-      precoPadrao: _double(map['preco_padrao']),
-      precoMaximo: _double(map['preco_maximo']),
+      observacoesPadrao: map['observacoes_padrao']?.toString() ?? '',
+      precoPadrao: _double(map['preco_padrao']) > 0
+          ? _double(map['preco_padrao'])
+          : _double(map['preco_maximo']) > 0
+          ? _double(map['preco_maximo'])
+          : _double(map['preco_minimo']),
       duracaoMinutos: _int(map['duracao_minutos']) ?? 0,
       ativo: _bool(map['ativo']),
       criadoEm: map['criado_em']?.toString() ?? '',
@@ -89,12 +87,11 @@ class ServicoCatalogo {
   ServicoCatalogo copyWith({
     int? id,
     String? nome,
+    int? categoriaId,
     String? categoria,
     String? descricao,
     String? observacoesPadrao,
-    double? precoMinimo,
     double? precoPadrao,
-    double? precoMaximo,
     int? duracaoMinutos,
     bool? ativo,
     String? criadoEm,
@@ -103,15 +100,12 @@ class ServicoCatalogo {
     return ServicoCatalogo(
       id: id ?? this.id,
       nome: nome ?? this.nome,
+      categoriaId: categoriaId ?? this.categoriaId,
       categoria: categoria ?? this.categoria,
       descricao: descricao ?? this.descricao,
-      observacoesPadrao:
-          observacoesPadrao ?? this.observacoesPadrao,
-      precoMinimo: precoMinimo ?? this.precoMinimo,
+      observacoesPadrao: observacoesPadrao ?? this.observacoesPadrao,
       precoPadrao: precoPadrao ?? this.precoPadrao,
-      precoMaximo: precoMaximo ?? this.precoMaximo,
-      duracaoMinutos:
-          duracaoMinutos ?? this.duracaoMinutos,
+      duracaoMinutos: duracaoMinutos ?? this.duracaoMinutos,
       ativo: ativo ?? this.ativo,
       criadoEm: criadoEm ?? this.criadoEm,
       atualizadoEm: atualizadoEm ?? this.atualizadoEm,
@@ -127,21 +121,15 @@ class ServicoCatalogo {
   static double _double(dynamic valor) {
     if (valor is num) return valor.toDouble();
 
-    return double.tryParse(
-          valor?.toString().replaceAll(',', '.') ?? '',
-        ) ??
-        0;
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0;
   }
 
   static bool _bool(dynamic valor) {
     if (valor is bool) return valor;
     if (valor is num) return valor != 0;
 
-    final texto =
-        valor?.toString().trim().toLowerCase() ?? '';
+    final texto = valor?.toString().trim().toLowerCase() ?? '';
 
-    return texto == '1' ||
-        texto == 'true' ||
-        texto == 'sim';
+    return texto == '1' || texto == 'true' || texto == 'sim';
   }
 }

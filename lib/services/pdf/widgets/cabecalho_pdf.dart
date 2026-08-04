@@ -374,7 +374,7 @@ class CabecalhoPdf {
       return nome;
     }
 
-    return 'Imperium Detailing';
+    return 'Sua empresa';
   }
 
   static bool _possuiWhatsApp(Configuracao configuracao) {
