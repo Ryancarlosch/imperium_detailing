@@ -21,6 +21,10 @@ class OrdemServico {
     this.combustivelEntrada = '',
     this.assinaturaCliente,
     this.lancadoFinanceiro = false,
+    this.revisadaEm,
+    this.motivoUltimaRevisao = '',
+    this.quantidadeRevisoes = 0,
+    this.assinaturaDesatualizada = false,
   });
 
   final int? id;
@@ -44,6 +48,10 @@ class OrdemServico {
   final String combustivelEntrada;
   final String? assinaturaCliente;
   final bool lancadoFinanceiro;
+  final String? revisadaEm;
+  final String motivoUltimaRevisao;
+  final int quantidadeRevisoes;
+  final bool assinaturaDesatualizada;
 
   double get valorFinal {
     final resultado = valorTotal - desconto;
@@ -90,6 +98,10 @@ class OrdemServico {
       'combustivel_entrada': combustivelEntrada,
       'assinatura_cliente': assinaturaCliente,
       'lancado_financeiro': lancadoFinanceiro ? 1 : 0,
+      'revisada_em': revisadaEm,
+      'motivo_ultima_revisao': motivoUltimaRevisao,
+      'quantidade_revisoes': quantidadeRevisoes,
+      'assinatura_desatualizada': assinaturaDesatualizada ? 1 : 0,
     };
   }
 
@@ -116,6 +128,10 @@ class OrdemServico {
       combustivelEntrada: _converterTexto(map['combustivel_entrada']),
       assinaturaCliente: _converterTextoNulo(map['assinatura_cliente']),
       lancadoFinanceiro: _converterBool(map['lancado_financeiro']),
+      revisadaEm: _converterTextoNulo(map['revisada_em']),
+      motivoUltimaRevisao: _converterTexto(map['motivo_ultima_revisao']),
+      quantidadeRevisoes: _converterInt(map['quantidade_revisoes']) ?? 0,
+      assinaturaDesatualizada: _converterBool(map['assinatura_desatualizada']),
     );
   }
 
@@ -150,6 +166,11 @@ class OrdemServico {
     String? assinaturaCliente,
     bool removerAssinaturaCliente = false,
     bool? lancadoFinanceiro,
+    String? revisadaEm,
+    bool removerRevisadaEm = false,
+    String? motivoUltimaRevisao,
+    int? quantidadeRevisoes,
+    bool? assinaturaDesatualizada,
   }) {
     return OrdemServico(
       id: id ?? this.id,
@@ -182,6 +203,11 @@ class OrdemServico {
           ? null
           : assinaturaCliente ?? this.assinaturaCliente,
       lancadoFinanceiro: lancadoFinanceiro ?? this.lancadoFinanceiro,
+      revisadaEm: removerRevisadaEm ? null : revisadaEm ?? this.revisadaEm,
+      motivoUltimaRevisao: motivoUltimaRevisao ?? this.motivoUltimaRevisao,
+      quantidadeRevisoes: quantidadeRevisoes ?? this.quantidadeRevisoes,
+      assinaturaDesatualizada:
+          assinaturaDesatualizada ?? this.assinaturaDesatualizada,
     );
   }
 

@@ -935,6 +935,154 @@ class OrdemServicoRepository {
     });
   }
 
+  Future<int> corrigirOrdemFinalizada({
+    required int ordemServicoId,
+    required String motivo,
+    required String funcionarioResponsavel,
+    required String observacoes,
+    required String quilometragemEntrada,
+    required String combustivelEntrada,
+    String? horaEntrada,
+    String? horaSaida,
+  }) async {
+    final motivoLimpo = motivo.trim();
+
+    if (motivoLimpo.length < 5) {
+      throw ArgumentError(
+        'Informe um motivo de correção com pelo menos 5 caracteres.',
+      );
+    }
+
+    final database = await _appDatabase.database;
+    final agora = DateTime.now();
+
+    return database.transaction((transaction) async {
+      final resultado = await transaction.query(
+        'ordens_servico',
+        columns: [
+          'id',
+          'status',
+          'funcionario_responsavel',
+          'observacoes',
+          'quilometragem_entrada',
+          'combustivel_entrada',
+          'hora_entrada',
+          'hora_saida',
+          'assinatura_cliente',
+          'quantidade_revisoes',
+          'assinatura_desatualizada',
+        ],
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+        limit: 1,
+      );
+
+      if (resultado.isEmpty) {
+        throw StateError('Ordem de Serviço não encontrada.');
+      }
+
+      final ordemAtual = resultado.first;
+      final statusAtual = (ordemAtual['status'] ?? '').toString().trim();
+
+      if (statusAtual != 'Finalizada') {
+        throw StateError(
+          'Somente Ordens de Serviço finalizadas podem ser corrigidas '
+          'por este fluxo.',
+        );
+      }
+
+      String texto(dynamic valor) {
+        return (valor ?? '').toString().trim();
+      }
+
+      String? horario(dynamic valor) {
+        final textoLimpo = texto(valor);
+        return textoLimpo.isEmpty ? null : textoLimpo;
+      }
+
+      final dadosAnteriores = <String, dynamic>{
+        'funcionario_responsavel': texto(ordemAtual['funcionario_responsavel']),
+        'observacoes': texto(ordemAtual['observacoes']),
+        'quilometragem_entrada': texto(ordemAtual['quilometragem_entrada']),
+        'combustivel_entrada': texto(ordemAtual['combustivel_entrada']),
+        'hora_entrada': horario(ordemAtual['hora_entrada']),
+        'hora_saida': horario(ordemAtual['hora_saida']),
+      };
+
+      final dadosNovos = <String, dynamic>{
+        'funcionario_responsavel': funcionarioResponsavel.trim(),
+        'observacoes': observacoes.trim(),
+        'quilometragem_entrada': quilometragemEntrada.trim(),
+        'combustivel_entrada': combustivelEntrada.trim(),
+        'hora_entrada': horario(horaEntrada),
+        'hora_saida': horario(horaSaida),
+      };
+
+      final houveAlteracao = dadosAnteriores.entries.any(
+        (entrada) => entrada.value != dadosNovos[entrada.key],
+      );
+
+      if (!houveAlteracao) {
+        throw StateError(
+          'Nenhuma alteração foi identificada na Ordem de Serviço.',
+        );
+      }
+
+      final quantidadeAtual =
+          (ordemAtual['quantidade_revisoes'] as num?)?.toInt() ?? 0;
+      final numeroRevisao = quantidadeAtual + 1;
+
+      final possuiAssinatura = texto(
+        ordemAtual['assinatura_cliente'],
+      ).isNotEmpty;
+      final assinaturaJaDesatualizada =
+          (ordemAtual['assinatura_desatualizada'] as num?)?.toInt() == 1;
+
+      final assinaturaDesatualizada =
+          possuiAssinatura || assinaturaJaDesatualizada;
+
+      await transaction.update(
+        'ordens_servico',
+        {
+          ...dadosNovos,
+          'revisada_em': agora.toIso8601String(),
+          'motivo_ultima_revisao': motivoLimpo,
+          'quantidade_revisoes': numeroRevisao,
+          'assinatura_desatualizada': assinaturaDesatualizada ? 1 : 0,
+        },
+        where: 'id = ? AND status = ?',
+        whereArgs: [ordemServicoId, 'Finalizada'],
+      );
+
+      await transaction.insert('ordem_servico_revisoes', {
+        'ordem_servico_id': ordemServicoId,
+        'numero_revisao': numeroRevisao,
+        'tipo': 'Correcao administrativa',
+        'motivo': motivoLimpo,
+        'dados_anteriores_json': jsonEncode(dadosAnteriores),
+        'dados_novos_json': jsonEncode(dadosNovos),
+        'criado_em': agora.toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.abort);
+
+      return numeroRevisao;
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> listarRevisoesOrdemServico(
+    int ordemServicoId,
+  ) async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.query(
+      'ordem_servico_revisoes',
+      where: 'ordem_servico_id = ?',
+      whereArgs: [ordemServicoId],
+      orderBy: 'numero_revisao DESC',
+    );
+
+    return resultado.map((item) => Map<String, dynamic>.from(item)).toList();
+  }
+
   Future<Map<String, dynamic>> obterResumoDoCliente(int clienteId) async {
     final database = await _appDatabase.database;
 

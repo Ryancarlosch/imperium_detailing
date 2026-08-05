@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import '../repositories/ordem_servico_repository.dart';
 
 class CorrigirOrdemServicoPage extends StatefulWidget {
-  const CorrigirOrdemServicoPage({
-    super.key,
-    required this.ordem,
-  });
+  const CorrigirOrdemServicoPage({super.key, required this.ordem});
 
   final Map<String, dynamic> ordem;
 
@@ -15,8 +12,7 @@ class CorrigirOrdemServicoPage extends StatefulWidget {
       _CorrigirOrdemServicoPageState();
 }
 
-class _CorrigirOrdemServicoPageState
-    extends State<CorrigirOrdemServicoPage> {
+class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final OrdemServicoRepository _repository = OrdemServicoRepository();
 
@@ -37,9 +33,7 @@ class _CorrigirOrdemServicoPageState
     _responsavelController = TextEditingController(
       text: _texto('funcionario_responsavel'),
     );
-    _observacoesController = TextEditingController(
-      text: _texto('observacoes'),
-    );
+    _observacoesController = TextEditingController(text: _texto('observacoes'));
     _quilometragemController = TextEditingController(
       text: _texto('quilometragem_entrada'),
     );
@@ -49,9 +43,7 @@ class _CorrigirOrdemServicoPageState
     _horaEntradaController = TextEditingController(
       text: _texto('hora_entrada'),
     );
-    _horaSaidaController = TextEditingController(
-      text: _texto('hora_saida'),
-    );
+    _horaSaidaController = TextEditingController(text: _texto('hora_saida'));
     _motivoController = TextEditingController();
   }
 
@@ -85,9 +77,7 @@ class _CorrigirOrdemServicoPageState
     return int.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
-  Future<void> _selecionarHorario(
-    TextEditingController controller,
-  ) async {
+  Future<void> _selecionarHorario(TextEditingController controller) async {
     TimeOfDay horarioInicial = TimeOfDay.now();
     final partes = controller.text.trim().split(':');
 
@@ -130,10 +120,7 @@ class _CorrigirOrdemServicoPageState
     final ordemServicoId = _ordemServicoId();
 
     if (ordemServicoId <= 0) {
-      _mostrarMensagem(
-        'Ordem de Serviço inválida.',
-        erro: true,
-      );
+      _mostrarMensagem('Ordem de Serviço inválida.', erro: true);
       return;
     }
 
@@ -227,9 +214,7 @@ class _CorrigirOrdemServicoPageState
         : _texto('numero');
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Corrigir Ordem de Serviço'),
-      ),
+      appBar: AppBar(title: const Text('Corrigir Ordem de Serviço')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -242,10 +227,7 @@ class _CorrigirOrdemServicoPageState
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Colors.amber,
-                    ),
+                    Icon(Icons.info_outline, color: Colors.amber),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -261,10 +243,7 @@ class _CorrigirOrdemServicoPageState
             const SizedBox(height: 12),
             Text(
               numero,
-              style: const TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 18),
             TextFormField(
@@ -363,9 +342,7 @@ class _CorrigirOrdemServicoPageState
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            border: Border(
-              top: BorderSide(color: Colors.grey.shade300),
-            ),
+            border: Border(top: BorderSide(color: Colors.grey.shade300)),
           ),
           child: FilledButton.icon(
             onPressed: _salvando ? null : _salvar,
@@ -376,9 +353,7 @@ class _CorrigirOrdemServicoPageState
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.save_as_outlined),
-            label: Text(
-              _salvando ? 'Salvando correção...' : 'Salvar correção',
-            ),
+            label: Text(_salvando ? 'Salvando correção...' : 'Salvar correção'),
           ),
         ),
       ),

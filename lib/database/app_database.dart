@@ -5,7 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 20;
+  static const int schemaVersion = 21;
 
   static Database? _database;
 
@@ -120,6 +120,10 @@ class AppDatabase {
         if (versaoAntiga < 20) {
           await _atualizarParaVersao20(database);
         }
+
+        if (versaoAntiga < 21) {
+          await _atualizarParaVersao21(database);
+        }
       },
     );
   }
@@ -133,6 +137,7 @@ class AppDatabase {
     await _criarTabelaOrcamentos(database);
     await _criarTabelaItensOrcamento(database);
     await _criarTabelaOrdensServico(database);
+    await _criarTabelaRevisoesOrdemServico(database);
     await _criarTabelaItensOrdemServico(database);
     await _criarTabelaChecklistOrdemServico(database);
     await _criarTabelaFotosOrdemServico(database);
@@ -423,6 +428,10 @@ class AppDatabase {
           combustivel_entrada TEXT NOT NULL DEFAULT '',
           assinatura_cliente TEXT,
           lancado_financeiro INTEGER NOT NULL DEFAULT 0,
+          revisada_em TEXT,
+          motivo_ultima_revisao TEXT NOT NULL DEFAULT '',
+          quantidade_revisoes INTEGER NOT NULL DEFAULT 0,
+          assinatura_desatualizada INTEGER NOT NULL DEFAULT 0,
           FOREIGN KEY (orcamento_id)
             REFERENCES orcamentos (id)
             ON DELETE SET NULL,
@@ -472,6 +481,37 @@ class AppDatabase {
         CREATE INDEX IF NOT EXISTS
         idx_ordens_servico_data_abertura
         ON ordens_servico (data_abertura)
+      ''');
+  }
+
+  Future<void> _criarTabelaRevisoesOrdemServico(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS ordem_servico_revisoes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ordem_servico_id INTEGER NOT NULL,
+          numero_revisao INTEGER NOT NULL,
+          tipo TEXT NOT NULL DEFAULT 'Correcao administrativa',
+          motivo TEXT NOT NULL,
+          dados_anteriores_json TEXT NOT NULL,
+          dados_novos_json TEXT NOT NULL,
+          criado_em TEXT NOT NULL,
+          FOREIGN KEY (ordem_servico_id)
+            REFERENCES ordens_servico (id)
+            ON DELETE CASCADE,
+          UNIQUE (ordem_servico_id, numero_revisao)
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_os_revisoes_ordem_servico_id
+        ON ordem_servico_revisoes (ordem_servico_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_os_revisoes_criado_em
+        ON ordem_servico_revisoes (criado_em)
       ''');
   }
 
@@ -1474,6 +1514,49 @@ class AppDatabase {
         UPDATE clientes
         SET ativo = 1
         WHERE ativo IS NULL
+      ''');
+  }
+
+  Future<void> _atualizarParaVersao21(Database database) async {
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'revisada_em',
+      definicao: 'TEXT',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'motivo_ultima_revisao',
+      definicao: "TEXT NOT NULL DEFAULT ''",
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'quantidade_revisoes',
+      definicao: 'INTEGER NOT NULL DEFAULT 0',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'assinatura_desatualizada',
+      definicao: 'INTEGER NOT NULL DEFAULT 0',
+    );
+
+    await _criarTabelaRevisoesOrdemServico(database);
+
+    await database.execute('''
+        UPDATE ordens_servico
+        SET
+          motivo_ultima_revisao =
+            COALESCE(motivo_ultima_revisao, ''),
+          quantidade_revisoes =
+            COALESCE(quantidade_revisoes, 0),
+          assinatura_desatualizada =
+            COALESCE(assinatura_desatualizada, 0)
       ''');
   }
 

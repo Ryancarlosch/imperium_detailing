@@ -17,11 +17,45 @@ class ClienteRepository {
   }
 
   Future<List<Cliente>> listarClientes() async {
+    return listarClientesAtivos();
+  }
+
+  Future<List<Cliente>> listarClientesAtivos() async {
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
       'clientes',
-      orderBy: 'nome ASC',
+      where: 'COALESCE(ativo, 1) = ?',
+      whereArgs: [1],
+      orderBy: 'nome COLLATE NOCASE ASC',
+    );
+
+    return resultado
+        .map((mapa) => Cliente.fromMap(mapa))
+        .toList();
+  }
+
+  Future<List<Cliente>> listarClientesArquivados() async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.query(
+      'clientes',
+      where: 'COALESCE(ativo, 1) = ?',
+      whereArgs: [0],
+      orderBy: 'nome COLLATE NOCASE ASC',
+    );
+
+    return resultado
+        .map((mapa) => Cliente.fromMap(mapa))
+        .toList();
+  }
+
+  Future<List<Cliente>> listarTodosClientes() async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.query(
+      'clientes',
+      orderBy: 'ativo DESC, nome COLLATE NOCASE ASC',
     );
 
     return resultado
@@ -49,8 +83,8 @@ class ClienteRepository {
   }
 
   Future<int> contarVeiculosDoCliente(
-    int clienteId,
-  ) async {
+      int clienteId,
+      ) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -73,8 +107,8 @@ class ClienteRepository {
     }
 
     return int.tryParse(
-          valor?.toString() ?? '',
-        ) ??
+      valor?.toString() ?? '',
+    ) ??
         0;
   }
 
@@ -98,13 +132,35 @@ class ClienteRepository {
     );
   }
 
-  Future<int> excluirCliente(int id) async {
+  Future<int> arquivarCliente(int id) async {
     final database = await _appDatabase.database;
 
-    return database.delete(
+    return database.update(
       'clientes',
-      where: 'id = ?',
-      whereArgs: [id],
+      {
+        'ativo': 0,
+        'arquivado_em': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ? AND COALESCE(ativo, 1) = ?',
+      whereArgs: [id, 1],
     );
+  }
+
+  Future<int> reativarCliente(int id) async {
+    final database = await _appDatabase.database;
+
+    return database.update(
+      'clientes',
+      {
+        'ativo': 1,
+        'arquivado_em': null,
+      },
+      where: 'id = ? AND COALESCE(ativo, 1) = ?',
+      whereArgs: [id, 0],
+    );
+  }
+
+  Future<int> excluirCliente(int id) async {
+    return arquivarCliente(id);
   }
 }
