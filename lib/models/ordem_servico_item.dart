@@ -36,34 +36,16 @@ class OrdemServicoItem {
     };
   }
 
-  factory OrdemServicoItem.fromMap(
-      Map<String, dynamic> map,
-      ) {
+  factory OrdemServicoItem.fromMap(Map<String, dynamic> map) {
     return OrdemServicoItem(
       id: _converterInt(map['id']),
-      ordemServicoId:
-      _converterInt(map['ordem_servico_id']) ?? 0,
-      servico: _converterTexto(
-        map['servico'],
-        padrao: 'Serviço',
-      ),
-      descricao: _converterTexto(
-        map['descricao'],
-      ),
-      quantidade: _converterDouble(
-        map['quantidade'],
-        padrao: 1,
-      ),
-      valorUnitario: _converterDouble(
-        map['valor_unitario'],
-      ),
-      ordem: _converterInt(
-        map['ordem'],
-      ) ??
-          0,
-      concluido: _converterBool(
-        map['concluido'],
-      ),
+      ordemServicoId: _converterInt(map['ordem_servico_id']) ?? 0,
+      servico: _converterTexto(map['servico'], padrao: 'Serviço'),
+      descricao: _converterTexto(map['descricao']),
+      quantidade: _converterDouble(map['quantidade'], padrao: 1),
+      valorUnitario: _converterDouble(map['valor_unitario']),
+      ordem: _converterInt(map['ordem']) ?? 0,
+      concluido: _converterBool(map['concluido']),
     );
   }
 
@@ -79,13 +61,11 @@ class OrdemServicoItem {
   }) {
     return OrdemServicoItem(
       id: id ?? this.id,
-      ordemServicoId:
-      ordemServicoId ?? this.ordemServicoId,
+      ordemServicoId: ordemServicoId ?? this.ordemServicoId,
       servico: servico ?? this.servico,
       descricao: descricao ?? this.descricao,
       quantidade: quantidade ?? this.quantidade,
-      valorUnitario:
-      valorUnitario ?? this.valorUnitario,
+      valorUnitario: valorUnitario ?? this.valorUnitario,
       ordem: ordem ?? this.ordem,
       concluido: concluido ?? this.concluido,
     );
@@ -104,15 +84,10 @@ class OrdemServicoItem {
       return valor.toInt();
     }
 
-    return int.tryParse(
-      valor.toString().trim(),
-    );
+    return int.tryParse(valor.toString().trim());
   }
 
-  static double _converterDouble(
-      dynamic valor, {
-        double padrao = 0,
-      }) {
+  static double _converterDouble(dynamic valor, {double padrao = 0}) {
     if (valor == null) {
       return padrao;
     }
@@ -132,21 +107,14 @@ class OrdemServicoItem {
     }
 
     if (texto.contains(',')) {
-      return double.tryParse(
-        texto
-            .replaceAll('.', '')
-            .replaceAll(',', '.'),
-      ) ??
+      return double.tryParse(texto.replaceAll('.', '').replaceAll(',', '.')) ??
           padrao;
     }
 
     return double.tryParse(texto) ?? padrao;
   }
 
-  static String _converterTexto(
-      dynamic valor, {
-        String padrao = '',
-      }) {
+  static String _converterTexto(dynamic valor, {String padrao = ''}) {
     final texto = valor?.toString().trim() ?? '';
 
     if (texto.isEmpty) {
@@ -165,13 +133,8 @@ class OrdemServicoItem {
       return valor != 0;
     }
 
-    final texto = valor
-        ?.toString()
-        .trim()
-        .toLowerCase();
+    final texto = valor?.toString().trim().toLowerCase();
 
-    return texto == '1' ||
-        texto == 'true' ||
-        texto == 'sim';
+    return texto == '1' || texto == 'true' || texto == 'sim';
   }
 }

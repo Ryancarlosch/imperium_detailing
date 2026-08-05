@@ -341,7 +341,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
                   color: const Color(0xFF151515),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 14,
                       offset: const Offset(0, -4),
                     ),
@@ -396,7 +396,9 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: (entrada ? Colors.green : Colors.red).withOpacity(0.18),
+            color: (entrada ? Colors.green : Colors.red).withValues(
+              alpha: 0.18,
+            ),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -408,7 +410,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
@@ -538,7 +540,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
-              value: _formaPagamento,
+              initialValue: _formaPagamento,
               decoration: const InputDecoration(
                 filled: true,
                 fillColor: Color(0xFF1A1A1A),
@@ -628,7 +630,7 @@ class _NovoMovimentoPageState extends State<NovoMovimentoPage> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<int?>(
-              value: _clienteIdSelecionado,
+              initialValue: _clienteIdSelecionado,
               isExpanded: true,
               decoration: const InputDecoration(
                 filled: true,

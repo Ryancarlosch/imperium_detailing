@@ -18,82 +18,50 @@ class DadosEmpresaPdf {
   }) {
     final dados = empresa ?? const <dynamic, dynamic>{};
 
-    final nomeEmpresa = _primeiroTexto(
-      dados,
-      [
-        'nome_empresa',
-        'empresa_nome',
-        'nome_fantasia',
-        'razao_social',
-      ],
-      padrao: contexto.nomeEmpresa,
-    );
+    final nomeEmpresa = _primeiroTexto(dados, [
+      'nome_empresa',
+      'empresa_nome',
+      'nome_fantasia',
+      'razao_social',
+    ], padrao: contexto.nomeEmpresa);
 
-    final razaoSocial = _primeiroTexto(
-      dados,
-      [
-        'razao_social',
-        'empresa_razao_social',
-      ],
-    );
+    final razaoSocial = _primeiroTexto(dados, [
+      'razao_social',
+      'empresa_razao_social',
+    ]);
 
-    final cnpj = _primeiroTexto(
-      dados,
-      [
-        'cnpj',
-        'empresa_cnpj',
-        'cpf_cnpj',
-        'documento',
-      ],
-    );
+    final cnpj = _primeiroTexto(dados, [
+      'cnpj',
+      'empresa_cnpj',
+      'cpf_cnpj',
+      'documento',
+    ]);
 
-    final responsavel = _primeiroTexto(
-      dados,
-      [
-        'responsavel',
-        'nome_responsavel',
-        'proprietario',
-        'nome_proprietario',
-        'empresa_responsavel',
-      ],
-    );
+    final responsavel = _primeiroTexto(dados, [
+      'responsavel',
+      'nome_responsavel',
+      'proprietario',
+      'nome_proprietario',
+      'empresa_responsavel',
+    ]);
 
-    final telefone = _primeiroTexto(
-      dados,
-      [
-        'telefone',
-        'celular',
-        'whatsapp',
-        'empresa_telefone',
-        'empresa_whatsapp',
-      ],
-    );
+    final telefone = _primeiroTexto(dados, [
+      'telefone',
+      'celular',
+      'whatsapp',
+      'empresa_telefone',
+      'empresa_whatsapp',
+    ]);
 
-    final email = _primeiroTexto(
-      dados,
-      [
-        'email',
-        'empresa_email',
-      ],
-    );
+    final email = _primeiroTexto(dados, ['email', 'empresa_email']);
 
-    final site = _primeiroTexto(
-      dados,
-      [
-        'site',
-        'website',
-        'empresa_site',
-      ],
-    );
+    final site = _primeiroTexto(dados, ['site', 'website', 'empresa_site']);
 
-    final instagram = _primeiroTexto(
-      dados,
-      [
-        'instagram',
-        'empresa_instagram',
-        'rede_social',
-      ],
-    );
+    final instagram = _primeiroTexto(dados, [
+      'instagram',
+      'empresa_instagram',
+      'rede_social',
+    ]);
 
     final endereco = _montarEndereco(dados);
 
@@ -110,14 +78,8 @@ class DadosEmpresaPdf {
     }
 
     if (razaoSocial.isNotEmpty &&
-        razaoSocial.toLowerCase() !=
-            nomeEmpresa.toLowerCase()) {
-      campos.add(
-        _CampoEmpresaPdf(
-          rotulo: 'Razão social',
-          valor: razaoSocial,
-        ),
-      );
+        razaoSocial.toLowerCase() != nomeEmpresa.toLowerCase()) {
+      campos.add(_CampoEmpresaPdf(rotulo: 'Razão social', valor: razaoSocial));
     }
 
     if (mostrarDocumento && cnpj.isNotEmpty) {
@@ -129,41 +91,22 @@ class DadosEmpresaPdf {
       );
     }
 
-    if (mostrarResponsavel &&
-        responsavel.isNotEmpty) {
-      campos.add(
-        _CampoEmpresaPdf(
-          rotulo: 'Responsável',
-          valor: responsavel,
-        ),
-      );
+    if (mostrarResponsavel && responsavel.isNotEmpty) {
+      campos.add(_CampoEmpresaPdf(rotulo: 'Responsável', valor: responsavel));
     }
 
     if (mostrarContato && telefone.isNotEmpty) {
       campos.add(
-        _CampoEmpresaPdf(
-          rotulo: 'Telefone / WhatsApp',
-          valor: telefone,
-        ),
+        _CampoEmpresaPdf(rotulo: 'Telefone / WhatsApp', valor: telefone),
       );
     }
 
     if (mostrarContato && email.isNotEmpty) {
-      campos.add(
-        _CampoEmpresaPdf(
-          rotulo: 'E-mail',
-          valor: email,
-        ),
-      );
+      campos.add(_CampoEmpresaPdf(rotulo: 'E-mail', valor: email));
     }
 
     if (mostrarContato && site.isNotEmpty) {
-      campos.add(
-        _CampoEmpresaPdf(
-          rotulo: 'Site',
-          valor: site,
-        ),
-      );
+      campos.add(_CampoEmpresaPdf(rotulo: 'Site', valor: site));
     }
 
     if (mostrarContato && instagram.isNotEmpty) {
@@ -177,11 +120,7 @@ class DadosEmpresaPdf {
 
     if (mostrarEndereco && endereco.isNotEmpty) {
       campos.add(
-        _CampoEmpresaPdf(
-          rotulo: 'Endereço',
-          valor: endereco,
-          maximoLinhas: 3,
-        ),
+        _CampoEmpresaPdf(rotulo: 'Endereço', valor: endereco, maximoLinhas: 3),
       );
     }
 
@@ -190,25 +129,15 @@ class DadosEmpresaPdf {
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(
-          color: PdfColors.grey300,
-          width: 0.8,
-        ),
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
       ),
       child: pw.Column(
-        crossAxisAlignment:
-        pw.CrossAxisAlignment.start,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          if (mostrarTitulo)
-            _criarTitulo(
-              contexto: contexto,
-              titulo: titulo,
-            ),
+          if (mostrarTitulo) _criarTitulo(contexto: contexto, titulo: titulo),
           pw.Padding(
             padding: const pw.EdgeInsets.all(14),
-            child: campos.isEmpty
-                ? _criarMensagemVazia()
-                : _criarGrade(campos),
+            child: campos.isEmpty ? _criarMensagemVazia() : _criarGrade(campos),
           ),
         ],
       ),
@@ -221,35 +150,22 @@ class DadosEmpresaPdf {
   }) {
     final dados = empresa ?? const <dynamic, dynamic>{};
 
-    final nomeEmpresa = _primeiroTexto(
-      dados,
-      [
-        'nome_empresa',
-        'empresa_nome',
-        'nome_fantasia',
-        'razao_social',
-      ],
-      padrao: contexto.nomeEmpresa,
-    );
+    final nomeEmpresa = _primeiroTexto(dados, [
+      'nome_empresa',
+      'empresa_nome',
+      'nome_fantasia',
+      'razao_social',
+    ], padrao: contexto.nomeEmpresa);
 
-    final telefone = _primeiroTexto(
-      dados,
-      [
-        'telefone',
-        'celular',
-        'whatsapp',
-        'empresa_telefone',
-        'empresa_whatsapp',
-      ],
-    );
+    final telefone = _primeiroTexto(dados, [
+      'telefone',
+      'celular',
+      'whatsapp',
+      'empresa_telefone',
+      'empresa_whatsapp',
+    ]);
 
-    final email = _primeiroTexto(
-      dados,
-      [
-        'email',
-        'empresa_email',
-      ],
-    );
+    final email = _primeiroTexto(dados, ['email', 'empresa_email']);
 
     final endereco = _montarEndereco(dados);
 
@@ -259,19 +175,13 @@ class DadosEmpresaPdf {
       decoration: pw.BoxDecoration(
         color: contexto.corSecundaria,
         borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(
-          color: contexto.corPrincipal,
-          width: 0.8,
-        ),
+        border: pw.Border.all(color: contexto.corPrincipal, width: 0.8),
       ),
       child: pw.Column(
-        crossAxisAlignment:
-        pw.CrossAxisAlignment.start,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            nomeEmpresa.isEmpty
-                ? 'EMPRESA'
-                : nomeEmpresa.toUpperCase(),
+            nomeEmpresa.isEmpty ? 'EMPRESA' : nomeEmpresa.toUpperCase(),
             style: pw.TextStyle(
               fontSize: 9,
               fontWeight: pw.FontWeight.bold,
@@ -281,24 +191,15 @@ class DadosEmpresaPdf {
           ),
           if (telefone.isNotEmpty) ...[
             pw.SizedBox(height: 5),
-            _criarLinhaCompacta(
-              rotulo: 'Telefone',
-              valor: telefone,
-            ),
+            _criarLinhaCompacta(rotulo: 'Telefone', valor: telefone),
           ],
           if (email.isNotEmpty) ...[
             pw.SizedBox(height: 3),
-            _criarLinhaCompacta(
-              rotulo: 'E-mail',
-              valor: email,
-            ),
+            _criarLinhaCompacta(rotulo: 'E-mail', valor: email),
           ],
           if (endereco.isNotEmpty) ...[
             pw.SizedBox(height: 3),
-            _criarLinhaCompacta(
-              rotulo: 'Endereço',
-              valor: endereco,
-            ),
+            _criarLinhaCompacta(rotulo: 'Endereço', valor: endereco),
           ],
         ],
       ),
@@ -311,10 +212,7 @@ class DadosEmpresaPdf {
   }) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 9,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: pw.BoxDecoration(
         color: contexto.corPrincipal,
         borderRadius: const pw.BorderRadius.only(
@@ -334,38 +232,24 @@ class DadosEmpresaPdf {
     );
   }
 
-  static pw.Widget _criarGrade(
-      List<_CampoEmpresaPdf> campos,
-      ) {
+  static pw.Widget _criarGrade(List<_CampoEmpresaPdf> campos) {
     final linhas = <pw.Widget>[];
 
-    for (var indice = 0;
-    indice < campos.length;
-    indice += 2) {
+    for (var indice = 0; indice < campos.length; indice += 2) {
       final primeiro = campos[indice];
 
-      final segundo =
-      indice + 1 < campos.length
-          ? campos[indice + 1]
-          : null;
+      final segundo = indice + 1 < campos.length ? campos[indice + 1] : null;
 
       linhas.add(
         pw.Padding(
-          padding: const pw.EdgeInsets.only(
-            bottom: 10,
-          ),
+          padding: const pw.EdgeInsets.only(bottom: 10),
           child: pw.Row(
-            crossAxisAlignment:
-            pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Expanded(
-                child: _criarCampo(primeiro),
-              ),
+              pw.Expanded(child: _criarCampo(primeiro)),
               pw.SizedBox(width: 16),
               pw.Expanded(
-                child: segundo == null
-                    ? pw.SizedBox()
-                    : _criarCampo(segundo),
+                child: segundo == null ? pw.SizedBox() : _criarCampo(segundo),
               ),
             ],
           ),
@@ -374,18 +258,14 @@ class DadosEmpresaPdf {
     }
 
     return pw.Column(
-      crossAxisAlignment:
-      pw.CrossAxisAlignment.start,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: linhas,
     );
   }
 
-  static pw.Widget _criarCampo(
-      _CampoEmpresaPdf campo,
-      ) {
+  static pw.Widget _criarCampo(_CampoEmpresaPdf campo) {
     return pw.Column(
-      crossAxisAlignment:
-      pw.CrossAxisAlignment.start,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       mainAxisSize: pw.MainAxisSize.min,
       children: [
         pw.Text(
@@ -431,10 +311,7 @@ class DadosEmpresaPdf {
           ),
           pw.TextSpan(
             text: valor,
-            style: const pw.TextStyle(
-              fontSize: 7,
-              color: PdfColors.white,
-            ),
+            style: const pw.TextStyle(fontSize: 7, color: PdfColors.white),
           ),
         ],
       ),
@@ -444,31 +321,24 @@ class DadosEmpresaPdf {
   static pw.Widget _criarMensagemVazia() {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(
-        vertical: 8,
-      ),
+      padding: const pw.EdgeInsets.symmetric(vertical: 8),
       child: pw.Text(
         'Dados da empresa não informados.',
         textAlign: pw.TextAlign.center,
-        style: const pw.TextStyle(
-          fontSize: 8,
-          color: PdfColors.grey600,
-        ),
+        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
       ),
     );
   }
 
   static String _primeiroTexto(
-      Map<dynamic, dynamic> mapa,
-      List<String> chaves, {
-        String padrao = '',
-      }) {
+    Map<dynamic, dynamic> mapa,
+    List<String> chaves, {
+    String padrao = '',
+  }) {
     for (final chave in chaves) {
-      final valor =
-      (mapa[chave] ?? '').toString().trim();
+      final valor = (mapa[chave] ?? '').toString().trim();
 
-      if (valor.isNotEmpty &&
-          valor.toLowerCase() != 'null') {
+      if (valor.isNotEmpty && valor.toLowerCase() != 'null') {
         return valor;
       }
     }
@@ -476,79 +346,37 @@ class DadosEmpresaPdf {
     return padrao.trim();
   }
 
-  static String _montarEndereco(
-      Map<dynamic, dynamic> mapa,
-      ) {
-    final enderecoCompleto = _primeiroTexto(
-      mapa,
-      [
-        'endereco_completo',
-        'empresa_endereco_completo',
-      ],
-    );
+  static String _montarEndereco(Map<dynamic, dynamic> mapa) {
+    final enderecoCompleto = _primeiroTexto(mapa, [
+      'endereco_completo',
+      'empresa_endereco_completo',
+    ]);
 
     if (enderecoCompleto.isNotEmpty) {
       return enderecoCompleto;
     }
 
-    final rua = _primeiroTexto(
-      mapa,
-      [
-        'endereco',
-        'logradouro',
-        'rua',
-        'empresa_endereco',
-      ],
-    );
+    final rua = _primeiroTexto(mapa, [
+      'endereco',
+      'logradouro',
+      'rua',
+      'empresa_endereco',
+    ]);
 
-    final numero = _primeiroTexto(
-      mapa,
-      [
-        'numero',
-        'endereco_numero',
-      ],
-    );
+    final numero = _primeiroTexto(mapa, ['numero', 'endereco_numero']);
 
-    final complemento = _primeiroTexto(
-      mapa,
-      [
-        'complemento',
-        'endereco_complemento',
-      ],
-    );
+    final complemento = _primeiroTexto(mapa, [
+      'complemento',
+      'endereco_complemento',
+    ]);
 
-    final bairro = _primeiroTexto(
-      mapa,
-      [
-        'bairro',
-        'endereco_bairro',
-      ],
-    );
+    final bairro = _primeiroTexto(mapa, ['bairro', 'endereco_bairro']);
 
-    final cidade = _primeiroTexto(
-      mapa,
-      [
-        'cidade',
-        'endereco_cidade',
-      ],
-    );
+    final cidade = _primeiroTexto(mapa, ['cidade', 'endereco_cidade']);
 
-    final estado = _primeiroTexto(
-      mapa,
-      [
-        'estado',
-        'uf',
-        'endereco_estado',
-      ],
-    );
+    final estado = _primeiroTexto(mapa, ['estado', 'uf', 'endereco_estado']);
 
-    final cep = _primeiroTexto(
-      mapa,
-      [
-        'cep',
-        'endereco_cep',
-      ],
-    );
+    final cep = _primeiroTexto(mapa, ['cep', 'endereco_cep']);
 
     final primeiraLinha = <String>[];
 
@@ -581,9 +409,7 @@ class DadosEmpresaPdf {
     }
 
     if (cidadeEstado.isNotEmpty) {
-      segundaLinha.add(
-        cidadeEstado.join(' - '),
-      );
+      segundaLinha.add(cidadeEstado.join(' - '));
     }
 
     if (cep.isNotEmpty) {
@@ -603,13 +429,8 @@ class DadosEmpresaPdf {
     return linhas.join('\n');
   }
 
-  static String _rotuloDocumento(
-      String documento,
-      ) {
-    final numeros = documento.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
+  static String _rotuloDocumento(String documento) {
+    final numeros = documento.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (numeros.length == 11) {
       return 'CPF';
@@ -622,15 +443,10 @@ class DadosEmpresaPdf {
     return 'CPF / CNPJ';
   }
 
-  static String _formatarDocumento(
-      String documento,
-      ) {
+  static String _formatarDocumento(String documento) {
     final texto = documento.trim();
 
-    final numeros = texto.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
+    final numeros = texto.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (numeros.length == 11) {
       return '${numeros.substring(0, 3)}.'
@@ -650,9 +466,7 @@ class DadosEmpresaPdf {
     return texto;
   }
 
-  static String _formatarInstagram(
-      String valor,
-      ) {
+  static String _formatarInstagram(String valor) {
     final texto = valor.trim();
 
     if (texto.isEmpty) {

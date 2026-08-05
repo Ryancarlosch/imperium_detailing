@@ -27,13 +27,8 @@ class AssinaturaPdf {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        if (mostrarDataLocal)
-          _criarDataLocal(
-            local: local,
-            data: data,
-          ),
-        if (mostrarDataLocal)
-          pw.SizedBox(height: 34),
+        if (mostrarDataLocal) _criarDataLocal(local: local, data: data),
+        if (mostrarDataLocal) pw.SizedBox(height: 34),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
@@ -46,8 +41,7 @@ class AssinaturaPdf {
                   documento: documentoCliente,
                 ),
               ),
-            if (mostrarCliente && mostrarResponsavel)
-              pw.SizedBox(width: 34),
+            if (mostrarCliente && mostrarResponsavel) pw.SizedBox(width: 34),
             if (mostrarResponsavel)
               pw.Expanded(
                 child: _criarAssinatura(
@@ -117,48 +111,35 @@ class AssinaturaPdf {
     bool mostrarResponsavel = true,
     bool mostrarDataLocal = true,
   }) {
-    final nomeCliente = _primeiroTexto(
-      cliente,
-      [
-        'nome',
-        'cliente_nome',
-        'nome_cliente',
-        'razao_social',
-      ],
-    );
+    final nomeCliente = _primeiroTexto(cliente, [
+      'nome',
+      'cliente_nome',
+      'nome_cliente',
+      'razao_social',
+    ]);
 
-    final documentoCliente = _primeiroTexto(
-      cliente,
-      [
-        'cpf_cnpj',
-        'cpf',
-        'cnpj',
-        'documento',
-        'cliente_cpf_cnpj',
-      ],
-    );
+    final documentoCliente = _primeiroTexto(cliente, [
+      'cpf_cnpj',
+      'cpf',
+      'cnpj',
+      'documento',
+      'cliente_cpf_cnpj',
+    ]);
 
-    final nomeResponsavel = _primeiroTexto(
-      empresa ?? const {},
-      [
-        'responsavel',
-        'nome_responsavel',
-        'proprietario',
-        'nome_proprietario',
-        'empresa_responsavel',
-      ],
-      padrao: contexto.nomeEmpresa,
-    );
+    final nomeResponsavel = _primeiroTexto(empresa ?? const {}, [
+      'responsavel',
+      'nome_responsavel',
+      'proprietario',
+      'nome_proprietario',
+      'empresa_responsavel',
+    ], padrao: contexto.nomeEmpresa);
 
-    final documentoResponsavel = _primeiroTexto(
-      empresa ?? const {},
-      [
-        'cpf_responsavel',
-        'documento_responsavel',
-        'cnpj',
-        'empresa_cnpj',
-      ],
-    );
+    final documentoResponsavel = _primeiroTexto(empresa ?? const {}, [
+      'cpf_responsavel',
+      'documento_responsavel',
+      'cnpj',
+      'empresa_cnpj',
+    ]);
 
     return criar(
       contexto: contexto,
@@ -199,10 +180,7 @@ class AssinaturaPdf {
       alignment: pw.Alignment.centerRight,
       child: pw.Text(
         partes.join(', '),
-        style: const pw.TextStyle(
-          fontSize: 8,
-          color: PdfColors.grey700,
-        ),
+        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
       ),
     );
   }
@@ -241,10 +219,7 @@ class AssinaturaPdf {
           pw.Text(
             nome.trim(),
             textAlign: pw.TextAlign.center,
-            style: const pw.TextStyle(
-              fontSize: 8,
-              color: PdfColors.grey900,
-            ),
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey900),
           ),
         ],
         if (documento.trim().isNotEmpty) ...[
@@ -252,10 +227,7 @@ class AssinaturaPdf {
           pw.Text(
             _formatarDocumento(documento),
             textAlign: pw.TextAlign.center,
-            style: const pw.TextStyle(
-              fontSize: 7,
-              color: PdfColors.grey600,
-            ),
+            style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600),
           ),
         ],
       ],
@@ -263,16 +235,14 @@ class AssinaturaPdf {
   }
 
   static String _primeiroTexto(
-      Map<dynamic, dynamic> mapa,
-      List<String> chaves, {
-        String padrao = '',
-      }) {
+    Map<dynamic, dynamic> mapa,
+    List<String> chaves, {
+    String padrao = '',
+  }) {
     for (final chave in chaves) {
-      final valor =
-      (mapa[chave] ?? '').toString().trim();
+      final valor = (mapa[chave] ?? '').toString().trim();
 
-      if (valor.isNotEmpty &&
-          valor.toLowerCase() != 'null') {
+      if (valor.isNotEmpty && valor.toLowerCase() != 'null') {
         return valor;
       }
     }
@@ -280,19 +250,14 @@ class AssinaturaPdf {
     return padrao.trim();
   }
 
-  static String _formatarDocumento(
-      String documento,
-      ) {
+  static String _formatarDocumento(String documento) {
     final texto = documento.trim();
 
     if (texto.isEmpty) {
       return '';
     }
 
-    final numeros = texto.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
+    final numeros = texto.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (numeros.length == 11) {
       return 'CPF: ${numeros.substring(0, 3)}.'

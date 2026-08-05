@@ -10,10 +10,7 @@ class ClienteRepository {
     final dados = cliente.toMap();
     dados.remove('id');
 
-    return database.insert(
-      'clientes',
-      dados,
-    );
+    return database.insert('clientes', dados);
   }
 
   Future<List<Cliente>> listarClientes() async {
@@ -30,9 +27,7 @@ class ClienteRepository {
       orderBy: 'nome COLLATE NOCASE ASC',
     );
 
-    return resultado
-        .map((mapa) => Cliente.fromMap(mapa))
-        .toList();
+    return resultado.map((mapa) => Cliente.fromMap(mapa)).toList();
   }
 
   Future<List<Cliente>> listarClientesArquivados() async {
@@ -45,9 +40,7 @@ class ClienteRepository {
       orderBy: 'nome COLLATE NOCASE ASC',
     );
 
-    return resultado
-        .map((mapa) => Cliente.fromMap(mapa))
-        .toList();
+    return resultado.map((mapa) => Cliente.fromMap(mapa)).toList();
   }
 
   Future<List<Cliente>> listarTodosClientes() async {
@@ -58,9 +51,7 @@ class ClienteRepository {
       orderBy: 'ativo DESC, nome COLLATE NOCASE ASC',
     );
 
-    return resultado
-        .map((mapa) => Cliente.fromMap(mapa))
-        .toList();
+    return resultado.map((mapa) => Cliente.fromMap(mapa)).toList();
   }
 
   Future<Cliente?> buscarClientePorId(int id) async {
@@ -77,14 +68,10 @@ class ClienteRepository {
       return null;
     }
 
-    return Cliente.fromMap(
-      Map<String, dynamic>.from(resultado.first),
-    );
+    return Cliente.fromMap(Map<String, dynamic>.from(resultado.first));
   }
 
-  Future<int> contarVeiculosDoCliente(
-      int clienteId,
-      ) async {
+  Future<int> contarVeiculosDoCliente(int clienteId) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -106,17 +93,12 @@ class ClienteRepository {
       return valor.toInt();
     }
 
-    return int.tryParse(
-      valor?.toString() ?? '',
-    ) ??
-        0;
+    return int.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
   Future<int> atualizarCliente(Cliente cliente) async {
     if (cliente.id == null) {
-      throw ArgumentError(
-        'Não é possível atualizar um cliente sem ID.',
-      );
+      throw ArgumentError('Não é possível atualizar um cliente sem ID.');
     }
 
     final database = await _appDatabase.database;
@@ -137,10 +119,7 @@ class ClienteRepository {
 
     return database.update(
       'clientes',
-      {
-        'ativo': 0,
-        'arquivado_em': DateTime.now().toIso8601String(),
-      },
+      {'ativo': 0, 'arquivado_em': DateTime.now().toIso8601String()},
       where: 'id = ? AND COALESCE(ativo, 1) = ?',
       whereArgs: [id, 1],
     );
@@ -151,10 +130,7 @@ class ClienteRepository {
 
     return database.update(
       'clientes',
-      {
-        'ativo': 1,
-        'arquivado_em': null,
-      },
+      {'ativo': 1, 'arquivado_em': null},
       where: 'id = ? AND COALESCE(ativo, 1) = ?',
       whereArgs: [id, 0],
     );

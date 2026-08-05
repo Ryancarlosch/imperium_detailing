@@ -426,7 +426,7 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                       sliver: SliverList.separated(
                         itemCount: movimentosFiltrados.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final movimento = movimentosFiltrados[index];
 
@@ -491,7 +491,7 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _filtroTipo,
+                    initialValue: _filtroTipo,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFF1A1A1A),
@@ -606,7 +606,7 @@ class _ResumoFinanceiro extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.12),
+                color: Colors.black.withValues(alpha: 0.12),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
@@ -692,7 +692,7 @@ class _CardResumoMenor extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: cor.withOpacity(0.12),
+                color: cor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icone, color: cor),
@@ -768,8 +768,8 @@ class _CardMovimento extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: (entrada ? Colors.green : Colors.red).withOpacity(
-                    0.12,
+                  color: (entrada ? Colors.green : Colors.red).withValues(
+                    alpha: 0.12,
                   ),
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -1295,7 +1295,7 @@ class _FormularioMovimentoState extends State<_FormularioMovimento> {
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
-                value: _formaPagamento,
+                initialValue: _formaPagamento,
                 decoration: const InputDecoration(
                   labelText: 'Forma de pagamento',
                   prefixIcon: Icon(Icons.payments_outlined),

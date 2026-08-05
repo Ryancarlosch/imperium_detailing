@@ -22,18 +22,12 @@ class TabelaServicosPdf {
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(
-          color: PdfColors.grey300,
-          width: 0.8,
-        ),
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _criarTitulo(
-            contexto: contexto,
-            titulo: titulo,
-          ),
+          _criarTitulo(contexto: contexto, titulo: titulo),
           if (itens.isEmpty)
             _criarListaVazia()
           else
@@ -56,10 +50,7 @@ class TabelaServicosPdf {
   }) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 9,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: pw.BoxDecoration(
         color: contexto.corPrincipal,
         borderRadius: const pw.BorderRadius.only(
@@ -91,44 +82,35 @@ class TabelaServicosPdf {
 
     var indiceColuna = 0;
 
-    larguras[indiceColuna] =
-    const pw.FixedColumnWidth(24);
+    larguras[indiceColuna] = const pw.FixedColumnWidth(24);
     indiceColuna++;
 
-    larguras[indiceColuna] =
-    const pw.FlexColumnWidth(4.2);
+    larguras[indiceColuna] = const pw.FlexColumnWidth(4.2);
     indiceColuna++;
 
     if (mostrarQuantidade) {
-      larguras[indiceColuna] =
-      const pw.FlexColumnWidth(0.9);
+      larguras[indiceColuna] = const pw.FlexColumnWidth(0.9);
       indiceColuna++;
     }
 
     if (mostrarValorUnitario) {
-      larguras[indiceColuna] =
-      const pw.FlexColumnWidth(1.4);
+      larguras[indiceColuna] = const pw.FlexColumnWidth(1.4);
       indiceColuna++;
     }
 
     if (mostrarDesconto) {
-      larguras[indiceColuna] =
-      const pw.FlexColumnWidth(1.2);
+      larguras[indiceColuna] = const pw.FlexColumnWidth(1.2);
       indiceColuna++;
     }
 
     if (mostrarTotal) {
-      larguras[indiceColuna] =
-      const pw.FlexColumnWidth(1.5);
+      larguras[indiceColuna] = const pw.FlexColumnWidth(1.5);
     }
 
     return pw.Table(
       columnWidths: larguras,
       border: const pw.TableBorder(
-        horizontalInside: pw.BorderSide(
-          color: PdfColors.grey300,
-          width: 0.5,
-        ),
+        horizontalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
       ),
       children: [
         _criarCabecalhoTabela(
@@ -138,22 +120,19 @@ class TabelaServicosPdf {
           mostrarDesconto: mostrarDesconto,
           mostrarTotal: mostrarTotal,
         ),
-        ...itens.asMap().entries.map(
-              (entrada) {
-            final indice = entrada.key;
-            final servico = entrada.value;
+        ...itens.asMap().entries.map((entrada) {
+          final indice = entrada.key;
+          final servico = entrada.value;
 
-            return _criarLinhaServico(
-              indice: indice,
-              servico: servico,
-              mostrarQuantidade: mostrarQuantidade,
-              mostrarValorUnitario:
-              mostrarValorUnitario,
-              mostrarDesconto: mostrarDesconto,
-              mostrarTotal: mostrarTotal,
-            );
-          },
-        ),
+          return _criarLinhaServico(
+            indice: indice,
+            servico: servico,
+            mostrarQuantidade: mostrarQuantidade,
+            mostrarValorUnitario: mostrarValorUnitario,
+            mostrarDesconto: mostrarDesconto,
+            mostrarTotal: mostrarTotal,
+          );
+        }),
       ],
     );
   }
@@ -166,21 +145,13 @@ class TabelaServicosPdf {
     required bool mostrarTotal,
   }) {
     final celulas = <pw.Widget>[
-      _criarCelulaCabecalho(
-        texto: '#',
-        alinhamento: pw.TextAlign.center,
-      ),
-      _criarCelulaCabecalho(
-        texto: 'DESCRIÇÃO',
-      ),
+      _criarCelulaCabecalho(texto: '#', alinhamento: pw.TextAlign.center),
+      _criarCelulaCabecalho(texto: 'DESCRIÇÃO'),
     ];
 
     if (mostrarQuantidade) {
       celulas.add(
-        _criarCelulaCabecalho(
-          texto: 'QTD.',
-          alinhamento: pw.TextAlign.center,
-        ),
+        _criarCelulaCabecalho(texto: 'QTD.', alinhamento: pw.TextAlign.center),
       );
     }
 
@@ -204,31 +175,22 @@ class TabelaServicosPdf {
 
     if (mostrarTotal) {
       celulas.add(
-        _criarCelulaCabecalho(
-          texto: 'TOTAL',
-          alinhamento: pw.TextAlign.right,
-        ),
+        _criarCelulaCabecalho(texto: 'TOTAL', alinhamento: pw.TextAlign.right),
       );
     }
 
     return pw.TableRow(
-      decoration: pw.BoxDecoration(
-        color: contexto.corSecundaria,
-      ),
+      decoration: pw.BoxDecoration(color: contexto.corSecundaria),
       children: celulas,
     );
   }
 
   static pw.Widget _criarCelulaCabecalho({
     required String texto,
-    pw.TextAlign alinhamento =
-        pw.TextAlign.left,
+    pw.TextAlign alinhamento = pw.TextAlign.left,
   }) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 7,
-        vertical: 7,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 7),
       child: pw.Text(
         texto,
         textAlign: alinhamento,
@@ -251,21 +213,14 @@ class TabelaServicosPdf {
     required bool mostrarTotal,
   }) {
     final celulas = <pw.Widget>[
-      _criarCelula(
-        texto: '${indice + 1}',
-        alinhamento: pw.TextAlign.center,
-      ),
-      _criarDescricaoServico(
-        servico,
-      ),
+      _criarCelula(texto: '${indice + 1}', alinhamento: pw.TextAlign.center),
+      _criarDescricaoServico(servico),
     ];
 
     if (mostrarQuantidade) {
       celulas.add(
         _criarCelula(
-          texto: _formatarQuantidade(
-            servico.quantidade,
-          ),
+          texto: _formatarQuantidade(servico.quantidade),
           alinhamento: pw.TextAlign.center,
         ),
       );
@@ -274,9 +229,7 @@ class TabelaServicosPdf {
     if (mostrarValorUnitario) {
       celulas.add(
         _criarCelula(
-          texto: _formatarMoeda(
-            servico.valorUnitario,
-          ),
+          texto: _formatarMoeda(servico.valorUnitario),
           alinhamento: pw.TextAlign.right,
         ),
       );
@@ -285,11 +238,7 @@ class TabelaServicosPdf {
     if (mostrarDesconto) {
       celulas.add(
         _criarCelula(
-          texto: servico.desconto > 0
-              ? _formatarMoeda(
-            servico.desconto,
-          )
-              : '-',
+          texto: servico.desconto > 0 ? _formatarMoeda(servico.desconto) : '-',
           alinhamento: pw.TextAlign.right,
         ),
       );
@@ -298,9 +247,7 @@ class TabelaServicosPdf {
     if (mostrarTotal) {
       celulas.add(
         _criarCelula(
-          texto: _formatarMoeda(
-            servico.valorTotal,
-          ),
+          texto: _formatarMoeda(servico.valorTotal),
           alinhamento: pw.TextAlign.right,
           destaque: true,
         ),
@@ -309,25 +256,17 @@ class TabelaServicosPdf {
 
     return pw.TableRow(
       decoration: pw.BoxDecoration(
-        color: indice.isEven
-            ? PdfColors.white
-            : PdfColors.grey100,
+        color: indice.isEven ? PdfColors.white : PdfColors.grey100,
       ),
       children: celulas,
     );
   }
 
-  static pw.Widget _criarDescricaoServico(
-      _ServicoPdf servico,
-      ) {
+  static pw.Widget _criarDescricaoServico(_ServicoPdf servico) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 7,
-        vertical: 8,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 8),
       child: pw.Column(
-        crossAxisAlignment:
-        pw.CrossAxisAlignment.start,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         mainAxisSize: pw.MainAxisSize.min,
         children: [
           pw.Text(
@@ -356,24 +295,18 @@ class TabelaServicosPdf {
 
   static pw.Widget _criarCelula({
     required String texto,
-    pw.TextAlign alinhamento =
-        pw.TextAlign.left,
+    pw.TextAlign alinhamento = pw.TextAlign.left,
     bool destaque = false,
   }) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 7,
-        vertical: 8,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 8),
       child: pw.Text(
         texto,
         textAlign: alinhamento,
         style: pw.TextStyle(
           fontSize: 7.5,
           color: PdfColors.grey900,
-          fontWeight: destaque
-              ? pw.FontWeight.bold
-              : pw.FontWeight.normal,
+          fontWeight: destaque ? pw.FontWeight.bold : pw.FontWeight.normal,
         ),
       ),
     );
@@ -382,106 +315,67 @@ class TabelaServicosPdf {
   static pw.Widget _criarListaVazia() {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 20,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 20),
       child: pw.Text(
         'Nenhum serviço informado.',
         textAlign: pw.TextAlign.center,
-        style: const pw.TextStyle(
-          fontSize: 8,
-          color: PdfColors.grey600,
-        ),
+        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
       ),
     );
   }
 
-  static List<_ServicoPdf> _converterServicos(
-      List<dynamic> servicos,
-      ) {
+  static List<_ServicoPdf> _converterServicos(List<dynamic> servicos) {
     final resultado = <_ServicoPdf>[];
 
     for (final item in servicos) {
       if (item is Map) {
-        final mapa = Map<dynamic, dynamic>.from(
-          item,
-        );
+        final mapa = Map<dynamic, dynamic>.from(item);
 
-        final descricao = _primeiroTexto(
-          mapa,
-          [
-            'descricao',
-            'nome',
-            'servico',
-            'servico_nome',
-            'descricao_servico',
-            'produto_nome',
-          ],
-        );
+        final descricao = _primeiroTexto(mapa, [
+          'descricao',
+          'nome',
+          'servico',
+          'servico_nome',
+          'descricao_servico',
+          'produto_nome',
+        ]);
 
         if (descricao.isEmpty) {
           continue;
         }
 
-        var quantidade = _primeiroNumero(
-          mapa,
-          [
-            'quantidade',
-            'qtd',
-            'qtde',
-          ],
-        );
+        var quantidade = _primeiroNumero(mapa, ['quantidade', 'qtd', 'qtde']);
 
         if (quantidade <= 0) {
           quantidade = 1;
         }
 
-        final valorUnitario = _primeiroNumero(
-          mapa,
-          [
-            'valor_unitario',
-            'preco_unitario',
-            'valor',
-            'preco',
-            'servico_valor',
-          ],
-        );
+        final valorUnitario = _primeiroNumero(mapa, [
+          'valor_unitario',
+          'preco_unitario',
+          'valor',
+          'preco',
+          'servico_valor',
+        ]);
 
-        final desconto = _primeiroNumero(
-          mapa,
-          [
-            'desconto',
-            'valor_desconto',
-          ],
-        );
+        final desconto = _primeiroNumero(mapa, ['desconto', 'valor_desconto']);
 
-        final totalInformado = _primeiroNumero(
-          mapa,
-          [
-            'valor_total',
-            'total',
-            'subtotal',
-          ],
-        );
+        final totalInformado = _primeiroNumero(mapa, [
+          'valor_total',
+          'total',
+          'subtotal',
+        ]);
 
-        final totalCalculado =
-            (quantidade * valorUnitario) -
-                desconto;
+        final totalCalculado = (quantidade * valorUnitario) - desconto;
 
-        final valorTotal = totalInformado > 0
-            ? totalInformado
-            : totalCalculado;
+        final valorTotal = totalInformado > 0 ? totalInformado : totalCalculado;
 
-        final observacao = _primeiroTexto(
-          mapa,
-          [
-            'observacao',
-            'observacoes',
-            'detalhes',
-            'descricao_detalhada',
-          ],
-        );
+        final observacao = _primeiroTexto(mapa, [
+          'observacao',
+          'observacoes',
+          'detalhes',
+          'descricao_detalhada',
+        ]);
 
         resultado.add(
           _ServicoPdf(
@@ -490,13 +384,11 @@ class TabelaServicosPdf {
             quantidade: quantidade,
             valorUnitario: valorUnitario,
             desconto: desconto,
-            valorTotal:
-            valorTotal < 0 ? 0 : valorTotal,
+            valorTotal: valorTotal < 0 ? 0 : valorTotal,
           ),
         );
       } else {
-        final descricao =
-            item?.toString().trim() ?? '';
+        final descricao = item?.toString().trim() ?? '';
 
         if (descricao.isNotEmpty) {
           resultado.add(
@@ -517,15 +409,13 @@ class TabelaServicosPdf {
   }
 
   static String _primeiroTexto(
-      Map<dynamic, dynamic> mapa,
-      List<String> chaves,
-      ) {
+    Map<dynamic, dynamic> mapa,
+    List<String> chaves,
+  ) {
     for (final chave in chaves) {
-      final valor =
-      (mapa[chave] ?? '').toString().trim();
+      final valor = (mapa[chave] ?? '').toString().trim();
 
-      if (valor.isNotEmpty &&
-          valor.toLowerCase() != 'null') {
+      if (valor.isNotEmpty && valor.toLowerCase() != 'null') {
         return valor;
       }
     }
@@ -534,9 +424,9 @@ class TabelaServicosPdf {
   }
 
   static double _primeiroNumero(
-      Map<dynamic, dynamic> mapa,
-      List<String> chaves,
-      ) {
+    Map<dynamic, dynamic> mapa,
+    List<String> chaves,
+  ) {
     for (final chave in chaves) {
       final valor = mapa[chave];
 
@@ -548,9 +438,7 @@ class TabelaServicosPdf {
         return valor.toDouble();
       }
 
-      final convertido = _converterNumero(
-        valor.toString(),
-      );
+      final convertido = _converterNumero(valor.toString());
 
       if (convertido != null) {
         return convertido;
@@ -560,26 +448,17 @@ class TabelaServicosPdf {
     return 0;
   }
 
-  static double? _converterNumero(
-      String valor,
-      ) {
+  static double? _converterNumero(String valor) {
     var texto = valor.trim();
 
-    if (texto.isEmpty ||
-        texto.toLowerCase() == 'null') {
+    if (texto.isEmpty || texto.toLowerCase() == 'null') {
       return null;
     }
 
-    texto = texto
-        .replaceAll('R\$', '')
-        .replaceAll('%', '')
-        .replaceAll(' ', '');
+    texto = texto.replaceAll('R\$', '').replaceAll('%', '').replaceAll(' ', '');
 
-    if (texto.contains(',') &&
-        texto.contains('.')) {
-      texto = texto
-          .replaceAll('.', '')
-          .replaceAll(',', '.');
+    if (texto.contains(',') && texto.contains('.')) {
+      texto = texto.replaceAll('.', '').replaceAll(',', '.');
     } else if (texto.contains(',')) {
       texto = texto.replaceAll(',', '.');
     }
@@ -587,45 +466,31 @@ class TabelaServicosPdf {
     return double.tryParse(texto);
   }
 
-  static String _formatarQuantidade(
-      double quantidade,
-      ) {
-    if (quantidade ==
-        quantidade.truncateToDouble()) {
-      return quantidade
-          .toInt()
-          .toString();
+  static String _formatarQuantidade(double quantidade) {
+    if (quantidade == quantidade.truncateToDouble()) {
+      return quantidade.toInt().toString();
     }
 
-    return quantidade
-        .toStringAsFixed(2)
-        .replaceAll('.', ',');
+    return quantidade.toStringAsFixed(2).replaceAll('.', ',');
   }
 
-  static String _formatarMoeda(
-      double valor,
-      ) {
+  static String _formatarMoeda(double valor) {
     final negativo = valor < 0;
     final absoluto = valor.abs();
 
-    final partes =
-    absoluto.toStringAsFixed(2).split('.');
+    final partes = absoluto.toStringAsFixed(2).split('.');
 
     final inteiro = partes[0];
     final decimal = partes[1];
 
     final buffer = StringBuffer();
 
-    for (var indice = 0;
-    indice < inteiro.length;
-    indice++) {
-      final posicaoRestante =
-          inteiro.length - indice;
+    for (var indice = 0; indice < inteiro.length; indice++) {
+      final posicaoRestante = inteiro.length - indice;
 
       buffer.write(inteiro[indice]);
 
-      if (posicaoRestante > 1 &&
-          posicaoRestante % 3 == 1) {
+      if (posicaoRestante > 1 && posicaoRestante % 3 == 1) {
         buffer.write('.');
       }
     }

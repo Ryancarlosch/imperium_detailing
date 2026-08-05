@@ -29,19 +29,14 @@ class FotoServico {
     };
   }
 
-  factory FotoServico.fromMap(
-      Map<String, dynamic> map,
-      ) {
+  factory FotoServico.fromMap(Map<String, dynamic> map) {
     return FotoServico(
       id: map['id'] as int?,
       clienteId: map['cliente_id'] as int,
       veiculoId: map['veiculo_id'] as int,
-      caminhoAntes:
-      map['caminho_antes'] as String? ?? '',
-      caminhoDepois:
-      map['caminho_depois'] as String? ?? '',
-      descricao:
-      map['descricao'] as String? ?? '',
+      caminhoAntes: map['caminho_antes'] as String? ?? '',
+      caminhoDepois: map['caminho_depois'] as String? ?? '',
+      descricao: map['descricao'] as String? ?? '',
       data: map['data'] as String? ?? '',
     );
   }
@@ -59,10 +54,8 @@ class FotoServico {
       id: id ?? this.id,
       clienteId: clienteId ?? this.clienteId,
       veiculoId: veiculoId ?? this.veiculoId,
-      caminhoAntes:
-      caminhoAntes ?? this.caminhoAntes,
-      caminhoDepois:
-      caminhoDepois ?? this.caminhoDepois,
+      caminhoAntes: caminhoAntes ?? this.caminhoAntes,
+      caminhoDepois: caminhoDepois ?? this.caminhoDepois,
       descricao: descricao ?? this.descricao,
       data: data ?? this.data,
     );

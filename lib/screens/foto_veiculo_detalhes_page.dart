@@ -29,9 +29,7 @@ class FotoVeiculoDetalhesPage extends StatelessWidget {
   }
 
   Color get _corTipo {
-    return tipo == 'Depois'
-        ? Colors.greenAccent
-        : Colors.orangeAccent;
+    return tipo == 'Depois' ? Colors.greenAccent : Colors.orangeAccent;
   }
 
   Widget _linhaInformacao({
@@ -39,17 +37,12 @@ class FotoVeiculoDetalhesPage extends StatelessWidget {
     required String titulo,
     required String valor,
   }) {
-    final texto = valor.trim().isEmpty
-        ? 'Não informado'
-        : valor.trim();
+    final texto = valor.trim().isEmpty ? 'Não informado' : valor.trim();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        leading: Icon(
-          icone,
-          color: const Color(0xFFD6A84B),
-        ),
+        leading: Icon(icone, color: const Color(0xFFD6A84B)),
         title: Text(titulo),
         subtitle: Text(texto),
       ),
@@ -61,17 +54,13 @@ class FotoVeiculoDetalhesPage extends StatelessWidget {
     final nomeCompleto = [
       nomeVeiculo.trim(),
       placa.trim().toUpperCase(),
-    ].where(
-      (valor) => valor.isNotEmpty,
-    ).join(' • ');
+    ].where((valor) => valor.isNotEmpty).join(' • ');
 
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text(
-          '$tipo • $data',
-        ),
+        title: Text('$tipo • $data'),
       ),
       body: Column(
         children: [
@@ -84,11 +73,7 @@ class FotoVeiculoDetalhesPage extends StatelessWidget {
                     ? Image.file(
                         File(caminho),
                         fit: BoxFit.contain,
-                        errorBuilder: (
-                          context,
-                          error,
-                          stackTrace,
-                        ) {
+                        errorBuilder: (context, error, stackTrace) {
                           return const Icon(
                             Icons.broken_image_outlined,
                             size: 74,
@@ -97,23 +82,18 @@ class FotoVeiculoDetalhesPage extends StatelessWidget {
                         },
                       )
                     : const Column(
-                        mainAxisSize:
-                            MainAxisSize.min,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons
-                                .image_not_supported_outlined,
+                            Icons.image_not_supported_outlined,
                             size: 74,
                             color: Colors.white30,
                           ),
                           SizedBox(height: 12),
                           Text(
                             'A imagem não foi encontrada no dispositivo.',
-                            textAlign:
-                                TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white54,
-                            ),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white54),
                           ),
                         ],
                       ),
@@ -122,59 +102,37 @@ class FotoVeiculoDetalhesPage extends StatelessWidget {
           ),
           Container(
             width: double.infinity,
-            constraints: const BoxConstraints(
-              maxHeight: 310,
-            ),
+            constraints: const BoxConstraints(maxHeight: 310),
             decoration: const BoxDecoration(
               color: Color(0xFF121212),
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(22),
-              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
             ),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                24,
-              ),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: _corTipo.withValues(
-                            alpha: 0.14,
-                          ),
-                          borderRadius:
-                              BorderRadius.circular(
-                            20,
-                          ),
+                          color: _corTipo.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           tipo,
                           style: TextStyle(
                             color: _corTipo,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       const Spacer(),
-                      Text(
-                        data,
-                        style: const TextStyle(
-                          color: Colors.white54,
-                        ),
-                      ),
+                      Text(data, style: const TextStyle(color: Colors.white54)),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -189,14 +147,12 @@ class FotoVeiculoDetalhesPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   _linhaInformacao(
-                    icone:
-                        Icons.directions_car_outlined,
+                    icone: Icons.directions_car_outlined,
                     titulo: 'Veículo',
                     valor: nomeCompleto,
                   ),
                   _linhaInformacao(
-                    icone:
-                        Icons.folder_outlined,
+                    icone: Icons.folder_outlined,
                     titulo: 'Arquivo',
                     valor: caminho,
                   ),

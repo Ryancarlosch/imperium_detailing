@@ -19,9 +19,7 @@ class MovimentoFinanceiro {
     this.agendamentoId,
   });
 
-  Map<String, dynamic> toMap({
-    bool incluirId = true,
-  }) {
+  Map<String, dynamic> toMap({bool incluirId = true}) {
     final mapa = <String, dynamic>{
       'tipo': tipo,
       'descricao': descricao,
@@ -39,23 +37,16 @@ class MovimentoFinanceiro {
     return mapa;
   }
 
-  factory MovimentoFinanceiro.fromMap(
-      Map<String, dynamic> map,
-      ) {
+  factory MovimentoFinanceiro.fromMap(Map<String, dynamic> map) {
     return MovimentoFinanceiro(
       id: _converterInt(map['id']),
       tipo: (map['tipo'] ?? '').toString(),
       descricao: (map['descricao'] ?? '').toString(),
       valor: _converterDouble(map['valor']),
-      formaPagamento:
-      (map['forma_pagamento'] ?? '').toString(),
+      formaPagamento: (map['forma_pagamento'] ?? '').toString(),
       data: (map['data'] ?? '').toString(),
-      clienteId: _converterInt(
-        map['cliente_id'],
-      ),
-      agendamentoId: _converterInt(
-        map['agendamento_id'],
-      ),
+      clienteId: _converterInt(map['cliente_id']),
+      agendamentoId: _converterInt(map['agendamento_id']),
     );
   }
 
@@ -68,9 +59,7 @@ class MovimentoFinanceiro {
       return valor;
     }
 
-    return int.tryParse(
-      valor.toString(),
-    );
+    return int.tryParse(valor.toString());
   }
 
   static double _converterDouble(dynamic valor) {
@@ -82,10 +71,7 @@ class MovimentoFinanceiro {
       return valor.toDouble();
     }
 
-    return double.tryParse(
-      valor.toString().replaceAll(',', '.'),
-    ) ??
-        0;
+    return double.tryParse(valor.toString().replaceAll(',', '.')) ?? 0;
   }
 
   MovimentoFinanceiro copyWith({
@@ -103,13 +89,10 @@ class MovimentoFinanceiro {
       tipo: tipo ?? this.tipo,
       descricao: descricao ?? this.descricao,
       valor: valor ?? this.valor,
-      formaPagamento:
-      formaPagamento ?? this.formaPagamento,
+      formaPagamento: formaPagamento ?? this.formaPagamento,
       data: data ?? this.data,
-      clienteId:
-      clienteId ?? this.clienteId,
-      agendamentoId:
-      agendamentoId ?? this.agendamentoId,
+      clienteId: clienteId ?? this.clienteId,
+      agendamentoId: agendamentoId ?? this.agendamentoId,
     );
   }
 }

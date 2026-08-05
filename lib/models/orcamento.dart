@@ -37,10 +37,7 @@ class Orcamento {
 
   double get subtotal {
     if (itens.isNotEmpty) {
-      return itens.fold<double>(
-        0,
-            (total, item) => total + item.subtotal,
-      );
+      return itens.fold<double>(0, (total, item) => total + item.subtotal);
     }
 
     return valor;
@@ -78,18 +75,14 @@ class Orcamento {
     return Orcamento(
       id: id ?? this.id,
       clienteId: clienteId ?? this.clienteId,
-      veiculoId: removerVeiculo
-          ? null
-          : veiculoId ?? this.veiculoId,
+      veiculoId: removerVeiculo ? null : veiculoId ?? this.veiculoId,
       servico: servico ?? this.servico,
       descricao: descricao ?? this.descricao,
       valor: valor ?? this.valor,
-      dataEmissao:
-      dataEmissao ?? this.dataEmissao,
+      dataEmissao: dataEmissao ?? this.dataEmissao,
       validade: validade ?? this.validade,
       status: status ?? this.status,
-      observacoes:
-      observacoes ?? this.observacoes,
+      observacoes: observacoes ?? this.observacoes,
       desconto: desconto ?? this.desconto,
       itens: itens ?? this.itens,
     );
@@ -112,36 +105,21 @@ class Orcamento {
   }
 
   factory Orcamento.fromMap(
-      Map<String, dynamic> map, {
-        List<ItemOrcamento> itens = const [],
-      }) {
+    Map<String, dynamic> map, {
+    List<ItemOrcamento> itens = const [],
+  }) {
     return Orcamento(
       id: _converterInt(map['id']),
-      clienteId:
-      _converterInt(map['cliente_id']) ?? 0,
-      veiculoId:
-      _converterInt(map['veiculo_id']),
-      servico:
-      map['servico']?.toString() ?? '',
-      descricao:
-      map['descricao']?.toString() ?? '',
-      valor: _converterDouble(
-        map['valor'],
-        0,
-      ),
-      dataEmissao:
-      map['data_emissao']?.toString() ?? '',
-      validade:
-      map['validade']?.toString() ?? '',
-      status:
-      map['status']?.toString() ??
-          'Pendente',
-      observacoes:
-      map['observacoes']?.toString() ?? '',
-      desconto: _converterDouble(
-        map['desconto'],
-        0,
-      ),
+      clienteId: _converterInt(map['cliente_id']) ?? 0,
+      veiculoId: _converterInt(map['veiculo_id']),
+      servico: map['servico']?.toString() ?? '',
+      descricao: map['descricao']?.toString() ?? '',
+      valor: _converterDouble(map['valor'], 0),
+      dataEmissao: map['data_emissao']?.toString() ?? '',
+      validade: map['validade']?.toString() ?? '',
+      status: map['status']?.toString() ?? 'Pendente',
+      observacoes: map['observacoes']?.toString() ?? '',
+      desconto: _converterDouble(map['desconto'], 0),
       itens: itens,
     );
   }
@@ -162,10 +140,7 @@ class Orcamento {
     return int.tryParse(valor.toString());
   }
 
-  static double _converterDouble(
-      dynamic valor,
-      double padrao,
-      ) {
+  static double _converterDouble(dynamic valor, double padrao) {
     if (valor == null) {
       return padrao;
     }
@@ -174,9 +149,6 @@ class Orcamento {
       return valor.toDouble();
     }
 
-    return double.tryParse(
-      valor.toString().replaceAll(',', '.'),
-    ) ??
-        padrao;
+    return double.tryParse(valor.toString().replaceAll(',', '.')) ?? padrao;
   }
 }

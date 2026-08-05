@@ -938,7 +938,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<Cliente>(
-              value: _clienteSelecionado,
+              initialValue: _clienteSelecionado,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Cliente *',
@@ -969,7 +969,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<Veiculo>(
-              value: _veiculoSelecionado,
+              initialValue: _veiculoSelecionado,
               isExpanded: true,
               decoration: InputDecoration(
                 labelText: 'Veículo',

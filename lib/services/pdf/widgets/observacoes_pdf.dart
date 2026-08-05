@@ -15,13 +15,11 @@ class ObservacoesPdf {
     String tituloTermos = 'TERMOS E CONDIÇÕES',
     bool mostrarMesmoVazio = false,
   }) {
-    final possuiObservacoes =
-        observacoes.trim().isNotEmpty;
+    final possuiObservacoes = observacoes.trim().isNotEmpty;
 
     final possuiTermos = termos.trim().isNotEmpty;
 
-    final possuiAgradecimento =
-        mensagemAgradecimento.trim().isNotEmpty;
+    final possuiAgradecimento = mensagemAgradecimento.trim().isNotEmpty;
 
     if (!mostrarMesmoVazio &&
         !possuiObservacoes &&
@@ -31,11 +29,9 @@ class ObservacoesPdf {
     }
 
     return pw.Column(
-      crossAxisAlignment:
-      pw.CrossAxisAlignment.start,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        if (possuiObservacoes ||
-            mostrarMesmoVazio)
+        if (possuiObservacoes || mostrarMesmoVazio)
           _criarBloco(
             contexto: contexto,
             titulo: tituloObservacoes,
@@ -43,9 +39,7 @@ class ObservacoesPdf {
                 ? observacoes.trim()
                 : 'Nenhuma observação informada.',
           ),
-        if ((possuiObservacoes ||
-            mostrarMesmoVazio) &&
-            possuiTermos)
+        if ((possuiObservacoes || mostrarMesmoVazio) && possuiTermos)
           pw.SizedBox(height: 12),
         if (possuiTermos)
           _criarBloco(
@@ -54,16 +48,13 @@ class ObservacoesPdf {
             texto: termos.trim(),
             estiloTermos: true,
           ),
-        if ((possuiObservacoes ||
-            possuiTermos ||
-            mostrarMesmoVazio) &&
+        if ((possuiObservacoes || possuiTermos || mostrarMesmoVazio) &&
             possuiAgradecimento)
           pw.SizedBox(height: 12),
         if (possuiAgradecimento)
           _criarAgradecimento(
             contexto: contexto,
-            mensagem:
-            mensagemAgradecimento.trim(),
+            mensagem: mensagemAgradecimento.trim(),
           ),
       ],
     );
@@ -88,11 +79,7 @@ class ObservacoesPdf {
     required String termos,
     String titulo = 'TERMOS E CONDIÇÕES',
   }) {
-    return criar(
-      contexto: contexto,
-      termos: termos,
-      tituloTermos: titulo,
-    );
+    return criar(contexto: contexto, termos: termos, tituloTermos: titulo);
   }
 
   static pw.Widget criarAgradecimento({
@@ -103,10 +90,7 @@ class ObservacoesPdf {
       return pw.SizedBox();
     }
 
-    return _criarAgradecimento(
-      contexto: contexto,
-      mensagem: mensagem.trim(),
-    );
+    return _criarAgradecimento(contexto: contexto, mensagem: mensagem.trim());
   }
 
   static pw.Widget criarPorMapa({
@@ -116,37 +100,26 @@ class ObservacoesPdf {
     String agradecimentoPadrao = '',
     bool mostrarMesmoVazio = false,
   }) {
-    final observacoes = _primeiroTexto(
-      dados,
-      [
-        'observacoes',
-        'observacao',
-        'descricao_observacao',
-        'anotacoes',
-        'detalhes',
-      ],
-    );
+    final observacoes = _primeiroTexto(dados, [
+      'observacoes',
+      'observacao',
+      'descricao_observacao',
+      'anotacoes',
+      'detalhes',
+    ]);
 
-    final termos = _primeiroTexto(
-      dados,
-      [
-        'termos',
-        'termos_condicoes',
-        'condicoes',
-        'condicoes_gerais',
-      ],
-      padrao: termosPadrao,
-    );
+    final termos = _primeiroTexto(dados, [
+      'termos',
+      'termos_condicoes',
+      'condicoes',
+      'condicoes_gerais',
+    ], padrao: termosPadrao);
 
-    final agradecimento = _primeiroTexto(
-      dados,
-      [
-        'mensagem_agradecimento',
-        'agradecimento',
-        'mensagem_final',
-      ],
-      padrao: agradecimentoPadrao,
-    );
+    final agradecimento = _primeiroTexto(dados, [
+      'mensagem_agradecimento',
+      'agradecimento',
+      'mensagem_final',
+    ], padrao: agradecimentoPadrao);
 
     return criar(
       contexto: contexto,
@@ -168,19 +141,12 @@ class ObservacoesPdf {
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(
-          color: PdfColors.grey300,
-          width: 0.8,
-        ),
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
       ),
       child: pw.Column(
-        crossAxisAlignment:
-        pw.CrossAxisAlignment.start,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _criarTitulo(
-            contexto: contexto,
-            titulo: titulo,
-          ),
+          _criarTitulo(contexto: contexto, titulo: titulo),
           pw.Padding(
             padding: const pw.EdgeInsets.all(14),
             child: estiloTermos
@@ -198,14 +164,10 @@ class ObservacoesPdf {
   }) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 9,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: pw.BoxDecoration(
         color: contexto.corPrincipal,
-        borderRadius:
-        const pw.BorderRadius.only(
+        borderRadius: const pw.BorderRadius.only(
           topLeft: pw.Radius.circular(7),
           topRight: pw.Radius.circular(7),
         ),
@@ -222,75 +184,54 @@ class ObservacoesPdf {
     );
   }
 
-  static pw.Widget _criarTextoNormal(
-      String texto,
-      ) {
-    final paragrafos = _separarParagrafos(
-      texto,
-    );
+  static pw.Widget _criarTextoNormal(String texto) {
+    final paragrafos = _separarParagrafos(texto);
 
     if (paragrafos.isEmpty) {
       return pw.Text(
         'Nenhuma informação cadastrada.',
-        style: const pw.TextStyle(
-          fontSize: 8,
-          color: PdfColors.grey600,
-        ),
+        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
       );
     }
 
     return pw.Column(
-      crossAxisAlignment:
-      pw.CrossAxisAlignment.start,
-      children: paragrafos.map(
-            (paragrafo) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.only(
-              bottom: 6,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: paragrafos.map((paragrafo) {
+        return pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 6),
+          child: pw.Text(
+            paragrafo,
+            textAlign: pw.TextAlign.justify,
+            style: const pw.TextStyle(
+              fontSize: 8,
+              color: PdfColors.grey800,
+              lineSpacing: 2,
             ),
-            child: pw.Text(
-              paragrafo,
-              textAlign: pw.TextAlign.justify,
-              style: const pw.TextStyle(
-                fontSize: 8,
-                color: PdfColors.grey800,
-                lineSpacing: 2,
-              ),
-            ),
-          );
-        },
-      ).toList(),
+          ),
+        );
+      }).toList(),
     );
   }
 
-  static pw.Widget _criarTextoTermos(
-      String texto,
-      ) {
+  static pw.Widget _criarTextoTermos(String texto) {
     final linhas = texto
         .replaceAll('\r\n', '\n')
         .replaceAll('\r', '\n')
         .split('\n')
-        .map(
-          (linha) => linha.trim(),
-    )
-        .where(
-          (linha) => linha.isNotEmpty,
-    )
+        .map((linha) => linha.trim())
+        .where((linha) => linha.isNotEmpty)
         .toList();
 
     if (linhas.isEmpty) {
       return pw.Text(
         'Nenhum termo cadastrado.',
-        style: const pw.TextStyle(
-          fontSize: 8,
-          color: PdfColors.grey600,
-        ),
+        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
       );
     }
 
     final possuiMarcadores = linhas.any(
-          (linha) =>
-      linha.startsWith('-') ||
+      (linha) =>
+          linha.startsWith('-') ||
           linha.startsWith('•') ||
           RegExp(r'^\d+[\.\)]').hasMatch(linha),
     );
@@ -300,58 +241,43 @@ class ObservacoesPdf {
     }
 
     return pw.Column(
-      crossAxisAlignment:
-      pw.CrossAxisAlignment.start,
-      children: linhas.map(
-            (linha) {
-          final textoLimpo = linha
-              .replaceFirst(
-            RegExp(r'^[-•]\s*'),
-            '',
-          )
-              .replaceFirst(
-            RegExp(r'^\d+[\.\)]\s*'),
-            '',
-          )
-              .trim();
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: linhas.map((linha) {
+        final textoLimpo = linha
+            .replaceFirst(RegExp(r'^[-•]\s*'), '')
+            .replaceFirst(RegExp(r'^\d+[\.\)]\s*'), '')
+            .trim();
 
-          return pw.Padding(
-            padding: const pw.EdgeInsets.only(
-              bottom: 6,
-            ),
-            child: pw.Row(
-              crossAxisAlignment:
-              pw.CrossAxisAlignment.start,
-              children: [
-                pw.Container(
-                  margin: const pw.EdgeInsets.only(
-                    top: 3,
-                  ),
-                  width: 4,
-                  height: 4,
-                  decoration: const pw.BoxDecoration(
-                    color: PdfColors.grey700,
-                    shape: pw.BoxShape.circle,
+        return pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 6),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Container(
+                margin: const pw.EdgeInsets.only(top: 3),
+                width: 4,
+                height: 4,
+                decoration: const pw.BoxDecoration(
+                  color: PdfColors.grey700,
+                  shape: pw.BoxShape.circle,
+                ),
+              ),
+              pw.SizedBox(width: 7),
+              pw.Expanded(
+                child: pw.Text(
+                  textoLimpo,
+                  textAlign: pw.TextAlign.justify,
+                  style: const pw.TextStyle(
+                    fontSize: 8,
+                    color: PdfColors.grey800,
+                    lineSpacing: 2,
                   ),
                 ),
-                pw.SizedBox(width: 7),
-                pw.Expanded(
-                  child: pw.Text(
-                    textoLimpo,
-                    textAlign:
-                    pw.TextAlign.justify,
-                    style: const pw.TextStyle(
-                      fontSize: 8,
-                      color: PdfColors.grey800,
-                      lineSpacing: 2,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ).toList(),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -361,45 +287,34 @@ class ObservacoesPdf {
   }) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 16,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: pw.BoxDecoration(
         color: contexto.corSecundaria,
         borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(
-          color: contexto.corPrincipal,
-          width: 0.9,
-        ),
+        border: pw.Border.all(color: contexto.corPrincipal, width: 0.9),
       ),
       child: pw.Row(
-        crossAxisAlignment:
-        pw.CrossAxisAlignment.center,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
           pw.Container(
             width: 5,
             height: 42,
             decoration: pw.BoxDecoration(
               color: contexto.corPrincipal,
-              borderRadius:
-              pw.BorderRadius.circular(3),
+              borderRadius: pw.BorderRadius.circular(3),
             ),
           ),
           pw.SizedBox(width: 12),
           pw.Expanded(
             child: pw.Column(
-              crossAxisAlignment:
-              pw.CrossAxisAlignment.start,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
                   'AGRADECIMENTO',
                   style: pw.TextStyle(
                     fontSize: 7,
-                    fontWeight:
-                    pw.FontWeight.bold,
-                    color:
-                    contexto.corPrincipal,
+                    fontWeight: pw.FontWeight.bold,
+                    color: contexto.corPrincipal,
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -420,33 +335,25 @@ class ObservacoesPdf {
     );
   }
 
-  static List<String> _separarParagrafos(
-      String texto,
-      ) {
+  static List<String> _separarParagrafos(String texto) {
     return texto
         .replaceAll('\r\n', '\n')
         .replaceAll('\r', '\n')
         .split(RegExp(r'\n+'))
-        .map(
-          (paragrafo) => paragrafo.trim(),
-    )
-        .where(
-          (paragrafo) => paragrafo.isNotEmpty,
-    )
+        .map((paragrafo) => paragrafo.trim())
+        .where((paragrafo) => paragrafo.isNotEmpty)
         .toList();
   }
 
   static String _primeiroTexto(
-      Map<dynamic, dynamic> mapa,
-      List<String> chaves, {
-        String padrao = '',
-      }) {
+    Map<dynamic, dynamic> mapa,
+    List<String> chaves, {
+    String padrao = '',
+  }) {
     for (final chave in chaves) {
-      final valor =
-      (mapa[chave] ?? '').toString().trim();
+      final valor = (mapa[chave] ?? '').toString().trim();
 
-      if (valor.isNotEmpty &&
-          valor.toLowerCase() != 'null') {
+      if (valor.isNotEmpty && valor.toLowerCase() != 'null') {
         return valor;
       }
     }

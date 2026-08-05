@@ -252,7 +252,7 @@ class _NovoAgendamentoPageState extends State<NovoAgendamentoPage> {
               padding: const EdgeInsets.all(16),
               children: [
                 DropdownButtonFormField<Cliente>(
-                  value: clienteSelecionado,
+                  initialValue: clienteSelecionado,
                   decoration: criarDecoracao(
                     label: 'Cliente',
                     icone: Icons.person_outline,
@@ -267,7 +267,7 @@ class _NovoAgendamentoPageState extends State<NovoAgendamentoPage> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<Veiculo>(
-                  value: veiculoSelecionado,
+                  initialValue: veiculoSelecionado,
                   decoration: criarDecoracao(
                     label: 'Veículo',
                     icone: Icons.directions_car_outlined,
@@ -342,7 +342,7 @@ class _NovoAgendamentoPageState extends State<NovoAgendamentoPage> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: statusSelecionado,
+                  initialValue: statusSelecionado,
                   decoration: criarDecoracao(
                     label: 'Status',
                     icone: Icons.info_outline,

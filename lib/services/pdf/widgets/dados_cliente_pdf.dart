@@ -13,53 +13,33 @@ class DadosClientePdf {
     String titulo = 'DADOS DO CLIENTE',
     bool mostrarVeiculo = true,
   }) {
-    final dadosCliente = _montarDadosCliente(
-      cliente,
-    );
+    final dadosCliente = _montarDadosCliente(cliente);
 
-    final dadosVeiculo = _montarDadosVeiculo(
-      veiculo,
-    );
+    final dadosVeiculo = _montarDadosVeiculo(veiculo);
 
     return pw.Container(
       width: double.infinity,
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(
-          color: PdfColors.grey300,
-          width: 0.8,
-        ),
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
       ),
       child: pw.Column(
-        crossAxisAlignment:
-        pw.CrossAxisAlignment.start,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _criarTitulo(
-            contexto: contexto,
-            titulo: titulo,
-          ),
+          _criarTitulo(contexto: contexto, titulo: titulo),
           pw.Padding(
             padding: const pw.EdgeInsets.all(14),
             child: pw.Column(
-              crossAxisAlignment:
-              pw.CrossAxisAlignment.start,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 if (dadosCliente.isEmpty)
-                  _criarMensagemVazia(
-                    'Cliente não informado',
-                  )
+                  _criarMensagemVazia('Cliente não informado')
                 else
-                  _criarGradeDados(
-                    dadosCliente,
-                  ),
-                if (mostrarVeiculo &&
-                    dadosVeiculo.isNotEmpty) ...[
+                  _criarGradeDados(dadosCliente),
+                if (mostrarVeiculo && dadosVeiculo.isNotEmpty) ...[
                   pw.SizedBox(height: 12),
-                  pw.Divider(
-                    color: PdfColors.grey300,
-                    thickness: 0.6,
-                  ),
+                  pw.Divider(color: PdfColors.grey300, thickness: 0.6),
                   pw.SizedBox(height: 9),
                   pw.Row(
                     children: [
@@ -68,10 +48,7 @@ class DadosClientePdf {
                         height: 13,
                         decoration: pw.BoxDecoration(
                           color: contexto.corPrincipal,
-                          borderRadius:
-                          pw.BorderRadius.circular(
-                            2,
-                          ),
+                          borderRadius: pw.BorderRadius.circular(2),
                         ),
                       ),
                       pw.SizedBox(width: 6),
@@ -79,8 +56,7 @@ class DadosClientePdf {
                         'VEÍCULO',
                         style: pw.TextStyle(
                           fontSize: 8,
-                          fontWeight:
-                          pw.FontWeight.bold,
+                          fontWeight: pw.FontWeight.bold,
                           color: PdfColors.grey700,
                           letterSpacing: 0.8,
                         ),
@@ -88,9 +64,7 @@ class DadosClientePdf {
                     ],
                   ),
                   pw.SizedBox(height: 8),
-                  _criarGradeDados(
-                    dadosVeiculo,
-                  ),
+                  _criarGradeDados(dadosVeiculo),
                 ],
               ],
             ),
@@ -118,37 +92,24 @@ class DadosClientePdf {
     required Map<dynamic, dynamic> veiculo,
     String titulo = 'DADOS DO VEÍCULO',
   }) {
-    final dadosVeiculo = _montarDadosVeiculo(
-      veiculo,
-    );
+    final dadosVeiculo = _montarDadosVeiculo(veiculo);
 
     return pw.Container(
       width: double.infinity,
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(
-          color: PdfColors.grey300,
-          width: 0.8,
-        ),
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
       ),
       child: pw.Column(
-        crossAxisAlignment:
-        pw.CrossAxisAlignment.start,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _criarTitulo(
-            contexto: contexto,
-            titulo: titulo,
-          ),
+          _criarTitulo(contexto: contexto, titulo: titulo),
           pw.Padding(
             padding: const pw.EdgeInsets.all(14),
             child: dadosVeiculo.isEmpty
-                ? _criarMensagemVazia(
-              'Veículo não informado',
-            )
-                : _criarGradeDados(
-              dadosVeiculo,
-            ),
+                ? _criarMensagemVazia('Veículo não informado')
+                : _criarGradeDados(dadosVeiculo),
           ),
         ],
       ),
@@ -161,10 +122,7 @@ class DadosClientePdf {
   }) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 9,
-      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: pw.BoxDecoration(
         color: contexto.corPrincipal,
         borderRadius: const pw.BorderRadius.only(
@@ -184,42 +142,24 @@ class DadosClientePdf {
     );
   }
 
-  static pw.Widget _criarGradeDados(
-      List<_CampoPdf> campos,
-      ) {
+  static pw.Widget _criarGradeDados(List<_CampoPdf> campos) {
     final linhas = <pw.Widget>[];
 
-    for (var indice = 0;
-    indice < campos.length;
-    indice += 2) {
+    for (var indice = 0; indice < campos.length; indice += 2) {
       final primeiro = campos[indice];
 
-      final segundo =
-      indice + 1 < campos.length
-          ? campos[indice + 1]
-          : null;
+      final segundo = indice + 1 < campos.length ? campos[indice + 1] : null;
 
       linhas.add(
         pw.Padding(
-          padding: const pw.EdgeInsets.only(
-            bottom: 9,
-          ),
+          padding: const pw.EdgeInsets.only(bottom: 9),
           child: pw.Row(
-            crossAxisAlignment:
-            pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Expanded(
-                child: _criarCampo(
-                  primeiro,
-                ),
-              ),
+              pw.Expanded(child: _criarCampo(primeiro)),
               pw.SizedBox(width: 16),
               pw.Expanded(
-                child: segundo == null
-                    ? pw.SizedBox()
-                    : _criarCampo(
-                  segundo,
-                ),
+                child: segundo == null ? pw.SizedBox() : _criarCampo(segundo),
               ),
             ],
           ),
@@ -228,18 +168,14 @@ class DadosClientePdf {
     }
 
     return pw.Column(
-      crossAxisAlignment:
-      pw.CrossAxisAlignment.start,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: linhas,
     );
   }
 
-  static pw.Widget _criarCampo(
-      _CampoPdf campo,
-      ) {
+  static pw.Widget _criarCampo(_CampoPdf campo) {
     return pw.Column(
-      crossAxisAlignment:
-      pw.CrossAxisAlignment.start,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       mainAxisSize: pw.MainAxisSize.min,
       children: [
         pw.Text(
@@ -268,270 +204,146 @@ class DadosClientePdf {
     );
   }
 
-  static pw.Widget _criarMensagemVazia(
-      String mensagem,
-      ) {
+  static pw.Widget _criarMensagemVazia(String mensagem) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(
-        vertical: 8,
-      ),
+      padding: const pw.EdgeInsets.symmetric(vertical: 8),
       child: pw.Text(
         mensagem,
         textAlign: pw.TextAlign.center,
-        style: const pw.TextStyle(
-          fontSize: 8,
-          color: PdfColors.grey600,
-        ),
+        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
       ),
     );
   }
 
-  static List<_CampoPdf> _montarDadosCliente(
-      Map<dynamic, dynamic> cliente,
-      ) {
+  static List<_CampoPdf> _montarDadosCliente(Map<dynamic, dynamic> cliente) {
     final campos = <_CampoPdf>[];
 
-    final nome = _primeiroTexto(
-      cliente,
-      [
-        'nome',
-        'cliente_nome',
-        'nome_cliente',
-        'razao_social',
-      ],
-    );
+    final nome = _primeiroTexto(cliente, [
+      'nome',
+      'cliente_nome',
+      'nome_cliente',
+      'razao_social',
+    ]);
 
-    final cpfCnpj = _primeiroTexto(
-      cliente,
-      [
-        'cpf_cnpj',
-        'cpf',
-        'cnpj',
-        'cliente_cpf_cnpj',
-        'documento',
-      ],
-    );
+    final cpfCnpj = _primeiroTexto(cliente, [
+      'cpf_cnpj',
+      'cpf',
+      'cnpj',
+      'cliente_cpf_cnpj',
+      'documento',
+    ]);
 
-    final telefone = _primeiroTexto(
-      cliente,
-      [
-        'telefone',
-        'celular',
-        'whatsapp',
-        'cliente_telefone',
-      ],
-    );
+    final telefone = _primeiroTexto(cliente, [
+      'telefone',
+      'celular',
+      'whatsapp',
+      'cliente_telefone',
+    ]);
 
-    final email = _primeiroTexto(
-      cliente,
-      [
-        'email',
-        'cliente_email',
-      ],
-    );
+    final email = _primeiroTexto(cliente, ['email', 'cliente_email']);
 
-    final endereco = _montarEndereco(
-      cliente,
-    );
+    final endereco = _montarEndereco(cliente);
 
     if (nome.isNotEmpty) {
-      campos.add(
-        _CampoPdf(
-          rotulo: 'Nome',
-          valor: nome,
-          destaque: true,
-        ),
-      );
+      campos.add(_CampoPdf(rotulo: 'Nome', valor: nome, destaque: true));
     }
 
     if (cpfCnpj.isNotEmpty) {
-      campos.add(
-        _CampoPdf(
-          rotulo: _rotuloDocumento(
-            cpfCnpj,
-          ),
-          valor: cpfCnpj,
-        ),
-      );
+      campos.add(_CampoPdf(rotulo: _rotuloDocumento(cpfCnpj), valor: cpfCnpj));
     }
 
     if (telefone.isNotEmpty) {
-      campos.add(
-        _CampoPdf(
-          rotulo: 'Telefone / WhatsApp',
-          valor: telefone,
-        ),
-      );
+      campos.add(_CampoPdf(rotulo: 'Telefone / WhatsApp', valor: telefone));
     }
 
     if (email.isNotEmpty) {
-      campos.add(
-        _CampoPdf(
-          rotulo: 'E-mail',
-          valor: email,
-        ),
-      );
+      campos.add(_CampoPdf(rotulo: 'E-mail', valor: email));
     }
 
     if (endereco.isNotEmpty) {
       campos.add(
-        _CampoPdf(
-          rotulo: 'Endereço',
-          valor: endereco,
-          maximoLinhas: 3,
-        ),
+        _CampoPdf(rotulo: 'Endereço', valor: endereco, maximoLinhas: 3),
       );
     }
 
     return campos;
   }
 
-  static List<_CampoPdf> _montarDadosVeiculo(
-      Map<dynamic, dynamic>? veiculo,
-      ) {
+  static List<_CampoPdf> _montarDadosVeiculo(Map<dynamic, dynamic>? veiculo) {
     if (veiculo == null) {
       return [];
     }
 
     final campos = <_CampoPdf>[];
 
-    final marca = _primeiroTexto(
-      veiculo,
-      [
-        'marca',
-        'veiculo_marca',
-      ],
-    );
+    final marca = _primeiroTexto(veiculo, ['marca', 'veiculo_marca']);
 
-    final modelo = _primeiroTexto(
-      veiculo,
-      [
-        'modelo',
-        'veiculo_modelo',
-      ],
-    );
+    final modelo = _primeiroTexto(veiculo, ['modelo', 'veiculo_modelo']);
 
     final nomeVeiculo = [
       marca,
       modelo,
-    ].where(
-          (valor) => valor.isNotEmpty,
-    ).join(' ');
+    ].where((valor) => valor.isNotEmpty).join(' ');
 
-    final placa = _primeiroTexto(
-      veiculo,
-      [
-        'placa',
-        'veiculo_placa',
-      ],
-    );
+    final placa = _primeiroTexto(veiculo, ['placa', 'veiculo_placa']);
 
-    final ano = _primeiroTexto(
-      veiculo,
-      [
-        'ano',
-        'ano_modelo',
-        'veiculo_ano',
-      ],
-    );
+    final ano = _primeiroTexto(veiculo, ['ano', 'ano_modelo', 'veiculo_ano']);
 
-    final cor = _primeiroTexto(
-      veiculo,
-      [
-        'cor',
-        'veiculo_cor',
-      ],
-    );
+    final cor = _primeiroTexto(veiculo, ['cor', 'veiculo_cor']);
 
-    final quilometragem = _primeiroTexto(
-      veiculo,
-      [
-        'quilometragem',
-        'km',
-        'veiculo_quilometragem',
-      ],
-    );
+    final quilometragem = _primeiroTexto(veiculo, [
+      'quilometragem',
+      'km',
+      'veiculo_quilometragem',
+    ]);
 
-    final chassi = _primeiroTexto(
-      veiculo,
-      [
-        'chassi',
-        'veiculo_chassi',
-      ],
-    );
+    final chassi = _primeiroTexto(veiculo, ['chassi', 'veiculo_chassi']);
 
     if (nomeVeiculo.isNotEmpty) {
       campos.add(
-        _CampoPdf(
-          rotulo: 'Veículo',
-          valor: nomeVeiculo,
-          destaque: true,
-        ),
+        _CampoPdf(rotulo: 'Veículo', valor: nomeVeiculo, destaque: true),
       );
     }
 
     if (placa.isNotEmpty) {
       campos.add(
-        _CampoPdf(
-          rotulo: 'Placa',
-          valor: placa.toUpperCase(),
-          destaque: true,
-        ),
+        _CampoPdf(rotulo: 'Placa', valor: placa.toUpperCase(), destaque: true),
       );
     }
 
     if (ano.isNotEmpty) {
-      campos.add(
-        _CampoPdf(
-          rotulo: 'Ano',
-          valor: ano,
-        ),
-      );
+      campos.add(_CampoPdf(rotulo: 'Ano', valor: ano));
     }
 
     if (cor.isNotEmpty) {
-      campos.add(
-        _CampoPdf(
-          rotulo: 'Cor',
-          valor: cor,
-        ),
-      );
+      campos.add(_CampoPdf(rotulo: 'Cor', valor: cor));
     }
 
     if (quilometragem.isNotEmpty) {
       campos.add(
         _CampoPdf(
           rotulo: 'Quilometragem',
-          valor: _formatarQuilometragem(
-            quilometragem,
-          ),
+          valor: _formatarQuilometragem(quilometragem),
         ),
       );
     }
 
     if (chassi.isNotEmpty) {
-      campos.add(
-        _CampoPdf(
-          rotulo: 'Chassi',
-          valor: chassi.toUpperCase(),
-        ),
-      );
+      campos.add(_CampoPdf(rotulo: 'Chassi', valor: chassi.toUpperCase()));
     }
 
     return campos;
   }
 
   static String _primeiroTexto(
-      Map<dynamic, dynamic> mapa,
-      List<String> chaves,
-      ) {
+    Map<dynamic, dynamic> mapa,
+    List<String> chaves,
+  ) {
     for (final chave in chaves) {
-      final valor =
-      (mapa[chave] ?? '').toString().trim();
+      final valor = (mapa[chave] ?? '').toString().trim();
 
-      if (valor.isNotEmpty &&
-          valor.toLowerCase() != 'null') {
+      if (valor.isNotEmpty && valor.toLowerCase() != 'null') {
         return valor;
       }
     }
@@ -539,79 +351,37 @@ class DadosClientePdf {
     return '';
   }
 
-  static String _montarEndereco(
-      Map<dynamic, dynamic> mapa,
-      ) {
-    final enderecoCompleto = _primeiroTexto(
-      mapa,
-      [
-        'endereco_completo',
-        'cliente_endereco_completo',
-      ],
-    );
+  static String _montarEndereco(Map<dynamic, dynamic> mapa) {
+    final enderecoCompleto = _primeiroTexto(mapa, [
+      'endereco_completo',
+      'cliente_endereco_completo',
+    ]);
 
     if (enderecoCompleto.isNotEmpty) {
       return enderecoCompleto;
     }
 
-    final rua = _primeiroTexto(
-      mapa,
-      [
-        'endereco',
-        'logradouro',
-        'rua',
-        'cliente_endereco',
-      ],
-    );
+    final rua = _primeiroTexto(mapa, [
+      'endereco',
+      'logradouro',
+      'rua',
+      'cliente_endereco',
+    ]);
 
-    final numero = _primeiroTexto(
-      mapa,
-      [
-        'numero',
-        'endereco_numero',
-      ],
-    );
+    final numero = _primeiroTexto(mapa, ['numero', 'endereco_numero']);
 
-    final complemento = _primeiroTexto(
-      mapa,
-      [
-        'complemento',
-        'endereco_complemento',
-      ],
-    );
+    final complemento = _primeiroTexto(mapa, [
+      'complemento',
+      'endereco_complemento',
+    ]);
 
-    final bairro = _primeiroTexto(
-      mapa,
-      [
-        'bairro',
-        'endereco_bairro',
-      ],
-    );
+    final bairro = _primeiroTexto(mapa, ['bairro', 'endereco_bairro']);
 
-    final cidade = _primeiroTexto(
-      mapa,
-      [
-        'cidade',
-        'endereco_cidade',
-      ],
-    );
+    final cidade = _primeiroTexto(mapa, ['cidade', 'endereco_cidade']);
 
-    final estado = _primeiroTexto(
-      mapa,
-      [
-        'estado',
-        'uf',
-        'endereco_estado',
-      ],
-    );
+    final estado = _primeiroTexto(mapa, ['estado', 'uf', 'endereco_estado']);
 
-    final cep = _primeiroTexto(
-      mapa,
-      [
-        'cep',
-        'endereco_cep',
-      ],
-    );
+    final cep = _primeiroTexto(mapa, ['cep', 'endereco_cep']);
 
     final primeiraLinha = <String>[];
 
@@ -640,47 +410,32 @@ class DadosClientePdf {
     }
 
     if (estado.isNotEmpty) {
-      cidadeEstado.add(
-        estado.toUpperCase(),
-      );
+      cidadeEstado.add(estado.toUpperCase());
     }
 
     if (cidadeEstado.isNotEmpty) {
-      segundaLinha.add(
-        cidadeEstado.join(' - '),
-      );
+      segundaLinha.add(cidadeEstado.join(' - '));
     }
 
     if (cep.isNotEmpty) {
-      segundaLinha.add(
-        'CEP: $cep',
-      );
+      segundaLinha.add('CEP: $cep');
     }
 
     final linhas = <String>[];
 
     if (primeiraLinha.isNotEmpty) {
-      linhas.add(
-        primeiraLinha.join(', '),
-      );
+      linhas.add(primeiraLinha.join(', '));
     }
 
     if (segundaLinha.isNotEmpty) {
-      linhas.add(
-        segundaLinha.join(' • '),
-      );
+      linhas.add(segundaLinha.join(' • '));
     }
 
     return linhas.join('\n');
   }
 
-  static String _rotuloDocumento(
-      String documento,
-      ) {
-    final numeros = documento.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
+  static String _rotuloDocumento(String documento) {
+    final numeros = documento.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (numeros.length == 11) {
       return 'CPF';
@@ -693,9 +448,7 @@ class DadosClientePdf {
     return 'CPF / CNPJ';
   }
 
-  static String _formatarQuilometragem(
-      String valor,
-      ) {
+  static String _formatarQuilometragem(String valor) {
     final texto = valor.trim();
 
     if (texto.isEmpty) {

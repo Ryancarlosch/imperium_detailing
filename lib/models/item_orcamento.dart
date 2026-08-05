@@ -36,8 +36,7 @@ class ItemOrcamento {
       servico: servico ?? this.servico,
       descricao: descricao ?? this.descricao,
       quantidade: quantidade ?? this.quantidade,
-      valorUnitario:
-      valorUnitario ?? this.valorUnitario,
+      valorUnitario: valorUnitario ?? this.valorUnitario,
       ordem: ordem ?? this.ordem,
     );
   }
@@ -54,21 +53,14 @@ class ItemOrcamento {
     };
   }
 
-  factory ItemOrcamento.fromMap(
-      Map<String, dynamic> map,
-      ) {
+  factory ItemOrcamento.fromMap(Map<String, dynamic> map) {
     return ItemOrcamento(
       id: _converterInt(map['id']),
-      orcamentoId:
-      _converterInt(map['orcamento_id']),
-      servico:
-      map['servico']?.toString() ?? '',
-      descricao:
-      map['descricao']?.toString() ?? '',
-      quantidade:
-      _converterDouble(map['quantidade'], 1),
-      valorUnitario:
-      _converterDouble(map['valor_unitario'], 0),
+      orcamentoId: _converterInt(map['orcamento_id']),
+      servico: map['servico']?.toString() ?? '',
+      descricao: map['descricao']?.toString() ?? '',
+      quantidade: _converterDouble(map['quantidade'], 1),
+      valorUnitario: _converterDouble(map['valor_unitario'], 0),
       ordem: _converterInt(map['ordem']) ?? 0,
     );
   }
@@ -89,10 +81,7 @@ class ItemOrcamento {
     return int.tryParse(valor.toString());
   }
 
-  static double _converterDouble(
-      dynamic valor,
-      double padrao,
-      ) {
+  static double _converterDouble(dynamic valor, double padrao) {
     if (valor == null) {
       return padrao;
     }
@@ -101,9 +90,6 @@ class ItemOrcamento {
       return valor.toDouble();
     }
 
-    return double.tryParse(
-      valor.toString().replaceAll(',', '.'),
-    ) ??
-        padrao;
+    return double.tryParse(valor.toString().replaceAll(',', '.')) ?? padrao;
   }
 }

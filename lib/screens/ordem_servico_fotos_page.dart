@@ -448,7 +448,7 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
                             fit: BoxFit.contain,
                             cacheWidth: 1700,
                             filterQuality: FilterQuality.medium,
-                            errorBuilder: (_, __, ___) {
+                            errorBuilder: (_, _, _) {
                               return const Center(
                                 child: Text(
                                   'Não foi possível abrir a foto.',
@@ -580,7 +580,7 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
                       fit: BoxFit.cover,
                       cacheWidth: 760,
                       filterQuality: FilterQuality.low,
-                      errorBuilder: (_, __, ___) {
+                      errorBuilder: (_, _, _) {
                         return Container(
                           color: const Color(0xFF252525),
                           alignment: Alignment.center,

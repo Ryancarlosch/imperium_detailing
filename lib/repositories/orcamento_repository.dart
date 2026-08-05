@@ -5,42 +5,32 @@ import '../models/item_orcamento.dart';
 import '../models/orcamento.dart';
 
 class OrcamentoRepository {
-  final AppDatabase _appDatabase =
-      AppDatabase.instance;
+  final AppDatabase _appDatabase = AppDatabase.instance;
 
-  Future<int> inserirOrcamento(
-      Orcamento orcamento,
-      ) async {
-    final database =
-    await _appDatabase.database;
+  Future<int> inserirOrcamento(Orcamento orcamento) async {
+    final database = await _appDatabase.database;
 
-    return database.transaction<int>(
-          (transaction) async {
-        final dadosOrcamento =
-        _dadosPrincipais(orcamento);
+    return database.transaction<int>((transaction) async {
+      final dadosOrcamento = _dadosPrincipais(orcamento);
 
-        final orcamentoId =
-        await transaction.insert(
-          'orcamentos',
-          dadosOrcamento,
-        );
+      final orcamentoId = await transaction.insert(
+        'orcamentos',
+        dadosOrcamento,
+      );
 
-        await _salvarItens(
-          transaction: transaction,
-          orcamentoId: orcamentoId,
-          itens: orcamento.itens,
-          orcamentoAntigo: orcamento,
-        );
+      await _salvarItens(
+        transaction: transaction,
+        orcamentoId: orcamentoId,
+        itens: orcamento.itens,
+        orcamentoAntigo: orcamento,
+      );
 
-        return orcamentoId;
-      },
-    );
+      return orcamentoId;
+    });
   }
 
-  Future<List<Map<String, dynamic>>>
-  listarOrcamentosComDetalhes() async {
-    final database =
-    await _appDatabase.database;
+  Future<List<Map<String, dynamic>>> listarOrcamentosComDetalhes() async {
+    final database = await _appDatabase.database;
 
     return database.rawQuery('''
       SELECT
@@ -97,15 +87,10 @@ class OrcamentoRepository {
     ''');
   }
 
-  Future<Map<String, dynamic>?>
-  buscarOrcamentoComDetalhes(
-      int id,
-      ) async {
-    final database =
-    await _appDatabase.database;
+  Future<Map<String, dynamic>?> buscarOrcamentoComDetalhes(int id) async {
+    final database = await _appDatabase.database;
 
-    final resultado =
-    await database.rawQuery(
+    final resultado = await database.rawQuery(
       '''
       SELECT
         o.*,
@@ -169,29 +154,19 @@ class OrcamentoRepository {
       return null;
     }
 
-    final detalhes =
-    Map<String, dynamic>.from(
-      resultado.first,
-    );
+    final detalhes = Map<String, dynamic>.from(resultado.first);
 
-    final itens =
-    await listarItensDoOrcamento(id);
+    final itens = await listarItensDoOrcamento(id);
 
-    detalhes['itens'] = itens
-        .map((item) => item.toMap())
-        .toList();
+    detalhes['itens'] = itens.map((item) => item.toMap()).toList();
 
     return detalhes;
   }
 
-  Future<Orcamento?> buscarPorId(
-      int id,
-      ) async {
-    final database =
-    await _appDatabase.database;
+  Future<Orcamento?> buscarPorId(int id) async {
+    final database = await _appDatabase.database;
 
-    final resultado =
-    await database.query(
+    final resultado = await database.query(
       'orcamentos',
       where: 'id = ?',
       whereArgs: [id],
@@ -202,120 +177,84 @@ class OrcamentoRepository {
       return null;
     }
 
-    final itens =
-    await listarItensDoOrcamento(id);
+    final itens = await listarItensDoOrcamento(id);
 
-    return Orcamento.fromMap(
-      resultado.first,
-      itens: itens,
-    );
+    return Orcamento.fromMap(resultado.first, itens: itens);
   }
 
-  Future<List<ItemOrcamento>>
-  listarItensDoOrcamento(
-      int orcamentoId,
-      ) async {
-    final database =
-    await _appDatabase.database;
+  Future<List<ItemOrcamento>> listarItensDoOrcamento(int orcamentoId) async {
+    final database = await _appDatabase.database;
 
-    final resultado =
-    await database.query(
+    final resultado = await database.query(
       'orcamento_itens',
       where: 'orcamento_id = ?',
       whereArgs: [orcamentoId],
       orderBy: 'ordem ASC, id ASC',
     );
 
-    return resultado
-        .map(ItemOrcamento.fromMap)
-        .toList();
+    return resultado.map(ItemOrcamento.fromMap).toList();
   }
 
-  Future<int> atualizarOrcamento(
-      Orcamento orcamento,
-      ) async {
+  Future<int> atualizarOrcamento(Orcamento orcamento) async {
     final orcamentoId = orcamento.id;
 
     if (orcamentoId == null) {
-      throw ArgumentError(
-        'Não é possível atualizar um orçamento sem ID.',
-      );
+      throw ArgumentError('Não é possível atualizar um orçamento sem ID.');
     }
 
-    final database =
-    await _appDatabase.database;
+    final database = await _appDatabase.database;
 
-    return database.transaction<int>(
-          (transaction) async {
-        final quantidadeAtualizada =
-        await transaction.update(
-          'orcamentos',
-          _dadosPrincipais(orcamento),
-          where: 'id = ?',
-          whereArgs: [orcamentoId],
-        );
+    return database.transaction<int>((transaction) async {
+      final quantidadeAtualizada = await transaction.update(
+        'orcamentos',
+        _dadosPrincipais(orcamento),
+        where: 'id = ?',
+        whereArgs: [orcamentoId],
+      );
 
-        await transaction.delete(
-          'orcamento_itens',
-          where: 'orcamento_id = ?',
-          whereArgs: [orcamentoId],
-        );
+      await transaction.delete(
+        'orcamento_itens',
+        where: 'orcamento_id = ?',
+        whereArgs: [orcamentoId],
+      );
 
-        await _salvarItens(
-          transaction: transaction,
-          orcamentoId: orcamentoId,
-          itens: orcamento.itens,
-          orcamentoAntigo: orcamento,
-        );
+      await _salvarItens(
+        transaction: transaction,
+        orcamentoId: orcamentoId,
+        itens: orcamento.itens,
+        orcamentoAntigo: orcamento,
+      );
 
-        return quantidadeAtualizada;
-      },
-    );
+      return quantidadeAtualizada;
+    });
   }
 
-  Future<int> atualizarStatus(
-      int id,
-      String status,
-      ) async {
-    final database =
-    await _appDatabase.database;
+  Future<int> atualizarStatus(int id, String status) async {
+    final database = await _appDatabase.database;
 
     return database.update(
       'orcamentos',
-      {
-        'status': status,
-      },
+      {'status': status},
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
-  Future<int> excluirOrcamento(
-      int id,
-      ) async {
-    final database =
-    await _appDatabase.database;
+  Future<int> excluirOrcamento(int id) async {
+    final database = await _appDatabase.database;
 
-    return database.transaction<int>(
-          (transaction) async {
-        await transaction.delete(
-          'orcamento_itens',
-          where: 'orcamento_id = ?',
-          whereArgs: [id],
-        );
+    return database.transaction<int>((transaction) async {
+      await transaction.delete(
+        'orcamento_itens',
+        where: 'orcamento_id = ?',
+        whereArgs: [id],
+      );
 
-        return transaction.delete(
-          'orcamentos',
-          where: 'id = ?',
-          whereArgs: [id],
-        );
-      },
-    );
+      return transaction.delete('orcamentos', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
-  Map<String, dynamic> _dadosPrincipais(
-      Orcamento orcamento,
-      ) {
+  Map<String, dynamic> _dadosPrincipais(Orcamento orcamento) {
     final dados = orcamento.toMap();
 
     dados.remove('id');
@@ -329,50 +268,29 @@ class OrcamentoRepository {
     required List<ItemOrcamento> itens,
     required Orcamento orcamentoAntigo,
   }) async {
-    final itensParaSalvar =
-    itens.isNotEmpty
+    final itensParaSalvar = itens.isNotEmpty
         ? itens
-        : _criarItemDeCompatibilidade(
-      orcamentoAntigo,
-    );
+        : _criarItemDeCompatibilidade(orcamentoAntigo);
 
-    for (
-    var indice = 0;
-    indice < itensParaSalvar.length;
-    indice++
-    ) {
+    for (var indice = 0; indice < itensParaSalvar.length; indice++) {
       final item = itensParaSalvar[indice];
 
       final dadosItem = item
-          .copyWith(
-        orcamentoId: orcamentoId,
-        ordem: indice,
-      )
+          .copyWith(orcamentoId: orcamentoId, ordem: indice)
           .toMap();
 
       dadosItem.remove('id');
 
-      await transaction.insert(
-        'orcamento_itens',
-        dadosItem,
-      );
+      await transaction.insert('orcamento_itens', dadosItem);
     }
   }
 
-  List<ItemOrcamento>
-  _criarItemDeCompatibilidade(
-      Orcamento orcamento,
-      ) {
-    final servico =
-    orcamento.servico.trim();
+  List<ItemOrcamento> _criarItemDeCompatibilidade(Orcamento orcamento) {
+    final servico = orcamento.servico.trim();
 
-    final descricao =
-    orcamento.descricao.trim();
+    final descricao = orcamento.descricao.trim();
 
-    final valor =
-    orcamento.valor > 0
-        ? orcamento.valor
-        : orcamento.valorTotal;
+    final valor = orcamento.valor > 0 ? orcamento.valor : orcamento.valorTotal;
 
     if (servico.isEmpty && valor <= 0) {
       return [];
@@ -380,9 +298,7 @@ class OrcamentoRepository {
 
     return [
       ItemOrcamento(
-        servico: servico.isEmpty
-            ? 'Serviço'
-            : servico,
+        servico: servico.isEmpty ? 'Serviço' : servico,
         descricao: descricao,
         quantidade: 1,
         valorUnitario: valor,

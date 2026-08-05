@@ -10,10 +10,7 @@ class VeiculoRepository {
     final dados = veiculo.toMap();
     dados.remove('id');
 
-    return database.insert(
-      'veiculos',
-      dados,
-    );
+    return database.insert('veiculos', dados);
   }
 
   Future<List<Veiculo>> listarVeiculos() async {
@@ -24,17 +21,13 @@ class VeiculoRepository {
       orderBy: 'marca ASC, modelo ASC',
     );
 
-    return resultado
-        .map((mapa) => Veiculo.fromMap(mapa))
-        .toList();
+    return resultado.map((mapa) => Veiculo.fromMap(mapa)).toList();
   }
 
-  Future<List<Map<String, dynamic>>>
-      listarVeiculosComCliente() async {
+  Future<List<Map<String, dynamic>>> listarVeiculosComCliente() async {
     final database = await _appDatabase.database;
 
-    return database.rawQuery(
-      '''
+    return database.rawQuery('''
       SELECT
         v.*,
         c.nome AS cliente_nome,
@@ -43,8 +36,7 @@ class VeiculoRepository {
       INNER JOIN clientes c
         ON c.id = v.cliente_id
       ORDER BY v.marca ASC, v.modelo ASC
-      ''',
-    );
+      ''');
   }
 
   Future<Veiculo?> buscarVeiculoPorId(int id) async {
@@ -64,8 +56,7 @@ class VeiculoRepository {
     return Veiculo.fromMap(resultado.first);
   }
 
-  Future<Map<String, dynamic>?>
-      buscarVeiculoComClientePorId(int id) async {
+  Future<Map<String, dynamic>?> buscarVeiculoComClientePorId(int id) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -91,9 +82,7 @@ class VeiculoRepository {
     return resultado.first;
   }
 
-  Future<List<Veiculo>> listarVeiculosDoCliente(
-    int clienteId,
-  ) async {
+  Future<List<Veiculo>> listarVeiculosDoCliente(int clienteId) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -103,14 +92,10 @@ class VeiculoRepository {
       orderBy: 'marca ASC, modelo ASC',
     );
 
-    return resultado
-        .map((mapa) => Veiculo.fromMap(mapa))
-        .toList();
+    return resultado.map((mapa) => Veiculo.fromMap(mapa)).toList();
   }
 
-  Future<int> contarFotosDoVeiculo(
-    int veiculoId,
-  ) async {
+  Future<int> contarFotosDoVeiculo(int veiculoId) async {
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -136,14 +121,10 @@ class VeiculoRepository {
       return valor.toInt();
     }
 
-    return int.tryParse(
-          valor?.toString() ?? '',
-        ) ??
-        0;
+    return int.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
-  Future<Map<String, dynamic>>
-      obterEstatisticasBasicasDoVeiculo(
+  Future<Map<String, dynamic>> obterEstatisticasBasicasDoVeiculo(
     int veiculoId,
   ) async {
     final database = await _appDatabase.database;
@@ -169,11 +150,7 @@ class VeiculoRepository {
             AND status = 'Finalizada'
         ) AS quantidade_finalizadas
       ''',
-      [
-        veiculoId,
-        veiculoId,
-        veiculoId,
-      ],
+      [veiculoId, veiculoId, veiculoId],
     );
 
     if (resultado.isEmpty) {
@@ -195,24 +172,17 @@ class VeiculoRepository {
         return valor.toInt();
       }
 
-      return int.tryParse(
-            valor?.toString() ?? '',
-          ) ??
-          0;
+      return int.tryParse(valor?.toString() ?? '') ?? 0;
     }
 
     return {
-      'quantidade_fotos':
-          converter(linha['quantidade_fotos']),
-      'quantidade_ordens':
-          converter(linha['quantidade_ordens']),
-      'quantidade_finalizadas':
-          converter(linha['quantidade_finalizadas']),
+      'quantidade_fotos': converter(linha['quantidade_fotos']),
+      'quantidade_ordens': converter(linha['quantidade_ordens']),
+      'quantidade_finalizadas': converter(linha['quantidade_finalizadas']),
     };
   }
 
-  Future<List<Map<String, dynamic>>>
-      listarFotosResumidasDoVeiculo(
+  Future<List<Map<String, dynamic>>> listarFotosResumidasDoVeiculo(
     int veiculoId, {
     int limite = 6,
   }) async {
@@ -224,13 +194,7 @@ class VeiculoRepository {
 
     return database.query(
       'fotos_servico',
-      columns: [
-        'id',
-        'caminho_antes',
-        'caminho_depois',
-        'descricao',
-        'data',
-      ],
+      columns: ['id', 'caminho_antes', 'caminho_depois', 'descricao', 'data'],
       where: 'veiculo_id = ?',
       whereArgs: [veiculoId],
       orderBy: 'id DESC',
@@ -240,9 +204,7 @@ class VeiculoRepository {
 
   Future<int> atualizarVeiculo(Veiculo veiculo) async {
     if (veiculo.id == null) {
-      throw ArgumentError(
-        'Não é possível atualizar um veículo sem ID.',
-      );
+      throw ArgumentError('Não é possível atualizar um veículo sem ID.');
     }
 
     final database = await _appDatabase.database;
@@ -261,10 +223,6 @@ class VeiculoRepository {
   Future<int> excluirVeiculo(int id) async {
     final database = await _appDatabase.database;
 
-    return database.delete(
-      'veiculos',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return database.delete('veiculos', where: 'id = ?', whereArgs: [id]);
   }
 }

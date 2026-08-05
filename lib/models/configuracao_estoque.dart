@@ -35,42 +35,27 @@ class ConfiguracaoEstoque {
     return {
       'id': id,
       'controlar_estoque': controlarEstoque ? 1 : 0,
-      'controlar_produtos_ordem_servico':
-      controlarProdutosOrdemServico ? 1 : 0,
+      'controlar_produtos_ordem_servico': controlarProdutosOrdemServico ? 1 : 0,
       'baixa_automatica': baixaAutomatica ? 1 : 0,
       'exigir_quantidade': exigirQuantidade ? 1 : 0,
-      'alertar_estoque_baixo':
-      alertarEstoqueBaixo ? 1 : 0,
+      'alertar_estoque_baixo': alertarEstoqueBaixo ? 1 : 0,
       'estoque_minimo_padrao': estoqueMinimoPadrao,
       'atualizado_em': atualizadoEm,
     };
   }
 
-  factory ConfiguracaoEstoque.fromMap(
-      Map<String, dynamic> map,
-      ) {
+  factory ConfiguracaoEstoque.fromMap(Map<String, dynamic> map) {
     return ConfiguracaoEstoque(
       id: map['id'] as int?,
-      controlarEstoque:
-      (map['controlar_estoque'] as int? ?? 1) == 1,
+      controlarEstoque: (map['controlar_estoque'] as int? ?? 1) == 1,
       controlarProdutosOrdemServico:
-      (map['controlar_produtos_ordem_servico']
-      as int? ??
-          0) ==
-          1,
-      baixaAutomatica:
-      (map['baixa_automatica'] as int? ?? 0) == 1,
-      exigirQuantidade:
-      (map['exigir_quantidade'] as int? ?? 0) == 1,
-      alertarEstoqueBaixo:
-      (map['alertar_estoque_baixo'] as int? ?? 1) ==
-          1,
+          (map['controlar_produtos_ordem_servico'] as int? ?? 0) == 1,
+      baixaAutomatica: (map['baixa_automatica'] as int? ?? 0) == 1,
+      exigirQuantidade: (map['exigir_quantidade'] as int? ?? 0) == 1,
+      alertarEstoqueBaixo: (map['alertar_estoque_baixo'] as int? ?? 1) == 1,
       estoqueMinimoPadrao:
-      (map['estoque_minimo_padrao'] as num?)
-          ?.toDouble() ??
-          1,
-      atualizadoEm:
-      map['atualizado_em']?.toString() ?? '',
+          (map['estoque_minimo_padrao'] as num?)?.toDouble() ?? 1,
+      atualizadoEm: map['atualizado_em']?.toString() ?? '',
     );
   }
 
@@ -86,23 +71,14 @@ class ConfiguracaoEstoque {
   }) {
     return ConfiguracaoEstoque(
       id: id ?? this.id,
-      controlarEstoque:
-      controlarEstoque ?? this.controlarEstoque,
+      controlarEstoque: controlarEstoque ?? this.controlarEstoque,
       controlarProdutosOrdemServico:
-      controlarProdutosOrdemServico ??
-          this.controlarProdutosOrdemServico,
-      baixaAutomatica:
-      baixaAutomatica ?? this.baixaAutomatica,
-      exigirQuantidade:
-      exigirQuantidade ?? this.exigirQuantidade,
-      alertarEstoqueBaixo:
-      alertarEstoqueBaixo ??
-          this.alertarEstoqueBaixo,
-      estoqueMinimoPadrao:
-      estoqueMinimoPadrao ??
-          this.estoqueMinimoPadrao,
-      atualizadoEm:
-      atualizadoEm ?? this.atualizadoEm,
+          controlarProdutosOrdemServico ?? this.controlarProdutosOrdemServico,
+      baixaAutomatica: baixaAutomatica ?? this.baixaAutomatica,
+      exigirQuantidade: exigirQuantidade ?? this.exigirQuantidade,
+      alertarEstoqueBaixo: alertarEstoqueBaixo ?? this.alertarEstoqueBaixo,
+      estoqueMinimoPadrao: estoqueMinimoPadrao ?? this.estoqueMinimoPadrao,
+      atualizadoEm: atualizadoEm ?? this.atualizadoEm,
     );
   }
 }

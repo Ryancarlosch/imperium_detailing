@@ -35,9 +35,7 @@ class Agendamento {
     };
   }
 
-  factory Agendamento.fromMap(
-      Map<String, dynamic> map,
-      ) {
+  factory Agendamento.fromMap(Map<String, dynamic> map) {
     return Agendamento(
       id: map['id'] as int?,
       clienteId: map['cliente_id'] as int,
@@ -47,8 +45,7 @@ class Agendamento {
       hora: map['hora'] as String? ?? '',
       valor: (map['valor'] as num?)?.toDouble() ?? 0,
       status: map['status'] as String? ?? 'Agendado',
-      observacoes:
-      map['observacoes'] as String? ?? '',
+      observacoes: map['observacoes'] as String? ?? '',
     );
   }
 
@@ -72,8 +69,7 @@ class Agendamento {
       hora: hora ?? this.hora,
       valor: valor ?? this.valor,
       status: status ?? this.status,
-      observacoes:
-      observacoes ?? this.observacoes,
+      observacoes: observacoes ?? this.observacoes,
     );
   }
 }
