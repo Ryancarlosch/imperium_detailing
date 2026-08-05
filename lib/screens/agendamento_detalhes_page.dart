@@ -272,7 +272,7 @@ class _AgendamentoDetalhesPageState extends State<AgendamentoDetalhesPage> {
             return AlertDialog(
               title: const Text('Alterar status'),
               content: DropdownButtonFormField<String>(
-                value: novoStatus,
+                initialValue: novoStatus,
                 decoration: const InputDecoration(
                   labelText: 'Status',
                   border: OutlineInputBorder(),
