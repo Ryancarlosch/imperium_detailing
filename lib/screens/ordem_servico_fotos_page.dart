@@ -16,6 +16,7 @@ class OrdemServicoFotosPage extends StatefulWidget {
     required this.cliente,
     required this.veiculo,
     this.somenteLeitura = false,
+    this.motivoCorrecao,
   });
 
   final int ordemServicoId;
@@ -23,6 +24,7 @@ class OrdemServicoFotosPage extends StatefulWidget {
   final String cliente;
   final String veiculo;
   final bool somenteLeitura;
+  final String? motivoCorrecao;
 
   @override
   State<OrdemServicoFotosPage> createState() => _OrdemServicoFotosPageState();
@@ -44,6 +46,10 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
   bool _alterou = false;
 
   String get _etapaAtual => _tabController.index == 0 ? 'Antes' : 'Depois';
+
+  bool get _emCorrecaoFinalizada {
+    return widget.motivoCorrecao?.trim().isNotEmpty == true;
+  }
 
   @override
   void initState() {
@@ -158,46 +164,13 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
     );
   }
 
-  Future<String?> _pedirDescricao() async {
-    final controller = TextEditingController();
-
-    final resultado = await showDialog<String>(
+  Future<String?> _pedirDescricao() {
+    return showDialog<String>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Descrição da foto'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            minLines: 2,
-            maxLines: 4,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              hintText: 'Ex.: risco na porta dianteira direita',
-              labelText: 'Descrição opcional',
-              alignLabelWithHint: true,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(controller.text.trim());
-              },
-              child: const Text('Salvar foto'),
-            ),
-          ],
-        );
+        return const _DescricaoFotoDialog();
       },
     );
-
-    controller.dispose();
-    return resultado;
   }
 
   Future<void> _adicionarFoto() async {
@@ -300,17 +273,31 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
 
       await File(imagem.path).copy(caminhoSalvo);
 
-      await _repository.inserirFoto(
-        ordemServicoId: widget.ordemServicoId,
-        etapa: _etapaAtual,
-        caminho: caminhoSalvo,
-        descricao: descricao,
-      );
+      if (_emCorrecaoFinalizada) {
+        await _repository.inserirFotoComRevisao(
+          ordemServicoId: widget.ordemServicoId,
+          etapa: _etapaAtual,
+          caminho: caminhoSalvo,
+          descricao: descricao,
+          motivo: widget.motivoCorrecao!,
+        );
+      } else {
+        await _repository.inserirFoto(
+          ordemServicoId: widget.ordemServicoId,
+          etapa: _etapaAtual,
+          caminho: caminhoSalvo,
+          descricao: descricao,
+        );
+      }
 
       _alterou = true;
       await _carregarFotos();
 
-      _mostrarMensagem('Foto adicionada em $_etapaAtual.');
+      _mostrarMensagem(
+        _emCorrecaoFinalizada
+            ? 'Foto adicionada e correção registrada.'
+            : 'Foto adicionada em $_etapaAtual.',
+      );
     } catch (erro) {
       if (caminhoSalvo != null) {
         final arquivo = File(caminhoSalvo);
@@ -377,7 +364,15 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
     });
 
     try {
-      await _repository.excluirFoto(id);
+      if (_emCorrecaoFinalizada) {
+        await _repository.excluirFotoComRevisao(
+          fotoId: id,
+          motivo: widget.motivoCorrecao!,
+        );
+      } else {
+        await _repository.excluirFoto(id);
+      }
+
       _alterou = true;
 
       if (mounted && Navigator.of(context).canPop()) {
@@ -385,7 +380,11 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
       }
 
       await _carregarFotos();
-      _mostrarMensagem('Foto excluída.');
+      _mostrarMensagem(
+        _emCorrecaoFinalizada
+            ? 'Foto excluída e correção registrada.'
+            : 'Foto excluída.',
+      );
     } catch (erro) {
       _mostrarMensagem('Não foi possível excluir a foto.\n$erro', erro: true);
     } finally {
@@ -684,6 +683,29 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
                         Text('Somente leitura'),
                       ],
                     ),
+                  ] else if (_emCorrecaoFinalizada) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.history_edu_outlined,
+                          size: 17,
+                          color: Colors.amber,
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            'Correção de OS finalizada: '
+                            '${widget.motivoCorrecao}',
+                            style: const TextStyle(
+                              color: Colors.amber,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ],
               ),
@@ -717,6 +739,56 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
                 ),
               ),
       ),
+    );
+  }
+}
+
+class _DescricaoFotoDialog extends StatefulWidget {
+  const _DescricaoFotoDialog();
+
+  @override
+  State<_DescricaoFotoDialog> createState() => _DescricaoFotoDialogState();
+}
+
+class _DescricaoFotoDialogState extends State<_DescricaoFotoDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Descrição da foto'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        minLines: 2,
+        maxLines: 4,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(
+          hintText: 'Ex.: risco na porta dianteira direita',
+          labelText: 'Descrição opcional',
+          alignLabelWithHint: true,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.of(context).pop(_controller.text.trim());
+          },
+          child: const Text('Salvar foto'),
+        ),
+      ],
     );
   }
 }

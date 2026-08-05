@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ class OrdemServicoChecklistPage extends StatefulWidget {
     required this.cliente,
     required this.veiculo,
     this.somenteLeitura = false,
+    this.motivoCorrecao,
   });
 
   final int ordemServicoId;
@@ -22,6 +24,7 @@ class OrdemServicoChecklistPage extends StatefulWidget {
   final String cliente;
   final String veiculo;
   final bool somenteLeitura;
+  final String? motivoCorrecao;
 
   @override
   State<OrdemServicoChecklistPage> createState() =>
@@ -40,7 +43,15 @@ class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
 
   bool _carregando = true;
   bool _salvando = false;
+  bool _salvoComSucesso = false;
   int? _itemProcessandoFotoId;
+
+  final Set<String> _arquivosNovosCriados = <String>{};
+  final Set<String> _arquivosParaExcluirAposSalvar = <String>{};
+
+  bool get _emCorrecaoFinalizada {
+    return widget.motivoCorrecao?.trim().isNotEmpty == true;
+  }
 
   @override
   void initState() {
@@ -50,6 +61,10 @@ class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
 
   @override
   void dispose() {
+    if (!_salvoComSucesso) {
+      unawaited(_excluirArquivosNovosNaoSalvos());
+    }
+
     for (final item in _itens) {
       item.dispose();
     }
@@ -118,22 +133,44 @@ class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
     });
 
     try {
-      await _repository.salvarDadosEntrada(
-        ordemServicoId: widget.ordemServicoId,
-        quilometragem: _quilometragemController.text,
-        combustivel: _combustivelController.text,
-      );
+      final itens = _itens.map((item) => item.toMap()).toList();
 
-      await _repository.salvarChecklist(
-        _itens.map((item) => item.toMap()).toList(),
-      );
+      if (_emCorrecaoFinalizada) {
+        await _repository.corrigirChecklistFinalizado(
+          ordemServicoId: widget.ordemServicoId,
+          motivo: widget.motivoCorrecao!,
+          quilometragem: _quilometragemController.text,
+          combustivel: _combustivelController.text,
+          itens: itens,
+        );
+      } else {
+        await _repository.salvarChecklistCompleto(
+          ordemServicoId: widget.ordemServicoId,
+          quilometragem: _quilometragemController.text,
+          combustivel: _combustivelController.text,
+          itens: itens,
+        );
+      }
+
+      _salvoComSucesso = true;
+
+      await _excluirArquivosSubstituidosAposSalvar();
+
+      _arquivosNovosCriados.clear();
+      _arquivosParaExcluirAposSalvar.clear();
 
       if (!mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Checklist salvo com sucesso.')),
+        SnackBar(
+          content: Text(
+            _emCorrecaoFinalizada
+                ? 'Correção do checklist registrada com sucesso.'
+                : 'Checklist salvo com sucesso.',
+          ),
+        ),
       );
 
       Navigator.of(context).pop(true);
@@ -175,23 +212,25 @@ class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
       }
 
       final caminhoSalvo = await _salvarImagemPermanentemente(imagem, item.id);
+      _arquivosNovosCriados.add(caminhoSalvo);
 
       if (!mounted) {
+        await _excluirArquivoSeForFotoDoChecklist(caminhoSalvo);
+        _arquivosNovosCriados.remove(caminhoSalvo);
         return;
       }
 
-      final caminhoAnterior = item.fotoAvaria;
+      final caminhoAnterior = item.fotoAvaria?.trim() ?? '';
+
+      if (caminhoAnterior.isNotEmpty && caminhoAnterior != caminhoSalvo) {
+        _arquivosParaExcluirAposSalvar.add(caminhoAnterior);
+      }
 
       setState(() {
         item.status = OrdemServicoChecklistRepository.statusAvaria;
         item.fotoAvaria = caminhoSalvo;
         item.dataAvariaRegistro ??= DateTime.now().toIso8601String();
       });
-
-      await _excluirArquivoSeForFotoDoChecklist(
-        caminhoAnterior,
-        ignorarCaminho: caminhoSalvo,
-      );
     } catch (erro) {
       _mostrarMensagem('Não foi possível adicionar a foto.\n$erro', erro: true);
     } finally {
@@ -266,13 +305,34 @@ class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
       return;
     }
 
-    final caminhoAnterior = item.fotoAvaria;
+    final caminhoAnterior = item.fotoAvaria?.trim() ?? '';
+
+    if (caminhoAnterior.isNotEmpty) {
+      _arquivosParaExcluirAposSalvar.add(caminhoAnterior);
+    }
 
     setState(() {
       item.fotoAvaria = null;
     });
+  }
 
-    await _excluirArquivoSeForFotoDoChecklist(caminhoAnterior);
+  Future<void> _excluirArquivosSubstituidosAposSalvar() async {
+    final caminhosEmUso = _itens
+        .map((item) => item.fotoAvaria?.trim() ?? '')
+        .where((caminho) => caminho.isNotEmpty)
+        .toSet();
+
+    for (final caminho in _arquivosParaExcluirAposSalvar) {
+      if (!caminhosEmUso.contains(caminho)) {
+        await _excluirArquivoSeForFotoDoChecklist(caminho);
+      }
+    }
+  }
+
+  Future<void> _excluirArquivosNovosNaoSalvos() async {
+    for (final caminho in _arquivosNovosCriados) {
+      await _excluirArquivoSeForFotoDoChecklist(caminho);
+    }
   }
 
   Future<void> _excluirArquivoSeForFotoDoChecklist(
@@ -299,6 +359,13 @@ class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
   void _alterarStatus(_ItemChecklistFormulario item, int novoStatus) {
     if (widget.somenteLeitura) {
       return;
+    }
+
+    final caminhoAnterior = item.fotoAvaria?.trim() ?? '';
+
+    if (novoStatus != OrdemServicoChecklistRepository.statusAvaria &&
+        caminhoAnterior.isNotEmpty) {
+      _arquivosParaExcluirAposSalvar.add(caminhoAnterior);
     }
 
     setState(() {
@@ -365,6 +432,10 @@ class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 120),
               children: [
+                if (_emCorrecaoFinalizada) ...[
+                  _construirAvisoCorrecao(),
+                  const SizedBox(height: 12),
+                ],
                 _construirCabecalho(progresso),
                 const SizedBox(height: 12),
                 _construirCardDadosEntrada(),
@@ -453,6 +524,29 @@ class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
                     ),
                   ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirAvisoCorrecao() {
+    return Card(
+      margin: EdgeInsets.zero,
+      color: Colors.amber.withValues(alpha: 0.10),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.history_edu_outlined, color: Colors.amber),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Correção de OS finalizada. Motivo: '
+                '${widget.motivoCorrecao}',
+              ),
             ),
           ],
         ),

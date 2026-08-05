@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'nova_ordem_servico_page.dart';
+import 'corrigir_ordem_servico_page.dart';
 import 'ordem_servico_checklist_page.dart';
 import 'ordem_servico_fotos_page.dart';
 import 'ordem_servico_assinatura_page.dart';
@@ -762,6 +763,49 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
     }
   }
 
+  Future<void> _corrigirOrdemFinalizada(Map<String, dynamic> ordem) async {
+    final id = _obterInt(ordem, 'id');
+    final status = _obterTexto(ordem, 'status');
+
+    if (id <= 0 || status != 'Finalizada' || _executandoAcao) {
+      return;
+    }
+
+    final numeroRevisao = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        builder: (_) {
+          return CorrigirOrdemServicoPage(ordem: ordem);
+        },
+      ),
+    );
+
+    if (numeroRevisao == null || !mounted) {
+      return;
+    }
+
+    Navigator.of(context).pop();
+
+    await _carregarOrdens();
+
+    if (!mounted) {
+      return;
+    }
+
+    _mostrarMensagem('Correção nº $numeroRevisao registrada com sucesso.');
+  }
+
+  Future<String?> _solicitarMotivoCorrecao({
+    required String titulo,
+    required String descricao,
+  }) {
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return _MotivoCorrecaoDialog(titulo: titulo, descricao: descricao);
+      },
+    );
+  }
+
   Future<void> _abrirChecklist(Map<String, dynamic> ordem) async {
     final id = _obterInt(ordem, 'id');
 
@@ -771,6 +815,20 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
     }
 
     final status = _obterTexto(ordem, 'status', padrao: 'Aberta');
+    String? motivoCorrecao;
+
+    if (status == 'Finalizada') {
+      motivoCorrecao = await _solicitarMotivoCorrecao(
+        titulo: 'Corrigir checklist',
+        descricao:
+            'Informe por que o checklist de entrada precisa ser '
+            'alterado após a finalização da Ordem de Serviço.',
+      );
+
+      if (motivoCorrecao == null || !mounted) {
+        return;
+      }
+    }
 
     final alterou = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -783,14 +841,29 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
             padrao: 'Cliente não informado',
           ),
           veiculo: _montarNomeVeiculo(ordem),
-          somenteLeitura: status == 'Finalizada' || status == 'Cancelada',
+          somenteLeitura: status == 'Cancelada',
+          motivoCorrecao: motivoCorrecao,
         ),
       ),
     );
 
-    if (alterou == true && mounted) {
-      _mostrarMensagem('Checklist atualizado.');
+    if (alterou != true || !mounted) {
+      return;
     }
+
+    if (status == 'Finalizada') {
+      Navigator.of(context).pop();
+      await _carregarOrdens();
+
+      if (!mounted) {
+        return;
+      }
+
+      _mostrarMensagem('Correção do checklist registrada com sucesso.');
+      return;
+    }
+
+    _mostrarMensagem('Checklist atualizado.');
   }
 
   Future<void> _abrirFotos(Map<String, dynamic> ordem) async {
@@ -802,6 +875,20 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
     }
 
     final status = _obterTexto(ordem, 'status', padrao: 'Aberta');
+    String? motivoCorrecao;
+
+    if (status == 'Finalizada') {
+      motivoCorrecao = await _solicitarMotivoCorrecao(
+        titulo: 'Corrigir fotos',
+        descricao:
+            'Informe por que as fotos de antes ou depois precisam ser '
+            'alteradas após a finalização da Ordem de Serviço.',
+      );
+
+      if (motivoCorrecao == null || !mounted) {
+        return;
+      }
+    }
 
     final alterou = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -814,14 +901,29 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
             padrao: 'Cliente não informado',
           ),
           veiculo: _montarNomeVeiculo(ordem),
-          somenteLeitura: status == 'Finalizada' || status == 'Cancelada',
+          somenteLeitura: status == 'Cancelada',
+          motivoCorrecao: motivoCorrecao,
         ),
       ),
     );
 
-    if (alterou == true && mounted) {
-      _mostrarMensagem('Fotos da Ordem de Serviço atualizadas.');
+    if (alterou != true || !mounted) {
+      return;
     }
+
+    if (status == 'Finalizada') {
+      Navigator.of(context).pop();
+      await _carregarOrdens();
+
+      if (!mounted) {
+        return;
+      }
+
+      _mostrarMensagem('Correção das fotos registrada com sucesso.');
+      return;
+    }
+
+    _mostrarMensagem('Fotos da Ordem de Serviço atualizadas.');
   }
 
   Future<void> _abrirAssinatura(Map<String, dynamic> ordem) async {
@@ -1303,6 +1405,15 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
 
     final valorFinal = (valorTotal - desconto).clamp(0, double.infinity);
 
+    final quantidadeRevisoes = _obterInt(ordem, 'quantidade_revisoes');
+
+    final revisadaEm = _obterTexto(ordem, 'revisada_em');
+
+    final motivoUltimaRevisao = _obterTexto(ordem, 'motivo_ultima_revisao');
+
+    final assinaturaDesatualizada =
+        _obterInt(ordem, 'assinatura_desatualizada') == 1;
+
     final itensBrutos = ordem['itens'];
 
     final itens = itensBrutos is List
@@ -1352,6 +1463,49 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
             Text(telefone, style: TextStyle(color: Colors.grey.shade700)),
           ],
           const SizedBox(height: 20),
+          if (quantidadeRevisoes > 0) ...[
+            Card(
+              color: Colors.amber.withValues(alpha: 0.10),
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: const Icon(
+                  Icons.history_edu_outlined,
+                  color: Colors.amber,
+                ),
+                title: Text(
+                  quantidadeRevisoes == 1
+                      ? '1 correção registrada'
+                      : '$quantidadeRevisoes correções registradas',
+                ),
+                subtitle: Text(
+                  [
+                    if (revisadaEm.isNotEmpty)
+                      'Última: ${_formatarData(revisadaEm)}',
+                    if (motivoUltimaRevisao.isNotEmpty) motivoUltimaRevisao,
+                  ].join(' • '),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (assinaturaDesatualizada) ...[
+            Card(
+              color: Colors.orange.withValues(alpha: 0.10),
+              margin: EdgeInsets.zero,
+              child: const ListTile(
+                leading: Icon(
+                  Icons.warning_amber_outlined,
+                  color: Colors.orange,
+                ),
+                title: Text('Assinatura anterior desatualizada'),
+                subtitle: Text(
+                  'A Ordem de Serviço foi corrigida após a assinatura. '
+                  'Recomenda-se coletar uma nova assinatura.',
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           _CartaoInformacao(
             titulo: 'Veículo',
             icone: Icons.directions_car_outlined,
@@ -1602,7 +1756,21 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
       );
     }
 
-    if (status == 'Finalizada' || status == 'Cancelada') {
+    if (status == 'Finalizada') {
+      botoes.add(
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: _executandoAcao
+                ? null
+                : () => _corrigirOrdemFinalizada(ordem),
+            icon: const Icon(Icons.edit_note_outlined),
+            label: const Text('Corrigir OS'),
+          ),
+        ),
+      );
+    }
+
+    if (status == 'Cancelada') {
       botoes.add(
         Expanded(
           child: OutlinedButton.icon(
@@ -1927,6 +2095,91 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MotivoCorrecaoDialog extends StatefulWidget {
+  const _MotivoCorrecaoDialog({required this.titulo, required this.descricao});
+
+  final String titulo;
+  final String descricao;
+
+  @override
+  State<_MotivoCorrecaoDialog> createState() => _MotivoCorrecaoDialogState();
+}
+
+class _MotivoCorrecaoDialogState extends State<_MotivoCorrecaoDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _continuar() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    Navigator.of(context).pop(_controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.titulo),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.descricao),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _controller,
+              autofocus: true,
+              minLines: 3,
+              maxLines: 5,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Motivo da correção *',
+                hintText: 'Ex.: faltou registrar a foto traseira',
+                alignLabelWithHint: true,
+                border: OutlineInputBorder(),
+              ),
+              validator: (valor) {
+                final motivo = valor?.trim() ?? '';
+
+                if (motivo.isEmpty) {
+                  return 'Informe o motivo da correção.';
+                }
+
+                if (motivo.length < 5) {
+                  return 'Descreva o motivo com pelo menos 5 caracteres.';
+                }
+
+                return null;
+              },
+              onFieldSubmitted: (_) {
+                _continuar();
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _continuar, child: const Text('Continuar')),
+      ],
     );
   }
 }

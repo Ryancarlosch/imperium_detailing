@@ -1,7 +1,14 @@
+import 'dart:convert';
+
+import 'package:sqflite/sqflite.dart';
+
 import '../database/app_database.dart';
+import 'ordem_servico_revisao_repository.dart';
 
 class OrdemServicoChecklistRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
+  final OrdemServicoRevisaoRepository _revisaoRepository =
+      OrdemServicoRevisaoRepository();
 
   static const int statusNaoVerificado = 0;
   static const int statusOk = 1;
@@ -95,40 +102,226 @@ class OrdemServicoChecklistRepository {
     final database = await _appDatabase.database;
 
     await database.transaction((transaction) async {
-      for (final item in itens) {
-        final id = _converterInt(item['id']);
+      await _salvarChecklistComTransacao(transaction, itens);
+    });
+  }
 
-        if (id == null) {
-          continue;
-        }
+  Future<void> salvarChecklistCompleto({
+    required int ordemServicoId,
+    required String quilometragem,
+    required String combustivel,
+    required List<Map<String, dynamic>> itens,
+  }) async {
+    final database = await _appDatabase.database;
 
-        final status = _obterStatus(item);
+    await database.transaction((transaction) async {
+      await _salvarDadosEntradaComTransacao(
+        transaction,
+        ordemServicoId: ordemServicoId,
+        quilometragem: quilometragem,
+        combustivel: combustivel,
+      );
 
-        final conferido = status != statusNaoVerificado;
+      await _salvarChecklistComTransacao(
+        transaction,
+        itens,
+        ordemServicoId: ordemServicoId,
+      );
+    });
+  }
 
-        final observacao = (item['observacao'] ?? '').toString().trim();
+  Future<int> corrigirChecklistFinalizado({
+    required int ordemServicoId,
+    required String motivo,
+    required String quilometragem,
+    required String combustivel,
+    required List<Map<String, dynamic>> itens,
+  }) async {
+    final database = await _appDatabase.database;
 
-        final fotoAvaria = _normalizarCaminhoFoto(item['foto_avaria']);
+    return database.transaction((transaction) async {
+      final dadosAnteriores = await _buscarSnapshotComTransacao(
+        transaction,
+        ordemServicoId,
+      );
 
-        await transaction.update(
-          'ordem_servico_checklist',
-          {
-            'marcado': conferido ? 1 : 0,
-            'status': status,
-            'observacao': observacao,
-            'foto_avaria': status == statusAvaria ? fotoAvaria : null,
-            'avaria_localizacao': status == statusAvaria
-                ? (item['avaria_localizacao'] ?? '').toString().trim()
-                : '',
-            'avaria_data_registro': status == statusAvaria
-                ? _normalizarTextoOpcional(item['avaria_data_registro'])
-                : null,
-          },
-          where: 'id = ?',
-          whereArgs: [id],
+      final dadosNovos = <String, dynamic>{
+        'dados_entrada': {
+          'quilometragem': quilometragem.trim(),
+          'combustivel': combustivel.trim(),
+        },
+        'itens': _normalizarItensParaSnapshot(itens),
+      };
+
+      if (jsonEncode(dadosAnteriores) == jsonEncode(dadosNovos)) {
+        throw StateError('Nenhuma alteração foi identificada no checklist.');
+      }
+
+      await _salvarDadosEntradaComTransacao(
+        transaction,
+        ordemServicoId: ordemServicoId,
+        quilometragem: quilometragem,
+        combustivel: combustivel,
+      );
+
+      await _salvarChecklistComTransacao(
+        transaction,
+        itens,
+        ordemServicoId: ordemServicoId,
+      );
+
+      return _revisaoRepository.registrarComTransacao(
+        transaction,
+        ordemServicoId: ordemServicoId,
+        tipo: 'Correcao de checklist',
+        motivo: motivo,
+        dadosAnteriores: dadosAnteriores,
+        dadosNovos: dadosNovos,
+      );
+    });
+  }
+
+  Future<void> _salvarChecklistComTransacao(
+    Transaction transaction,
+    List<Map<String, dynamic>> itens, {
+    int? ordemServicoId,
+  }) async {
+    for (final item in itens) {
+      final id = _converterInt(item['id']);
+
+      if (id == null) {
+        continue;
+      }
+
+      final dados = _normalizarItemParaPersistencia(item);
+
+      final linhasAlteradas = await transaction.update(
+        'ordem_servico_checklist',
+        dados,
+        where: ordemServicoId == null
+            ? 'id = ?'
+            : 'id = ? AND ordem_servico_id = ?',
+        whereArgs: ordemServicoId == null ? [id] : [id, ordemServicoId],
+      );
+
+      if (linhasAlteradas == 0) {
+        throw StateError(
+          'Um item do checklist não foi encontrado durante o salvamento.',
         );
       }
+    }
+  }
+
+  Future<void> _salvarDadosEntradaComTransacao(
+    Transaction transaction, {
+    required int ordemServicoId,
+    required String quilometragem,
+    required String combustivel,
+  }) async {
+    final linhasAlteradas = await transaction.update(
+      'ordens_servico',
+      {
+        'quilometragem_entrada': quilometragem.trim(),
+        'combustivel_entrada': combustivel.trim(),
+      },
+      where: 'id = ?',
+      whereArgs: [ordemServicoId],
+    );
+
+    if (linhasAlteradas == 0) {
+      throw StateError('Ordem de Serviço não encontrada.');
+    }
+  }
+
+  Future<Map<String, dynamic>> _buscarSnapshotComTransacao(
+    Transaction transaction,
+    int ordemServicoId,
+  ) async {
+    final resultadoOrdem = await transaction.query(
+      'ordens_servico',
+      columns: ['quilometragem_entrada', 'combustivel_entrada'],
+      where: 'id = ?',
+      whereArgs: [ordemServicoId],
+      limit: 1,
+    );
+
+    if (resultadoOrdem.isEmpty) {
+      throw StateError('Ordem de Serviço não encontrada.');
+    }
+
+    final resultadoItens = await transaction.query(
+      'ordem_servico_checklist',
+      columns: [
+        'id',
+        'status',
+        'marcado',
+        'observacao',
+        'foto_avaria',
+        'avaria_localizacao',
+        'avaria_data_registro',
+      ],
+      where: 'ordem_servico_id = ?',
+      whereArgs: [ordemServicoId],
+      orderBy: 'ordem ASC, id ASC',
+    );
+
+    return {
+      'dados_entrada': {
+        'quilometragem': (resultadoOrdem.first['quilometragem_entrada'] ?? '')
+            .toString()
+            .trim(),
+        'combustivel': (resultadoOrdem.first['combustivel_entrada'] ?? '')
+            .toString()
+            .trim(),
+      },
+      'itens': _normalizarItensParaSnapshot(
+        resultadoItens.map((item) => Map<String, dynamic>.from(item)).toList(),
+      ),
+    };
+  }
+
+  List<Map<String, dynamic>> _normalizarItensParaSnapshot(
+    List<Map<String, dynamic>> itens,
+  ) {
+    final normalizados = itens
+        .map((item) => _normalizarItemParaSnapshot(item))
+        .toList();
+
+    normalizados.sort((a, b) {
+      final primeiro = _converterInt(a['id']) ?? 0;
+      final segundo = _converterInt(b['id']) ?? 0;
+      return primeiro.compareTo(segundo);
     });
+
+    return normalizados;
+  }
+
+  Map<String, dynamic> _normalizarItemParaSnapshot(Map<String, dynamic> item) {
+    final id = _converterInt(item['id']);
+    final dados = _normalizarItemParaPersistencia(item);
+
+    return {'id': id, ...dados};
+  }
+
+  Map<String, dynamic> _normalizarItemParaPersistencia(
+    Map<String, dynamic> item,
+  ) {
+    final status = _obterStatus(item);
+    final conferido = status != statusNaoVerificado;
+    final fotoAvaria = _normalizarCaminhoFoto(item['foto_avaria']);
+
+    return {
+      'marcado': conferido ? 1 : 0,
+      'status': status,
+      'observacao': (item['observacao'] ?? '').toString().trim(),
+      'foto_avaria': status == statusAvaria ? fotoAvaria : null,
+      'avaria_localizacao': status == statusAvaria
+          ? (item['avaria_localizacao'] ?? '').toString().trim()
+          : '',
+      'avaria_data_registro': status == statusAvaria
+          ? _normalizarTextoOpcional(item['avaria_data_registro'])
+          : null,
+    };
   }
 
   Future<void> atualizarStatus({
@@ -240,15 +433,14 @@ class OrdemServicoChecklistRepository {
   }) async {
     final database = await _appDatabase.database;
 
-    await database.update(
-      'ordens_servico',
-      {
-        'quilometragem_entrada': quilometragem.trim(),
-        'combustivel_entrada': combustivel.trim(),
-      },
-      where: 'id = ?',
-      whereArgs: [ordemServicoId],
-    );
+    await database.transaction((transaction) async {
+      await _salvarDadosEntradaComTransacao(
+        transaction,
+        ordemServicoId: ordemServicoId,
+        quilometragem: quilometragem,
+        combustivel: combustivel,
+      );
+    });
   }
 
   Future<Map<String, dynamic>?> buscarItemPorId(int checklistId) async {
