@@ -14,39 +14,66 @@ class ClientesPage extends StatefulWidget {
 class _ClientesPageState extends State<ClientesPage> {
   final ClienteRepository _repository = ClienteRepository();
 
-  List<Cliente> clientes = [];
-  bool carregando = true;
+  List<Cliente> _clientes = [];
+  bool _carregando = true;
+  bool _mostrarArquivados = false;
 
   @override
   void initState() {
     super.initState();
-    carregarClientes();
+    _carregarClientes();
   }
 
-  Future<void> carregarClientes() async {
-    try {
-      final lista = await _repository.listarClientes();
+  Future<void> _carregarClientes({bool exibirCarregamento = true}) async {
+    final filtroArquivadosConsultado = _mostrarArquivados;
 
-      if (!mounted) return;
+    if (exibirCarregamento && mounted) {
+      setState(() {
+        _carregando = true;
+      });
+    }
+
+    try {
+      final lista = filtroArquivadosConsultado
+          ? await _repository.listarClientesArquivados()
+          : await _repository.listarClientesAtivos();
+
+      if (!mounted || filtroArquivadosConsultado != _mostrarArquivados) {
+        return;
+      }
 
       setState(() {
-        clientes = lista;
-        carregando = false;
+        _clientes = lista;
+        _carregando = false;
       });
     } catch (erro) {
-      if (!mounted) return;
+      if (!mounted || filtroArquivadosConsultado != _mostrarArquivados) {
+        return;
+      }
 
       setState(() {
-        carregando = false;
+        _carregando = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar clientes: $erro')),
-      );
+      _mostrarMensagem('Erro ao carregar clientes: $erro', erro: true);
     }
   }
 
-  Future<void> abrirCadastro() async {
+  void _alterarFiltro(bool mostrarArquivados) {
+    if (_mostrarArquivados == mostrarArquivados) {
+      return;
+    }
+
+    setState(() {
+      _mostrarArquivados = mostrarArquivados;
+      _clientes = [];
+      _carregando = true;
+    });
+
+    _carregarClientes(exibirCarregamento: false);
+  }
+
+  Future<void> _abrirCadastro() async {
     final cliente = await showDialog<Cliente>(
       context: context,
       builder: (context) {
@@ -65,89 +92,230 @@ class _ClientesPageState extends State<ClientesPage> {
         return;
       }
 
-      await carregarClientes();
+      await _carregarClientes();
+
+      if (!mounted) {
+        return;
+      }
+
+      _mostrarMensagem('Cliente cadastrado com sucesso.');
     } catch (erro) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      _mostrarMensagem('Erro ao cadastrar cliente: $erro', erro: true);
+    }
+  }
+
+  Future<void> _abrirDetalhes(Cliente cliente) async {
+    final resultado = await Navigator.push<Object?>(
+      context,
+      MaterialPageRoute(
+        builder: (_) {
+          return ClienteDetalhesPage(cliente: cliente);
+        },
+      ),
+    );
+
+    if (!mounted || resultado == null) {
+      return;
+    }
+
+    await _carregarClientes();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (resultado == 'arquivado') {
+      _mostrarMensagem('Cliente arquivado. Todo o histórico foi preservado.');
+    } else if (resultado == 'reativado') {
+      _mostrarMensagem('Cliente reativado com sucesso.');
+    }
+  }
+
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
         SnackBar(
-          content: Text('Erro ao cadastrar cliente: $erro'),
-          backgroundColor: Colors.red.shade700,
+          content: Text(mensagem),
+          backgroundColor: erro ? Colors.red.shade700 : null,
         ),
       );
+  }
+
+  String _dataArquivamento(Cliente cliente) {
+    final valor = cliente.arquivadoEm;
+
+    if (valor == null || valor.trim().isEmpty) {
+      return '';
     }
+
+    final data = DateTime.tryParse(valor);
+
+    if (data == null) {
+      return '';
+    }
+
+    final dia = data.day.toString().padLeft(2, '0');
+    final mes = data.month.toString().padLeft(2, '0');
+    final ano = data.year.toString().padLeft(4, '0');
+
+    return '$dia/$mes/$ano';
+  }
+
+  Widget _construirFiltro() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: SizedBox(
+        width: double.infinity,
+        child: SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment<bool>(
+              value: false,
+              icon: Icon(Icons.people_outline),
+              label: Text('Ativos'),
+            ),
+            ButtonSegment<bool>(
+              value: true,
+              icon: Icon(Icons.archive_outlined),
+              label: Text('Arquivados'),
+            ),
+          ],
+          selected: {_mostrarArquivados},
+          onSelectionChanged: (selecao) {
+            _alterarFiltro(selecao.first);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _construirEstadoVazio() {
+    final titulo = _mostrarArquivados
+        ? 'Nenhum cliente arquivado'
+        : 'Nenhum cliente cadastrado';
+
+    final descricao = _mostrarArquivados
+        ? 'Clientes arquivados aparecerão aqui.'
+        : 'Toque no botão + para cadastrar.';
+
+    return RefreshIndicator(
+      onRefresh: _carregarClientes,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        children: [
+          SizedBox(height: MediaQuery.sizeOf(context).height * 0.18),
+          Icon(
+            _mostrarArquivados
+                ? Icons.inventory_2_outlined
+                : Icons.people_outline,
+            size: 72,
+            color: Colors.white38,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            titulo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            descricao,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white54),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirLista() {
+    return RefreshIndicator(
+      onRefresh: _carregarClientes,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: _clientes.length,
+        separatorBuilder: (_, _) {
+          return const SizedBox(height: 10);
+        },
+        itemBuilder: (context, index) {
+          final cliente = _clientes[index];
+          final dataArquivamento = _dataArquivamento(cliente);
+
+          return Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                child: Icon(
+                  cliente.ativo ? Icons.person : Icons.archive_outlined,
+                ),
+              ),
+              title: Text(cliente.nome),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    cliente.telefone.isNotEmpty
+                        ? cliente.telefone
+                        : 'Telefone não informado',
+                  ),
+                  if (!cliente.ativo) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      dataArquivamento.isEmpty
+                          ? 'Cliente arquivado'
+                          : 'Arquivado em $dataArquivamento',
+                      style: const TextStyle(
+                        color: Colors.amber,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              isThreeLine: !cliente.ativo,
+              onTap: () {
+                _abrirDetalhes(cliente);
+              },
+              trailing: const Icon(Icons.chevron_right),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Clientes')),
-      body: carregando
-          ? const Center(child: CircularProgressIndicator())
-          : clientes.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people_outline, size: 72, color: Colors.white38),
-                  SizedBox(height: 16),
-                  Text(
-                    'Nenhum cliente cadastrado',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Toque no botão + para cadastrar',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: carregarClientes,
-              child: ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: clientes.length,
-                separatorBuilder: (_, __) {
-                  return const SizedBox(height: 10);
-                },
-                itemBuilder: (context, index) {
-                  final cliente = clientes[index];
-
-                  return Card(
-                    child: ListTile(
-                      leading: const CircleAvatar(child: Icon(Icons.person)),
-                      title: Text(cliente.nome),
-                      subtitle: Text(
-                        cliente.telefone.isNotEmpty
-                            ? cliente.telefone
-                            : 'Telefone não informado',
-                      ),
-                      onTap: () async {
-                        final resultado = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                ClienteDetalhesPage(cliente: cliente),
-                          ),
-                        );
-
-                        if (resultado == true) {
-                          carregarClientes();
-                        }
-                      },
-                      trailing: const Icon(Icons.chevron_right),
-                    ),
-                  );
-                },
-              ),
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: abrirCadastro,
-        child: const Icon(Icons.add),
+      body: Column(
+        children: [
+          _construirFiltro(),
+          Expanded(
+            child: _carregando
+                ? const Center(child: CircularProgressIndicator())
+                : _clientes.isEmpty
+                ? _construirEstadoVazio()
+                : _construirLista(),
+          ),
+        ],
       ),
+      floatingActionButton: _mostrarArquivados
+          ? null
+          : FloatingActionButton(
+              onPressed: _abrirCadastro,
+              child: const Icon(Icons.add),
+            ),
     );
   }
 }
@@ -160,6 +328,8 @@ class _NovoClienteDialog extends StatefulWidget {
 }
 
 class _NovoClienteDialogState extends State<_NovoClienteDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _telefoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -177,17 +347,12 @@ class _NovoClienteDialogState extends State<_NovoClienteDialog> {
   }
 
   void _salvar() {
-    final nome = _nomeController.text.trim();
-
-    if (nome.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe o nome do cliente.')),
-      );
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
     final cliente = Cliente(
-      nome: nome,
+      nome: _nomeController.text.trim(),
       telefone: _telefoneController.text.trim(),
       email: _emailController.text.trim(),
       endereco: _enderecoController.text.trim(),
@@ -202,55 +367,66 @@ class _NovoClienteDialogState extends State<_NovoClienteDialog> {
     return AlertDialog(
       title: const Text('Novo cliente'),
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nomeController,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Nome do cliente',
-                prefixIcon: Icon(Icons.person_outline),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nomeController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Nome do cliente',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (valor) {
+                  if (valor == null || valor.trim().isEmpty) {
+                    return 'Informe o nome do cliente.';
+                  }
+
+                  return null;
+                },
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _telefoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Telefone',
-                prefixIcon: Icon(Icons.phone_outlined),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _telefoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Telefone',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'E-mail',
-                prefixIcon: Icon(Icons.email_outlined),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'E-mail',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _enderecoController,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Endereço',
-                prefixIcon: Icon(Icons.location_on_outlined),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _enderecoController,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Endereço',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _observacoesController,
-              maxLines: 3,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Observações',
-                prefixIcon: Icon(Icons.notes_outlined),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _observacoesController,
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Observações',
+                  prefixIcon: Icon(Icons.notes_outlined),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [

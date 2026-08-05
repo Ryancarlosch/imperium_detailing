@@ -8,10 +8,12 @@ import '../services/ordem_servico_pdf_service.dart';
 import '../services/whatsapp_service.dart';
 import 'veiculos_cliente_page.dart';
 
-class ClienteDetalhesPage extends StatefulWidget {
-  final Cliente cliente;
+enum _AcaoCliente { editar, arquivarOuReativar }
 
+class ClienteDetalhesPage extends StatefulWidget {
   const ClienteDetalhesPage({super.key, required this.cliente});
+
+  final Cliente cliente;
 
   @override
   State<ClienteDetalhesPage> createState() => _ClienteDetalhesPageState();
@@ -37,6 +39,7 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
   bool _carregando = true;
   bool _gerandoPdf = false;
   bool _abrindoWhatsApp = false;
+  bool _alterandoArquivamento = false;
 
   int _quantidadeVeiculos = 0;
   int _quantidadeOrdens = 0;
@@ -86,17 +89,11 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
 
       setState(() {
         _quantidadeVeiculos = resultados[0] as int;
-
         _quantidadeOrdens = (resumo['quantidade_ordens'] as num?)?.toInt() ?? 0;
-
         _totalGasto = (resumo['total_gasto'] as num?)?.toDouble() ?? 0;
-
         _ticketMedio = (resumo['ticket_medio'] as num?)?.toDouble() ?? 0;
-
         _ultimoAtendimento = (resumo['ultimo_atendimento'] ?? '').toString();
-
         _historico = resultados[2] as List<Map<String, dynamic>>;
-
         _carregando = false;
       });
     } catch (erro) {
@@ -109,8 +106,7 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
       });
 
       _mostrarMensagem(
-        'Não foi possível carregar o histórico do cliente.\n'
-        '$erro',
+        'Não foi possível carregar o histórico do cliente.\n$erro',
         erro: true,
       );
     }
@@ -131,130 +127,156 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
       );
   }
 
-  Future<void> editarCliente() async {
-    final nomeController = TextEditingController(text: cliente.nome);
+  Future<void> _editarCliente() async {
+    if (!cliente.ativo) {
+      _mostrarMensagem(
+        'Reative o cliente antes de editar seus dados.',
+        erro: true,
+      );
+      return;
+    }
 
-    final telefoneController = TextEditingController(text: cliente.telefone);
-
-    final emailController = TextEditingController(text: cliente.email);
-
-    final enderecoController = TextEditingController(text: cliente.endereco);
-
-    final observacoesController = TextEditingController(
-      text: cliente.observacoes,
+    final clienteAtualizado = await showDialog<Cliente>(
+      context: context,
+      builder: (context) {
+        return _EditarClienteDialog(cliente: cliente);
+      },
     );
 
-    await showDialog<void>(
+    if (clienteAtualizado == null || !mounted) {
+      return;
+    }
+
+    try {
+      await _clienteRepository.atualizarCliente(clienteAtualizado);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        cliente = clienteAtualizado;
+      });
+
+      _mostrarMensagem('Cliente atualizado com sucesso.');
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      _mostrarMensagem(
+        'Não foi possível atualizar o cliente.\n$erro',
+        erro: true,
+      );
+    }
+  }
+
+  Future<void> _alterarArquivamento() async {
+    final clienteId = cliente.id;
+
+    if (clienteId == null || _alterandoArquivamento) {
+      return;
+    }
+
+    final vaiArquivar = cliente.ativo;
+
+    final confirmou = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Editar cliente'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nomeController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: telefoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Telefone',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'E-mail',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: enderecoController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Endereço',
-                    prefixIcon: Icon(Icons.location_on_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: observacoesController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Observações',
-                    prefixIcon: Icon(Icons.notes_outlined),
-                  ),
-                ),
-              ],
-            ),
+          title: Text(vaiArquivar ? 'Arquivar cliente' : 'Reativar cliente'),
+          content: Text(
+            vaiArquivar
+                ? 'O cliente deixará de aparecer nos cadastros ativos, '
+                      'mas veículos, agendamentos, orçamentos, ordens de '
+                      'serviço e histórico financeiro serão preservados.'
+                : 'O cliente voltará a aparecer nos cadastros ativos e '
+                      'poderá ser utilizado em novos atendimentos.',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
+                Navigator.pop(dialogContext, false);
               },
               child: const Text('Cancelar'),
             ),
-            FilledButton(
-              onPressed: () async {
-                final nome = nomeController.text.trim();
-
-                if (nome.isEmpty) {
-                  _mostrarMensagem('Informe o nome do cliente.', erro: true);
-                  return;
-                }
-
-                final clienteAtualizado = Cliente(
-                  id: cliente.id,
-                  nome: nome,
-                  telefone: telefoneController.text.trim(),
-                  email: emailController.text.trim(),
-                  endereco: enderecoController.text.trim(),
-                  observacoes: observacoesController.text.trim(),
-                );
-
-                await _clienteRepository.atualizarCliente(clienteAtualizado);
-
-                if (!dialogContext.mounted) {
-                  return;
-                }
-
-                Navigator.pop(dialogContext);
-
-                if (!mounted) {
-                  return;
-                }
-
-                setState(() {
-                  cliente = clienteAtualizado;
-                });
-
-                _mostrarMensagem('Cliente atualizado com sucesso.');
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
               },
-              child: const Text('Salvar'),
+              icon: Icon(
+                vaiArquivar ? Icons.archive_outlined : Icons.restore_outlined,
+              ),
+              label: Text(vaiArquivar ? 'Arquivar' : 'Reativar'),
             ),
           ],
         );
       },
     );
+
+    if (confirmou != true || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _alterandoArquivamento = true;
+    });
+
+    try {
+      final registrosAlterados = vaiArquivar
+          ? await _clienteRepository.arquivarCliente(clienteId)
+          : await _clienteRepository.reativarCliente(clienteId);
+
+      if (registrosAlterados == 0) {
+        throw StateError(
+          vaiArquivar
+              ? 'O cliente já estava arquivado ou não foi encontrado.'
+              : 'O cliente já estava ativo ou não foi encontrado.',
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pop(context, vaiArquivar ? 'arquivado' : 'reativado');
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _alterandoArquivamento = false;
+      });
+
+      _mostrarMensagem(
+        vaiArquivar
+            ? 'Não foi possível arquivar o cliente.\n$erro'
+            : 'Não foi possível reativar o cliente.\n$erro',
+        erro: true,
+      );
+    }
   }
 
-  void abrirVeiculos() {
+  void _tratarAcao(_AcaoCliente acao) {
+    switch (acao) {
+      case _AcaoCliente.editar:
+        _editarCliente();
+        return;
+      case _AcaoCliente.arquivarOuReativar:
+        _alterarArquivamento();
+        return;
+    }
+  }
+
+  void _abrirVeiculos() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => VeiculosClientePage(cliente: cliente)),
+      MaterialPageRoute(
+        builder: (_) {
+          return VeiculosClientePage(cliente: cliente);
+        },
+      ),
     ).then((_) {
       _carregarHistorico();
     });
@@ -514,9 +536,7 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
 
   String _nomeVeiculo(Map<String, dynamic> ordem) {
     final marca = _texto(ordem, 'veiculo_marca');
-
     final modelo = _texto(ordem, 'veiculo_modelo');
-
     final placa = _texto(ordem, 'veiculo_placa');
 
     final nome = '$marca $modelo'.trim();
@@ -538,9 +558,7 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
 
   double _valorFinal(Map<String, dynamic> ordem) {
     final valorTotal = _numero(ordem, 'valor_total');
-
     final desconto = _numero(ordem, 'desconto');
-
     final resultado = valorTotal - desconto;
 
     return resultado < 0 ? 0 : resultado;
@@ -609,11 +627,8 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
 
   Widget _cardOrdem(Map<String, dynamic> ordem) {
     final id = _inteiro(ordem, 'id');
-
     final numero = _texto(ordem, 'numero', padrao: 'Ordem de Serviço');
-
     final status = _texto(ordem, 'status', padrao: 'Aberta');
-
     final servicos = _texto(
       ordem,
       'servicos',
@@ -731,6 +746,37 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
     );
   }
 
+  Widget _avisoArquivado() {
+    final arquivadoEm = cliente.arquivadoEm;
+    final data = arquivadoEm == null ? '' : _formatarData(arquivadoEm);
+
+    return Card(
+      color: Colors.amber.withValues(alpha: 0.10),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.archive_outlined, color: Colors.amber),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                data.isEmpty || data == 'Nenhum atendimento'
+                    ? 'Cliente arquivado. O histórico foi preservado.'
+                    : 'Cliente arquivado em $data. '
+                          'O histórico foi preservado.',
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -753,11 +799,49 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
             tooltip: 'Atualizar',
             icon: const Icon(Icons.refresh_outlined),
           ),
-          IconButton(
-            onPressed: editarCliente,
-            tooltip: 'Editar cliente',
-            icon: const Icon(Icons.edit_outlined),
-          ),
+          if (_alterandoArquivamento)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else
+            PopupMenuButton<_AcaoCliente>(
+              tooltip: 'Mais opções',
+              onSelected: _tratarAcao,
+              itemBuilder: (context) {
+                return [
+                  if (cliente.ativo)
+                    const PopupMenuItem<_AcaoCliente>(
+                      value: _AcaoCliente.editar,
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('Editar cliente'),
+                      ),
+                    ),
+                  PopupMenuItem<_AcaoCliente>(
+                    value: _AcaoCliente.arquivarOuReativar,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        cliente.ativo
+                            ? Icons.archive_outlined
+                            : Icons.restore_outlined,
+                      ),
+                      title: Text(
+                        cliente.ativo ? 'Arquivar cliente' : 'Reativar cliente',
+                      ),
+                    ),
+                  ),
+                ];
+              },
+            ),
         ],
       ),
       body: _carregando
@@ -768,13 +852,17 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 children: [
-                  const CircleAvatar(
+                  if (!cliente.ativo) ...[
+                    _avisoArquivado(),
+                    const SizedBox(height: 12),
+                  ],
+                  CircleAvatar(
                     radius: 46,
-                    backgroundColor: Color(0xFF252525),
+                    backgroundColor: const Color(0xFF252525),
                     child: Icon(
-                      Icons.person,
+                      cliente.ativo ? Icons.person : Icons.archive_outlined,
                       size: 48,
-                      color: Color(0xFFD6A84B),
+                      color: const Color(0xFFD6A84B),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -831,7 +919,7 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
                   ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: abrirVeiculos,
+                    onPressed: _abrirVeiculos,
                     icon: const Icon(Icons.directions_car_outlined),
                     label: const Text('Ver veículos do cliente'),
                   ),
@@ -894,7 +982,8 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
                             ),
                             SizedBox(height: 10),
                             Text(
-                              'Este cliente ainda não possui Ordens de Serviço.',
+                              'Este cliente ainda não possui '
+                              'Ordens de Serviço.',
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -907,6 +996,143 @@ class _ClienteDetalhesPageState extends State<ClienteDetalhesPage> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _EditarClienteDialog extends StatefulWidget {
+  const _EditarClienteDialog({required this.cliente});
+
+  final Cliente cliente;
+
+  @override
+  State<_EditarClienteDialog> createState() => _EditarClienteDialogState();
+}
+
+class _EditarClienteDialogState extends State<_EditarClienteDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  late final TextEditingController _nomeController;
+  late final TextEditingController _telefoneController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _enderecoController;
+  late final TextEditingController _observacoesController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _nomeController = TextEditingController(text: widget.cliente.nome);
+    _telefoneController = TextEditingController(text: widget.cliente.telefone);
+    _emailController = TextEditingController(text: widget.cliente.email);
+    _enderecoController = TextEditingController(text: widget.cliente.endereco);
+    _observacoesController = TextEditingController(
+      text: widget.cliente.observacoes,
+    );
+  }
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _telefoneController.dispose();
+    _emailController.dispose();
+    _enderecoController.dispose();
+    _observacoesController.dispose();
+    super.dispose();
+  }
+
+  void _salvar() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final clienteAtualizado = widget.cliente.copyWith(
+      nome: _nomeController.text.trim(),
+      telefone: _telefoneController.text.trim(),
+      email: _emailController.text.trim(),
+      endereco: _enderecoController.text.trim(),
+      observacoes: _observacoesController.text.trim(),
+    );
+
+    Navigator.pop(context, clienteAtualizado);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Editar cliente'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nomeController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Nome',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (valor) {
+                  if (valor == null || valor.trim().isEmpty) {
+                    return 'Informe o nome do cliente.';
+                  }
+
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _telefoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Telefone',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'E-mail',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _enderecoController,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Endereço',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _observacoesController,
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Observações',
+                  prefixIcon: Icon(Icons.notes_outlined),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _salvar, child: const Text('Salvar')),
+      ],
     );
   }
 }
