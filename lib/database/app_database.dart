@@ -5,7 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 19;
+  static const int schemaVersion = 20;
 
   static Database? _database;
 
@@ -116,6 +116,10 @@ class AppDatabase {
         if (versaoAntiga < 19) {
           await _atualizarParaVersao19(database);
         }
+
+        if (versaoAntiga < 20) {
+          await _atualizarParaVersao20(database);
+        }
       },
     );
   }
@@ -155,8 +159,30 @@ class AppDatabase {
           telefone TEXT,
           email TEXT,
           endereco TEXT,
-          observacoes TEXT
+          observacoes TEXT,
+          ativo INTEGER NOT NULL DEFAULT 1,
+          arquivado_em TEXT
         )
+      ''');
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'clientes',
+      coluna: 'ativo',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'clientes',
+      coluna: 'arquivado_em',
+      definicao: 'TEXT',
+    );
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_clientes_ativo_nome
+        ON clientes (ativo, nome COLLATE NOCASE)
       ''');
   }
 
@@ -1438,6 +1464,16 @@ class AppDatabase {
               THEN LOWER(TRIM(unidade_base))
             ELSE 'unidade'
           END
+      ''');
+  }
+
+  Future<void> _atualizarParaVersao20(Database database) async {
+    await _criarTabelaClientes(database);
+
+    await database.execute('''
+        UPDATE clientes
+        SET ativo = 1
+        WHERE ativo IS NULL
       ''');
   }
 
