@@ -48,7 +48,16 @@ class RestauracaoResumo {
 }
 
 class BackupService {
-  BackupService._();
+  BackupService._()
+    : _obterDocumentos = getApplicationDocumentsDirectory,
+      _obterTemporario = getTemporaryDirectory,
+      _obterPackageInfo = PackageInfo.fromPlatform;
+
+  BackupService.paraTeste({
+    required this._obterDocumentos,
+    required this._obterTemporario,
+    required this._obterPackageInfo,
+  });
 
   static final BackupService instance = BackupService._();
 
@@ -58,6 +67,10 @@ class BackupService {
   final AppDatabase _appDatabase = AppDatabase.instance;
   final ConfiguracaoRepository _configuracaoRepository =
       ConfiguracaoRepository();
+
+  final Future<Directory> Function() _obterDocumentos;
+  final Future<Directory> Function() _obterTemporario;
+  final Future<PackageInfo> Function() _obterPackageInfo;
 
   Future<BackupResumo> criarBackup() async {
     return _criarBackupInterno(
@@ -75,21 +88,15 @@ class BackupService {
       );
     }
 
-    final pastaTemporariaBase = await getTemporaryDirectory();
+    final pastaTemporariaBase = await _obterTemporario();
     final pastaExtracao = Directory(
       path.join(
         pastaTemporariaBase.path,
-        'imperium_restore_${DateTime.now().millisecondsSinceEpoch}',
+        'imperium_restore_${DateTime.now().microsecondsSinceEpoch}',
       ),
     );
 
-    if (await pastaExtracao.exists()) {
-      await pastaExtracao.delete(recursive: true);
-    }
-
-    await pastaExtracao.create(recursive: true);
-
-    final warnings = <String>[];
+    final avisos = <String>[];
 
     try {
       final validacao = await _validarArquivoBackup(arquivoBackup);
@@ -97,7 +104,8 @@ class BackupService {
 
       if (validacao.versaoBanco > AppDatabase.schemaVersion) {
         throw BackupException(
-          'Este backup foi criado com um schema de banco mais novo. Atualize o aplicativo antes de restaurar.',
+          'Este backup foi criado com um schema de banco mais novo. '
+          'Atualize o aplicativo antes de restaurar.',
         );
       }
 
@@ -112,19 +120,24 @@ class BackupService {
         await _aplicarBackupNoSistema(
           arquivoBackup: arquivoBackup,
           pastaExtracao: pastaExtracao,
-          warnings: warnings,
+          avisos: avisos,
         );
-      } catch (erro) {
-        warnings.add('Restauração principal falhou. Tentando rollback.');
+      } catch (_) {
+        avisos.add('Restauração principal falhou. Rollback iniciado.');
 
         try {
+          await _appDatabase.fecharBanco();
           await _aplicarBackupNoSistema(
             arquivoBackup: File(backupSeguranca.caminhoArquivo),
             pastaExtracao: pastaExtracao,
-            warnings: warnings,
+            avisos: avisos,
           );
         } catch (_) {
-          // Se o rollback falhar, ainda tentamos reabrir o banco original.
+          avisos.add(
+            'O rollback automático também encontrou uma falha. '
+            'O backup de segurança foi preservado em '
+            '${backupSeguranca.caminhoArquivo}.',
+          );
         }
 
         await _reabrirBanco();
@@ -132,15 +145,9 @@ class BackupService {
       }
 
       await _reabrirBanco();
-      return RestauracaoResumo(avisos: warnings);
+      return RestauracaoResumo(avisos: avisos);
     } finally {
-      try {
-        if (await pastaExtracao.exists()) {
-          await pastaExtracao.delete(recursive: true);
-        }
-      } catch (_) {
-        // Limpeza temporária best-effort.
-      }
+      await _excluirDiretorioBestEffort(pastaExtracao);
     }
   }
 
@@ -148,11 +155,11 @@ class BackupService {
     required bool registrarNoBanco,
     required String prefixoArquivo,
   }) async {
-    final packageInfo = await PackageInfo.fromPlatform();
+    final packageInfo = await _obterPackageInfo();
     final agora = DateTime.now();
     final nomeArquivo = '${prefixoArquivo}_${_formatarDataArquivo(agora)}.zip';
 
-    final pastaDocumentos = await getApplicationDocumentsDirectory();
+    final pastaDocumentos = await _obterDocumentos();
     final pastaBackups = Directory(path.join(pastaDocumentos.path, 'backups'));
     await pastaBackups.create(recursive: true);
 
@@ -161,19 +168,15 @@ class BackupService {
       await arquivoBackup.delete();
     }
 
-    final pastaTemporariaBase = await getTemporaryDirectory();
+    final pastaTemporariaBase = await _obterTemporario();
     final pastaStaging = Directory(
       path.join(
         pastaTemporariaBase.path,
-        'imperium_backup_${agora.millisecondsSinceEpoch}',
+        'imperium_backup_${agora.microsecondsSinceEpoch}',
       ),
     );
 
-    if (await pastaStaging.exists()) {
-      await pastaStaging.delete(recursive: true);
-    }
-
-    await pastaStaging.create(recursive: true);
+    await _prepararDiretorioVazio(pastaStaging);
 
     final pastaConteudo = Directory(path.join(pastaStaging.path, 'payload'));
     final pastaArquivos = Directory(path.join(pastaConteudo.path, 'files'));
@@ -182,7 +185,7 @@ class BackupService {
     await pastaArquivos.create(recursive: true);
     await pastaBanco.create(recursive: true);
 
-    final warnings = <String>[];
+    final avisos = <String>[];
     var quantidadeArquivos = 0;
     var tamanhoConteudo = 0;
 
@@ -199,34 +202,42 @@ class BackupService {
         final arquivoOrigem = File(entrada.caminhoOriginal);
 
         if (!await arquivoOrigem.exists()) {
-          warnings.add('Arquivo ausente ignorado: ${entrada.caminhoOriginal}');
+          avisos.add('Arquivo ausente ignorado: ${entrada.caminhoOriginal}');
           continue;
         }
 
         final arquivoDestino = File(
           path.join(pastaArquivos.path, entrada.relativo),
         );
+
         await arquivoDestino.parent.create(recursive: true);
         final copia = await arquivoOrigem.copy(arquivoDestino.path);
+
         quantidadeArquivos++;
         tamanhoConteudo += await copia.length();
       }
 
       final caminhoBanco = await _obterCaminhoBanco();
-      final arquivoBancoOrigem = File(caminhoBanco);
 
+      await _appDatabase.fecharBanco();
+
+      final arquivoBancoOrigem = File(caminhoBanco);
       if (!await arquivoBancoOrigem.exists()) {
         throw const BackupException(
           'O banco de dados local não foi encontrado.',
         );
       }
 
-      await _appDatabase.fecharBanco();
-
       final arquivoBancoDestino = File(
         path.join(pastaBanco.path, 'imperium_detailing.db'),
       );
+
       await arquivoBancoOrigem.copy(arquivoBancoDestino.path);
+      await _validarBancoBackup(
+        arquivoBancoDestino,
+        versaoEsperada: AppDatabase.schemaVersion,
+      );
+
       quantidadeArquivos++;
       tamanhoConteudo += await arquivoBancoDestino.length();
 
@@ -245,6 +256,7 @@ class BackupService {
       final arquivoMetadata = File(
         path.join(pastaConteudo.path, 'metadata.json'),
       );
+
       await arquivoMetadata.writeAsString(
         const JsonEncoder.withIndent('  ').convert(metadata),
         flush: true,
@@ -254,6 +266,12 @@ class BackupService {
       encoder.create(arquivoBackup.path);
       encoder.addDirectory(pastaConteudo);
       encoder.close();
+
+      if (!await arquivoBackup.exists() || await arquivoBackup.length() <= 0) {
+        throw const BackupException(
+          'Não foi possível gerar um arquivo de backup válido.',
+        );
+      }
 
       final tamanhoZip = await arquivoBackup.length();
 
@@ -272,7 +290,7 @@ class BackupService {
         versaoApp: packageInfo.version,
         versaoBanco: AppDatabase.schemaVersion,
         quantidadeArquivos: quantidadeArquivos + 1,
-        avisos: warnings,
+        avisos: List.unmodifiable(avisos),
       );
     } finally {
       try {
@@ -281,21 +299,16 @@ class BackupService {
         // Reabertura best-effort.
       }
 
-      try {
-        if (await pastaStaging.exists()) {
-          await pastaStaging.delete(recursive: true);
-        }
-      } catch (_) {
-        // Limpeza best-effort.
-      }
+      await _excluirDiretorioBestEffort(pastaStaging);
     }
   }
 
   Future<void> _aplicarBackupNoSistema({
     required File arquivoBackup,
     required Directory pastaExtracao,
-    required List<String> warnings,
+    required List<String> avisos,
   }) async {
+    await _prepararDiretorioVazio(pastaExtracao);
     await _extrairZipSeguro(arquivoBackup, pastaExtracao);
 
     final raizConteudo = await _localizarRaizConteudo(pastaExtracao);
@@ -309,6 +322,7 @@ class BackupService {
       raizConteudo,
       'metadata.json',
     );
+
     final databaseArquivo = await _encontrarArquivoPorNome(
       raizConteudo,
       'imperium_detailing.db',
@@ -320,35 +334,136 @@ class BackupService {
       );
     }
 
-    final validacao = await _validarArquivoBackup(arquivoBackup);
-    _validarMetadados(validacao.metadados);
+    final metadata = _lerMetadadosDeBytes(await metadataArquivo.readAsBytes());
+
+    _validarMetadados(metadata);
+
+    final versaoBanco = (metadata['versao_banco'] as num?)?.toInt() ?? -1;
+
+    if (versaoBanco > AppDatabase.schemaVersion) {
+      throw BackupException(
+        'Este backup foi criado com um schema de banco mais novo. '
+        'Atualize o aplicativo antes de restaurar.',
+      );
+    }
+
+    await _validarBancoBackup(databaseArquivo, versaoEsperada: versaoBanco);
+
+    final pastaDocumentos = await _obterDocumentos();
 
     await _restaurarArquivosDoBackup(
       raizConteudo: raizConteudo,
-      pastaDocumentos: await getApplicationDocumentsDirectory(),
-      warnings: warnings,
+      pastaDocumentos: pastaDocumentos,
+      avisos: avisos,
     );
+
+    await _appDatabase.fecharBanco();
+
+    final destinoBanco = File(await _obterCaminhoBanco());
+
+    await _substituirBanco(origem: databaseArquivo, destino: destinoBanco);
+
+    // Abertura pelo AppDatabase aplica migrações caso o backup seja antigo.
+    await _reabrirBanco();
+    await _appDatabase.fecharBanco();
 
     await _atualizarCaminhosNoBanco(
-      arquivoBanco: databaseArquivo,
-      pastaDocumentos: await getApplicationDocumentsDirectory(),
-      warnings: warnings,
+      arquivoBanco: destinoBanco,
+      pastaDocumentos: pastaDocumentos,
+      avisos: avisos,
     );
 
-    await _substituirBanco(
-      origem: databaseArquivo,
-      destino: File(await _obterCaminhoBanco()),
+    await _validarBancoBackup(
+      destinoBanco,
+      versaoEsperada: AppDatabase.schemaVersion,
     );
+  }
+
+  Future<void> _validarBancoBackup(
+    File arquivoBanco, {
+    required int versaoEsperada,
+  }) async {
+    if (!await arquivoBanco.exists() || await arquivoBanco.length() <= 0) {
+      throw const BackupException(
+        'O backup não contém um banco de dados válido.',
+      );
+    }
+
+    Database? database;
+
+    try {
+      database = await openDatabase(
+        arquivoBanco.path,
+        readOnly: true,
+        singleInstance: false,
+      );
+
+      final versao = await database.getVersion();
+
+      if (versao != versaoEsperada) {
+        throw BackupException(
+          'A versão interna do banco ($versao) não corresponde '
+          'à versão informada no backup ($versaoEsperada).',
+        );
+      }
+
+      final integridade = await database.rawQuery('PRAGMA integrity_check');
+      final resultadoIntegridade = integridade.isEmpty
+          ? ''
+          : integridade.first.values.first?.toString().trim().toLowerCase() ??
+                '';
+
+      if (resultadoIntegridade != 'ok') {
+        throw const BackupException(
+          'O banco contido no backup está corrompido.',
+        );
+      }
+
+      final chavesInvalidas = await database.rawQuery(
+        'PRAGMA foreign_key_check',
+      );
+
+      if (chavesInvalidas.isNotEmpty) {
+        throw const BackupException(
+          'O banco do backup possui relacionamentos inválidos.',
+        );
+      }
+
+      final tabelas = await database.rawQuery('''
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name IN ('clientes', 'configuracoes')
+        ''');
+
+      final nomes = tabelas
+          .map((linha) => linha['name']?.toString() ?? '')
+          .toSet();
+
+      if (!nomes.contains('clientes') || !nomes.contains('configuracoes')) {
+        throw const BackupException(
+          'O banco do backup não possui a estrutura mínima esperada.',
+        );
+      }
+    } on BackupException {
+      rethrow;
+    } catch (_) {
+      throw const BackupException(
+        'Não foi possível validar o banco contido no backup.',
+      );
+    } finally {
+      await database?.close();
+    }
   }
 
   Future<void> _atualizarCaminhosNoBanco({
     required File arquivoBanco,
     required Directory pastaDocumentos,
-    required List<String> warnings,
+    required List<String> avisos,
   }) async {
     final database = await openDatabase(
       arquivoBanco.path,
-      version: AppDatabase.schemaVersion,
+      singleInstance: false,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -360,43 +475,54 @@ class BackupService {
           tabela: 'configuracoes',
           coluna: 'caminho_logo',
           seletor:
-              'SELECT id, caminho_logo AS caminho FROM configuracoes WHERE caminho_logo IS NOT NULL AND TRIM(caminho_logo) != ""',
+              'SELECT id, caminho_logo AS caminho FROM configuracoes '
+              'WHERE caminho_logo IS NOT NULL AND TRIM(caminho_logo) != \'\'',
         ),
         _MapaBackup(
           tabela: 'configuracoes',
           coluna: 'caminho_assinatura_empresa',
           seletor:
-              'SELECT id, caminho_assinatura_empresa AS caminho FROM configuracoes WHERE caminho_assinatura_empresa IS NOT NULL AND TRIM(caminho_assinatura_empresa) != ""',
+              'SELECT id, caminho_assinatura_empresa AS caminho '
+              'FROM configuracoes '
+              'WHERE caminho_assinatura_empresa IS NOT NULL '
+              'AND TRIM(caminho_assinatura_empresa) != \'\'',
         ),
         _MapaBackup(
           tabela: 'fotos_servico',
           coluna: 'caminho_antes',
           seletor:
-              'SELECT id, caminho_antes AS caminho FROM fotos_servico WHERE caminho_antes IS NOT NULL AND TRIM(caminho_antes) != ""',
+              'SELECT id, caminho_antes AS caminho FROM fotos_servico '
+              'WHERE caminho_antes IS NOT NULL AND TRIM(caminho_antes) != \'\'',
         ),
         _MapaBackup(
           tabela: 'fotos_servico',
           coluna: 'caminho_depois',
           seletor:
-              'SELECT id, caminho_depois AS caminho FROM fotos_servico WHERE caminho_depois IS NOT NULL AND TRIM(caminho_depois) != ""',
+              'SELECT id, caminho_depois AS caminho FROM fotos_servico '
+              'WHERE caminho_depois IS NOT NULL '
+              'AND TRIM(caminho_depois) != \'\'',
         ),
         _MapaBackup(
           tabela: 'ordem_servico_fotos',
           coluna: 'caminho',
           seletor:
-              'SELECT id, caminho FROM ordem_servico_fotos WHERE caminho IS NOT NULL AND TRIM(caminho) != ""',
+              'SELECT id, caminho FROM ordem_servico_fotos '
+              'WHERE caminho IS NOT NULL AND TRIM(caminho) != \'\'',
         ),
         _MapaBackup(
           tabela: 'ordem_servico_checklist',
           coluna: 'foto_avaria',
           seletor:
-              'SELECT id, foto_avaria AS caminho FROM ordem_servico_checklist WHERE foto_avaria IS NOT NULL AND TRIM(foto_avaria) != ""',
+              'SELECT id, foto_avaria AS caminho FROM ordem_servico_checklist '
+              'WHERE foto_avaria IS NOT NULL AND TRIM(foto_avaria) != \'\'',
         ),
         _MapaBackup(
           tabela: 'ordens_servico',
           coluna: 'assinatura_cliente',
           seletor:
-              'SELECT id, assinatura_cliente AS caminho FROM ordens_servico WHERE assinatura_cliente IS NOT NULL AND TRIM(assinatura_cliente) != ""',
+              'SELECT id, assinatura_cliente AS caminho FROM ordens_servico '
+              'WHERE assinatura_cliente IS NOT NULL '
+              'AND TRIM(assinatura_cliente) != \'\'',
         ),
       ];
 
@@ -415,16 +541,19 @@ class BackupService {
             caminhoOriginal,
             pastaDocumentos.path,
           );
+
           if (relativo == null) {
-            warnings.add(
+            avisos.add(
               'Caminho fora da pasta do app ignorado: $caminhoOriginal',
             );
+
             await database.update(
               mapa.tabela,
               {mapa.coluna: mapa.coluna == 'assinatura_cliente' ? null : ''},
               where: 'id = ?',
               whereArgs: [id],
             );
+
             continue;
           }
 
@@ -432,7 +561,7 @@ class BackupService {
           final arquivoExiste = File(novoCaminho).existsSync();
 
           if (!arquivoExiste) {
-            warnings.add('Arquivo ausente após restauração: $relativo');
+            avisos.add('Arquivo ausente após restauração: $relativo');
           }
 
           await database.update(
@@ -455,22 +584,33 @@ class BackupService {
   Future<void> _restaurarArquivosDoBackup({
     required Directory raizConteudo,
     required Directory pastaDocumentos,
-    required List<String> warnings,
+    required List<String> avisos,
   }) async {
     final pastaArquivos = Directory(path.join(raizConteudo.path, 'files'));
 
     if (!await pastaArquivos.exists()) {
-      warnings.add('Nenhuma pasta de arquivos foi encontrada no backup.');
+      avisos.add('Nenhuma pasta de arquivos foi encontrada no backup.');
       return;
     }
 
-    await for (final entidade in pastaArquivos.list(recursive: true)) {
+    await for (final entidade in pastaArquivos.list(
+      recursive: true,
+      followLinks: false,
+    )) {
       if (entidade is! File) {
         continue;
       }
 
       final relativo = path.relative(entidade.path, from: pastaArquivos.path);
+
       final destino = File(path.join(pastaDocumentos.path, relativo));
+
+      if (!_caminhoDentroDaRaiz(pastaDocumentos.path, destino.path)) {
+        throw const BackupException(
+          'O backup contém um caminho de arquivo inválido.',
+        );
+      }
+
       await destino.parent.create(recursive: true);
       await entidade.copy(destino.path);
     }
@@ -484,30 +624,44 @@ class BackupService {
       throw const BackupException('O banco do backup não foi encontrado.');
     }
 
-    final destinoWal = File('${destino.path}-wal');
-    final destinoShm = File('${destino.path}-shm');
+    final temporario = File('${destino.path}.restore_tmp');
+    final arquivosAuxiliares = <File>[
+      File('${destino.path}-wal'),
+      File('${destino.path}-shm'),
+      File('${destino.path}-journal'),
+      temporario,
+    ];
+
+    for (final arquivo in arquivosAuxiliares) {
+      if (await arquivo.exists()) {
+        await arquivo.delete();
+      }
+    }
+
+    await destino.parent.create(recursive: true);
+    await origem.copy(temporario.path);
 
     if (await destino.exists()) {
       await destino.delete();
     }
 
-    if (await destinoWal.exists()) {
-      await destinoWal.delete();
-    }
-
-    if (await destinoShm.exists()) {
-      await destinoShm.delete();
-    }
-
-    await destino.parent.create(recursive: true);
-    await origem.copy(destino.path);
+    await temporario.rename(destino.path);
   }
 
   Future<_ArquivoValidado> _validarArquivoBackup(File arquivoBackup) async {
-    final bytes = await arquivoBackup.readAsBytes();
-    final archive = ZipDecoder().decodeBytes(bytes);
+    Archive archive;
+
+    try {
+      final bytes = await arquivoBackup.readAsBytes();
+      archive = ZipDecoder().decodeBytes(bytes);
+    } catch (_) {
+      throw const BackupException(
+        'O arquivo selecionado não é um ZIP de backup válido.',
+      );
+    }
 
     final nomes = <String>[];
+
     for (final arquivo in archive.files) {
       if (arquivo.isFile) {
         nomes.add(arquivo.name);
@@ -523,11 +677,19 @@ class BackupService {
       orElse: () => null,
     );
 
-    if (metadataArquivo == null) {
-      throw const BackupException('O backup não contém metadados válidos.');
+    final databaseArquivo = nomes.cast<String?>().firstWhere(
+      (nome) => nome != null && nome.endsWith('imperium_detailing.db'),
+      orElse: () => null,
+    );
+
+    if (metadataArquivo == null || databaseArquivo == null) {
+      throw const BackupException(
+        'O backup não contém metadados ou banco de dados válidos.',
+      );
     }
 
     final metadataBytes = _extrairArquivoDoZip(archive, metadataArquivo);
+
     if (metadataBytes == null) {
       throw const BackupException(
         'Não foi possível ler os metadados do backup.',
@@ -537,25 +699,29 @@ class BackupService {
     final metadata = _lerMetadadosDeBytes(metadataBytes);
     final versaoBanco = (metadata['versao_banco'] as num?)?.toInt() ?? -1;
 
-    return _ArquivoValidado(
-      metadados: metadata,
-      versaoBanco: versaoBanco,
-      arquivos: nomes,
-    );
+    if (versaoBanco <= 0) {
+      throw const BackupException(
+        'A versão do banco informada no backup é inválida.',
+      );
+    }
+
+    return _ArquivoValidado(metadados: metadata, versaoBanco: versaoBanco);
   }
 
   List<int>? _extrairArquivoDoZip(Archive archive, String nomeArquivo) {
     for (final arquivo in archive.files) {
-      if (arquivo.isFile && arquivo.name.endsWith(nomeArquivo)) {
-        final content = arquivo.content;
+      if (!arquivo.isFile || arquivo.name != nomeArquivo) {
+        continue;
+      }
 
-        if (content is List<int>) {
-          return content;
-        }
+      final content = arquivo.content;
 
-        if (content is Uint8List) {
-          return content;
-        }
+      if (content is Uint8List) {
+        return content;
+      }
+
+      if (content is List<int>) {
+        return content;
       }
     }
 
@@ -563,14 +729,20 @@ class BackupService {
   }
 
   Map<String, Object?> _lerMetadadosDeBytes(List<int> bytes) {
-    final texto = utf8.decode(bytes);
-    final mapa = jsonDecode(texto);
+    try {
+      final texto = utf8.decode(bytes);
+      final mapa = jsonDecode(texto);
 
-    if (mapa is! Map<String, dynamic>) {
+      if (mapa is! Map<String, dynamic>) {
+        throw const BackupException('O arquivo de metadados é inválido.');
+      }
+
+      return Map<String, Object?>.from(mapa);
+    } on BackupException {
+      rethrow;
+    } catch (_) {
       throw const BackupException('O arquivo de metadados é inválido.');
     }
-
-    return mapa;
   }
 
   void _validarMetadados(Map<String, Object?> metadata) {
@@ -593,9 +765,18 @@ class BackupService {
   }
 
   Future<void> _extrairZipSeguro(File arquivoZip, Directory destino) async {
-    final bytes = await arquivoZip.readAsBytes();
-    final archive = ZipDecoder().decodeBytes(bytes);
-    final raiz = path.normalize(destino.path);
+    Archive archive;
+
+    try {
+      final bytes = await arquivoZip.readAsBytes();
+      archive = ZipDecoder().decodeBytes(bytes);
+    } catch (_) {
+      throw const BackupException(
+        'O arquivo selecionado não é um ZIP de backup válido.',
+      );
+    }
+
+    final raiz = path.normalize(path.absolute(destino.path));
 
     for (final arquivo in archive.files) {
       if (!arquivo.isFile) {
@@ -603,17 +784,25 @@ class BackupService {
       }
 
       final caminhoDestino = path.normalize(
-        path.join(destino.path, arquivo.name),
+        path.absolute(path.join(destino.path, arquivo.name)),
       );
+
       if (!_caminhoDentroDaRaiz(raiz, caminhoDestino)) {
         throw const BackupException(
           'O backup contém caminhos inválidos e não pode ser extraído.',
         );
       }
 
+      final conteudo = arquivo.content;
+      if (conteudo is! List<int>) {
+        throw const BackupException(
+          'O backup contém um arquivo interno inválido.',
+        );
+      }
+
       final saida = File(caminhoDestino);
       await saida.parent.create(recursive: true);
-      await saida.writeAsBytes(arquivo.content as List<int>, flush: true);
+      await saida.writeAsBytes(conteudo, flush: true);
     }
   }
 
@@ -687,8 +876,10 @@ class BackupService {
     }
 
     final arquivos = <_ArquivoPersistente>[];
+
     for (final caminho in caminhos) {
       final relativo = _extrairRelativo(caminho, pastaDocumentos.path);
+
       if (relativo == null) {
         continue;
       }
@@ -710,9 +901,27 @@ class BackupService {
     await _appDatabase.database;
   }
 
+  Future<void> _prepararDiretorioVazio(Directory diretorio) async {
+    if (await diretorio.exists()) {
+      await diretorio.delete(recursive: true);
+    }
+
+    await diretorio.create(recursive: true);
+  }
+
+  Future<void> _excluirDiretorioBestEffort(Directory diretorio) async {
+    try {
+      if (await diretorio.exists()) {
+        await diretorio.delete(recursive: true);
+      }
+    } catch (_) {
+      // Limpeza temporária best-effort.
+    }
+  }
+
   bool _caminhoDentroDaRaiz(String raiz, String candidato) {
-    final raizNormalizada = path.normalize(raiz);
-    final candidatoNormalizado = path.normalize(candidato);
+    final raizNormalizada = path.normalize(path.absolute(raiz));
+    final candidatoNormalizado = path.normalize(path.absolute(candidato));
 
     return candidatoNormalizado == raizNormalizada ||
         candidatoNormalizado.startsWith('$raizNormalizada${path.separator}');
@@ -723,7 +932,9 @@ class BackupService {
     final documentosNormalizado = pastaDocumentos.replaceAll('\\', '/');
 
     if (caminhoNormalizado.startsWith('$documentosNormalizado/')) {
-      return caminhoNormalizado.substring(documentosNormalizado.length + 1);
+      return _normalizarRelativo(
+        caminhoNormalizado.substring(documentosNormalizado.length + 1),
+      );
     }
 
     final marcadores = [
@@ -736,12 +947,19 @@ class BackupService {
 
     for (final marcador in marcadores) {
       final indice = caminhoNormalizado.indexOf(marcador);
+
       if (indice >= 0) {
-        return caminhoNormalizado.substring(indice + 1);
+        return _normalizarRelativo(caminhoNormalizado.substring(indice + 1));
       }
     }
 
     return null;
+  }
+
+  String _normalizarRelativo(String relativo) {
+    return path.normalize(
+      relativo.replaceAll('\\', path.separator).replaceAll('/', path.separator),
+    );
   }
 
   String _formatarDataArquivo(DateTime data) {
@@ -752,16 +970,7 @@ class BackupService {
     final minuto = data.minute.toString().padLeft(2, '0');
     final segundo = data.second.toString().padLeft(2, '0');
 
-    final buffer = StringBuffer()
-      ..write(ano)
-      ..write(mes)
-      ..write(dia)
-      ..write('_')
-      ..write(hora)
-      ..write(minuto)
-      ..write(segundo);
-
-    return buffer.toString();
+    return '$ano$mes${dia}_$hora$minuto$segundo';
   }
 }
 
@@ -776,15 +985,10 @@ class _ArquivoPersistente {
 }
 
 class _ArquivoValidado {
-  const _ArquivoValidado({
-    required this.metadados,
-    required this.versaoBanco,
-    required this.arquivos,
-  });
+  const _ArquivoValidado({required this.metadados, required this.versaoBanco});
 
   final Map<String, Object?> metadados;
   final int versaoBanco;
-  final List<String> arquivos;
 }
 
 class _MapaBackup {
