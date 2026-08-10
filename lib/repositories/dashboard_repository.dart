@@ -17,8 +17,11 @@ class DashboardData {
     required this.clientesTotal,
     required this.veiculosTotal,
     required this.faturamento,
+    this.faturamentoCompetencia = 0,
     required this.saidas,
     required this.saldo,
+    required this.saldoTotalContas,
+    required this.saldosContas,
     required this.lucroBrutoEstimado,
     required this.ticketMedio,
     required this.clientesAtendidos,
@@ -48,9 +51,22 @@ class DashboardData {
   final int clientesTotal;
   final int veiculosTotal;
 
+  /// Mantido por compatibilidade: entradas financeiras realizadas no período.
   final double faturamento;
+
+  /// Faturamento comercial por competência: OS finalizadas no período.
+  final double faturamentoCompetencia;
+
   final double saidas;
+
+  /// Resultado líquido das movimentações do período selecionado.
   final double saldo;
+
+  /// Saldo financeiro disponível agora, somando as contas ativas.
+  /// Não depende do filtro de período do dashboard.
+  final double saldoTotalContas;
+  final List<DashboardSaldoConta> saldosContas;
+
   final double lucroBrutoEstimado;
   final double ticketMedio;
 
@@ -77,6 +93,24 @@ class DashboardData {
   bool get temSeries => serieFinanceira.isNotEmpty;
 
   bool get temAlertas => alertas.isNotEmpty;
+}
+
+class DashboardSaldoConta {
+  const DashboardSaldoConta({
+    required this.id,
+    required this.nome,
+    required this.tipo,
+    required this.instituicao,
+    required this.saldoInicial,
+    required this.saldoAtual,
+  });
+
+  final int id;
+  final String nome;
+  final String tipo;
+  final String instituicao;
+  final double saldoInicial;
+  final double saldoAtual;
 }
 
 class DashboardSeriePonto {
@@ -107,11 +141,13 @@ class DashboardRankingItem {
 
 class DashboardRankingCliente {
   const DashboardRankingCliente({
+    required this.clienteId,
     required this.nome,
     required this.quantidade,
     required this.total,
   });
 
+  final int clienteId;
   final String nome;
   final int quantidade;
   final double total;
@@ -187,6 +223,12 @@ class DashboardRepository {
       consultaPeriodo.inicio,
       consultaPeriodo.fimExclusivo,
     );
+    final saldosContasFuturo = _consultarSaldosContas(database);
+    final faturamentoFuturo = _consultarFaturamentoOrdens(
+      database,
+      consultaPeriodo.inicio,
+      consultaPeriodo.fimExclusivo,
+    );
 
     final resultados = await Future.wait([
       resumoFinanceiroFuturo,
@@ -198,6 +240,8 @@ class DashboardRepository {
       alertasFuturo,
       totaisFuturo,
       custoProdutosFuturo,
+      saldosContasFuturo,
+      faturamentoFuturo,
     ]);
 
     final resumoFinanceiro = resultados[0] as _ResumoFinanceiro;
@@ -209,6 +253,12 @@ class DashboardRepository {
     final alertas = resultados[6] as List<DashboardAlertaItem>;
     final totais = resultados[7] as List<List<Map<String, Object?>>>;
     final custoProdutos = resultados[8] as double;
+    final saldosContas = resultados[9] as List<DashboardSaldoConta>;
+    final faturamento = resultados[10] as double;
+    final saldoTotalContas = saldosContas.fold<double>(
+      0,
+      (total, conta) => total + conta.saldoAtual,
+    );
 
     return DashboardData(
       periodo: periodo,
@@ -218,9 +268,12 @@ class DashboardRepository {
       clientesTotal: _lerInteiro(totais[0]),
       veiculosTotal: _lerInteiro(totais[1]),
       faturamento: resumoFinanceiro.entradas,
+      faturamentoCompetencia: faturamento,
       saidas: resumoFinanceiro.saidas,
       saldo: resumoFinanceiro.saldo,
-      lucroBrutoEstimado: resumoFinanceiro.entradas - custoProdutos,
+      saldoTotalContas: saldoTotalContas,
+      saldosContas: saldosContas,
+      lucroBrutoEstimado: faturamento - custoProdutos,
       ticketMedio: resumoOrdens.ticketMedio,
       clientesAtendidos: resumoOrdens.clientesAtendidos,
       veiculosAtendidos: resumoOrdens.veiculosAtendidos,
@@ -304,6 +357,83 @@ class DashboardRepository {
     return DateTime(data.year, data.month, data.day);
   }
 
+  Future<List<DashboardSaldoConta>> _consultarSaldosContas(
+    Database database,
+  ) async {
+    final resultado = await database.rawQuery('''
+      SELECT
+        c.id,
+        c.nome,
+        c.tipo,
+        c.instituicao,
+        c.saldo_inicial,
+        c.saldo_inicial + COALESCE((
+          SELECT SUM(
+            CASE
+              WHEN LOWER(m.tipo) = 'entrada' THEN m.valor
+              WHEN LOWER(m.tipo) IN ('saída', 'saida') THEN -m.valor
+              ELSE 0
+            END
+          )
+          FROM movimentos_financeiros m
+          WHERE m.conta_id = c.id
+            AND m.status = 'Realizado'
+        ), 0) AS saldo_atual
+      FROM financeiro_contas c
+      WHERE c.ativo = 1
+      ORDER BY
+        CASE c.tipo
+          WHEN 'Conta bancária' THEN 1
+          WHEN 'Dinheiro' THEN 2
+          WHEN 'Carteira digital' THEN 3
+          WHEN 'Maquininha' THEN 4
+          ELSE 5
+        END,
+        c.nome COLLATE NOCASE ASC
+      ''');
+
+    return resultado
+        .map(
+          (linha) => DashboardSaldoConta(
+            id: _converterInteiro(linha['id']),
+            nome: (linha['nome'] ?? 'Conta').toString().trim(),
+            tipo: (linha['tipo'] ?? 'Outro').toString().trim(),
+            instituicao: (linha['instituicao'] ?? '').toString().trim(),
+            saldoInicial: _converterDouble(linha['saldo_inicial']),
+            saldoAtual: _converterDouble(linha['saldo_atual']),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Future<double> _consultarFaturamentoOrdens(
+    Database database,
+    DateTime inicio,
+    DateTime fimExclusivo,
+  ) async {
+    final resultado = await database.rawQuery(
+      '''
+      SELECT COALESCE(SUM(
+        MAX(
+          COALESCE(valor_total, 0)
+          - COALESCE(desconto, 0)
+          - COALESCE(desconto_negociacao, 0)
+          + COALESCE(acrescimo_negociacao, 0)
+          + COALESCE(juros_parcelamento, 0),
+          0
+        )
+      ), 0) AS total
+      FROM ordens_servico
+      WHERE LOWER(status) = 'finalizada'
+        AND data_finalizacao >= ?
+        AND data_finalizacao < ?
+      ''',
+      [_toIsoDateString(inicio), _toIsoDateString(fimExclusivo)],
+    );
+
+    return _lerDouble(resultado);
+  }
+
   Future<_ResumoFinanceiro> _consultarResumoFinanceiro(
     Database database,
     DateTime inicio,
@@ -315,8 +445,24 @@ class DashboardRepository {
         COALESCE(SUM(CASE WHEN LOWER(tipo) = 'entrada' THEN valor ELSE 0 END), 0) AS entradas,
         COALESCE(SUM(CASE WHEN LOWER(tipo) IN ('saída', 'saida') THEN valor ELSE 0 END), 0) AS saidas
       FROM movimentos_financeiros
-      WHERE data >= ?
-        AND data < ?
+      WHERE status = 'Realizado'
+        AND transferencia_id IS NULL
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ordem_servico_pagamentos p
+          WHERE p.id = movimentos_financeiros.pagamento_id
+            AND p.status = 'Estornado'
+            AND NOT EXISTS (
+              SELECT 1
+              FROM movimentos_financeiros devolucao
+              WHERE devolucao.pagamento_id = p.id
+                AND devolucao.status = 'Realizado'
+                AND LOWER(COALESCE(devolucao.origem, '')) =
+                    'devolução ao cliente'
+            )
+        )
+        AND COALESCE(data_pagamento, data) >= ?
+        AND COALESCE(data_pagamento, data) < ?
       ''',
       [_toIsoDateString(inicio), _toIsoDateString(fimExclusivo)],
     );
@@ -344,7 +490,19 @@ class DashboardRepository {
         COUNT(CASE WHEN LOWER(status) = 'finalizada' AND data_finalizacao >= ? AND data_finalizacao < ? THEN 1 END) AS ordens_finalizadas,
         COUNT(DISTINCT CASE WHEN LOWER(status) = 'finalizada' AND data_finalizacao >= ? AND data_finalizacao < ? THEN cliente_id END) AS clientes_atendidos,
         COUNT(DISTINCT CASE WHEN LOWER(status) = 'finalizada' AND data_finalizacao >= ? AND data_finalizacao < ? AND veiculo_id IS NOT NULL THEN veiculo_id END) AS veiculos_atendidos,
-        COALESCE(AVG(CASE WHEN LOWER(status) = 'finalizada' AND data_finalizacao >= ? AND data_finalizacao < ? THEN CASE WHEN (valor_total - desconto) > 0 THEN (valor_total - desconto) ELSE 0 END END), 0) AS ticket_medio
+        COALESCE(AVG(CASE
+          WHEN LOWER(status) = 'finalizada'
+            AND data_finalizacao >= ?
+            AND data_finalizacao < ?
+          THEN MAX(
+            COALESCE(valor_total, 0)
+            - COALESCE(desconto, 0)
+            - COALESCE(desconto_negociacao, 0)
+            + COALESCE(acrescimo_negociacao, 0)
+            + COALESCE(juros_parcelamento, 0),
+            0
+          )
+        END), 0) AS ticket_medio
       FROM ordens_servico
       ''',
       [
@@ -505,23 +663,55 @@ class DashboardRepository {
       agrupamento == DashboardAgrupamento.diario
           ? '''
             SELECT
-              substr(data, 1, 10) AS periodo,
+              substr(COALESCE(data_pagamento, data), 1, 10) AS periodo,
               LOWER(tipo) AS tipo,
               COALESCE(SUM(valor), 0) AS total
             FROM movimentos_financeiros
-            WHERE data >= ?
-              AND data < ?
+            WHERE status = 'Realizado'
+              AND transferencia_id IS NULL
+              AND NOT EXISTS (
+                SELECT 1
+                FROM ordem_servico_pagamentos p
+                WHERE p.id = movimentos_financeiros.pagamento_id
+                  AND p.status = 'Estornado'
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM movimentos_financeiros devolucao
+                    WHERE devolucao.pagamento_id = p.id
+                      AND devolucao.status = 'Realizado'
+                      AND LOWER(COALESCE(devolucao.origem, '')) =
+                          'devolução ao cliente'
+                  )
+              )
+              AND COALESCE(data_pagamento, data) >= ?
+              AND COALESCE(data_pagamento, data) < ?
             GROUP BY periodo, tipo
             ORDER BY periodo ASC
             '''
           : '''
             SELECT
-              substr(data, 1, 7) AS periodo,
+              substr(COALESCE(data_pagamento, data), 1, 7) AS periodo,
               LOWER(tipo) AS tipo,
               COALESCE(SUM(valor), 0) AS total
             FROM movimentos_financeiros
-            WHERE data >= ?
-              AND data < ?
+            WHERE status = 'Realizado'
+              AND transferencia_id IS NULL
+              AND NOT EXISTS (
+                SELECT 1
+                FROM ordem_servico_pagamentos p
+                WHERE p.id = movimentos_financeiros.pagamento_id
+                  AND p.status = 'Estornado'
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM movimentos_financeiros devolucao
+                    WHERE devolucao.pagamento_id = p.id
+                      AND devolucao.status = 'Realizado'
+                      AND LOWER(COALESCE(devolucao.origem, '')) =
+                          'devolução ao cliente'
+                  )
+              )
+              AND COALESCE(data_pagamento, data) >= ?
+              AND COALESCE(data_pagamento, data) < ?
             GROUP BY periodo, tipo
             ORDER BY periodo ASC
             ''',
@@ -629,9 +819,19 @@ class DashboardRepository {
     final resultado = await database.rawQuery(
       '''
       SELECT
+        c.id AS cliente_id,
         c.nome AS nome,
         COUNT(*) AS quantidade,
-        COALESCE(SUM(CASE WHEN (os.valor_total - os.desconto) > 0 THEN (os.valor_total - os.desconto) ELSE 0 END), 0) AS total
+        COALESCE(SUM(
+          MAX(
+            COALESCE(os.valor_total, 0)
+            - COALESCE(os.desconto, 0)
+            - COALESCE(os.desconto_negociacao, 0)
+            + COALESCE(os.acrescimo_negociacao, 0)
+            + COALESCE(os.juros_parcelamento, 0),
+            0
+          )
+        ), 0) AS total
       FROM ordens_servico os
       INNER JOIN clientes c
         ON c.id = os.cliente_id
@@ -648,6 +848,7 @@ class DashboardRepository {
     return resultado
         .map(
           (linha) => DashboardRankingCliente(
+            clienteId: _converterInteiro(linha['cliente_id']),
             nome: (linha['nome'] ?? '-').toString(),
             quantidade: _converterInteiro(linha['quantidade']),
             total: _converterDouble(linha['total']),

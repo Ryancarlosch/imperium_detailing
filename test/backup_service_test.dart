@@ -69,7 +69,7 @@ void main() {
       expect(resumo.versaoApp, '1.0.0');
       expect(resumo.versaoBanco, AppDatabase.schemaVersion);
       expect(resumo.avisos, isEmpty);
-      expect(resumo.quantidadeArquivos, 9);
+      expect(resumo.quantidadeArquivos, 10);
 
       final archive = ZipDecoder().decodeBytes(
         await File(resumo.caminhoArquivo).readAsBytes(),
@@ -112,7 +112,7 @@ void main() {
       expect(metadata['versao_banco'], AppDatabase.schemaVersion);
       expect(metadata['versao_app'], '1.0.0');
       expect(metadata['build_app'], '100');
-      expect(metadata['quantidade_arquivos'], 9);
+      expect(metadata['quantidade_arquivos'], 10);
 
       final database = await AppDatabase.instance.database;
       final configuracao = await database.query(
@@ -299,6 +299,24 @@ void main() {
           'ordens_servico',
           'os_001',
           'foto_antes.jpg',
+        ),
+      );
+
+      final pagamento = await bancoRestaurado.query(
+        'ordem_servico_pagamentos',
+        columns: ['comprovante_caminho'],
+        where: 'ordem_servico_id = ?',
+        whereArgs: [dados.ordemId],
+        limit: 1,
+      );
+
+      expect(
+        pagamento.single['comprovante_caminho'],
+        path.join(
+          novosDocumentos.path,
+          'comprovantes_pagamentos',
+          'os_1',
+          'comprovante_pix.pdf',
         ),
       );
     });
@@ -498,6 +516,12 @@ Future<_DadosBackupTeste> _prepararDadosComArquivos(
     'assinatura cliente',
   );
 
+  final comprovantePagamento = await _criarArquivo(
+    documentos,
+    path.join('comprovantes_pagamentos', 'os_1', 'comprovante_pix.pdf'),
+    'comprovante de pagamento',
+  );
+
   final database = await AppDatabase.instance.database;
 
   await database.update(
@@ -540,7 +564,29 @@ Future<_DadosBackupTeste> _prepararDadosComArquivos(
     'data_abertura': '2026-08-06',
     'data_inicio': '2026-08-06',
     'data_finalizacao': '2026-08-06',
+    'valor_total': 100,
+    'desconto': 0,
+    'forma_pagamento': 'Pix',
     'assinatura_cliente': assinaturaCliente.path,
+    'lancado_financeiro': 1,
+    'status_pagamento': 'Pago',
+    'valor_recebido': 100,
+    'pagamento_atualizado_em': '2026-08-06T20:30:00.000',
+  });
+
+  const agoraPagamento = '2026-08-06T20:30:00.000';
+
+  await database.insert('ordem_servico_pagamentos', {
+    'ordem_servico_id': ordemId,
+    'status': 'Pago',
+    'valor': 100,
+    'forma_pagamento': 'Pix',
+    'data_pagamento': agoraPagamento,
+    'comprovante_caminho': comprovantePagamento.path,
+    'observacoes': 'Comprovante usado no teste de backup.',
+    'motivo_estorno': '',
+    'criado_em': agoraPagamento,
+    'atualizado_em': agoraPagamento,
   });
 
   await database.insert('ordem_servico_fotos', {
@@ -577,6 +623,7 @@ Future<_DadosBackupTeste> _prepararDadosComArquivos(
       path.join('ordens_servico', 'os_001', 'foto_antes.jpg'),
       path.join('ordens_servico', 'os_001', 'avaria.jpg'),
       path.join('assinaturas_ordens_servico', 'assinatura_cliente.png'),
+      path.join('comprovantes_pagamentos', 'os_1', 'comprovante_pix.pdf'),
     ],
   );
 }

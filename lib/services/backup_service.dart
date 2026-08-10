@@ -524,6 +524,15 @@ class BackupService {
               'WHERE assinatura_cliente IS NOT NULL '
               'AND TRIM(assinatura_cliente) != \'\'',
         ),
+        _MapaBackup(
+          tabela: 'ordem_servico_pagamentos',
+          coluna: 'comprovante_caminho',
+          seletor:
+              'SELECT id, comprovante_caminho AS caminho '
+              'FROM ordem_servico_pagamentos '
+              'WHERE comprovante_caminho IS NOT NULL '
+              'AND TRIM(comprovante_caminho) != \'\'',
+        ),
       ];
 
       for (final mapa in mapeamentos) {
@@ -856,6 +865,9 @@ class BackupService {
       database.rawQuery('SELECT caminho FROM ordem_servico_fotos'),
       database.rawQuery('SELECT foto_avaria FROM ordem_servico_checklist'),
       database.rawQuery('SELECT assinatura_cliente FROM ordens_servico'),
+      database.rawQuery(
+        'SELECT comprovante_caminho FROM ordem_servico_pagamentos',
+      ),
     ]);
 
     for (final linha in tabelas[0]) {
@@ -873,6 +885,10 @@ class BackupService {
 
     for (final linha in tabelas[3]) {
       adicionar(linha['assinatura_cliente']?.toString());
+    }
+
+    for (final linha in tabelas[4]) {
+      adicionar(linha['comprovante_caminho']?.toString());
     }
 
     final arquivos = <_ArquivoPersistente>[];
@@ -942,6 +958,7 @@ class BackupService {
       '/logos/',
       '/assinaturas_empresa/',
       '/assinaturas_ordens_servico/',
+      '/comprovantes_pagamentos/',
       '/ordens_servico/',
     ];
 

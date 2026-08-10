@@ -25,6 +25,13 @@ class OrdemServico {
     this.motivoUltimaRevisao = '',
     this.quantidadeRevisoes = 0,
     this.assinaturaDesatualizada = false,
+    this.statusPagamento = 'Pendente',
+    this.valorRecebido = 0,
+    this.vencimentoPagamento,
+    this.pagamentoAtualizadoEm,
+    this.descontoNegociacao = 0,
+    this.acrescimoNegociacao = 0,
+    this.jurosParcelamento = 0,
   });
 
   final int? id;
@@ -52,6 +59,13 @@ class OrdemServico {
   final String motivoUltimaRevisao;
   final int quantidadeRevisoes;
   final bool assinaturaDesatualizada;
+  final String statusPagamento;
+  final double valorRecebido;
+  final String? vencimentoPagamento;
+  final String? pagamentoAtualizadoEm;
+  final double descontoNegociacao;
+  final double acrescimoNegociacao;
+  final double jurosParcelamento;
 
   double get valorFinal {
     final resultado = valorTotal - desconto;
@@ -61,6 +75,16 @@ class OrdemServico {
     }
 
     return resultado;
+  }
+
+  double get valorNegociado {
+    final resultado =
+        valorFinal -
+        descontoNegociacao +
+        acrescimoNegociacao +
+        jurosParcelamento;
+
+    return resultado.clamp(0, double.infinity).toDouble();
   }
 
   bool get estaAberta {
@@ -73,6 +97,16 @@ class OrdemServico {
 
   bool get estaFinalizada {
     return status == 'Finalizada';
+  }
+
+  double get valorPendente {
+    return (valorNegociado - valorRecebido)
+        .clamp(0, double.infinity)
+        .toDouble();
+  }
+
+  bool get pagamentoQuitado {
+    return valorPendente <= 0.000001 || statusPagamento == 'Pago';
   }
 
   Map<String, dynamic> toMap() {
@@ -102,6 +136,13 @@ class OrdemServico {
       'motivo_ultima_revisao': motivoUltimaRevisao,
       'quantidade_revisoes': quantidadeRevisoes,
       'assinatura_desatualizada': assinaturaDesatualizada ? 1 : 0,
+      'status_pagamento': statusPagamento,
+      'valor_recebido': valorRecebido,
+      'vencimento_pagamento': vencimentoPagamento,
+      'pagamento_atualizado_em': pagamentoAtualizadoEm,
+      'desconto_negociacao': descontoNegociacao,
+      'acrescimo_negociacao': acrescimoNegociacao,
+      'juros_parcelamento': jurosParcelamento,
     };
   }
 
@@ -132,6 +173,18 @@ class OrdemServico {
       motivoUltimaRevisao: _converterTexto(map['motivo_ultima_revisao']),
       quantidadeRevisoes: _converterInt(map['quantidade_revisoes']) ?? 0,
       assinaturaDesatualizada: _converterBool(map['assinatura_desatualizada']),
+      statusPagamento: _converterTexto(
+        map['status_pagamento'],
+        padrao: 'Pendente',
+      ),
+      valorRecebido: _converterDouble(map['valor_recebido']),
+      vencimentoPagamento: _converterTextoNulo(map['vencimento_pagamento']),
+      pagamentoAtualizadoEm: _converterTextoNulo(
+        map['pagamento_atualizado_em'],
+      ),
+      descontoNegociacao: _converterDouble(map['desconto_negociacao']),
+      acrescimoNegociacao: _converterDouble(map['acrescimo_negociacao']),
+      jurosParcelamento: _converterDouble(map['juros_parcelamento']),
     );
   }
 
@@ -171,6 +224,15 @@ class OrdemServico {
     String? motivoUltimaRevisao,
     int? quantidadeRevisoes,
     bool? assinaturaDesatualizada,
+    String? statusPagamento,
+    double? valorRecebido,
+    String? vencimentoPagamento,
+    bool removerVencimentoPagamento = false,
+    String? pagamentoAtualizadoEm,
+    bool removerPagamentoAtualizadoEm = false,
+    double? descontoNegociacao,
+    double? acrescimoNegociacao,
+    double? jurosParcelamento,
   }) {
     return OrdemServico(
       id: id ?? this.id,
@@ -208,6 +270,17 @@ class OrdemServico {
       quantidadeRevisoes: quantidadeRevisoes ?? this.quantidadeRevisoes,
       assinaturaDesatualizada:
           assinaturaDesatualizada ?? this.assinaturaDesatualizada,
+      statusPagamento: statusPagamento ?? this.statusPagamento,
+      valorRecebido: valorRecebido ?? this.valorRecebido,
+      vencimentoPagamento: removerVencimentoPagamento
+          ? null
+          : vencimentoPagamento ?? this.vencimentoPagamento,
+      pagamentoAtualizadoEm: removerPagamentoAtualizadoEm
+          ? null
+          : pagamentoAtualizadoEm ?? this.pagamentoAtualizadoEm,
+      descontoNegociacao: descontoNegociacao ?? this.descontoNegociacao,
+      acrescimoNegociacao: acrescimoNegociacao ?? this.acrescimoNegociacao,
+      jurosParcelamento: jurosParcelamento ?? this.jurosParcelamento,
     );
   }
 

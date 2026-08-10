@@ -97,7 +97,45 @@ void main() {
     });
 
     test(
-      'finaliza OS em andamento e cria somente um lançamento financeiro',
+      'finaliza sem recebimento e cria conta pendente sem entrada',
+      () async {
+        final ordemId = await _criarOrdem(
+          repository: repository,
+          numero: _proximoNumero(() => ++sequenciaNumero),
+          status: 'Em andamento',
+          valorTotal: 750,
+          desconto: 50,
+        );
+
+        await repository.finalizarOrdemServico(ordemServicoId: ordemId);
+
+        final ordem = await repository.buscarOrdemServicoPorId(ordemId);
+        final database = await AppDatabase.instance.database;
+        final movimentos = await database.query(
+          'movimentos_financeiros',
+          where: 'ordem_servico_id = ?',
+          whereArgs: [ordemId],
+        );
+        final pagamentos = await database.query(
+          'ordem_servico_pagamentos',
+          where: 'ordem_servico_id = ?',
+          whereArgs: [ordemId],
+        );
+
+        expect(ordem, isNotNull);
+        expect(ordem!.status, 'Finalizada');
+        expect(ordem.statusPagamento, 'Pendente');
+        expect(ordem.valorRecebido, 0);
+        expect(ordem.valorPendente, 700);
+        expect(ordem.lancadoFinanceiro, isFalse);
+        expect(ordem.formaPagamento, isNull);
+        expect(movimentos, isEmpty);
+        expect(pagamentos, isEmpty);
+      },
+    );
+
+    test(
+      'finaliza OS paga e cria somente um pagamento e uma entrada financeira',
       () async {
         final ordemId = await _criarOrdem(
           repository: repository,
@@ -129,11 +167,27 @@ void main() {
         expect(ordemFinalizada.horaSaida, isNotNull);
         expect(ordemFinalizada.formaPagamento, 'Pix');
         expect(ordemFinalizada.lancadoFinanceiro, isTrue);
+        expect(ordemFinalizada.statusPagamento, 'Pago');
+        expect(ordemFinalizada.valorRecebido, 900.0);
+        expect(ordemFinalizada.valorPendente, 0.0);
+
+        final pagamentos = await database.query(
+          'ordem_servico_pagamentos',
+          where: 'ordem_servico_id = ?',
+          whereArgs: [ordemId],
+        );
+
+        expect(pagamentos, hasLength(1));
+        expect(pagamentos.single['status'], 'Pago');
+        expect((pagamentos.single['valor'] as num).toDouble(), 900.0);
+        expect(pagamentos.single['forma_pagamento'], 'Pix');
 
         expect(movimentos, hasLength(1));
         expect(movimentos.single['tipo'], 'entrada');
         expect((movimentos.single['valor'] as num).toDouble(), 900.0);
         expect(movimentos.single['forma_pagamento'], 'Pix');
+        expect(movimentos.single['ordem_servico_id'], ordemId);
+        expect(movimentos.single['pagamento_id'], pagamentos.single['id']);
         expect(
           movimentos.single['descricao'].toString(),
           contains(ordemFinalizada.numero),
@@ -150,7 +204,14 @@ void main() {
           whereArgs: [ordemFinalizada.clienteId],
         );
 
+        final pagamentosDepois = await database.query(
+          'ordem_servico_pagamentos',
+          where: 'ordem_servico_id = ?',
+          whereArgs: [ordemId],
+        );
+
         expect(movimentosDepois, hasLength(1));
+        expect(pagamentosDepois, hasLength(1));
       },
     );
 
@@ -403,6 +464,12 @@ void main() {
         'movimentos_financeiros',
       );
 
+      final pagamentos = await database.query(
+        'ordem_servico_pagamentos',
+        where: 'ordem_servico_id = ?',
+        whereArgs: [ordemId],
+      );
+
       final movimentacoesEstoque = await database.query(
         'movimentacoes_estoque',
         where: 'ordem_servico_id = ?',
@@ -429,6 +496,7 @@ void main() {
       );
 
       expect(movimentosFinanceiros, isEmpty);
+      expect(pagamentos, isEmpty);
       expect(movimentacoesEstoque, isEmpty);
       expect(composicoes, isEmpty);
     });

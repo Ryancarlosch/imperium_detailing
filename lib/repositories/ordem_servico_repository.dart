@@ -1,15 +1,20 @@
-import 'package:sqflite/sqflite.dart';
 import 'dart:convert';
+
+import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
 import '../models/ordem_servico.dart';
 import '../models/ordem_servico_item.dart';
 import '../repositories/agendamento_repository.dart';
+import '../repositories/custos_repository.dart';
+import '../repositories/pagamento_repository.dart';
 
 class OrdemServicoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
 
   final AgendamentoRepository _agendamentoRepository = AgendamentoRepository();
+  final PagamentoRepository _pagamentoRepository = PagamentoRepository();
+  final CustosRepository _custosRepository = CustosRepository();
 
   int? _converterInt(dynamic valor) {
     if (valor == null) {
@@ -365,6 +370,287 @@ class OrdemServicoRepository {
         .toList();
   }
 
+  /// Adiciona um serviço do catálogo a uma OS ainda editável.
+  ///
+  /// A operação é transacional:
+  /// - valida que a OS está Aberta ou Em andamento;
+  /// - adiciona o item da OS;
+  /// - inclui os produtos obrigatórios/marcados por padrão do serviço;
+  /// - valida o estoque previsto da própria OS;
+  /// - recalcula o subtotal da OS.
+  ///
+  /// Nenhum estoque é baixado aqui. A baixa FIFO continua acontecendo
+  /// somente na finalização da Ordem de Serviço.
+  Future<Map<String, dynamic>> adicionarServicoCatalogoNaOrdem({
+    required int ordemServicoId,
+    required int servicoCatalogoId,
+    required double quantidade,
+    double? valorUnitario,
+    String? descricao,
+  }) async {
+    if (ordemServicoId <= 0) {
+      throw ArgumentError('Ordem de Serviço inválida.');
+    }
+
+    if (servicoCatalogoId <= 0) {
+      throw ArgumentError('Serviço do catálogo inválido.');
+    }
+
+    if (quantidade <= 0) {
+      throw ArgumentError('A quantidade do serviço deve ser maior que zero.');
+    }
+
+    if (valorUnitario != null && valorUnitario < 0) {
+      throw ArgumentError('O valor do serviço não pode ser negativo.');
+    }
+
+    final database = await _appDatabase.database;
+
+    return database.transaction<Map<String, dynamic>>((transaction) async {
+      final ordemResultado = await transaction.query(
+        'ordens_servico',
+        columns: ['id', 'numero', 'status'],
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+        limit: 1,
+      );
+
+      if (ordemResultado.isEmpty) {
+        throw StateError('Ordem de Serviço não encontrada.');
+      }
+
+      final ordem = ordemResultado.first;
+      final status = (ordem['status'] ?? '').toString().trim();
+
+      if (status != 'Aberta' && status != 'Em andamento') {
+        throw StateError(
+          'Só é possível adicionar serviços em uma OS Aberta ou Em andamento.',
+        );
+      }
+
+      final servicoResultado = await transaction.query(
+        'servicos_catalogo',
+        columns: [
+          'id',
+          'nome',
+          'descricao',
+          'preco_padrao',
+          'ativo',
+        ],
+        where: 'id = ?',
+        whereArgs: [servicoCatalogoId],
+        limit: 1,
+      );
+
+      if (servicoResultado.isEmpty) {
+        throw StateError('Serviço não encontrado no catálogo.');
+      }
+
+      final servico = servicoResultado.first;
+      final ativo = _converterInt(servico['ativo']) ?? 0;
+
+      if (ativo != 1) {
+        throw StateError(
+          'O serviço selecionado está inativo e não pode ser adicionado.',
+        );
+      }
+
+      final nomeServico = (servico['nome'] ?? '').toString().trim();
+      if (nomeServico.isEmpty) {
+        throw StateError('O serviço selecionado não possui nome.');
+      }
+
+      final precoCatalogo =
+          (servico['preco_padrao'] as num?)?.toDouble() ?? 0.0;
+      final precoUsado = valorUnitario ?? precoCatalogo;
+
+      if (precoUsado < 0) {
+        throw ArgumentError('O valor do serviço não pode ser negativo.');
+      }
+
+      final descricaoCatalogo =
+          (servico['descricao'] ?? '').toString().trim();
+      final descricaoUsada = descricao == null
+          ? descricaoCatalogo
+          : descricao.trim();
+
+      final ordemItemResultado = await transaction.rawQuery(
+        '''
+        SELECT COALESCE(MAX(ordem), -1) AS ultima_ordem
+        FROM ordem_servico_itens
+        WHERE ordem_servico_id = ?
+        ''',
+        [ordemServicoId],
+      );
+      final ultimaOrdem =
+          _converterInt(ordemItemResultado.first['ultima_ordem']) ?? -1;
+
+      final produtosCatalogo = await transaction.rawQuery(
+        '''
+        SELECT
+          sp.item_estoque_id,
+          sp.quantidade_padrao,
+          sp.unidade AS unidade_configurada,
+          sp.obrigatorio,
+          sp.marcado_por_padrao,
+          ie.nome AS produto_nome,
+          ie.unidade AS unidade_estoque,
+          ie.quantidade AS estoque_atual,
+          ie.custo_unitario,
+          ie.custo_unitario_calculado,
+          ie.ativo AS produto_ativo
+        FROM servico_produtos sp
+        INNER JOIN itens_estoque ie
+          ON ie.id = sp.item_estoque_id
+        WHERE sp.servico_id = ?
+          AND (sp.obrigatorio = 1 OR sp.marcado_por_padrao = 1)
+        ORDER BY sp.ordem ASC, sp.id ASC
+        ''',
+        [servicoCatalogoId],
+      );
+
+      final produtosPreparados = <Map<String, dynamic>>[];
+
+      for (final produto in produtosCatalogo) {
+        final produtoId = _converterInt(produto['item_estoque_id']);
+        final quantidadePadrao =
+            (produto['quantidade_padrao'] as num?)?.toDouble() ?? 0.0;
+        final quantidadeProduto = quantidadePadrao * quantidade;
+
+        if (produtoId == null || quantidadeProduto <= 0) {
+          continue;
+        }
+
+        final produtoAtivo = _converterInt(produto['produto_ativo']) ?? 0;
+        final produtoNome =
+            (produto['produto_nome'] ?? 'Produto').toString().trim();
+
+        if (produtoAtivo != 1) {
+          throw StateError(
+            'O produto "$produtoNome", vinculado a este serviço, está inativo.',
+          );
+        }
+
+        final estoqueAtual =
+            (produto['estoque_atual'] as num?)?.toDouble() ?? 0.0;
+
+        final previstoResultado = await transaction.rawQuery(
+          '''
+          SELECT COALESCE(SUM(quantidade), 0) AS quantidade
+          FROM ordem_servico_produtos
+          WHERE ordem_servico_id = ?
+            AND produto_id = ?
+            AND baixado_estoque = 0
+          ''',
+          [ordemServicoId, produtoId],
+        );
+
+        final jaPrevisto =
+            (previstoResultado.first['quantidade'] as num?)?.toDouble() ?? 0.0;
+        final totalPrevisto = jaPrevisto + quantidadeProduto;
+
+        if (totalPrevisto - estoqueAtual > 0.000001) {
+          throw StateError(
+            'Estoque insuficiente para adicionar este serviço. '
+            '"$produtoNome": disponível '
+            '${_formatarQuantidadeMensagem(estoqueAtual)}, '
+            'necessário na OS '
+            '${_formatarQuantidadeMensagem(totalPrevisto)}.',
+          );
+        }
+
+        final custoCalculado =
+            (produto['custo_unitario_calculado'] as num?)?.toDouble() ?? 0.0;
+        final custoCadastrado =
+            (produto['custo_unitario'] as num?)?.toDouble() ?? 0.0;
+        final custoUnitario = custoCalculado > 0
+            ? custoCalculado
+            : custoCadastrado;
+
+        final unidade =
+            (produto['unidade_estoque'] ?? '').toString().trim();
+
+        produtosPreparados.add({
+          'produto_id': produtoId,
+          'produto_nome': produtoNome,
+          'quantidade': quantidadeProduto,
+          'unidade': unidade,
+          'custo_unitario': custoUnitario,
+        });
+      }
+
+      final dadosItem = OrdemServicoItem(
+        ordemServicoId: ordemServicoId,
+        servico: nomeServico,
+        descricao: descricaoUsada,
+        quantidade: quantidade,
+        valorUnitario: precoUsado,
+        ordem: ultimaOrdem + 1,
+        concluido: false,
+      ).toMap();
+      dadosItem.remove('id');
+
+      final itemId = await transaction.insert(
+        'ordem_servico_itens',
+        dadosItem,
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+
+      for (final produto in produtosPreparados) {
+        final custoUnitario =
+            (produto['custo_unitario'] as num?)?.toDouble() ?? 0.0;
+        final quantidadeProduto =
+            (produto['quantidade'] as num?)?.toDouble() ?? 0.0;
+
+        await transaction.insert(
+          'ordem_servico_produtos',
+          {
+            'ordem_servico_id': ordemServicoId,
+            'produto_id': produto['produto_id'],
+            'produto_nome': produto['produto_nome'],
+            'quantidade': quantidadeProduto,
+            'unidade': produto['unidade'],
+            'custo_unitario': custoUnitario,
+            'custo_unitario_no_momento': custoUnitario,
+            'custo_total_no_momento': quantidadeProduto * custoUnitario,
+            'composicao_lotes_json': '',
+            'baixado_estoque': 0,
+          },
+          conflictAlgorithm: ConflictAlgorithm.abort,
+        );
+      }
+
+      final subtotalResultado = await transaction.rawQuery(
+        '''
+        SELECT COALESCE(SUM(quantidade * valor_unitario), 0) AS subtotal
+        FROM ordem_servico_itens
+        WHERE ordem_servico_id = ?
+        ''',
+        [ordemServicoId],
+      );
+
+      final novoSubtotal =
+          (subtotalResultado.first['subtotal'] as num?)?.toDouble() ?? 0.0;
+
+      await transaction.update(
+        'ordens_servico',
+        {'valor_total': novoSubtotal},
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+      );
+
+      return {
+        'item_id': itemId,
+        'servico': nomeServico,
+        'quantidade': quantidade,
+        'valor_unitario': precoUsado,
+        'subtotal_item': quantidade * precoUsado,
+        'novo_subtotal_os': novoSubtotal,
+        'produtos_adicionados': produtosPreparados.length,
+      };
+    });
+  }
+
   Future<int> inserirItem(OrdemServicoItem item) async {
     final database = await _appDatabase.database;
 
@@ -454,8 +740,12 @@ class OrdemServicoRepository {
     );
   }
 
-  Future<void> iniciarOrdemServico(int ordemServicoId) async {
+  Future<void> iniciarOrdemServico(
+    int ordemServicoId, {
+    DateTime? dataHoraEntrada,
+  }) async {
     final agora = DateTime.now();
+    final entradaEfetiva = dataHoraEntrada ?? agora;
     final database = await _appDatabase.database;
 
     await database.transaction((transaction) async {
@@ -488,8 +778,8 @@ class OrdemServicoRepository {
         'ordens_servico',
         {
           'status': 'Em andamento',
-          'data_inicio': _formatarData(agora),
-          'hora_entrada': _formatarHora(agora),
+          'data_inicio': _formatarData(entradaEfetiva),
+          'hora_entrada': _formatarHora(entradaEfetiva),
         },
         where: 'id = ?',
         whereArgs: [ordemServicoId],
@@ -510,10 +800,18 @@ class OrdemServicoRepository {
   Future<void> finalizarOrdemServico({
     required int ordemServicoId,
     String? formaPagamento,
+    double? valorPagamento,
+    String? vencimentoPagamento,
+    int? contaFinanceiraId,
+    int parcelasTaxa = 1,
+    DateTime? dataHoraEntrada,
+    DateTime? dataHoraSaida,
+    DateTime? dataHoraPagamento,
   }) async {
     final database = await _appDatabase.database;
     final agora = DateTime.now();
     final formaPagamentoLimpa = formaPagamento?.trim() ?? '';
+    final vencimentoPagamentoLimpo = vencimentoPagamento?.trim() ?? '';
 
     await database.transaction((transaction) async {
       final resultado = await transaction.query(
@@ -525,8 +823,14 @@ class OrdemServicoRepository {
           'cliente_id',
           'valor_total',
           'desconto',
+          'desconto_negociacao',
+          'acrescimo_negociacao',
+          'juros_parcelamento',
           'lancado_financeiro',
           'agendamento_id',
+          'data_inicio',
+          'hora_entrada',
+          'funcionario_responsavel',
         ],
         where: 'id = ?',
         whereArgs: [ordemServicoId],
@@ -557,20 +861,60 @@ class OrdemServicoRepository {
         );
       }
 
+      final entradaRegistrada = _combinarDataHoraArmazenada(
+        ordem['data_inicio'],
+        ordem['hora_entrada'],
+      );
+      final entradaEfetiva = dataHoraEntrada ?? entradaRegistrada ?? agora;
+      final saidaEfetiva = dataHoraSaida ?? agora;
+
+      if (saidaEfetiva.isBefore(entradaEfetiva)) {
+        throw ArgumentError(
+          'A data/hora de saída não pode ser anterior à data/hora de entrada.',
+        );
+      }
+
+      final pagamentoEfetivo = dataHoraPagamento ?? saidaEfetiva;
+
       final valorTotal = (ordem['valor_total'] as num?)?.toDouble() ?? 0;
 
       final desconto = (ordem['desconto'] as num?)?.toDouble() ?? 0;
+      final descontoNegociacao =
+          (ordem['desconto_negociacao'] as num?)?.toDouble() ?? 0;
+      final acrescimoNegociacao =
+          (ordem['acrescimo_negociacao'] as num?)?.toDouble() ?? 0;
+      final jurosParcelamento =
+          (ordem['juros_parcelamento'] as num?)?.toDouble() ?? 0;
 
-      final valorFinal = (valorTotal - desconto)
-          .clamp(0, double.infinity)
-          .toDouble();
+      // Deve ser a mesma fórmula exibida na tela, usada pelos pagamentos
+      // e pelo DRE. Antes a finalização considerava apenas valor_total -
+      // desconto e podia divergir após negociação/acréscimos/juros.
+      final valorFinal =
+          (valorTotal -
+                  desconto -
+                  descontoNegociacao +
+                  acrescimoNegociacao +
+                  jurosParcelamento)
+              .clamp(0, double.infinity)
+              .toDouble();
 
-      final lancadoFinanceiro =
-          (ordem['lancado_financeiro'] as num?)?.toInt() == 1;
+      final pagamentoSolicitado =
+          valorPagamento ?? (formaPagamentoLimpa.isNotEmpty ? valorFinal : 0.0);
+
+      if (pagamentoSolicitado < 0 ||
+          pagamentoSolicitado - valorFinal > 0.000001) {
+        throw ArgumentError(
+          'O valor recebido na finalização é inválido para esta OS.',
+        );
+      }
+
+      if (pagamentoSolicitado > 0.000001 && formaPagamentoLimpa.isEmpty) {
+        throw ArgumentError(
+          'Informe a forma de pagamento para registrar o recebimento.',
+        );
+      }
 
       final numero = (ordem['numero'] ?? ordemServicoId).toString().trim();
-
-      final clienteId = (ordem['cliente_id'] as num?)?.toInt();
 
       final produtosPendentes = await transaction.query(
         'ordem_servico_produtos',
@@ -872,7 +1216,7 @@ class OrdemServicoRepository {
             'origem': 'Ordem de Serviço',
             'ordem_servico_id': ordemServicoId,
             'lote_id': loteId,
-            'data': agora.toIso8601String(),
+            'data': saidaEfetiva.toIso8601String(),
           }, conflictAlgorithm: ConflictAlgorithm.abort);
 
           saldoAtualPorProduto[produtoId] = saldoItemPosterior;
@@ -891,26 +1235,41 @@ class OrdemServicoRepository {
         );
       }
 
-      if (!lancadoFinanceiro && valorFinal > 0) {
-        await transaction.insert('movimentos_financeiros', {
-          'tipo': 'entrada',
-          'descricao': 'Ordem de Serviço finalizada: $numero',
-          'valor': valorFinal,
-          'forma_pagamento': formaPagamentoLimpa.isEmpty
-              ? 'Não informado'
-              : formaPagamentoLimpa,
-          'data': agora.toIso8601String(),
-          'cliente_id': clienteId,
-          'agendamento_id': null,
-        }, conflictAlgorithm: ConflictAlgorithm.abort);
-      }
-
       final dados = <String, dynamic>{
         'status': 'Finalizada',
-        'data_finalizacao': _formatarData(agora),
-        'hora_saida': _formatarHora(agora),
-        'lancado_financeiro': lancadoFinanceiro || valorFinal > 0 ? 1 : 0,
+        'data_inicio': _formatarData(entradaEfetiva),
+        'hora_entrada': _formatarHora(entradaEfetiva),
+        'data_finalizacao': _formatarData(saidaEfetiva),
+        'hora_saida': _formatarHora(saidaEfetiva),
+        'lancado_financeiro': 0,
+        'status_pagamento': valorFinal <= 0.000001 ? 'Pago' : 'Pendente',
+        'valor_recebido': 0,
+        'vencimento_pagamento': vencimentoPagamentoLimpo.isEmpty
+            ? null
+            : vencimentoPagamentoLimpo,
+        'pagamento_atualizado_em': agora.toIso8601String(),
+        'forma_pagamento': formaPagamentoLimpa.isEmpty
+            ? null
+            : formaPagamentoLimpa,
       };
+
+      await transaction.update(
+        'ordens_servico',
+        dados,
+        where: 'id = ?',
+        whereArgs: [ordemServicoId],
+      );
+
+      // O responsável foi selecionado no cadastro da OS. Ao finalizar,
+      // transforma o tempo real de entrada/saída em custo de mão de obra,
+      // usando o custo/hora atual como snapshot histórico da OS.
+      await _custosRepository.registrarMaoObraAutomaticaComTransacao(
+        transaction,
+        ordemServicoId: ordemServicoId,
+        colaboradorNome: (ordem['funcionario_responsavel'] ?? '').toString(),
+        entrada: entradaEfetiva,
+        saida: saidaEfetiva,
+      );
 
       final agendamentoId = _converterInt(ordem['agendamento_id']);
 
@@ -922,16 +1281,17 @@ class OrdemServicoRepository {
         );
       }
 
-      if (formaPagamentoLimpa.isNotEmpty) {
-        dados['forma_pagamento'] = formaPagamentoLimpa;
+      if (pagamentoSolicitado > 0.000001) {
+        await _pagamentoRepository.registrarPagamentoComTransacao(
+          transaction,
+          ordemServicoId: ordemServicoId,
+          valor: pagamentoSolicitado,
+          formaPagamento: formaPagamentoLimpa,
+          dataPagamento: pagamentoEfetivo,
+          contaFinanceiraId: contaFinanceiraId,
+          parcelasTaxa: parcelasTaxa.clamp(1, 48).toInt(),
+        );
       }
-
-      await transaction.update(
-        'ordens_servico',
-        dados,
-        where: 'id = ?',
-        whereArgs: [ordemServicoId],
-      );
     });
   }
 
@@ -942,6 +1302,8 @@ class OrdemServicoRepository {
     required String observacoes,
     required String quilometragemEntrada,
     required String combustivelEntrada,
+    String? dataInicio,
+    String? dataFinalizacao,
     String? horaEntrada,
     String? horaSaida,
   }) async {
@@ -966,6 +1328,8 @@ class OrdemServicoRepository {
           'observacoes',
           'quilometragem_entrada',
           'combustivel_entrada',
+          'data_inicio',
+          'data_finalizacao',
           'hora_entrada',
           'hora_saida',
           'assinatura_cliente',
@@ -1000,11 +1364,37 @@ class OrdemServicoRepository {
         return textoLimpo.isEmpty ? null : textoLimpo;
       }
 
+      final dataInicioAtual = texto(ordemAtual['data_inicio']);
+      final dataFinalizacaoAtual = texto(ordemAtual['data_finalizacao']);
+      final dataInicioNova = dataInicio == null
+          ? (dataInicioAtual.isEmpty ? null : dataInicioAtual)
+          : _normalizarDataBanco(dataInicio, campo: 'data de entrada');
+      final dataFinalizacaoNova = dataFinalizacao == null
+          ? (dataFinalizacaoAtual.isEmpty ? null : dataFinalizacaoAtual)
+          : _normalizarDataBanco(dataFinalizacao, campo: 'data de saída');
+      final horaEntradaNova = horaEntrada == null
+          ? horario(ordemAtual['hora_entrada'])
+          : horario(horaEntrada);
+      final horaSaidaNova = horaSaida == null
+          ? horario(ordemAtual['hora_saida'])
+          : horario(horaSaida);
+
+      _validarPeriodoOperacional(
+        dataInicio: dataInicioNova,
+        horaEntrada: horaEntradaNova,
+        dataFinalizacao: dataFinalizacaoNova,
+        horaSaida: horaSaidaNova,
+      );
+
       final dadosAnteriores = <String, dynamic>{
         'funcionario_responsavel': texto(ordemAtual['funcionario_responsavel']),
         'observacoes': texto(ordemAtual['observacoes']),
         'quilometragem_entrada': texto(ordemAtual['quilometragem_entrada']),
         'combustivel_entrada': texto(ordemAtual['combustivel_entrada']),
+        'data_inicio': dataInicioAtual.isEmpty ? null : dataInicioAtual,
+        'data_finalizacao': dataFinalizacaoAtual.isEmpty
+            ? null
+            : dataFinalizacaoAtual,
         'hora_entrada': horario(ordemAtual['hora_entrada']),
         'hora_saida': horario(ordemAtual['hora_saida']),
       };
@@ -1014,8 +1404,10 @@ class OrdemServicoRepository {
         'observacoes': observacoes.trim(),
         'quilometragem_entrada': quilometragemEntrada.trim(),
         'combustivel_entrada': combustivelEntrada.trim(),
-        'hora_entrada': horario(horaEntrada),
-        'hora_saida': horario(horaSaida),
+        'data_inicio': dataInicioNova,
+        'data_finalizacao': dataFinalizacaoNova,
+        'hora_entrada': horaEntradaNova,
+        'hora_saida': horaSaidaNova,
       };
 
       final houveAlteracao = dadosAnteriores.entries.any(
@@ -1053,6 +1445,35 @@ class OrdemServicoRepository {
         where: 'id = ? AND status = ?',
         whereArgs: [ordemServicoId, 'Finalizada'],
       );
+
+      final entradaCorrigida = _combinarDataHoraArmazenada(
+        dataInicioNova,
+        horaEntradaNova,
+      );
+      final saidaCorrigida = _combinarDataHoraArmazenada(
+        dataFinalizacaoNova,
+        horaSaidaNova,
+      );
+
+      if (entradaCorrigida != null && saidaCorrigida != null) {
+        await _custosRepository.recalcularMaoObraAutomaticaComTransacao(
+          transaction,
+          ordemServicoId: ordemServicoId,
+          colaboradorNome: funcionarioResponsavel.trim(),
+          entrada: entradaCorrigida,
+          saida: saidaCorrigida,
+        );
+
+        // A baixa FIFO aconteceu na saída real do veículo. Se a data/hora
+        // operacional for corrigida depois, mantém o histórico de estoque
+        // coerente com o novo período da OS. Quantidades e custos não mudam.
+        await transaction.update(
+          'movimentacoes_estoque',
+          {'data': saidaCorrigida.toIso8601String()},
+          where: "ordem_servico_id = ? AND UPPER(tipo) = 'SAIDA'",
+          whereArgs: [ordemServicoId],
+        );
+      }
 
       await transaction.insert('ordem_servico_revisoes', {
         'ordem_servico_id': ordemServicoId,
@@ -1094,7 +1515,14 @@ class OrdemServicoRepository {
           SUM(
             CASE
               WHEN status = 'Finalizada'
-              THEN MAX(valor_total - desconto, 0)
+              THEN MAX(
+                COALESCE(valor_total, 0)
+                - COALESCE(desconto, 0)
+                - COALESCE(desconto_negociacao, 0)
+                + COALESCE(acrescimo_negociacao, 0)
+                + COALESCE(juros_parcelamento, 0),
+                0
+              )
               ELSE 0
             END
           ),
@@ -1204,8 +1632,20 @@ class OrdemServicoRepository {
             CASE
               WHEN status = 'Finalizada'
               THEN CASE
-                WHEN (valor_total - desconto) > 0
-                THEN (valor_total - desconto)
+                WHEN (
+                  COALESCE(valor_total, 0)
+                  - COALESCE(desconto, 0)
+                  - COALESCE(desconto_negociacao, 0)
+                  + COALESCE(acrescimo_negociacao, 0)
+                  + COALESCE(juros_parcelamento, 0)
+                ) > 0
+                THEN (
+                  COALESCE(valor_total, 0)
+                  - COALESCE(desconto, 0)
+                  - COALESCE(desconto_negociacao, 0)
+                  + COALESCE(acrescimo_negociacao, 0)
+                  + COALESCE(juros_parcelamento, 0)
+                )
                 ELSE 0
               END
               ELSE 0
@@ -1382,7 +1822,7 @@ class OrdemServicoRepository {
     await database.transaction((transaction) async {
       final resultado = await transaction.query(
         'ordens_servico',
-        columns: ['id', 'status', 'agendamento_id'],
+        columns: ['id', 'status', 'agendamento_id', 'valor_recebido'],
         where: 'id = ?',
         whereArgs: [ordemServicoId],
         limit: 1,
@@ -1399,9 +1839,32 @@ class OrdemServicoRepository {
         return;
       }
 
+      final valorRecebido = (ordem['valor_recebido'] as num?)?.toDouble() ?? 0;
+
+      if (valorRecebido > 0.000001) {
+        throw StateError(
+          'Estorne os pagamentos recebidos antes de cancelar esta OS.',
+        );
+      }
+
+      await transaction.update(
+        'ordem_servico_pagamentos',
+        {
+          'status': 'Cancelado',
+          'atualizado_em': DateTime.now().toIso8601String(),
+        },
+        where: "ordem_servico_id = ? AND status = 'Pendente'",
+        whereArgs: [ordemServicoId],
+      );
+
       await transaction.update(
         'ordens_servico',
-        {'status': 'Cancelada'},
+        {
+          'status': 'Cancelada',
+          'status_pagamento': 'Cancelado',
+          'vencimento_pagamento': null,
+          'pagamento_atualizado_em': DateTime.now().toIso8601String(),
+        },
         where: 'id = ?',
         whereArgs: [ordemServicoId],
       );
@@ -1506,12 +1969,35 @@ class OrdemServicoRepository {
   }
 
   Future<void> excluirOrdemServico(int ordemServicoId) async {
+    await _excluirOrdemServicoComReversao(
+      ordemServicoId,
+      restaurarAgendamento: false,
+    );
+  }
+
+  /// Exclusão administrativa para limpar Ordens de Serviço criadas em testes.
+  ///
+  /// Antes de apagar a OS, desfaz os efeitos automáticos que ela causou no
+  /// estoque e remove as movimentações financeiras vinculadas. Cliente,
+  /// veículo, produtos do estoque, serviços do catálogo, orçamento e
+  /// agendamento não são excluídos.
+  Future<void> excluirOrdemServicoDeTeste(int ordemServicoId) async {
+    await _excluirOrdemServicoComReversao(
+      ordemServicoId,
+      restaurarAgendamento: true,
+    );
+  }
+
+  Future<void> _excluirOrdemServicoComReversao(
+    int ordemServicoId, {
+    required bool restaurarAgendamento,
+  }) async {
     final database = await _appDatabase.database;
 
     await database.transaction((transaction) async {
       final resultado = await transaction.query(
         'ordens_servico',
-        columns: ['status', 'agendamento_id'],
+        columns: ['id', 'numero', 'status', 'agendamento_id'],
         where: 'id = ?',
         whereArgs: [ordemServicoId],
         limit: 1,
@@ -1525,20 +2011,251 @@ class OrdemServicoRepository {
       final status = (ordem['status'] ?? '').toString().trim();
       final agendamentoId = _converterInt(ordem['agendamento_id']);
 
+      if (restaurarAgendamento && status != 'Finalizada') {
+        throw StateError(
+          'A exclusão de OS de teste é destinada a Ordens de Serviço '
+          'finalizadas.',
+        );
+      }
+
+      // Desfaz a baixa de estoque antes de apagar os registros da OS.
+      await _restaurarEstoqueDaOrdemDeTeste(transaction, ordemServicoId);
+
+      // Os FKs de movimentos financeiros usam ON DELETE SET NULL. Por isso
+      // removemos explicitamente todos os movimentos ligados à OS ou aos seus
+      // pagamentos antes de apagar a OS, evitando saldo "fantasma".
+      await transaction.rawDelete(
+        '''
+        DELETE FROM movimentos_financeiros
+        WHERE ordem_servico_id = ?
+           OR pagamento_id IN (
+             SELECT id
+             FROM ordem_servico_pagamentos
+             WHERE ordem_servico_id = ?
+           )
+        ''',
+        [ordemServicoId, ordemServicoId],
+      );
+
+      // Movimentações de estoque também usam ON DELETE SET NULL. Após devolver
+      // as quantidades, elas precisam ser removidas explicitamente.
       await transaction.delete(
+        'movimentacoes_estoque',
+        where: 'ordem_servico_id = ?',
+        whereArgs: [ordemServicoId],
+      );
+
+      // O perfil de preço da OS fica em uma tabela gerencial auxiliar sem
+      // FK para não exigir mudança de schemaVersion. Remove o snapshot
+      // explicitamente quando a OS é excluída, evitando metadado órfão.
+      final tabelaPerfil = await transaction.rawQuery(
+        '''
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'financeiro_preco_documentos'
+        LIMIT 1
+        ''',
+      );
+
+      if (tabelaPerfil.isNotEmpty) {
+        await transaction.delete(
+          'financeiro_preco_documentos',
+          where: 'documento_tipo = ? AND documento_id = ?',
+          whereArgs: ['OS', ordemServicoId],
+        );
+      }
+
+      final tabelaDesconto = await transaction.rawQuery(
+        '''
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'financeiro_desconto_documentos'
+        LIMIT 1
+        ''',
+      );
+
+      if (tabelaDesconto.isNotEmpty) {
+        await transaction.delete(
+          'financeiro_desconto_documentos',
+          where: 'documento_tipo = ? AND documento_id = ?',
+          whereArgs: ['OS', ordemServicoId],
+        );
+      }
+
+      // Itens, produtos, composição de lotes, checklist, fotos, revisões,
+      // pagamentos, ajustes financeiros e mão de obra vinculados possuem
+      // cascata a partir da OS. Os arquivos físicos de fotos/assinaturas não
+      // são apagados aqui para evitar remover um arquivo externo do usuário.
+      final removidas = await transaction.delete(
         'ordens_servico',
         where: 'id = ?',
         whereArgs: [ordemServicoId],
       );
 
+      if (removidas == 0) {
+        throw StateError('Não foi possível excluir a Ordem de Serviço.');
+      }
+
       if (agendamentoId != null) {
         await _agendamentoRepository.atualizarStatusComTransacao(
           transaction,
           agendamentoId,
-          _statusAgendamentoAposExcluirOrdem(status),
+          restaurarAgendamento
+              ? 'Agendado'
+              : _statusAgendamentoAposExcluirOrdem(status),
         );
       }
     });
+  }
+
+  Future<void> _restaurarEstoqueDaOrdemDeTeste(
+    Transaction transaction,
+    int ordemServicoId,
+  ) async {
+    final movimentos = await transaction.query(
+      'movimentacoes_estoque',
+      columns: [
+        'item_estoque_id',
+        'lote_id',
+        'tipo',
+        'quantidade',
+      ],
+      where: 'ordem_servico_id = ?',
+      whereArgs: [ordemServicoId],
+      orderBy: 'id ASC',
+    );
+
+    final deltaPorItem = <int, double>{};
+    final deltaPorLote = <int, double>{};
+
+    for (final movimento in movimentos) {
+      final itemId = _converterInt(movimento['item_estoque_id']);
+      final loteId = _converterInt(movimento['lote_id']);
+      final quantidade =
+          (movimento['quantidade'] as num?)?.toDouble() ?? 0.0;
+      final tipo = (movimento['tipo'] ?? '').toString().trim().toLowerCase();
+
+      if (itemId == null || quantidade <= 0) {
+        continue;
+      }
+
+      double delta;
+      if (tipo == 'saida' || tipo == 'saída') {
+        // A OS retirou do estoque: para apagá-la, devolvemos.
+        delta = quantidade;
+      } else if (tipo == 'entrada') {
+        // Caso exista uma entrada vinculada à OS, também desfazemos seu efeito.
+        delta = -quantidade;
+      } else {
+        continue;
+      }
+
+      deltaPorItem[itemId] = (deltaPorItem[itemId] ?? 0) + delta;
+      if (loteId != null) {
+        deltaPorLote[loteId] = (deltaPorLote[loteId] ?? 0) + delta;
+      }
+    }
+
+    // Bancos legados podem ter a composição FIFO gravada sem a movimentação
+    // de estoque correspondente. Nesse caso usamos a composição dos lotes como
+    // fonte para a devolução.
+    if (deltaPorItem.isEmpty) {
+      final composicoes = await transaction.rawQuery(
+        '''
+        SELECT
+          p.produto_id AS item_estoque_id,
+          l.lote_id,
+          COALESCE(SUM(l.quantidade), 0) AS quantidade
+        FROM ordem_servico_produto_lotes l
+        INNER JOIN ordem_servico_produtos p
+          ON p.id = l.ordem_servico_produto_id
+        WHERE p.ordem_servico_id = ?
+          AND p.produto_id IS NOT NULL
+        GROUP BY p.produto_id, l.lote_id
+        ''',
+        [ordemServicoId],
+      );
+
+      for (final item in composicoes) {
+        final itemId = _converterInt(item['item_estoque_id']);
+        final loteId = _converterInt(item['lote_id']);
+        final quantidade = (item['quantidade'] as num?)?.toDouble() ?? 0.0;
+
+        if (itemId == null || quantidade <= 0) {
+          continue;
+        }
+
+        deltaPorItem[itemId] = (deltaPorItem[itemId] ?? 0) + quantidade;
+        if (loteId != null) {
+          deltaPorLote[loteId] = (deltaPorLote[loteId] ?? 0) + quantidade;
+        }
+      }
+    }
+
+    if (deltaPorItem.isEmpty && deltaPorLote.isEmpty) {
+      return;
+    }
+
+    final agora = DateTime.now().toIso8601String();
+
+    for (final entry in deltaPorLote.entries) {
+      final lote = await transaction.query(
+        'estoque_lotes',
+        columns: ['id', 'quantidade_disponivel'],
+        where: 'id = ?',
+        whereArgs: [entry.key],
+        limit: 1,
+      );
+
+      if (lote.isEmpty) {
+        // Se um lote histórico já foi removido, ainda restauramos o saldo do
+        // item abaixo. Não inventamos um novo lote de compra.
+        continue;
+      }
+
+      final atual =
+          (lote.first['quantidade_disponivel'] as num?)?.toDouble() ?? 0.0;
+      final novo = (atual + entry.value).clamp(0, double.infinity).toDouble();
+
+      await transaction.update(
+        'estoque_lotes',
+        {
+          'quantidade_disponivel': novo,
+          if (entry.value > 0) 'ativo': 1,
+        },
+        where: 'id = ?',
+        whereArgs: [entry.key],
+      );
+    }
+
+    for (final entry in deltaPorItem.entries) {
+      final item = await transaction.query(
+        'itens_estoque',
+        columns: ['id', 'quantidade'],
+        where: 'id = ?',
+        whereArgs: [entry.key],
+        limit: 1,
+      );
+
+      if (item.isEmpty) {
+        continue;
+      }
+
+      final atual = (item.first['quantidade'] as num?)?.toDouble() ?? 0.0;
+      final novo = (atual + entry.value).clamp(0, double.infinity).toDouble();
+
+      await transaction.update(
+        'itens_estoque',
+        {
+          'quantidade': novo,
+          'atualizado_em': agora,
+        },
+        where: 'id = ?',
+        whereArgs: [entry.key],
+      );
+    }
   }
 
   String _statusAgendamentoAposExcluirOrdem(String statusOrdem) {
@@ -1613,6 +2330,116 @@ class OrdemServicoRepository {
 
     if (linhasAlteradas == 0) {
       throw StateError('Ordem de Serviço não encontrada.');
+    }
+  }
+
+  DateTime? _combinarDataHoraArmazenada(dynamic data, dynamic hora) {
+    final textoData = (data ?? '').toString().trim();
+    if (textoData.isEmpty) {
+      return null;
+    }
+
+    final dataBase = DateTime.tryParse(textoData);
+    if (dataBase == null) {
+      return null;
+    }
+
+    var horaValor = 0;
+    var minutoValor = 0;
+    final textoHora = (hora ?? '').toString().trim();
+    if (textoHora.isNotEmpty) {
+      final partes = textoHora.split(':');
+      if (partes.length >= 2) {
+        horaValor = int.tryParse(partes[0]) ?? 0;
+        minutoValor = int.tryParse(partes[1]) ?? 0;
+      }
+    }
+
+    return DateTime(
+      dataBase.year,
+      dataBase.month,
+      dataBase.day,
+      horaValor,
+      minutoValor,
+    );
+  }
+
+  String? _normalizarDataBanco(String? valor, {required String campo}) {
+    final texto = valor?.trim() ?? '';
+    if (texto.isEmpty) {
+      return null;
+    }
+
+    DateTime? data = DateTime.tryParse(texto);
+    if (data == null) {
+      final partes = texto.split('/');
+      if (partes.length == 3) {
+        final dia = int.tryParse(partes[0]);
+        final mes = int.tryParse(partes[1]);
+        final ano = int.tryParse(partes[2]);
+        if (dia != null && mes != null && ano != null) {
+          final candidata = DateTime(ano, mes, dia);
+          if (candidata.year == ano &&
+              candidata.month == mes &&
+              candidata.day == dia) {
+            data = candidata;
+          }
+        }
+      }
+    }
+
+    if (data == null) {
+      throw ArgumentError('Informe uma $campo válida.');
+    }
+
+    return _formatarData(data);
+  }
+
+  void _validarPeriodoOperacional({
+    required String? dataInicio,
+    required String? horaEntrada,
+    required String? dataFinalizacao,
+    required String? horaSaida,
+  }) {
+    if (dataInicio == null || dataFinalizacao == null) {
+      return;
+    }
+
+    final entradaData = DateTime.tryParse(dataInicio);
+    final saidaData = DateTime.tryParse(dataFinalizacao);
+    if (entradaData == null || saidaData == null) {
+      return;
+    }
+
+    final entradaDia = DateTime(
+      entradaData.year,
+      entradaData.month,
+      entradaData.day,
+    );
+    final saidaDia = DateTime(saidaData.year, saidaData.month, saidaData.day);
+
+    if (saidaDia.isBefore(entradaDia)) {
+      throw ArgumentError('A data de saída não pode ser anterior à entrada.');
+    }
+
+    if (saidaDia != entradaDia || horaEntrada == null || horaSaida == null) {
+      return;
+    }
+
+    int minutos(String valor) {
+      final partes = valor.split(':');
+      if (partes.length < 2) {
+        return 0;
+      }
+      final hora = int.tryParse(partes[0]) ?? 0;
+      final minuto = int.tryParse(partes[1]) ?? 0;
+      return hora * 60 + minuto;
+    }
+
+    if (minutos(horaSaida) < minutos(horaEntrada)) {
+      throw ArgumentError(
+        'A hora de saída não pode ser anterior à hora de entrada no mesmo dia.',
+      );
     }
   }
 

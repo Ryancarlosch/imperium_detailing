@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/item_orcamento.dart';
 import '../repositories/orcamento_repository.dart';
 import '../repositories/ordem_servico_repository.dart';
+import '../repositories/fidelidade_repository.dart';
 import '../services/pdf/orcamento_pdf_service.dart';
 import '../services/whatsapp_service.dart';
 import 'novo_orcamento_page.dart';
@@ -21,6 +22,7 @@ class OrcamentoDetalhesPage extends StatefulWidget {
 class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
   final _repository = OrcamentoRepository();
   final _ordemRepository = OrdemServicoRepository();
+  final _fidelidadeRepository = FidelidadeRepository();
   final _pdfService = OrcamentoPdfService();
 
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
@@ -29,6 +31,7 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
 
   Map<String, dynamic>? _dados;
   List<ItemOrcamento> _itens = [];
+  DescontoDocumentoSnapshot? _snapshotDesconto;
 
   bool _carregando = true;
   bool _gerandoPdf = false;
@@ -57,6 +60,17 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
 
       final itens = _extrairItens(dados?['itens']);
 
+      DescontoDocumentoSnapshot? snapshotDesconto;
+      try {
+        snapshotDesconto =
+            await _fidelidadeRepository.buscarDescontoDocumento(
+          documentoTipo: 'ORCAMENTO',
+          documentoId: widget.orcamentoId,
+        );
+      } catch (_) {
+        // Orçamentos antigos continuam abrindo normalmente.
+      }
+
       final existeOrdem = await _ordemRepository.existeOrdemParaOrcamento(
         widget.orcamentoId,
       );
@@ -68,6 +82,7 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
       setState(() {
         _dados = dados;
         _itens = itens;
+        _snapshotDesconto = snapshotDesconto;
         _existeOrdemServico = existeOrdem;
         _verificandoOrdem = false;
         _carregando = false;
@@ -577,6 +592,45 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
         .replaceAll(RegExp(r',$'), '');
   }
 
+  String _nomePerfilPreco(String perfil) {
+    switch (perfil) {
+      case 'cliente':
+        return 'Cliente final';
+      case 'parceiro_1_4':
+        return 'Parceiro • 1 a 4/mês';
+      case 'parceiro_5_9':
+        return 'Parceiro • 5 a 9/mês';
+      case 'parceiro_10_mais':
+        return 'Parceiro • 10+/mês';
+      case 'informado':
+      default:
+        return 'Preço informado / combinado';
+    }
+  }
+
+  String _origemDescontoTexto() {
+    final origem = _snapshotDesconto?.origem ?? '';
+
+    switch (origem) {
+      case 'fidelidade_sugerida':
+        return 'Fidelidade aplicada após sugestão';
+      case 'fidelidade_automatica':
+        return 'Fidelidade automática';
+      case 'nenhum':
+        return 'Sem desconto';
+      case 'manual':
+        return 'Desconto manual';
+      default:
+        return _numero('desconto') > 0
+            ? 'Desconto manual'
+            : 'Sem desconto';
+    }
+  }
+
+  String _percentualTexto(double valor) {
+    return '${valor.toStringAsFixed(1).replaceAll('.', ',')}%';
+  }
+
   Color _corStatus(String status) {
     switch (status) {
       case 'Aprovado':
@@ -621,6 +675,11 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
       _texto('veiculo_modelo'),
       _texto('veiculo_placa'),
     ].where((item) => item.isNotEmpty).join(' • ');
+
+    final perfilPreco = _texto('perfil_preco').isEmpty
+        ? 'informado'
+        : _texto('perfil_preco');
+    final clienteDesde = _snapshotDesconto?.clienteDesde;
 
     return PopScope(
       canPop: !_excluindo,
@@ -707,6 +766,14 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
                             valor: veiculo.isEmpty ? 'Não vinculado' : veiculo,
                             icone: Icons.directions_car_outlined,
                           ),
+                          if (clienteDesde != null) ...[
+                            const Divider(height: 24),
+                            _LinhaInformacao(
+                              titulo: 'Cliente desde',
+                              valor: _data.format(clienteDesde),
+                              icone: Icons.loyalty_outlined,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -761,6 +828,30 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
                           _LinhaValor(
                             titulo: 'Desconto',
                             valor: _moeda.format(desconto),
+                          ),
+                          const SizedBox(height: 10),
+                          _LinhaInformacao(
+                            titulo: 'Origem do desconto',
+                            valor: _origemDescontoTexto(),
+                            icone: Icons.discount_outlined,
+                          ),
+                          if (_snapshotDesconto != null &&
+                              _snapshotDesconto!.origem
+                                  .startsWith('fidelidade')) ...[
+                            const SizedBox(height: 10),
+                            _LinhaInformacao(
+                              titulo: 'Percentual de fidelidade',
+                              valor: _percentualTexto(
+                                _snapshotDesconto!.percentual,
+                              ),
+                              icone: Icons.redeem_outlined,
+                            ),
+                          ],
+                          const SizedBox(height: 10),
+                          _LinhaInformacao(
+                            titulo: 'Perfil de preço',
+                            valor: _nomePerfilPreco(perfilPreco),
+                            icone: Icons.sell_outlined,
                           ),
                           const Divider(height: 26),
                           _LinhaValor(

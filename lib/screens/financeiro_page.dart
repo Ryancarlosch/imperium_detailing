@@ -1,8 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../models/movimento_financeiro.dart';
+import '../models/conta_financeira.dart';
+import '../repositories/conta_financeira_repository.dart';
 import '../repositories/financeiro_repository.dart';
+import '../repositories/pagamento_repository.dart';
+import 'contas_financeiras_page.dart';
+import 'custos_page.dart';
+import 'dre_page.dart';
+import 'financeiro_dashboard_page.dart';
+import 'fluxo_caixa_page.dart';
+import 'fornecedores_page.dart';
+import 'movimentacoes_financeiras_page.dart';
+import 'pagamentos_page.dart';
+import 'previsto_realizado_page.dart';
+import 'plano_contas_page.dart';
+import 'metas_financeiras_page.dart';
+import 'regras_taxa_page.dart';
+import 'relatorios_financeiros_page.dart';
 
 class FinanceiroPage extends StatefulWidget {
   const FinanceiroPage({super.key});
@@ -13,697 +28,411 @@ class FinanceiroPage extends StatefulWidget {
 
 class _FinanceiroPageState extends State<FinanceiroPage> {
   final FinanceiroRepository _repository = FinanceiroRepository();
-  final TextEditingController _pesquisaController = TextEditingController();
-
-  final NumberFormat _formatoMoeda = NumberFormat.currency(
+  final ContaFinanceiraRepository _contasRepository =
+      ContaFinanceiraRepository();
+  final PagamentoRepository _pagamentosRepository = PagamentoRepository();
+  final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
-  final DateFormat _formatoData = DateFormat('dd/MM/yyyy');
-
   bool _carregando = true;
-  String _pesquisa = '';
-  String _filtroTipo = 'Todos';
-  DateTimeRange? _periodoSelecionado;
+  Map<String, double> _resumo = const {
+    'entradas_realizadas': 0,
+    'saidas_realizadas': 0,
+    'saldo_realizado': 0,
+    'entradas_previstas': 0,
+    'saidas_previstas': 0,
+    'vencido_pagar': 0,
+  };
+  double _saldoContas = 0;
+  double _aReceberOs = 0;
 
-  List<Map<String, dynamic>> _movimentos = [];
+  DateTime get _inicioMes {
+    final hoje = DateTime.now();
+    return DateTime(hoje.year, hoje.month, 1);
+  }
 
-  double _entradas = 0;
-  double _saidas = 0;
-  double _saldo = 0;
+  DateTime get _fimMes {
+    final hoje = DateTime.now();
+    return DateTime(hoje.year, hoje.month + 1, 0, 23, 59, 59);
+  }
 
   @override
   void initState() {
     super.initState();
-    _carregarDados();
+    _carregar();
   }
 
-  @override
-  void dispose() {
-    _pesquisaController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _carregarDados() async {
+  Future<void> _carregar() async {
     if (mounted) {
-      setState(() {
-        _carregando = true;
-      });
+      setState(() => _carregando = true);
     }
 
     try {
-      final movimentos = await _repository.listarMovimentosComCliente();
+      final resultados = await Future.wait<dynamic>([
+        _repository.obterResumoOperacional(inicio: _inicioMes, fim: _fimMes),
+        _contasRepository.listar(),
+        _pagamentosRepository.obterResumoGeral(),
+      ]);
 
-      double entradas = 0;
-      double saidas = 0;
-
-      for (final movimento in movimentos) {
-        final tipo = (movimento['tipo'] ?? '').toString().trim().toLowerCase();
-        final valor = _converterParaDouble(movimento['valor']);
-
-        if (tipo == 'entrada') {
-          entradas += valor;
-        } else if (tipo == 'saída' || tipo == 'saida') {
-          saidas += valor;
-        }
-      }
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _movimentos = movimentos;
-        _entradas = entradas;
-        _saidas = saidas;
-        _saldo = entradas - saidas;
-        _carregando = false;
-      });
-    } catch (erro) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _carregando = false;
-      });
-
-      _mostrarMensagem(
-        'Não foi possível carregar o financeiro: $erro',
-        erro: true,
+      final contas = List<ContaFinanceira>.from(resultados[1] as List<dynamic>);
+      final saldoContas = contas.fold<double>(
+        0,
+        (total, item) => total + (item.saldoAtual ?? item.saldoInicial),
       );
-    }
-  }
-
-  double _converterParaDouble(dynamic valor) {
-    if (valor is num) {
-      return valor.toDouble();
-    }
-
-    return double.tryParse(valor.toString().replaceAll(',', '.')) ?? 0;
-  }
-
-  DateTime? _converterData(dynamic valor) {
-    if (valor == null) {
-      return null;
-    }
-
-    final texto = valor.toString();
-
-    try {
-      return DateTime.parse(texto);
-    } catch (_) {
-      try {
-        return DateFormat('dd/MM/yyyy').parseStrict(texto);
-      } catch (_) {
-        return null;
-      }
-    }
-  }
-
-  List<Map<String, dynamic>> get _movimentosFiltrados {
-    final termo = _pesquisa.trim().toLowerCase();
-
-    final lista = _movimentos.where((movimento) {
-      final tipo = (movimento['tipo'] ?? '').toString().trim();
-      final descricao = (movimento['descricao'] ?? '').toString();
-      final formaPagamento = (movimento['forma_pagamento'] ?? '').toString();
-      final nomeCliente =
-          (movimento['cliente_nome'] ??
-                  movimento['nome_cliente'] ??
-                  movimento['nome'] ??
-                  '')
-              .toString();
-
-      final tipoNormalizado = tipo.toLowerCase();
-      final correspondePesquisa =
-          termo.isEmpty ||
-          descricao.toLowerCase().contains(termo) ||
-          formaPagamento.toLowerCase().contains(termo) ||
-          nomeCliente.toLowerCase().contains(termo);
-
-      final correspondeTipo =
-          _filtroTipo == 'Todos' ||
-          tipoNormalizado == _filtroTipo.toLowerCase() ||
-          (_filtroTipo == 'Saída' &&
-              (tipoNormalizado == 'saida' || tipoNormalizado == 'saída'));
-
-      final dataMovimento = _converterData(movimento['data']);
-
-      final correspondePeriodo =
-          _periodoSelecionado == null ||
-          (dataMovimento != null &&
-              !dataMovimento.isBefore(
-                DateTime(
-                  _periodoSelecionado!.start.year,
-                  _periodoSelecionado!.start.month,
-                  _periodoSelecionado!.start.day,
-                ),
-              ) &&
-              !dataMovimento.isAfter(
-                DateTime(
-                  _periodoSelecionado!.end.year,
-                  _periodoSelecionado!.end.month,
-                  _periodoSelecionado!.end.day,
-                  23,
-                  59,
-                  59,
-                ),
-              ));
-
-      return correspondePesquisa && correspondeTipo && correspondePeriodo;
-    }).toList();
-
-    lista.sort((a, b) {
-      final dataA = _converterData(a['data']) ?? DateTime(1900);
-      final dataB = _converterData(b['data']) ?? DateTime(1900);
-      return dataB.compareTo(dataA);
-    });
-
-    return lista;
-  }
-
-  double get _entradasFiltradas {
-    return _movimentosFiltrados
-        .where(
-          (item) =>
-              (item['tipo'] ?? '').toString().trim().toLowerCase() == 'entrada',
-        )
-        .fold<double>(
-          0,
-          (total, item) => total + _converterParaDouble(item['valor']),
-        );
-  }
-
-  double get _saidasFiltradas {
-    return _movimentosFiltrados
-        .where((item) {
-          final tipo = (item['tipo'] ?? '').toString().trim().toLowerCase();
-          return tipo == 'saída' || tipo == 'saida';
-        })
-        .fold<double>(
-          0,
-          (total, item) => total + _converterParaDouble(item['valor']),
-        );
-  }
-
-  Future<void> _selecionarPeriodo() async {
-    final hoje = DateTime.now();
-
-    final periodo = await showDateRangePicker(
-      context: context,
-      locale: const Locale('pt', 'BR'),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(hoje.year + 5),
-      initialDateRange: _periodoSelecionado,
-      helpText: 'Selecionar período',
-      cancelText: 'Cancelar',
-      confirmText: 'Aplicar',
-      saveText: 'Aplicar',
-      fieldStartHintText: 'Data inicial',
-      fieldEndHintText: 'Data final',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFFD6A84B),
-              onPrimary: Colors.black,
-              surface: Color(0xFF211D17),
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(
-              backgroundColor: Color(0xFF151515),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (periodo == null || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _periodoSelecionado = periodo;
-    });
-  }
-
-  Future<void> _abrirFormulario({Map<String, dynamic>? movimento}) async {
-    final resultado = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return _FormularioMovimento(
-          movimento: movimento,
-          repository: _repository,
-        );
-      },
-    );
-
-    if (resultado == true) {
-      await _carregarDados();
-    }
-  }
-
-  Future<void> _confirmarExclusao(Map<String, dynamic> movimento) async {
-    final descricao = (movimento['descricao'] ?? 'Movimentação').toString();
-
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Excluir movimentação'),
-          content: Text(
-            'Deseja realmente excluir "$descricao"?\n\n'
-            'Esta ação não poderá ser desfeita.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Excluir'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmar != true) {
-      return;
-    }
-
-    try {
-      final idValue = movimento['id'];
-      final id = idValue is int
-          ? idValue
-          : int.tryParse(idValue?.toString() ?? '');
-
-      if (id == null) {
-        throw Exception('Identificador da movimentação não encontrado.');
-      }
-
-      await _repository.excluirMovimento(id);
+      final resumoPagamentos = Map<String, double>.from(
+        resultados[2] as Map<String, double>,
+      );
 
       if (!mounted) {
         return;
       }
-
-      _mostrarMensagem('Movimentação excluída com sucesso.');
-      await _carregarDados();
+      setState(() {
+        _resumo = Map<String, double>.from(
+          resultados[0] as Map<String, double>,
+        );
+        _saldoContas = saldoContas;
+        _aReceberOs = resumoPagamentos['a_receber'] ?? 0;
+        _carregando = false;
+      });
     } catch (erro) {
       if (!mounted) {
         return;
       }
-
-      _mostrarMensagem('Não foi possível excluir: $erro', erro: true);
-    }
-  }
-
-  void _mostrarMensagem(String mensagem, {bool erro = false}) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
+      setState(() => _carregando = false);
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(mensagem),
-          backgroundColor: erro ? Colors.red.shade700 : Colors.green.shade700,
+          content: Text('Não foi possível carregar o financeiro.\n$erro'),
+          backgroundColor: Colors.red.shade700,
         ),
       );
+    }
+  }
+
+  Future<void> _abrir(Widget pagina) async {
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => pagina));
+    await _carregar();
   }
 
   @override
   Widget build(BuildContext context) {
-    final movimentosFiltrados = _movimentosFiltrados;
-    final usandoFiltros =
-        _pesquisa.isNotEmpty ||
-        _filtroTipo != 'Todos' ||
-        _periodoSelecionado != null;
-
-    final entradasExibidas = usandoFiltros ? _entradasFiltradas : _entradas;
-    final saidasExibidas = usandoFiltros ? _saidasFiltradas : _saidas;
-    final saldoExibido = usandoFiltros
-        ? entradasExibidas - saidasExibidas
-        : _saldo;
+    final hoje = DateTime.now();
+    final tituloMes = DateFormat('MMMM yyyy', 'pt_BR').format(hoje);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0E0E),
       appBar: AppBar(
-        title: const Text('Controle financeiro'),
-        centerTitle: false,
+        title: const Text('Financeiro'),
         actions: [
           IconButton(
             tooltip: 'Atualizar',
-            onPressed: _carregando ? null : _carregarDados,
+            onPressed: _carregando ? null : _carregar,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _abrirFormulario(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Nova movimentação'),
-      ),
       body: RefreshIndicator(
-        onRefresh: _carregarDados,
+        onRefresh: _carregar,
         child: _carregando
             ? const Center(child: CircularProgressIndicator())
-            : CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    sliver: SliverToBoxAdapter(
-                      child: _ResumoFinanceiro(
-                        entradas: entradasExibidas,
-                        saidas: saidasExibidas,
-                        saldo: saldoExibido,
-                        formatoMoeda: _formatoMoeda,
-                      ),
-                    ),
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
+                  Text(
+                    tituloMes[0].toUpperCase() + tituloMes.substring(1),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: Colors.white70),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    sliver: SliverToBoxAdapter(child: _construirFiltros()),
+                  const SizedBox(height: 10),
+                  _ResumoPrincipal(
+                    saldo: _resumo['saldo_realizado'] ?? 0,
+                    entradas: _resumo['entradas_realizadas'] ?? 0,
+                    saidas: _resumo['saidas_realizadas'] ?? 0,
+                    moeda: _moeda,
                   ),
-                  if (movimentosFiltrados.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _EstadoVazio(
-                        possuiFiltros: usandoFiltros,
-                        aoAdicionar: () => _abrirFormulario(),
-                        aoLimparFiltros: _limparFiltros,
-                      ),
-                    )
-                  else ...[
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                      sliver: SliverToBoxAdapter(
-                        child: Row(
-                          children: [
-                            Text(
-                              'Movimentações',
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '${movimentosFiltrados.length} registro(s)',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: Colors.white70),
-                            ),
-                          ],
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MiniResumo(
+                          titulo: 'A receber total',
+                          valor: _moeda.format(
+                            (_resumo['entradas_previstas'] ?? 0) + _aReceberOs,
+                          ),
+                          icone: Icons.schedule_rounded,
                         ),
                       ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                      sliver: SliverList.separated(
-                        itemCount: movimentosFiltrados.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final movimento = movimentosFiltrados[index];
-
-                          return _CardMovimento(
-                            movimento: movimento,
-                            formatoMoeda: _formatoMoeda,
-                            formatoData: _formatoData,
-                            converterData: _converterData,
-                            converterValor: _converterParaDouble,
-                            aoEditar: () =>
-                                _abrirFormulario(movimento: movimento),
-                            aoExcluir: () => _confirmarExclusao(movimento),
-                          );
-                        },
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _MiniResumo(
+                          titulo: 'A pagar previsto',
+                          valor: _moeda.format(
+                            _resumo['saidas_previstas'] ?? 0,
+                          ),
+                          icone: Icons.event_note_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _MiniResumo(
+                    titulo: 'Saldo vinculado às contas cadastradas',
+                    valor: _moeda.format(_saldoContas),
+                    icone: Icons.account_balance_wallet_outlined,
+                  ),
+                  const SizedBox(height: 22),
+                  const _TituloSecao(
+                    titulo: 'Operação do dia a dia',
+                    subtitulo:
+                        'Cada ferramenta fica separada para facilitar o uso.',
+                  ),
+                  const SizedBox(height: 10),
+                  _MenuFinanceiro(
+                    titulo: 'Movimentações',
+                    subtitulo:
+                        'Entradas, saídas, previstos, realizados e transferências',
+                    icone: Icons.swap_vert_circle_outlined,
+                    onTap: () => _abrir(const MovimentacoesFinanceirasPage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Contas a pagar',
+                    subtitulo: 'Despesas previstas, vencimentos e pagamentos',
+                    icone: Icons.event_busy_outlined,
+                    badge: (_resumo['vencido_pagar'] ?? 0) > 0
+                        ? 'Vencido ${_moeda.format(_resumo['vencido_pagar'])}'
+                        : null,
+                    onTap: () => _abrir(
+                      const MovimentacoesFinanceirasPage(
+                        tipoInicial: 'Saída',
+                        statusInicial: 'Previsto',
+                        titulo: 'Contas a pagar',
                       ),
                     ),
-                  ],
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Contas a receber das OS',
+                    subtitulo: 'Pagamentos, parcelas, vencidos e comprovantes',
+                    icone: Icons.receipt_long_outlined,
+                    onTap: () => _abrir(const PagamentosPage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Fluxo de caixa',
+                    subtitulo:
+                        'Evolução diária e mensal, saldo realizado e projetado',
+                    icone: Icons.waterfall_chart_rounded,
+                    onTap: () => _abrir(const FluxoCaixaPage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Previsto x realizado',
+                    subtitulo:
+                        'Compare receitas e despesas planejadas com o que aconteceu',
+                    icone: Icons.compare_arrows_rounded,
+                    onTap: () => _abrir(const PrevistoRealizadoPage()),
+                  ),
+                  const SizedBox(height: 18),
+                  const _TituloSecao(
+                    titulo: 'Cadastros financeiros',
+                    subtitulo: 'Base para organizar o caixa e a futura DRE.',
+                  ),
+                  const SizedBox(height: 10),
+                  _MenuFinanceiro(
+                    titulo: 'Plano de contas',
+                    subtitulo:
+                        'Categorias e subcategorias de receitas e despesas',
+                    icone: Icons.account_tree_outlined,
+                    onTap: () => _abrir(const PlanoContasPage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Contas e caixa',
+                    subtitulo: 'Dinheiro, bancos, carteiras e saldo por conta',
+                    icone: Icons.account_balance_outlined,
+                    onTap: () => _abrir(const ContasFinanceirasPage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Fornecedores',
+                    subtitulo: 'Cadastro para vincular despesas e compras',
+                    icone: Icons.local_shipping_outlined,
+                    onTap: () => _abrir(const FornecedoresPage()),
+                  ),
+                  const SizedBox(height: 18),
+                  const _TituloSecao(
+                    titulo: 'Gestão e análise',
+                    subtitulo:
+                        'Custos, DRE, metas, dashboard e relatórios em áreas separadas.',
+                  ),
+                  const SizedBox(height: 10),
+                  _MenuFinanceiro(
+                    titulo: 'Dashboard financeiro',
+                    subtitulo:
+                        'Faturamento, recebido, resultado, metas e evolução mensal',
+                    icone: Icons.dashboard_outlined,
+                    onTap: () => _abrir(const FinanceiroDashboardPage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Custos e mão de obra',
+                    subtitulo:
+                        'Custos fixos, custo/hora, serviços e resultado por OS',
+                    icone: Icons.calculate_outlined,
+                    onTap: () => _abrir(const CustosPage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'DRE gerencial',
+                    subtitulo:
+                        'Regime de competência ou caixa, margem e detalhamento',
+                    icone: Icons.assessment_outlined,
+                    onTap: () => _abrir(const DrePage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Metas financeiras',
+                    subtitulo: 'Metas mensais de receita, despesas e resultado',
+                    icone: Icons.track_changes_outlined,
+                    onTap: () => _abrir(const MetasFinanceirasPage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Relatórios financeiros',
+                    subtitulo:
+                        'Categorias, DRE e rentabilidade das Ordens de Serviço',
+                    icone: Icons.summarize_outlined,
+                    onTap: () => _abrir(const RelatoriosFinanceirosPage()),
+                  ),
+                  _MenuFinanceiro(
+                    titulo: 'Regras de maquininha',
+                    subtitulo:
+                        'Taxas automáticas por débito, crédito, parcelas e conta',
+                    icone: Icons.credit_card_outlined,
+                    onTap: () => _abrir(const RegrasTaxaPage()),
+                  ),
                 ],
               ),
       ),
     );
   }
+}
 
-  Widget _construirFiltros() {
+class _ResumoPrincipal extends StatelessWidget {
+  const _ResumoPrincipal({
+    required this.saldo,
+    required this.entradas,
+    required this.saidas,
+    required this.moeda,
+  });
+
+  final double saldo;
+  final double entradas;
+  final double saidas;
+  final NumberFormat moeda;
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
-      elevation: 0,
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _pesquisaController,
-              onChanged: (valor) {
-                setState(() {
-                  _pesquisa = valor;
-                });
-              },
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: const Color(0xFF1A1A1A),
-                hintText: 'Pesquisar descrição, cliente ou pagamento',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _pesquisa.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Limpar pesquisa',
-                        onPressed: () {
-                          _pesquisaController.clear();
-                          setState(() {
-                            _pesquisa = '';
-                          });
-                        },
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
+            const Text('Resultado de caixa do mês'),
+            const SizedBox(height: 5),
+            Text(
+              moeda.format(saldo),
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _filtroTipo,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFF1A1A1A),
-                      labelText: 'Tipo',
-                      prefixIcon: const Icon(Icons.tune_rounded),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'Todos', child: Text('Todos')),
-                      DropdownMenuItem(
-                        value: 'Entrada',
-                        child: Text('Entradas'),
-                      ),
-                      DropdownMenuItem(value: 'Saída', child: Text('Saídas')),
-                    ],
-                    onChanged: (valor) {
-                      if (valor == null) {
-                        return;
-                      }
-
-                      setState(() {
-                        _filtroTipo = valor;
-                      });
-                    },
+                  child: _LinhaResumo(
+                    titulo: 'Entradas',
+                    valor: moeda.format(entradas),
+                    icone: Icons.south_west_rounded,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _selecionarPeriodo,
-                    icon: const Icon(Icons.date_range_rounded),
-                    label: Text(
-                      _periodoSelecionado == null
-                          ? 'Período'
-                          : '${_formatoData.format(_periodoSelecionado!.start)}'
-                                ' até '
-                                '${_formatoData.format(_periodoSelecionado!.end)}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(58),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
+                  child: _LinhaResumo(
+                    titulo: 'Saídas',
+                    valor: moeda.format(saidas),
+                    icone: Icons.north_east_rounded,
                   ),
                 ),
               ],
             ),
-            if (_pesquisa.isNotEmpty ||
-                _filtroTipo != 'Todos' ||
-                _periodoSelecionado != null) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _limparFiltros,
-                  icon: const Icon(Icons.filter_alt_off_rounded),
-                  label: const Text('Limpar filtros'),
-                ),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
-
-  void _limparFiltros() {
-    _pesquisaController.clear();
-
-    setState(() {
-      _pesquisa = '';
-      _filtroTipo = 'Todos';
-      _periodoSelecionado = null;
-    });
-  }
 }
 
-class _ResumoFinanceiro extends StatelessWidget {
-  const _ResumoFinanceiro({
-    required this.entradas,
-    required this.saidas,
-    required this.saldo,
-    required this.formatoMoeda,
+class _LinhaResumo extends StatelessWidget {
+  const _LinhaResumo({
+    required this.titulo,
+    required this.valor,
+    required this.icone,
   });
 
-  final double entradas;
-  final double saidas;
-  final double saldo;
-  final NumberFormat formatoMoeda;
+  final String titulo;
+  final String valor;
+  final IconData icone;
 
   @override
   Widget build(BuildContext context) {
-    final saldoPositivo = saldo >= 0;
-
-    return Column(
+    return Row(
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.blueGrey.shade900, Colors.blueGrey.shade700],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
+        Icon(icone, size: 20, color: const Color(0xFFD6A84B)),
+        const SizedBox(width: 7),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(titulo, style: const TextStyle(color: Colors.white60)),
               Text(
-                'Saldo atual',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(color: Colors.white70),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                formatoMoeda.format(saldo),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: saldoPositivo
-                      ? Colors.lightGreenAccent
-                      : Colors.redAccent.shade100,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                saldoPositivo
-                    ? 'As entradas estão acima das saídas.'
-                    : 'As saídas estão acima das entradas.',
-                style: const TextStyle(color: Colors.white70),
+                valor,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _CardResumoMenor(
-                titulo: 'Entradas',
-                valor: formatoMoeda.format(entradas),
-                icone: Icons.south_west_rounded,
-                cor: Colors.green,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _CardResumoMenor(
-                titulo: 'Saídas',
-                valor: formatoMoeda.format(saidas),
-                icone: Icons.north_east_rounded,
-                cor: Colors.red,
-              ),
-            ),
-          ],
         ),
       ],
     );
   }
 }
 
-class _CardResumoMenor extends StatelessWidget {
-  const _CardResumoMenor({
+class _MiniResumo extends StatelessWidget {
+  const _MiniResumo({
     required this.titulo,
     required this.valor,
     required this.icone,
-    required this.cor,
   });
 
   final String titulo;
   final String valor;
   final IconData icone;
-  final Color cor;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 0,
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(15),
+        padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: cor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icone, color: cor),
-            ),
-            const SizedBox(width: 10),
+            Icon(icone, color: const Color(0xFFD6A84B)),
+            const SizedBox(width: 9),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(titulo, style: TextStyle(color: Colors.white70)),
-                  const SizedBox(height: 3),
+                  Text(
+                    titulo,
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
                   Text(
                     valor,
                     maxLines: 1,
@@ -720,659 +449,72 @@ class _CardResumoMenor extends StatelessWidget {
   }
 }
 
-class _CardMovimento extends StatelessWidget {
-  const _CardMovimento({
-    required this.movimento,
-    required this.formatoMoeda,
-    required this.formatoData,
-    required this.converterData,
-    required this.converterValor,
-    required this.aoEditar,
-    required this.aoExcluir,
-  });
+class _TituloSecao extends StatelessWidget {
+  const _TituloSecao({required this.titulo, required this.subtitulo});
 
-  final Map<String, dynamic> movimento;
-  final NumberFormat formatoMoeda;
-  final DateFormat formatoData;
-  final DateTime? Function(dynamic) converterData;
-  final double Function(dynamic) converterValor;
-  final VoidCallback aoEditar;
-  final VoidCallback aoExcluir;
+  final String titulo;
+  final String subtitulo;
 
   @override
   Widget build(BuildContext context) {
-    final tipo = (movimento['tipo'] ?? '').toString();
-    final entrada = tipo.toLowerCase() == 'entrada';
-    final valor = converterValor(movimento['valor']);
-    final data = converterData(movimento['data']);
-
-    final nomeCliente =
-        (movimento['cliente_nome'] ??
-                movimento['nome_cliente'] ??
-                movimento['nome'] ??
-                '')
-            .toString();
-
-    final formaPagamento = (movimento['forma_pagamento'] ?? '').toString();
-
-    return Card(
-      elevation: 0,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: aoEditar,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: (entrada ? Colors.green : Colors.red).withValues(
-                    alpha: 0.12,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  entrada
-                      ? Icons.arrow_downward_rounded
-                      : Icons.arrow_upward_rounded,
-                  color: entrada ? Colors.green : Colors.red,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      (movimento['descricao'] ?? 'Sem descrição').toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 4,
-                      children: [
-                        _InformacaoLinha(
-                          icone: Icons.calendar_today_rounded,
-                          texto: data == null
-                              ? 'Data não informada'
-                              : formatoData.format(data),
-                        ),
-                        if (formaPagamento.isNotEmpty)
-                          _InformacaoLinha(
-                            icone: Icons.payments_outlined,
-                            texto: formaPagamento,
-                          ),
-                        if (nomeCliente.isNotEmpty)
-                          _InformacaoLinha(
-                            icone: Icons.person_outline_rounded,
-                            texto: nomeCliente,
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${entrada ? '+' : '-'} ${formatoMoeda.format(valor)}',
-                    style: TextStyle(
-                      color: entrada
-                          ? Colors.green.shade700
-                          : Colors.red.shade700,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    tooltip: 'Opções',
-                    onSelected: (opcao) {
-                      if (opcao == 'editar') {
-                        aoEditar();
-                      } else if (opcao == 'excluir') {
-                        aoExcluir();
-                      }
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
-                        value: 'editar',
-                        child: ListTile(
-                          dense: true,
-                          leading: Icon(Icons.edit_outlined),
-                          title: Text('Editar'),
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 'excluir',
-                        child: ListTile(
-                          dense: true,
-                          leading: Icon(
-                            Icons.delete_outline_rounded,
-                            color: Colors.red,
-                          ),
-                          title: Text(
-                            'Excluir',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InformacaoLinha extends StatelessWidget {
-  const _InformacaoLinha({required this.icone, required this.texto});
-
-  final IconData icone;
-  final String texto;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icone, size: 14, color: Colors.white60),
-        const SizedBox(width: 4),
-        Text(texto, style: TextStyle(fontSize: 12, color: Colors.white70)),
+        Text(
+          titulo,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 2),
+        Text(subtitulo, style: const TextStyle(color: Colors.white60)),
       ],
     );
   }
 }
 
-class _EstadoVazio extends StatelessWidget {
-  const _EstadoVazio({
-    required this.possuiFiltros,
-    required this.aoAdicionar,
-    required this.aoLimparFiltros,
+class _MenuFinanceiro extends StatelessWidget {
+  const _MenuFinanceiro({
+    required this.titulo,
+    required this.subtitulo,
+    required this.icone,
+    required this.onTap,
+    this.badge,
   });
 
-  final bool possuiFiltros;
-  final VoidCallback aoAdicionar;
-  final VoidCallback aoLimparFiltros;
+  final String titulo;
+  final String subtitulo;
+  final IconData icone;
+  final VoidCallback onTap;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              possuiFiltros
-                  ? Icons.search_off_rounded
-                  : Icons.account_balance_wallet_outlined,
-              size: 72,
-              color: Colors.white38,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              possuiFiltros
-                  ? 'Nenhuma movimentação encontrada'
-                  : 'Nenhuma movimentação cadastrada',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              possuiFiltros
-                  ? 'Altere ou limpe os filtros para visualizar outros registros.'
-                  : 'Cadastre entradas e saídas para acompanhar o resultado da empresa.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: possuiFiltros ? aoLimparFiltros : aoAdicionar,
-              icon: Icon(
-                possuiFiltros
-                    ? Icons.filter_alt_off_rounded
-                    : Icons.add_rounded,
-              ),
-              label: Text(
-                possuiFiltros ? 'Limpar filtros' : 'Adicionar movimentação',
-              ),
-            ),
-          ],
+    return Card(
+      margin: const EdgeInsets.only(bottom: 9),
+      child: ListTile(
+        leading: Icon(icone, color: const Color(0xFFD6A84B)),
+        title: Text(
+          titulo,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-      ),
-    );
-  }
-}
-
-class _FormularioMovimento extends StatefulWidget {
-  const _FormularioMovimento({required this.repository, this.movimento});
-
-  final FinanceiroRepository repository;
-  final Map<String, dynamic>? movimento;
-
-  @override
-  State<_FormularioMovimento> createState() => _FormularioMovimentoState();
-}
-
-class _FormularioMovimentoState extends State<_FormularioMovimento> {
-  final _formKey = GlobalKey<FormState>();
-
-  late final TextEditingController _descricaoController;
-  late final TextEditingController _valorController;
-
-  final DateFormat _formatoData = DateFormat('dd/MM/yyyy');
-
-  String _tipo = 'Entrada';
-  String _formaPagamento = 'Pix';
-  DateTime _data = DateTime.now();
-  bool _salvando = false;
-
-  bool get _editando => widget.movimento != null;
-
-  @override
-  void initState() {
-    super.initState();
-
-    final movimento = widget.movimento;
-
-    _descricaoController = TextEditingController(
-      text: (movimento?['descricao'] ?? '').toString(),
-    );
-
-    final valor = movimento?['valor'];
-    _valorController = TextEditingController(
-      text: valor == null ? '' : _formatarValorInicial(valor),
-    );
-
-    final tipoSalvo = (movimento?['tipo'] ?? '').toString().toLowerCase();
-    if (tipoSalvo == 'saída' || tipoSalvo == 'saida') {
-      _tipo = 'Saída';
-    }
-
-    final formaSalva = (movimento?['forma_pagamento'] ?? '').toString().trim();
-    if (formaSalva.isNotEmpty) {
-      _formaPagamento = formaSalva;
-    }
-
-    final dataSalva = movimento?['data'];
-    if (dataSalva != null) {
-      try {
-        _data = DateTime.parse(dataSalva.toString());
-      } catch (_) {
-        try {
-          _data = DateFormat('dd/MM/yyyy').parseStrict(dataSalva.toString());
-        } catch (_) {}
-      }
-    }
-  }
-
-  String _formatarValorInicial(dynamic valor) {
-    final numero = valor is num
-        ? valor.toDouble()
-        : double.tryParse(valor.toString()) ?? 0;
-
-    return numero.toStringAsFixed(2).replaceAll('.', ',');
-  }
-
-  @override
-  void dispose() {
-    _descricaoController.dispose();
-    _valorController.dispose();
-    super.dispose();
-  }
-
-  double? _lerValor() {
-    var texto = _valorController.text.trim();
-
-    if (texto.isEmpty) {
-      return null;
-    }
-
-    texto = texto.replaceAll('R\$', '').replaceAll(' ', '');
-
-    if (texto.contains(',') && texto.contains('.')) {
-      texto = texto.replaceAll('.', '').replaceAll(',', '.');
-    } else {
-      texto = texto.replaceAll(',', '.');
-    }
-
-    return double.tryParse(texto);
-  }
-
-  Future<void> _selecionarData() async {
-    FocusScope.of(context).unfocus();
-
-    final dataAtual = DateTime(_data.year, _data.month, _data.day);
-
-    final data = await showDatePicker(
-      context: context,
-      locale: const Locale('pt', 'BR'),
-      initialDate: dataAtual,
-      firstDate: DateTime(2000, 1, 1),
-      lastDate: DateTime(DateTime.now().year + 10, 12, 31),
-      helpText: 'Selecionar data',
-      cancelText: 'Cancelar',
-      confirmText: 'Selecionar',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFFD6A84B),
-              onPrimary: Colors.black,
-              surface: Color(0xFF211D17),
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(
-              backgroundColor: Color(0xFF211D17),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (data == null || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _data = DateTime(data.year, data.month, data.day);
-    });
-  }
-
-  Future<void> _salvar() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    final valor = _lerValor();
-    if (valor == null || valor <= 0) {
-      _mostrarErro('Informe um valor maior que zero.');
-      return;
-    }
-
-    setState(() {
-      _salvando = true;
-    });
-
-    try {
-      final dataNormalizada = DateTime(_data.year, _data.month, _data.day);
-
-      final movimento = MovimentoFinanceiro(
-        id: _converterInt(widget.movimento?['id']),
-        tipo: _tipo,
-        descricao: _descricaoController.text.trim(),
-        valor: valor,
-        formaPagamento: _formaPagamento,
-        data: dataNormalizada.toIso8601String(),
-        clienteId: _converterInt(widget.movimento?['cliente_id']),
-        agendamentoId: _converterInt(widget.movimento?['agendamento_id']),
-      );
-
-      int idSalvo;
-
-      if (_editando) {
-        await widget.repository.atualizarMovimento(movimento);
-        idSalvo = movimento.id!;
-      } else {
-        idSalvo = await widget.repository.inserirMovimento(movimento);
-      }
-
-      final movimentoConfirmado = await widget.repository.buscarMovimentoPorId(
-        idSalvo,
-      );
-
-      if (movimentoConfirmado == null) {
-        throw Exception(
-          'A movimentação foi enviada, mas não foi encontrada no banco.',
-        );
-      }
-
-      final dataConfirmada = DateTime.tryParse(movimentoConfirmado.data);
-
-      if (dataConfirmada == null ||
-          dataConfirmada.year != dataNormalizada.year ||
-          dataConfirmada.month != dataNormalizada.month ||
-          dataConfirmada.day != dataNormalizada.day) {
-        throw Exception('A data não foi gravada corretamente no banco.');
-      }
-
-      if (!mounted) {
-        return;
-      }
-
-      Navigator.pop(context, true);
-    } catch (erro) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _salvando = false;
-      });
-
-      _mostrarErro('Não foi possível salvar: $erro');
-    }
-  }
-
-  int? _converterInt(dynamic valor) {
-    if (valor is int) {
-      return valor;
-    }
-
-    return int.tryParse(valor?.toString() ?? '');
-  }
-
-  void _mostrarErro(String texto) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(texto), backgroundColor: Colors.red.shade700),
-      );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final teclado = MediaQuery.viewInsetsOf(context).bottom;
-
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.92,
-      ),
-      padding: EdgeInsets.fromLTRB(18, 10, 18, teclado + 20),
-      decoration: const BoxDecoration(
-        color: Color(0xFF151515),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-      ),
-      child: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 45,
-                  height: 5,
-                  margin: const EdgeInsets.only(bottom: 18),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-              ),
-              Text(
-                _editando ? 'Editar movimentação' : 'Nova movimentação',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 18),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
-                    value: 'Entrada',
-                    label: Text('Entrada'),
-                    icon: Icon(Icons.south_west_rounded),
-                  ),
-                  ButtonSegment(
-                    value: 'Saída',
-                    label: Text('Saída'),
-                    icon: Icon(Icons.north_east_rounded),
-                  ),
-                ],
-                selected: {_tipo},
-                onSelectionChanged: (selecionados) {
-                  setState(() {
-                    _tipo = selecionados.first;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descricaoController,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Descrição',
-                  hintText: 'Ex.: Polimento completo',
-                  prefixIcon: Icon(Icons.description_outlined),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (valor) {
-                  if (valor == null || valor.trim().isEmpty) {
-                    return 'Informe uma descrição.';
-                  }
-
-                  if (valor.trim().length < 3) {
-                    return 'Digite pelo menos 3 caracteres.';
-                  }
-
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _valorController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Valor',
-                  hintText: '0,00',
-                  prefixText: 'R\$ ',
-                  prefixIcon: Icon(Icons.attach_money_rounded),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (_) {
-                  final valor = _lerValor();
-
-                  if (valor == null) {
-                    return 'Informe o valor.';
-                  }
-
-                  if (valor <= 0) {
-                    return 'O valor deve ser maior que zero.';
-                  }
-
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
-              DropdownButtonFormField<String>(
-                initialValue: _formaPagamento,
-                decoration: const InputDecoration(
-                  labelText: 'Forma de pagamento',
-                  prefixIcon: Icon(Icons.payments_outlined),
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'Pix', child: Text('Pix')),
-                  DropdownMenuItem(value: 'Dinheiro', child: Text('Dinheiro')),
-                  DropdownMenuItem(
-                    value: 'Cartão de crédito',
-                    child: Text('Cartão de crédito'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Cartão de débito',
-                    child: Text('Cartão de débito'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Transferência',
-                    child: Text('Transferência'),
-                  ),
-                  DropdownMenuItem(value: 'Boleto', child: Text('Boleto')),
-                  DropdownMenuItem(value: 'Outro', child: Text('Outro')),
-                ],
-                onChanged: (valor) {
-                  if (valor == null) {
-                    return;
-                  }
-
-                  setState(() {
-                    _formaPagamento = valor;
-                  });
-                },
-              ),
-              const SizedBox(height: 14),
-              InkWell(
-                borderRadius: BorderRadius.circular(4),
-                onTap: _selecionarData,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Data',
-                    prefixIcon: Icon(Icons.calendar_month_rounded),
-                    suffixIcon: Icon(Icons.keyboard_arrow_down_rounded),
-                    border: OutlineInputBorder(),
-                  ),
-                  child: Text(_formatoData.format(_data)),
-                ),
-              ),
-              const SizedBox(height: 22),
-              Row(
+        subtitle: Text(subtitulo),
+        trailing: badge == null
+            ? const Icon(Icons.chevron_right_rounded)
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _salvando
-                          ? null
-                          : () => Navigator.pop(context, false),
-                      child: const Text('Cancelar'),
+                  Text(
+                    badge!,
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _salvando ? null : _salvar,
-                      icon: _salvando
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save_outlined),
-                      label: Text(_salvando ? 'Salvando...' : 'Salvar'),
-                    ),
-                  ),
+                  const Icon(Icons.chevron_right_rounded),
                 ],
               ),
-            ],
-          ),
-        ),
+        onTap: onTap,
       ),
     );
   }

@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../repositories/cliente_repository.dart';
 import '../repositories/configuracao_repository.dart';
 import '../repositories/dashboard_repository.dart';
+import '../repositories/financeiro_dashboard_repository.dart';
+import '../repositories/usuario_repository.dart';
 import '../services/primeiro_uso_assistente.dart';
 import 'agenda_page.dart';
 import 'cliente_detalhes_page.dart';
@@ -19,7 +21,14 @@ import 'servicos_page.dart';
 import 'veiculos_page.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+  const DashboardPage({
+    super.key,
+    this.sessao,
+    this.onLogout,
+  });
+
+  final Map<String, dynamic>? sessao;
+  final VoidCallback? onLogout;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -27,9 +36,13 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final DashboardRepository _dashboardRepository = DashboardRepository();
+  final FinanceiroDashboardRepository _financeiroDashboardRepository =
+      FinanceiroDashboardRepository();
   final ClienteRepository _clienteRepository = ClienteRepository();
   final ConfiguracaoRepository _configuracaoRepository =
       ConfiguracaoRepository();
+  final UsuarioRepository _usuarioRepository =
+      UsuarioRepository();
   final NumberFormat _formatoMoeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
@@ -39,10 +52,12 @@ class _DashboardPageState extends State<DashboardPage> {
   String? _mensagemErro;
   String _nomeEmpresa = 'Sua empresa';
   bool _assistenteExibido = false;
+  bool _saldosVisiveis = true;
 
   DashboardPeriodo _periodoSelecionado = DashboardPeriodo.mesAtual;
   DateTimeRange? _periodoPersonalizado;
   DashboardData? _dados;
+  FinanceiroDashboardData? _financeiroMes;
 
   @override
   void initState() {
@@ -101,18 +116,25 @@ class _DashboardPageState extends State<DashboardPage> {
     });
 
     try {
-      final dados = await _dashboardRepository.carregarDashboard(
-        periodo: _periodoSelecionado,
-        inicioPersonalizado: _periodoPersonalizado?.start,
-        fimPersonalizado: _periodoPersonalizado?.end,
-      );
+      final agora = DateTime.now();
+      final resultados = await Future.wait<dynamic>([
+        _dashboardRepository.carregarDashboard(
+          periodo: _periodoSelecionado,
+          inicioPersonalizado: _periodoPersonalizado?.start,
+          fimPersonalizado: _periodoPersonalizado?.end,
+        ),
+        _financeiroDashboardRepository.carregar(
+          mes: DateTime(agora.year, agora.month, 1),
+        ),
+      ]);
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _dados = dados;
+        _dados = resultados[0] as DashboardData;
+        _financeiroMes = resultados[1] as FinanceiroDashboardData;
         _carregando = false;
       });
     } catch (erro) {
@@ -176,6 +198,48 @@ class _DashboardPageState extends State<DashboardPage> {
     await _carregarResumo();
   }
 
+  bool _pode(String modulo) {
+    final sessao =
+        widget.sessao ?? _usuarioRepository.sessaoAtual;
+
+    if (sessao == null) {
+      return false;
+    }
+
+    if ((sessao['perfil'] ?? '').toString().trim() ==
+        UsuarioRepository.perfilAdministrador) {
+      return true;
+    }
+
+    final permissoes = sessao['permissoes'];
+
+    if (permissoes is Map) {
+      return permissoes[modulo] == true;
+    }
+
+    return _usuarioRepository.sessaoPodeAcessar(modulo);
+  }
+
+  bool _validarAcesso(String modulo) {
+    if (_pode(modulo)) {
+      return true;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Seu usuário não possui permissão para este módulo.',
+            ),
+          ),
+        );
+    }
+
+    return false;
+  }
+
   Future<void> _abrirPagina(Widget pagina) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => pagina));
     await _carregarNomeEmpresa();
@@ -183,38 +247,47 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _abrirFinanceiro() async {
+    if (!_validarAcesso('financeiro')) return;
     await _abrirPagina(const FinanceiroPage());
   }
 
   Future<void> _abrirClientes() async {
+    if (!_validarAcesso('clientes')) return;
     await _abrirPagina(const ClientesPage());
   }
 
   Future<void> _abrirVeiculos() async {
+    if (!_validarAcesso('clientes')) return;
     await _abrirPagina(const VeiculosPage());
   }
 
   Future<void> _abrirAgenda() async {
+    if (!_validarAcesso('agenda')) return;
     await _abrirPagina(const AgendaPage());
   }
 
   Future<void> _abrirOrdens([String? statusInicial]) async {
+    if (!_validarAcesso('ordens_servico')) return;
     await _abrirPagina(OrdensServicoPage(statusInicial: statusInicial));
   }
 
   Future<void> _abrirServicos() async {
+    if (!_validarAcesso('precificacao')) return;
     await _abrirPagina(const ServicosPage());
   }
 
   Future<void> _abrirEstoque() async {
+    if (!_validarAcesso('estoque')) return;
     await _abrirPagina(const EstoquePage());
   }
 
   Future<void> _abrirFotos() async {
+    if (!_validarAcesso('ordens_servico')) return;
     await _abrirPagina(const FotosPage());
   }
 
   Future<void> _abrirOrcamentos() async {
+    if (!_validarAcesso('orcamentos')) return;
     await _abrirPagina(const OrcamentosPage());
   }
 
@@ -283,14 +356,15 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   List<_PontoGrafico> _montarPontosGrafico(DashboardData dados) {
-    return dados.serieFinanceira
-        .map(
-          (item) => _PontoGrafico(
-            data: item.data,
-            valor: item.entradas - item.saidas,
-          ),
-        )
-        .toList();
+    var acumulado = 0.0;
+    final pontos = <_PontoGrafico>[];
+
+    for (final item in dados.serieFinanceira) {
+      acumulado += item.entradas - item.saidas;
+      pontos.add(_PontoGrafico(data: item.data, valor: acumulado));
+    }
+
+    return pontos;
   }
 
   @override
@@ -338,6 +412,12 @@ class _DashboardPageState extends State<DashboardPage> {
             onPressed: _carregarResumo,
             icon: const Icon(Icons.refresh_rounded),
           ),
+          if (widget.onLogout != null)
+            IconButton(
+              tooltip: 'Sair',
+              onPressed: widget.onLogout,
+              icon: const Icon(Icons.logout_rounded),
+            ),
           const SizedBox(width: 6),
         ],
       ),
@@ -366,21 +446,46 @@ class _DashboardPageState extends State<DashboardPage> {
               _ResumoRapidoSection(
                 dados: dados,
                 formatoMoeda: _formatoMoeda,
+                saldosVisiveis: _saldosVisiveis,
                 onAbrirFinanceiro: _abrirFinanceiro,
                 onAbrirAgenda: _abrirAgenda,
                 onAbrirOrdensEmAndamento: () => _abrirOrdens('Em andamento'),
               ),
               const SizedBox(height: 14),
+              _SaldosContasCard(
+                contas: dados.saldosContas,
+                saldoTotal: dados.saldoTotalContas,
+                formatoMoeda: _formatoMoeda,
+                valoresVisiveis: _saldosVisiveis,
+                onAlternarVisibilidade: () {
+                  setState(() {
+                    _saldosVisiveis = !_saldosVisiveis;
+                  });
+                },
+                onAbrirFinanceiro: _abrirFinanceiro,
+              ),
+              if (_financeiroMes != null) ...[
+                const SizedBox(height: 14),
+                _VisaoFinanceiraMesCard(
+                  dados: _financeiroMes!,
+                  formatoMoeda: _formatoMoeda,
+                  valoresVisiveis: _saldosVisiveis,
+                  onAbrirFinanceiro: _abrirFinanceiro,
+                ),
+              ],
+              const SizedBox(height: 14),
               _GraficoEvolucaoCard(
                 pontos: _montarPontosGrafico(dados),
                 formatoMoeda: _formatoMoeda,
                 periodoSelecionado: _periodoSelecionado,
+                valoresVisiveis: _saldosVisiveis,
               ),
               const SizedBox(height: 14),
               _GraficoFinanceiroCard(
                 dados: dados,
                 formatoMoeda: _formatoMoeda,
                 periodoSelecionado: _periodoSelecionado,
+                valoresVisiveis: _saldosVisiveis,
               ),
               const SizedBox(height: 14),
               _RankingsSection(
@@ -417,8 +522,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 onAbrirOrcamentos: _abrirOrcamentos,
                 onAbrirOrdens: () => _abrirOrdens('Todos'),
                 onAbrirServicos: _abrirServicos,
-                onAbrirConfiguracoes: () =>
-                    _abrirPagina(const ConfiguracoesPage()),
+                onAbrirConfiguracoes: () {
+                  if (!_validarAcesso('configuracoes')) return;
+                  _abrirPagina(const ConfiguracoesPage());
+                },
               ),
             ],
           ],
@@ -517,6 +624,7 @@ class _ResumoRapidoSection extends StatelessWidget {
   const _ResumoRapidoSection({
     required this.dados,
     required this.formatoMoeda,
+    required this.saldosVisiveis,
     required this.onAbrirFinanceiro,
     required this.onAbrirAgenda,
     required this.onAbrirOrdensEmAndamento,
@@ -524,6 +632,7 @@ class _ResumoRapidoSection extends StatelessWidget {
 
   final DashboardData dados;
   final NumberFormat formatoMoeda;
+  final bool saldosVisiveis;
   final VoidCallback onAbrirFinanceiro;
   final VoidCallback onAbrirAgenda;
   final VoidCallback onAbrirOrdensEmAndamento;
@@ -532,17 +641,21 @@ class _ResumoRapidoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final itens = [
       _IndicadorResumo(
-        'Faturamento',
-        formatoMoeda.format(dados.faturamento),
+        'Faturado',
+        saldosVisiveis
+            ? formatoMoeda.format(dados.faturamentoCompetencia)
+            : 'R\$ ••••••',
         Icons.payments_outlined,
         const Color(0xFFD6A84B),
         onAbrirFinanceiro,
       ),
       _IndicadorResumo(
-        'Saldo',
-        formatoMoeda.format(dados.saldo),
+        'Saldo disponível',
+        saldosVisiveis
+            ? formatoMoeda.format(dados.saldoTotalContas)
+            : 'R\$ ••••••',
         Icons.account_balance_wallet_outlined,
-        dados.saldo >= 0 ? Colors.greenAccent : Colors.orangeAccent,
+        dados.saldoTotalContas >= 0 ? Colors.greenAccent : Colors.orangeAccent,
         onAbrirFinanceiro,
       ),
       _IndicadorResumo(
@@ -562,6 +675,576 @@ class _ResumoRapidoSection extends StatelessWidget {
     ];
 
     return _MatrizIndicadores(itens: itens, aspecto: 2.3);
+  }
+}
+
+class _SaldosContasCard extends StatelessWidget {
+  const _SaldosContasCard({
+    required this.contas,
+    required this.saldoTotal,
+    required this.formatoMoeda,
+    required this.valoresVisiveis,
+    required this.onAlternarVisibilidade,
+    required this.onAbrirFinanceiro,
+  });
+
+  final List<DashboardSaldoConta> contas;
+  final double saldoTotal;
+  final NumberFormat formatoMoeda;
+  final bool valoresVisiveis;
+  final VoidCallback onAlternarVisibilidade;
+  final VoidCallback onAbrirFinanceiro;
+
+  String _valor(double valor) {
+    if (!valoresVisiveis) {
+      return 'R\$ ••••••';
+    }
+    return formatoMoeda.format(valor);
+  }
+
+  IconData _iconeConta(String tipo) {
+    switch (tipo) {
+      case 'Dinheiro':
+        return Icons.payments_outlined;
+      case 'Conta bancária':
+        return Icons.account_balance_outlined;
+      case 'Carteira digital':
+        return Icons.account_balance_wallet_outlined;
+      case 'Maquininha':
+        return Icons.point_of_sale_outlined;
+      default:
+        return Icons.wallet_outlined;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0xFFD6A84B).withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Saldos das contas',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Dinheiro disponível agora nas contas cadastradas.',
+                      style: TextStyle(color: Colors.white60, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: valoresVisiveis
+                    ? 'Ocultar valores'
+                    : 'Mostrar valores',
+                onPressed: onAlternarVisibilidade,
+                icon: Icon(
+                  valoresVisiveis
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: const Color(0xFFD6A84B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _valor(saldoTotal),
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 3),
+          const Text(
+            'Saldo total disponível',
+            style: TextStyle(color: Colors.white60, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          if (contas.isEmpty)
+            const _EstadoVazio(
+              titulo: 'Nenhuma conta financeira ativa',
+              mensagem: 'Cadastre Dinheiro, banco ou maquininha no Financeiro.',
+            )
+          else
+            ...contas.map(
+              (conta) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Material(
+                  color: const Color(0xFF1E1E1E),
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    onTap: onAbrirFinanceiro,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 11,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFD6A84B,
+                              ).withValues(alpha: 0.11),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              _iconeConta(conta.tipo),
+                              color: const Color(0xFFD6A84B),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  conta.nome,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  conta.instituicao.isNotEmpty
+                                      ? '${conta.tipo} • ${conta.instituicao}'
+                                      : conta.tipo,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _valor(conta.saldoAtual),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: conta.saldoAtual < 0
+                                  ? Colors.orangeAccent
+                                  : Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (contas.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onAbrirFinanceiro,
+                icon: const Icon(Icons.chevron_right_rounded),
+                label: const Text('Abrir Financeiro'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+
+class _VisaoFinanceiraMesCard extends StatelessWidget {
+  const _VisaoFinanceiraMesCard({
+    required this.dados,
+    required this.formatoMoeda,
+    required this.valoresVisiveis,
+    required this.onAbrirFinanceiro,
+  });
+
+  final FinanceiroDashboardData dados;
+  final NumberFormat formatoMoeda;
+  final bool valoresVisiveis;
+  final VoidCallback onAbrirFinanceiro;
+
+  String _valor(double valor) {
+    return valoresVisiveis ? formatoMoeda.format(valor) : 'R\$ ••••••';
+  }
+
+  String _percentual(double valor) {
+    return '${valor.toStringAsFixed(0).replaceAll('.', ',')}%';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final faturado = dados.dreCompetencia.receitaLiquida;
+    final resultado = dados.dreCompetencia.resultadoGerencial;
+    final resultadoCaixa = dados.dreCaixa.resultadoGerencial;
+    final meta = dados.metaReceita;
+    final progresso = meta <= 0
+        ? 0.0
+        : (faturado / meta).clamp(0.0, 1.0).toDouble();
+    final faltaFaturar = (meta - faturado).clamp(0.0, double.infinity).toDouble();
+
+    final hoje = DateTime.now();
+    final mesAtualSelecionado =
+        dados.inicio.year == hoje.year && dados.inicio.month == hoje.month;
+    final mesFuturo =
+        dados.inicio.isAfter(DateTime(hoje.year, hoje.month, 1));
+    final ultimoDiaMesSelecionado = DateTime(
+      dados.inicio.year,
+      dados.inicio.month + 1,
+      0,
+    );
+
+    final diasRestantes = mesAtualSelecionado
+        ? ultimoDiaMesSelecionado
+                  .difference(DateTime(hoje.year, hoje.month, hoje.day))
+                  .inDays +
+              1
+        : mesFuturo
+        ? ultimoDiaMesSelecionado.day
+        : 0;
+
+    final necessarioDia = meta > 0 && faltaFaturar > 0 && diasRestantes > 0
+        ? faltaFaturar / diasRestantes
+        : 0.0;
+
+    final tituloMes = DateFormat('MMMM yyyy', 'pt_BR').format(dados.inicio);
+    final tituloFormatado =
+        tituloMes.substring(0, 1).toUpperCase() + tituloMes.substring(1);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0xFFD6A84B).withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.insights_rounded,
+                color: Color(0xFFD6A84B),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Visão financeira do mês',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      tituloFormatado,
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: onAbrirFinanceiro,
+                child: const Text('Detalhes'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final colunas = constraints.maxWidth < 520 ? 2 : 3;
+              final largura = constraints.maxWidth;
+              final espacamento = 8.0;
+              final itemWidth =
+                  (largura - (espacamento * (colunas - 1))) / colunas;
+
+              final itens = <Widget>[
+                _MiniKpiFinanceiro(
+                  titulo: 'Faturado',
+                  valor: _valor(faturado),
+                  icone: Icons.receipt_long_outlined,
+                  positivo: true,
+                ),
+                _MiniKpiFinanceiro(
+                  titulo: 'Recebido no mês',
+                  valor: _valor(dados.recebido),
+                  icone: Icons.payments_outlined,
+                  positivo: true,
+                ),
+                _MiniKpiFinanceiro(
+                  titulo: 'A receber (total)',
+                  valor: _valor(dados.aReceber),
+                  icone: Icons.schedule_rounded,
+                ),
+                _MiniKpiFinanceiro(
+                  titulo: 'Resultado gerencial',
+                  valor: _valor(resultado),
+                  icone: resultado >= 0
+                      ? Icons.trending_up_rounded
+                      : Icons.trending_down_rounded,
+                  positivo: resultado >= 0,
+                  negativo: resultado < 0,
+                ),
+                _MiniKpiFinanceiro(
+                  titulo: 'Resultado de caixa',
+                  valor: _valor(resultadoCaixa),
+                  icone: Icons.account_balance_wallet_outlined,
+                  positivo: resultadoCaixa >= 0,
+                  negativo: resultadoCaixa < 0,
+                ),
+                _MiniKpiFinanceiro(
+                  titulo: 'Vencido',
+                  valor: _valor(dados.vencido),
+                  icone: Icons.warning_amber_rounded,
+                  negativo: dados.vencido > 0,
+                ),
+              ];
+
+              return Wrap(
+                spacing: espacamento,
+                runSpacing: espacamento,
+                children: [
+                  for (final item in itens)
+                    SizedBox(width: itemWidth, child: item),
+                ],
+              );
+            },
+          ),
+          if (meta > 0) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Meta de faturamento',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      Text(
+                        _percentual(progresso * 100),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: progresso,
+                    minHeight: 7,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _LinhaMetaDashboard(
+                          titulo: 'Meta',
+                          valor: _valor(meta),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _LinhaMetaDashboard(
+                          titulo: 'Falta faturar',
+                          valor: _valor(faltaFaturar),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (faltaFaturar > 0) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      diasRestantes > 0
+                          ? valoresVisiveis
+                                ? 'Para atingir a meta: '
+                                      '${formatoMoeda.format(necessarioDia)} '
+                                      'por dia em $diasRestantes '
+                                      '${diasRestantes == 1 ? 'dia' : 'dias'}.'
+                                : 'Para atingir a meta: '
+                                      'R\$ •••••• por dia.'
+                          : 'Mês encerrado com '
+                                '${valoresVisiveis ? formatoMoeda.format(faltaFaturar) : 'R\$ ••••••'} '
+                                'abaixo da meta de faturamento.',
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ] else if (meta > 0) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Meta de faturamento atingida neste período.',
+                      style: TextStyle(
+                        color: Colors.white60,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 10),
+            const Text(
+              'Nenhuma meta geral de faturamento foi cadastrada para este mês.',
+              style: TextStyle(color: Colors.white54, fontSize: 11.5),
+            ),
+          ],
+          const SizedBox(height: 8),
+          const Text(
+            'Faturado segue a competência das OS finalizadas. Recebido no mês '
+            'mostra dinheiro efetivamente recebido no período. A receber é o '
+            'saldo aberto total dos clientes. Resultado de caixa usa a mesma '
+            'regra da visão Caixa da DRE.',
+            style: TextStyle(color: Colors.white54, fontSize: 11.5),
+          ),
+          if ((faturado - dados.recebido).abs() > 0.01) ...[
+            const SizedBox(height: 7),
+            Text(
+              'Competência x recebimento: a diferença é normal quando existem '
+              'parcelas, recebimentos de meses anteriores ou vendas ainda não '
+              'recebidas.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 11.5,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniKpiFinanceiro extends StatelessWidget {
+  const _MiniKpiFinanceiro({
+    required this.titulo,
+    required this.valor,
+    required this.icone,
+    this.positivo = false,
+    this.negativo = false,
+  });
+
+  final String titulo;
+  final String valor;
+  final IconData icone;
+  final bool positivo;
+  final bool negativo;
+
+  @override
+  Widget build(BuildContext context) {
+    final cor = negativo
+        ? Colors.orangeAccent
+        : positivo
+        ? Colors.greenAccent
+        : const Color(0xFFD6A84B);
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 88),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cor.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icone, size: 18, color: cor),
+          const Spacer(),
+          Text(
+            valor,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            titulo,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 10.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LinhaMetaDashboard extends StatelessWidget {
+  const _LinhaMetaDashboard({
+    required this.titulo,
+    required this.valor,
+  });
+
+  final String titulo;
+  final String valor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          titulo,
+          style: const TextStyle(color: Colors.white54, fontSize: 10.5),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          valor,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
   }
 }
 
@@ -821,15 +1504,25 @@ class _GraficoFinanceiroCard extends StatelessWidget {
     required this.dados,
     required this.formatoMoeda,
     required this.periodoSelecionado,
+    required this.valoresVisiveis,
   });
 
   final DashboardData dados;
   final NumberFormat formatoMoeda;
   final DashboardPeriodo periodoSelecionado;
+  final bool valoresVisiveis;
 
   @override
   Widget build(BuildContext context) {
     final pontos = dados.serieFinanceira;
+    final entradasCaixa = pontos.fold<double>(
+      0,
+      (total, item) => total + item.entradas,
+    );
+    final saidasCaixa = pontos.fold<double>(
+      0,
+      (total, item) => total + item.saidas,
+    );
 
     return Container(
       width: double.infinity,
@@ -982,13 +1675,17 @@ class _GraficoFinanceiroCard extends StatelessWidget {
             children: [
               _LegendaGrafico(
                 cor: const Color(0xFFD6A84B),
-                texto: 'Entradas',
-                valor: formatoMoeda.format(dados.faturamento),
+                texto: 'Entradas de caixa',
+                valor: valoresVisiveis
+                    ? formatoMoeda.format(entradasCaixa)
+                    : 'R\$ ••••••',
               ),
               _LegendaGrafico(
                 cor: Colors.redAccent,
-                texto: 'Saídas',
-                valor: formatoMoeda.format(dados.saidas),
+                texto: 'Saídas de caixa',
+                valor: valoresVisiveis
+                    ? formatoMoeda.format(saidasCaixa)
+                    : 'R\$ ••••••',
               ),
             ],
           ),
@@ -1003,15 +1700,17 @@ class _GraficoEvolucaoCard extends StatelessWidget {
     required this.pontos,
     required this.formatoMoeda,
     required this.periodoSelecionado,
+    required this.valoresVisiveis,
   });
 
   final List<_PontoGrafico> pontos;
   final NumberFormat formatoMoeda;
   final DashboardPeriodo periodoSelecionado;
+  final bool valoresVisiveis;
 
   @override
   Widget build(BuildContext context) {
-    final total = pontos.fold<double>(0, (soma, item) => soma + item.valor);
+    final total = pontos.isEmpty ? 0.0 : pontos.last.valor;
 
     return Container(
       width: double.infinity,
@@ -1025,12 +1724,12 @@ class _GraficoEvolucaoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            formatoMoeda.format(total),
+            valoresVisiveis ? formatoMoeda.format(total) : 'R\$ ••••••',
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           const Text(
-            'Evolução líquida do período.',
+            'Evolução líquida acumulada. Correções por estorno não distorcem a linha.',
             style: TextStyle(color: Colors.white60, fontSize: 12),
           ),
           const SizedBox(height: 12),
@@ -1130,7 +1829,6 @@ class _GraficoEvolucaoCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          minY: 0,
                           lineBarsData: [
                             LineChartBarData(
                               spots: [

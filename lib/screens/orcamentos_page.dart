@@ -69,9 +69,13 @@ class _OrcamentosPageState extends State<OrcamentosPage> {
           [
             orcamento['cliente_nome'],
             orcamento['servico'],
+            orcamento['servicos_resumo'],
             orcamento['veiculo_marca'],
             orcamento['veiculo_modelo'],
             orcamento['veiculo_placa'],
+            _nomePerfilPreco(
+              (orcamento['perfil_preco'] ?? 'informado').toString(),
+            ),
           ].join(' ').toLowerCase().contains(termo);
 
       final correspondeStatus =
@@ -121,6 +125,22 @@ class _OrcamentosPageState extends State<OrcamentosPage> {
         return Colors.red;
       default:
         return Colors.orange;
+    }
+  }
+
+  String _nomePerfilPreco(String perfil) {
+    switch (perfil) {
+      case 'cliente':
+        return 'Cliente final';
+      case 'parceiro_1_4':
+        return 'Parceiro • 1 a 4/mês';
+      case 'parceiro_5_9':
+        return 'Parceiro • 5 a 9/mês';
+      case 'parceiro_10_mais':
+        return 'Parceiro • 10+/mês';
+      case 'informado':
+      default:
+        return 'Preço informado';
     }
   }
 
@@ -238,7 +258,14 @@ class _OrcamentosPageState extends State<OrcamentosPage> {
                       final status = (orcamento['status'] ?? 'Pendente')
                           .toString();
                       final valor =
-                          (orcamento['valor'] as num?)?.toDouble() ?? 0;
+                          (orcamento['valor_total'] as num?)?.toDouble() ??
+                          (orcamento['valor'] as num?)?.toDouble() ??
+                          0;
+                      final perfil = _nomePerfilPreco(
+                        (orcamento['perfil_preco'] ?? 'informado').toString(),
+                      );
+                      final quantidadeItens =
+                          (orcamento['quantidade_itens'] as num?)?.toInt() ?? 0;
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
@@ -259,13 +286,24 @@ class _OrcamentosPageState extends State<OrcamentosPage> {
                               ),
                             ),
                             title: Text(
-                              (orcamento['servico'] ?? '').toString(),
+                              (orcamento['servicos_resumo'] ??
+                                      orcamento['servico'] ??
+                                      'Serviço')
+                                  .toString(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             subtitle: Text(
-                              '${orcamento['cliente_nome']}\n$status',
+                              [
+                                (orcamento['cliente_nome'] ?? '').toString(),
+                                '$status • $perfil',
+                                quantidadeItens == 1
+                                    ? '1 serviço'
+                                    : '$quantidadeItens serviços',
+                              ].join('\n'),
                             ),
                             isThreeLine: true,
                             trailing: Column(

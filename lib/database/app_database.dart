@@ -5,7 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 21;
+  static const int schemaVersion = 27;
 
   static Database? _database;
 
@@ -31,6 +31,9 @@ class AppDatabase {
       },
       onCreate: (database, version) async {
         await _criarTabelas(database);
+      },
+      onOpen: (database) async {
+        await _aplicarPlanoContasSimplificado(database);
       },
       onUpgrade: (database, versaoAntiga, versaoNova) async {
         if (versaoAntiga < 2) {
@@ -124,6 +127,30 @@ class AppDatabase {
         if (versaoAntiga < 21) {
           await _atualizarParaVersao21(database);
         }
+
+        if (versaoAntiga < 22) {
+          await _atualizarParaVersao22(database);
+        }
+
+        if (versaoAntiga < 23) {
+          await _atualizarParaVersao23(database);
+        }
+
+        if (versaoAntiga < 24) {
+          await _atualizarParaVersao24(database);
+        }
+
+        if (versaoAntiga < 25) {
+          await _atualizarParaVersao25(database);
+        }
+
+        if (versaoAntiga < 26) {
+          await _atualizarParaVersao26(database);
+        }
+
+        if (versaoAntiga < 27) {
+          await _atualizarParaVersao27(database);
+        }
       },
     );
   }
@@ -133,11 +160,24 @@ class AppDatabase {
     await _criarTabelaVeiculos(database);
     await _criarTabelaAgendamentos(database);
     await _criarTabelaFotos(database);
-    await _criarTabelaMovimentosFinanceiros(database);
     await _criarTabelaOrcamentos(database);
     await _criarTabelaItensOrcamento(database);
     await _criarTabelaOrdensServico(database);
     await _criarTabelaRevisoesOrdemServico(database);
+    await _criarTabelaAjustesFinanceirosOrdemServico(database);
+    await _criarTabelaPlanoContasFinanceiro(database);
+    await _inserirPlanoContasFinanceiroPadrao(database);
+    await _criarTabelaContasFinanceiras(database);
+    await _inserirContaFinanceiraPadrao(database);
+    await _criarTabelaFornecedores(database);
+    await _criarTabelaTransferenciasFinanceiras(database);
+    await _criarTabelaCustosFixos(database);
+    await _criarTabelaColaboradoresCusto(database);
+    await _criarTabelaMaoObraOrdemServico(database);
+    await _criarTabelaRegrasTaxaCartao(database);
+    await _criarTabelaMetasFinanceiras(database);
+    await _criarTabelaPagamentosOrdemServico(database);
+    await _criarTabelaMovimentosFinanceiros(database);
     await _criarTabelaItensOrdemServico(database);
     await _criarTabelaChecklistOrdemServico(database);
     await _criarTabelaFotosOrdemServico(database);
@@ -287,6 +327,1017 @@ class AppDatabase {
       ''');
   }
 
+  Future<void> _criarTabelaPlanoContasFinanceiro(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS financeiro_plano_contas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          codigo TEXT NOT NULL UNIQUE,
+          nome TEXT NOT NULL,
+          tipo TEXT NOT NULL,
+          natureza TEXT NOT NULL,
+          grupo_dre TEXT NOT NULL DEFAULT 'Não DRE',
+          parent_id INTEGER,
+          ativo INTEGER NOT NULL DEFAULT 1,
+          ordem INTEGER NOT NULL DEFAULT 0,
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL,
+          FOREIGN KEY (parent_id)
+            REFERENCES financeiro_plano_contas (id)
+            ON DELETE RESTRICT,
+          CHECK (tipo IN ('Entrada', 'Saída', 'Neutro'))
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_plano_contas_parent
+        ON financeiro_plano_contas (parent_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_plano_contas_ativo_tipo
+        ON financeiro_plano_contas (ativo, tipo, ordem, nome COLLATE NOCASE)
+      ''');
+  }
+
+  Future<void> _inserirPlanoContasFinanceiroPadrao(Database database) async {
+    final agora = DateTime.now().toIso8601String();
+
+    final contas = <Map<String, Object?>>[
+      {
+        'codigo': '1',
+        'nome': 'Receitas',
+        'tipo': 'Entrada',
+        'natureza': 'Receita operacional',
+        'grupo_dre': 'Receita Bruta',
+        'parent_codigo': null,
+        'ordem': 100,
+      },
+      {
+        'codigo': '1.01',
+        'nome': 'Serviços',
+        'tipo': 'Entrada',
+        'natureza': 'Receita operacional',
+        'grupo_dre': 'Receita Bruta',
+        'parent_codigo': '1',
+        'ordem': 110,
+      },
+      {
+        'codigo': '1.01.01',
+        'nome': 'Polimento',
+        'tipo': 'Entrada',
+        'natureza': 'Receita operacional',
+        'grupo_dre': 'Receita Bruta',
+        'parent_codigo': '1.01',
+        'ordem': 111,
+      },
+      {
+        'codigo': '1.01.02',
+        'nome': 'Higienização',
+        'tipo': 'Entrada',
+        'natureza': 'Receita operacional',
+        'grupo_dre': 'Receita Bruta',
+        'parent_codigo': '1.01',
+        'ordem': 112,
+      },
+      {
+        'codigo': '1.01.03',
+        'nome': 'Insulfilm',
+        'tipo': 'Entrada',
+        'natureza': 'Receita operacional',
+        'grupo_dre': 'Receita Bruta',
+        'parent_codigo': '1.01',
+        'ordem': 113,
+      },
+      {
+        'codigo': '1.01.04',
+        'nome': 'Vitrificação',
+        'tipo': 'Entrada',
+        'natureza': 'Receita operacional',
+        'grupo_dre': 'Receita Bruta',
+        'parent_codigo': '1.01',
+        'ordem': 114,
+      },
+      {
+        'codigo': '1.01.05',
+        'nome': 'Lavação',
+        'tipo': 'Entrada',
+        'natureza': 'Receita operacional',
+        'grupo_dre': 'Receita Bruta',
+        'parent_codigo': '1.01',
+        'ordem': 115,
+      },
+      {
+        'codigo': '1.01.06',
+        'nome': 'Pintura',
+        'tipo': 'Entrada',
+        'natureza': 'Receita operacional',
+        'grupo_dre': 'Receita Bruta',
+        'parent_codigo': '1.01',
+        'ordem': 116,
+      },
+      {
+        'codigo': '1.01.07',
+        'nome': 'Revenda',
+        'tipo': 'Entrada',
+        'natureza': 'Receita operacional',
+        'grupo_dre': 'Receita Bruta',
+        'parent_codigo': '1.01',
+        'ordem': 117,
+      },
+      {
+        'codigo': '1.02',
+        'nome': 'Deduções da receita',
+        'tipo': 'Saída',
+        'natureza': 'Dedução de receita',
+        'grupo_dre': 'Deduções',
+        'parent_codigo': '1',
+        'ordem': 120,
+      },
+      {
+        'codigo': '1.02.01',
+        'nome': 'Estornos e cancelamentos',
+        'tipo': 'Saída',
+        'natureza': 'Dedução de receita',
+        'grupo_dre': 'Deduções',
+        'parent_codigo': '1.02',
+        'ordem': 121,
+      },
+      {
+        'codigo': '1.02.02',
+        'nome': 'Descontos comerciais',
+        'tipo': 'Saída',
+        'natureza': 'Dedução de receita',
+        'grupo_dre': 'Deduções',
+        'parent_codigo': '1.02',
+        'ordem': 122,
+      },
+      {
+        'codigo': '1.02.03',
+        'nome': 'Impostos sobre faturamento',
+        'tipo': 'Saída',
+        'natureza': 'Dedução de receita',
+        'grupo_dre': 'Deduções',
+        'parent_codigo': '1.02',
+        'ordem': 123,
+      },
+      {
+        'codigo': '1.99',
+        'nome': 'Outras receitas',
+        'tipo': 'Entrada',
+        'natureza': 'Outras receitas',
+        'grupo_dre': 'Outras Receitas',
+        'parent_codigo': '1',
+        'ordem': 190,
+      },
+      {
+        'codigo': '1.99.01',
+        'nome': 'Outras receitas',
+        'tipo': 'Entrada',
+        'natureza': 'Outras receitas',
+        'grupo_dre': 'Outras Receitas',
+        'parent_codigo': '1.99',
+        'ordem': 191,
+      },
+      {
+        'codigo': '2',
+        'nome': 'Despesas',
+        'tipo': 'Saída',
+        'natureza': 'Despesa operacional',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': null,
+        'ordem': 200,
+      },
+      {
+        'codigo': '2.01',
+        'nome': 'Colaboradores',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2',
+        'ordem': 210,
+      },
+      {
+        'codigo': '2.01.01',
+        'nome': 'Folha de pagamento',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.01',
+        'ordem': 211,
+      },
+      {
+        'codigo': '2.01.02',
+        'nome': 'Pró-labore',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.01',
+        'ordem': 212,
+      },
+      {
+        'codigo': '2.01.03',
+        'nome': 'Encargos e benefícios',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.01',
+        'ordem': 213,
+      },
+      {
+        'codigo': '2.02',
+        'nome': 'Custo de venda',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
+        'parent_codigo': '2',
+        'ordem': 220,
+      },
+      {
+        'codigo': '2.02.01',
+        'nome': 'Taxas de cartão',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
+        'parent_codigo': '2.02',
+        'ordem': 221,
+      },
+      {
+        'codigo': '2.02.02',
+        'nome': 'Comissões',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
+        'parent_codigo': '2.02',
+        'ordem': 222,
+      },
+      {
+        'codigo': '2.03',
+        'nome': 'Materiais',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
+        'parent_codigo': '2',
+        'ordem': 230,
+      },
+      {
+        'codigo': '2.03.01',
+        'nome': 'Produtos consumidos em serviços',
+        'tipo': 'Saída',
+        'natureza': 'Custo de produto consumido',
+        'grupo_dre': 'Custos Variáveis',
+        'parent_codigo': '2.03',
+        'ordem': 231,
+      },
+      {
+        'codigo': '2.03.02',
+        'nome': 'Materiais de consumo',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
+        'parent_codigo': '2.03',
+        'ordem': 232,
+      },
+      {
+        'codigo': '2.04',
+        'nome': 'Empresa',
+        'tipo': 'Saída',
+        'natureza': 'Despesa fixa',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2',
+        'ordem': 240,
+      },
+      {
+        'codigo': '2.04.01',
+        'nome': 'Aluguel',
+        'tipo': 'Saída',
+        'natureza': 'Despesa fixa',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 241,
+      },
+      {
+        'codigo': '2.04.02',
+        'nome': 'Energia elétrica',
+        'tipo': 'Saída',
+        'natureza': 'Despesa fixa',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 242,
+      },
+      {
+        'codigo': '2.04.03',
+        'nome': 'Água',
+        'tipo': 'Saída',
+        'natureza': 'Despesa fixa',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 243,
+      },
+      {
+        'codigo': '2.04.04',
+        'nome': 'Internet e telefone',
+        'tipo': 'Saída',
+        'natureza': 'Despesa fixa',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 244,
+      },
+      {
+        'codigo': '2.04.05',
+        'nome': 'Contador',
+        'tipo': 'Saída',
+        'natureza': 'Despesa fixa',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 245,
+      },
+      {
+        'codigo': '2.04.06',
+        'nome': 'Impostos',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 246,
+      },
+      {
+        'codigo': '2.04.07',
+        'nome': 'Combustível',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 247,
+      },
+      {
+        'codigo': '2.04.08',
+        'nome': 'Manutenção',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 248,
+      },
+      {
+        'codigo': '2.04.09',
+        'nome': 'Marketing',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 249,
+      },
+      {
+        'codigo': '2.04.10',
+        'nome': 'Software e assinaturas',
+        'tipo': 'Saída',
+        'natureza': 'Despesa fixa',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 250,
+      },
+      {
+        'codigo': '2.04.11',
+        'nome': 'Limpeza',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 251,
+      },
+      {
+        'codigo': '2.04.12',
+        'nome': 'Taxas e tributos operacionais',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
+        'grupo_dre': 'Despesas Operacionais',
+        'parent_codigo': '2.04',
+        'ordem': 252,
+      },
+      {
+        'codigo': '2.05',
+        'nome': 'Despesas financeiras',
+        'tipo': 'Saída',
+        'natureza': 'Despesa financeira',
+        'grupo_dre': 'Resultado Financeiro',
+        'parent_codigo': '2',
+        'ordem': 260,
+      },
+      {
+        'codigo': '2.05.01',
+        'nome': 'Juros e tarifas bancárias',
+        'tipo': 'Saída',
+        'natureza': 'Despesa financeira',
+        'grupo_dre': 'Resultado Financeiro',
+        'parent_codigo': '2.05',
+        'ordem': 261,
+      },
+      {
+        'codigo': '2.99',
+        'nome': 'Outras despesas',
+        'tipo': 'Saída',
+        'natureza': 'Outras despesas',
+        'grupo_dre': 'Outras Despesas',
+        'parent_codigo': '2',
+        'ordem': 290,
+      },
+      {
+        'codigo': '2.99.01',
+        'nome': 'Outras despesas',
+        'tipo': 'Saída',
+        'natureza': 'Outras despesas',
+        'grupo_dre': 'Outras Despesas',
+        'parent_codigo': '2.99',
+        'ordem': 291,
+      },
+      {
+        'codigo': '9',
+        'nome': 'Movimentos sem efeito na DRE',
+        'tipo': 'Neutro',
+        'natureza': 'Movimento patrimonial',
+        'grupo_dre': 'Não DRE',
+        'parent_codigo': null,
+        'ordem': 900,
+      },
+      {
+        'codigo': '9.01',
+        'nome': 'Transferência entre contas',
+        'tipo': 'Neutro',
+        'natureza': 'Transferência',
+        'grupo_dre': 'Não DRE',
+        'parent_codigo': '9',
+        'ordem': 910,
+      },
+      {
+        'codigo': '9.02',
+        'nome': 'Empréstimos',
+        'tipo': 'Neutro',
+        'natureza': 'Empréstimo',
+        'grupo_dre': 'Não DRE',
+        'parent_codigo': '9',
+        'ordem': 920,
+      },
+      {
+        'codigo': '9.03',
+        'nome': 'Aportes',
+        'tipo': 'Neutro',
+        'natureza': 'Aporte',
+        'grupo_dre': 'Não DRE',
+        'parent_codigo': '9',
+        'ordem': 930,
+      },
+      {
+        'codigo': '9.04',
+        'nome': 'Retiradas e gastos pessoais',
+        'tipo': 'Neutro',
+        'natureza': 'Retirada',
+        'grupo_dre': 'Não DRE',
+        'parent_codigo': '9',
+        'ordem': 940,
+      },
+      {
+        'codigo': '9.05',
+        'nome': 'Correção de caixa',
+        'tipo': 'Neutro',
+        'natureza': 'Ajuste de caixa',
+        'grupo_dre': 'Não DRE',
+        'parent_codigo': '9',
+        'ordem': 950,
+      },
+      {
+        'codigo': '9.06',
+        'nome': 'Compra para estoque',
+        'tipo': 'Saída',
+        'natureza': 'Aquisição de estoque',
+        'grupo_dre': 'Não DRE',
+        'parent_codigo': '9',
+        'ordem': 960,
+      },
+    ];
+
+    for (final conta in contas) {
+      final parentCodigo = conta['parent_codigo']?.toString();
+      int? parentId;
+
+      if (parentCodigo != null && parentCodigo.isNotEmpty) {
+        parentId = await _idPlanoContaPorCodigo(database, parentCodigo);
+      }
+
+      await database.insert('financeiro_plano_contas', {
+        'codigo': conta['codigo'],
+        'nome': conta['nome'],
+        'tipo': conta['tipo'],
+        'natureza': conta['natureza'],
+        'grupo_dre': conta['grupo_dre'],
+        'parent_id': parentId,
+        'ativo': 1,
+        'ordem': conta['ordem'],
+        'criado_em': agora,
+        'atualizado_em': agora,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+  }
+
+
+  Future<void> _aplicarPlanoContasSimplificado(Database database) async {
+    if (!await _tabelaExiste(database, 'financeiro_plano_contas')) {
+      return;
+    }
+
+    // Mantém os códigos internos já usados por pagamentos, taxas,
+    // transferências e histórico. A simplificação é visual/operacional.
+    await _inserirPlanoContasFinanceiroPadrao(database);
+
+    final agora = DateTime.now().toIso8601String();
+
+    Future<void> garantirConta({
+      required String codigo,
+      required String nome,
+      required String tipo,
+      required String natureza,
+      required String grupoDre,
+      required String parentCodigo,
+      required int ordem,
+    }) async {
+      final parentId = await _idPlanoContaPorCodigo(database, parentCodigo);
+      await database.insert(
+        'financeiro_plano_contas',
+        {
+          'codigo': codigo,
+          'nome': nome,
+          'tipo': tipo,
+          'natureza': natureza,
+          'grupo_dre': grupoDre,
+          'parent_id': parentId,
+          'ativo': 1,
+          'ordem': ordem,
+          'criado_em': agora,
+          'atualizado_em': agora,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+
+    // Novas categorias resumidas para quem está começando.
+    await garantirConta(
+      codigo: '1.03',
+      nome: 'Venda de produtos',
+      tipo: 'Entrada',
+      natureza: 'Receita operacional',
+      grupoDre: 'Receita Bruta',
+      parentCodigo: '1',
+      ordem: 130,
+    );
+
+    await garantirConta(
+      codigo: '2.04.13',
+      nome: 'Água, energia e internet',
+      tipo: 'Saída',
+      natureza: 'Despesa fixa',
+      grupoDre: 'Despesas Operacionais',
+      parentCodigo: '2.04',
+      ordem: 253,
+    );
+
+    // Os nomes canônicos do plano de contas fazem parte do contrato
+    // interno da V27 e são preservados para schema, migrações e histórico.
+    //
+    // Versões iniciais desta simplificação chegaram a gravar nomes mais
+    // amigáveis diretamente no banco. Se isso ocorreu, restauramos apenas
+    // esses aliases exatos. Nomes personalizados pelo usuário são preservados.
+    const nomesCanonicos = <String, Map<String, String>>{
+      '2.01': {
+        'alias': 'Equipe',
+        'canonico': 'Colaboradores',
+      },
+      '2.01.01': {
+        'alias': 'Funcionários',
+        'canonico': 'Folha de pagamento',
+      },
+      '2.02': {
+        'alias': 'Custos das vendas',
+        'canonico': 'Custo de venda',
+      },
+      '2.03': {
+        'alias': 'Produtos e materiais',
+        'canonico': 'Materiais',
+      },
+      '2.03.01': {
+        'alias': 'Produtos e materiais usados nos serviços',
+        'canonico': 'Produtos consumidos em serviços',
+      },
+      '2.04': {
+        'alias': 'Despesas da empresa',
+        'canonico': 'Empresa',
+      },
+      '2.04.05': {
+        'alias': 'Contabilidade',
+        'canonico': 'Contador',
+      },
+      '2.04.07': {
+        'alias': 'Combustível e veículos',
+        'canonico': 'Combustível',
+      },
+      '2.05.01': {
+        'alias': 'Tarifas e juros bancários',
+        'canonico': 'Juros e tarifas bancárias',
+      },
+      '9': {
+        'alias': 'Não afeta o resultado',
+        'canonico': 'Movimentos sem efeito na DRE',
+      },
+      '9.03': {
+        'alias': 'Aporte dos sócios',
+        'canonico': 'Aportes',
+      },
+      '9.04': {
+        'alias': 'Retirada dos sócios',
+        'canonico': 'Retiradas e gastos pessoais',
+      },
+      '9.05': {
+        'alias': 'Ajuste de saldo',
+        'canonico': 'Correção de caixa',
+      },
+    };
+
+    for (final item in nomesCanonicos.entries) {
+      await database.update(
+        'financeiro_plano_contas',
+        {
+          'nome': item.value['canonico'],
+          'atualizado_em': agora,
+        },
+        where: 'codigo = ? AND nome = ?',
+        whereArgs: [item.key, item.value['alias']],
+      );
+    }
+
+    // Serviços específicos já são detalhados pelas próprias OS.
+    // Mantemos as contas no banco para preservar qualquer histórico antigo,
+    // mas elas deixam de aparecer na operação diária.
+    const codigosLegadosServicos = <String>[
+      '1.01.01',
+      '1.01.02',
+      '1.01.03',
+      '1.01.04',
+      '1.01.05',
+      '1.01.06',
+      '1.01.07',
+    ];
+
+    for (final codigo in codigosLegadosServicos) {
+      await database.update(
+        'financeiro_plano_contas',
+        {
+          'ativo': 0,
+          'atualizado_em': agora,
+        },
+        where: 'codigo = ?',
+        whereArgs: [codigo],
+      );
+    }
+
+    // Consolida categorias redundantes para deixar o uso inicial objetivo.
+    // Os registros antigos continuam vinculados às contas históricas.
+    const codigosConsolidados = <String>[
+      '2.01.03',
+      '2.03.02',
+      '2.04.02',
+      '2.04.03',
+      '2.04.04',
+      '2.04.11',
+      '2.04.12',
+    ];
+
+    for (final codigo in codigosConsolidados) {
+      await database.update(
+        'financeiro_plano_contas',
+        {
+          'ativo': 0,
+          'atualizado_em': agora,
+        },
+        where: 'codigo = ?',
+        whereArgs: [codigo],
+      );
+    }
+
+    // Garante que as categorias automáticas essenciais nunca desapareçam.
+    const codigosEssenciais = <String>[
+      '1.01',
+      '1.02.01',
+      '1.99.01',
+      '2.02.01',
+      '2.03.01',
+      '2.99.01',
+      '9.01',
+      '9.06',
+    ];
+
+    for (final codigo in codigosEssenciais) {
+      await database.update(
+        'financeiro_plano_contas',
+        {
+          'ativo': 1,
+          'atualizado_em': agora,
+        },
+        where: 'codigo = ?',
+        whereArgs: [codigo],
+      );
+    }
+  }
+
+  Future<int?> _idPlanoContaPorCodigo(Database database, String codigo) async {
+    final resultado = await database.query(
+      'financeiro_plano_contas',
+      columns: ['id'],
+      where: 'codigo = ?',
+      whereArgs: [codigo],
+      limit: 1,
+    );
+
+    if (resultado.isEmpty) {
+      return null;
+    }
+
+    return (resultado.first['id'] as num?)?.toInt();
+  }
+
+  Future<void> _criarTabelaContasFinanceiras(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS financeiro_contas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nome TEXT NOT NULL UNIQUE,
+          tipo TEXT NOT NULL DEFAULT 'Conta bancária',
+          instituicao TEXT NOT NULL DEFAULT '',
+          saldo_inicial REAL NOT NULL DEFAULT 0,
+          data_saldo_inicial TEXT,
+          observacoes TEXT NOT NULL DEFAULT '',
+          ativo INTEGER NOT NULL DEFAULT 1,
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL,
+          CHECK (tipo IN (
+            'Dinheiro',
+            'Conta bancária',
+            'Carteira digital',
+            'Maquininha',
+            'Outro'
+          ))
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_contas_ativo_nome
+        ON financeiro_contas (ativo, nome COLLATE NOCASE)
+      ''');
+  }
+
+  Future<void> _inserirContaFinanceiraPadrao(Database database) async {
+    final agora = DateTime.now().toIso8601String();
+
+    await database.insert('financeiro_contas', {
+      'nome': 'Caixa / Dinheiro',
+      'tipo': 'Dinheiro',
+      'instituicao': '',
+      'saldo_inicial': 0,
+      'data_saldo_inicial': null,
+      'observacoes': 'Conta padrão criada pelo Imperium.',
+      'ativo': 1,
+      'criado_em': agora,
+      'atualizado_em': agora,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  Future<void> _criarTabelaFornecedores(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS fornecedores (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nome TEXT NOT NULL,
+          documento TEXT NOT NULL DEFAULT '',
+          telefone TEXT NOT NULL DEFAULT '',
+          email TEXT NOT NULL DEFAULT '',
+          endereco TEXT NOT NULL DEFAULT '',
+          cidade TEXT NOT NULL DEFAULT '',
+          estado TEXT NOT NULL DEFAULT '',
+          categoria TEXT NOT NULL DEFAULT '',
+          observacoes TEXT NOT NULL DEFAULT '',
+          ativo INTEGER NOT NULL DEFAULT 1,
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_fornecedores_ativo_nome
+        ON fornecedores (ativo, nome COLLATE NOCASE)
+      ''');
+  }
+
+  Future<void> _criarTabelaTransferenciasFinanceiras(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS financeiro_transferencias (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conta_origem_id INTEGER NOT NULL,
+          conta_destino_id INTEGER NOT NULL,
+          valor REAL NOT NULL,
+          data TEXT NOT NULL,
+          descricao TEXT NOT NULL DEFAULT '',
+          observacoes TEXT NOT NULL DEFAULT '',
+          criado_em TEXT NOT NULL,
+          FOREIGN KEY (conta_origem_id)
+            REFERENCES financeiro_contas (id)
+            ON DELETE RESTRICT,
+          FOREIGN KEY (conta_destino_id)
+            REFERENCES financeiro_contas (id)
+            ON DELETE RESTRICT,
+          CHECK (valor > 0),
+          CHECK (conta_origem_id <> conta_destino_id)
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_transferencias_data
+        ON financeiro_transferencias (data)
+      ''');
+  }
+
+  Future<void> _criarTabelaCustosFixos(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS financeiro_custos_fixos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nome TEXT NOT NULL,
+          valor_mensal REAL NOT NULL DEFAULT 0,
+          categoria TEXT NOT NULL DEFAULT 'Despesa fixa',
+          dia_vencimento INTEGER,
+          plano_conta_id INTEGER,
+          observacoes TEXT NOT NULL DEFAULT '',
+          ativo INTEGER NOT NULL DEFAULT 1,
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL,
+          FOREIGN KEY (plano_conta_id)
+            REFERENCES financeiro_plano_contas (id)
+            ON DELETE SET NULL,
+          CHECK (valor_mensal >= 0),
+          CHECK (dia_vencimento IS NULL OR (dia_vencimento >= 1 AND dia_vencimento <= 31)),
+          CHECK (ativo IN (0, 1))
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_custos_fixos_ativo_nome
+        ON financeiro_custos_fixos (ativo, nome COLLATE NOCASE)
+      ''');
+  }
+
+  Future<void> _criarTabelaColaboradoresCusto(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS financeiro_colaboradores_custo (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nome TEXT NOT NULL,
+          funcao TEXT NOT NULL DEFAULT '',
+          remuneracao_mensal REAL NOT NULL DEFAULT 0,
+          encargos_mensais REAL NOT NULL DEFAULT 0,
+          outros_custos_mensais REAL NOT NULL DEFAULT 0,
+          horas_produtivas_mes REAL NOT NULL DEFAULT 0,
+          observacoes TEXT NOT NULL DEFAULT '',
+          ativo INTEGER NOT NULL DEFAULT 1,
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL,
+          CHECK (remuneracao_mensal >= 0),
+          CHECK (encargos_mensais >= 0),
+          CHECK (outros_custos_mensais >= 0),
+          CHECK (horas_produtivas_mes >= 0),
+          CHECK (ativo IN (0, 1))
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_colaboradores_custo_ativo_nome
+        ON financeiro_colaboradores_custo (ativo, nome COLLATE NOCASE)
+      ''');
+  }
+
+  Future<void> _criarTabelaMaoObraOrdemServico(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS financeiro_os_mao_obra (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ordem_servico_id INTEGER NOT NULL,
+          colaborador_custo_id INTEGER,
+          descricao TEXT NOT NULL DEFAULT '',
+          horas REAL NOT NULL,
+          custo_hora_snapshot REAL NOT NULL DEFAULT 0,
+          custo_total REAL NOT NULL DEFAULT 0,
+          data TEXT NOT NULL,
+          observacoes TEXT NOT NULL DEFAULT '',
+          ativo INTEGER NOT NULL DEFAULT 1,
+          cancelado_em TEXT,
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL,
+          FOREIGN KEY (ordem_servico_id)
+            REFERENCES ordens_servico (id)
+            ON DELETE CASCADE,
+          FOREIGN KEY (colaborador_custo_id)
+            REFERENCES financeiro_colaboradores_custo (id)
+            ON DELETE SET NULL,
+          CHECK (horas > 0),
+          CHECK (custo_hora_snapshot >= 0),
+          CHECK (custo_total >= 0),
+          CHECK (ativo IN (0, 1))
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_os_mao_obra_os_id
+        ON financeiro_os_mao_obra (ordem_servico_id, ativo)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_os_mao_obra_colaborador_id
+        ON financeiro_os_mao_obra (colaborador_custo_id, ativo)
+      ''');
+  }
+
+  Future<void> _criarTabelaRegrasTaxaCartao(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS financeiro_regras_taxa (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nome TEXT NOT NULL,
+          forma_pagamento TEXT NOT NULL,
+          parcelas INTEGER NOT NULL DEFAULT 1,
+          conta_id INTEGER,
+          taxa_percentual REAL NOT NULL DEFAULT 0,
+          taxa_fixa REAL NOT NULL DEFAULT 0,
+          prazo_recebimento_dias INTEGER NOT NULL DEFAULT 0,
+          prioridade INTEGER NOT NULL DEFAULT 0,
+          repassar_cliente INTEGER NOT NULL DEFAULT 0,
+          observacoes TEXT NOT NULL DEFAULT '',
+          ativo INTEGER NOT NULL DEFAULT 1,
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL,
+          FOREIGN KEY (conta_id)
+            REFERENCES financeiro_contas (id)
+            ON DELETE SET NULL,
+          CHECK (forma_pagamento IN ('Cartão de crédito', 'Cartão de débito')),
+          CHECK (parcelas >= 1 AND parcelas <= 48),
+          CHECK (taxa_percentual >= 0 AND taxa_percentual <= 100),
+          CHECK (taxa_fixa >= 0),
+          CHECK (prazo_recebimento_dias >= 0),
+          CHECK (repassar_cliente IN (0, 1)),
+          CHECK (ativo IN (0, 1))
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_regras_taxa_busca
+        ON financeiro_regras_taxa (
+          ativo,
+          forma_pagamento,
+          parcelas,
+          conta_id,
+          prioridade
+        )
+      ''');
+  }
+
+  Future<void> _criarTabelaMetasFinanceiras(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS financeiro_metas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ano INTEGER NOT NULL,
+          mes INTEGER NOT NULL,
+          tipo TEXT NOT NULL,
+          plano_conta_id INTEGER,
+          valor_meta REAL NOT NULL DEFAULT 0,
+          observacoes TEXT NOT NULL DEFAULT '',
+          ativo INTEGER NOT NULL DEFAULT 1,
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL,
+          FOREIGN KEY (plano_conta_id)
+            REFERENCES financeiro_plano_contas (id)
+            ON DELETE SET NULL,
+          CHECK (mes >= 1 AND mes <= 12),
+          CHECK (tipo IN ('Receita', 'Despesa', 'Resultado')),
+          CHECK (valor_meta >= 0),
+          CHECK (ativo IN (0, 1))
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_financeiro_metas_periodo
+        ON financeiro_metas (ano, mes, tipo, ativo)
+      ''');
+  }
+
   Future<void> _criarTabelaMovimentosFinanceiros(Database database) async {
     await database.execute('''
         CREATE TABLE IF NOT EXISTS movimentos_financeiros (
@@ -298,12 +1349,47 @@ class AppDatabase {
           data TEXT NOT NULL,
           cliente_id INTEGER,
           agendamento_id INTEGER,
+          ordem_servico_id INTEGER,
+          pagamento_id INTEGER,
+          plano_conta_id INTEGER,
+          conta_id INTEGER,
+          fornecedor_id INTEGER,
+          transferencia_id INTEGER,
+          natureza TEXT NOT NULL DEFAULT 'Não classificado',
+          origem TEXT NOT NULL DEFAULT 'Manual',
+          status TEXT NOT NULL DEFAULT 'Realizado',
+          data_competencia TEXT,
+          data_vencimento TEXT,
+          data_pagamento TEXT,
+          numero_documento TEXT NOT NULL DEFAULT '',
+          observacoes TEXT NOT NULL DEFAULT '',
+          impacta_dre INTEGER NOT NULL DEFAULT 1,
           FOREIGN KEY (cliente_id)
             REFERENCES clientes (id)
             ON DELETE SET NULL,
           FOREIGN KEY (agendamento_id)
             REFERENCES agendamentos (id)
-            ON DELETE SET NULL
+            ON DELETE SET NULL,
+          FOREIGN KEY (ordem_servico_id)
+            REFERENCES ordens_servico (id)
+            ON DELETE SET NULL,
+          FOREIGN KEY (pagamento_id)
+            REFERENCES ordem_servico_pagamentos (id)
+            ON DELETE SET NULL,
+          FOREIGN KEY (plano_conta_id)
+            REFERENCES financeiro_plano_contas (id)
+            ON DELETE SET NULL,
+          FOREIGN KEY (conta_id)
+            REFERENCES financeiro_contas (id)
+            ON DELETE SET NULL,
+          FOREIGN KEY (fornecedor_id)
+            REFERENCES fornecedores (id)
+            ON DELETE SET NULL,
+          FOREIGN KEY (transferencia_id)
+            REFERENCES financeiro_transferencias (id)
+            ON DELETE CASCADE,
+          CHECK (status IN ('Previsto', 'Realizado', 'Cancelado')),
+          CHECK (impacta_dre IN (0, 1))
         )
       ''');
 
@@ -323,6 +1409,54 @@ class AppDatabase {
         CREATE INDEX IF NOT EXISTS
         idx_movimentos_data
         ON movimentos_financeiros (data)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_ordem_servico_id
+        ON movimentos_financeiros (ordem_servico_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_pagamento_id
+        ON movimentos_financeiros (pagamento_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_plano_conta_id
+        ON movimentos_financeiros (plano_conta_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_conta_id
+        ON movimentos_financeiros (conta_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_fornecedor_id
+        ON movimentos_financeiros (fornecedor_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_transferencia_id
+        ON movimentos_financeiros (transferencia_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_status_vencimento
+        ON movimentos_financeiros (status, data_vencimento)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_competencia
+        ON movimentos_financeiros (data_competencia)
       ''');
   }
 
@@ -432,6 +1566,13 @@ class AppDatabase {
           motivo_ultima_revisao TEXT NOT NULL DEFAULT '',
           quantidade_revisoes INTEGER NOT NULL DEFAULT 0,
           assinatura_desatualizada INTEGER NOT NULL DEFAULT 0,
+          status_pagamento TEXT NOT NULL DEFAULT 'Pendente',
+          valor_recebido REAL NOT NULL DEFAULT 0,
+          vencimento_pagamento TEXT,
+          pagamento_atualizado_em TEXT,
+          desconto_negociacao REAL NOT NULL DEFAULT 0,
+          acrescimo_negociacao REAL NOT NULL DEFAULT 0,
+          juros_parcelamento REAL NOT NULL DEFAULT 0,
           FOREIGN KEY (orcamento_id)
             REFERENCES orcamentos (id)
             ON DELETE SET NULL,
@@ -482,6 +1623,18 @@ class AppDatabase {
         idx_ordens_servico_data_abertura
         ON ordens_servico (data_abertura)
       ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_ordens_servico_status_pagamento
+        ON ordens_servico (status_pagamento)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_ordens_servico_vencimento_pagamento
+        ON ordens_servico (vencimento_pagamento)
+      ''');
   }
 
   Future<void> _criarTabelaRevisoesOrdemServico(Database database) async {
@@ -512,6 +1665,116 @@ class AppDatabase {
         CREATE INDEX IF NOT EXISTS
         idx_os_revisoes_criado_em
         ON ordem_servico_revisoes (criado_em)
+      ''');
+  }
+
+  Future<void> _criarTabelaAjustesFinanceirosOrdemServico(
+    Database database,
+  ) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS ordem_servico_ajustes_financeiros (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ordem_servico_id INTEGER NOT NULL,
+          tipo TEXT NOT NULL,
+          valor REAL NOT NULL,
+          motivo TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'Ativo',
+          origem TEXT NOT NULL DEFAULT 'Manual',
+          regra_taxa_id INTEGER,
+          pagamento_id INTEGER,
+          criado_em TEXT NOT NULL,
+          cancelado_em TEXT,
+          motivo_cancelamento TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY (ordem_servico_id)
+            REFERENCES ordens_servico (id)
+            ON DELETE CASCADE,
+          FOREIGN KEY (regra_taxa_id)
+            REFERENCES financeiro_regras_taxa (id)
+            ON DELETE SET NULL,
+          FOREIGN KEY (pagamento_id)
+            REFERENCES ordem_servico_pagamentos (id)
+            ON DELETE SET NULL,
+          CHECK (tipo IN ('Desconto', 'Acréscimo', 'Juros')),
+          CHECK (status IN ('Ativo', 'Cancelado')),
+          CHECK (valor > 0)
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_os_ajustes_financeiros_os_id
+        ON ordem_servico_ajustes_financeiros (ordem_servico_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_os_ajustes_financeiros_status
+        ON ordem_servico_ajustes_financeiros (status)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_os_ajustes_financeiros_pagamento
+        ON ordem_servico_ajustes_financeiros (pagamento_id, status)
+      ''');
+  }
+
+  Future<void> _criarTabelaPagamentosOrdemServico(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS ordem_servico_pagamentos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ordem_servico_id INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'Pago',
+          valor REAL NOT NULL DEFAULT 0,
+          forma_pagamento TEXT NOT NULL DEFAULT '',
+          data_pagamento TEXT,
+          parcela_numero INTEGER,
+          total_parcelas INTEGER,
+          vencimento TEXT,
+          comprovante_caminho TEXT,
+          observacoes TEXT NOT NULL DEFAULT '',
+          taxa_percentual REAL,
+          taxa_operacao REAL NOT NULL DEFAULT 0,
+          valor_liquido REAL NOT NULL DEFAULT 0,
+          regra_taxa_id INTEGER,
+          parcelas_taxa INTEGER NOT NULL DEFAULT 1,
+          estornado_em TEXT,
+          motivo_estorno TEXT NOT NULL DEFAULT '',
+          criado_em TEXT NOT NULL,
+          atualizado_em TEXT NOT NULL,
+          FOREIGN KEY (ordem_servico_id)
+            REFERENCES ordens_servico (id)
+            ON DELETE CASCADE,
+          FOREIGN KEY (regra_taxa_id)
+            REFERENCES financeiro_regras_taxa (id)
+            ON DELETE SET NULL,
+          CHECK (valor >= 0),
+          CHECK (taxa_percentual IS NULL OR (taxa_percentual >= 0 AND taxa_percentual <= 100)),
+          CHECK (taxa_operacao >= 0 AND taxa_operacao <= valor),
+          CHECK (valor_liquido >= 0 AND valor_liquido <= valor),
+          CHECK (parcelas_taxa >= 1 AND parcelas_taxa <= 48),
+          CHECK (status IN ('Pendente', 'Pago', 'Estornado', 'Cancelado')),
+          CHECK (parcela_numero IS NULL OR parcela_numero > 0),
+          CHECK (total_parcelas IS NULL OR total_parcelas > 0)
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_os_pagamentos_ordem_servico_id
+        ON ordem_servico_pagamentos (ordem_servico_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_os_pagamentos_status
+        ON ordem_servico_pagamentos (status)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_os_pagamentos_vencimento
+        ON ordem_servico_pagamentos (vencimento)
       ''');
   }
 
@@ -1558,6 +2821,479 @@ class AppDatabase {
           assinatura_desatualizada =
             COALESCE(assinatura_desatualizada, 0)
       ''');
+  }
+
+  Future<void> _atualizarParaVersao22(Database database) async {
+    // A tabela de regras já precisa existir porque a definição atual de
+    // pagamentos possui uma FK opcional para ela. Em bancos antigos ela fica
+    // vazia até a migração financeira da v26.
+    await _criarTabelaRegrasTaxaCartao(database);
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'status_pagamento',
+      definicao: "TEXT NOT NULL DEFAULT 'Pendente'",
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'valor_recebido',
+      definicao: 'REAL NOT NULL DEFAULT 0',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'vencimento_pagamento',
+      definicao: 'TEXT',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'pagamento_atualizado_em',
+      definicao: 'TEXT',
+    );
+
+    await _criarTabelaPagamentosOrdemServico(database);
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_ordens_servico_status_pagamento
+        ON ordens_servico (status_pagamento)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_ordens_servico_vencimento_pagamento
+        ON ordens_servico (vencimento_pagamento)
+      ''');
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentos_financeiros',
+      coluna: 'ordem_servico_id',
+      definicao: 'INTEGER REFERENCES ordens_servico (id) ON DELETE SET NULL',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentos_financeiros',
+      coluna: 'pagamento_id',
+      definicao:
+          'INTEGER REFERENCES ordem_servico_pagamentos (id) ON DELETE SET NULL',
+    );
+
+    if (await _tabelaExiste(database, 'movimentos_financeiros')) {
+      await database.execute('''
+          CREATE INDEX IF NOT EXISTS
+          idx_movimentos_ordem_servico_id
+          ON movimentos_financeiros (ordem_servico_id)
+        ''');
+      await database.execute('''
+          CREATE INDEX IF NOT EXISTS
+          idx_movimentos_pagamento_id
+          ON movimentos_financeiros (pagamento_id)
+        ''');
+    }
+
+    final agora = DateTime.now().toIso8601String();
+
+    await database.execute('''
+        UPDATE ordens_servico
+        SET
+          valor_recebido = CASE
+            WHEN LOWER(status) = 'finalizada'
+              AND COALESCE(lancado_financeiro, 0) = 1
+            THEN MAX(COALESCE(valor_total, 0) - COALESCE(desconto, 0), 0)
+            ELSE COALESCE(valor_recebido, 0)
+          END,
+          status_pagamento = CASE
+            WHEN LOWER(status) = 'cancelada' THEN 'Cancelado'
+            WHEN LOWER(status) = 'finalizada'
+              AND MAX(COALESCE(valor_total, 0) - COALESCE(desconto, 0), 0) = 0
+              THEN 'Pago'
+            WHEN LOWER(status) = 'finalizada'
+              AND COALESCE(lancado_financeiro, 0) = 1
+              THEN 'Pago'
+            ELSE COALESCE(NULLIF(TRIM(status_pagamento), ''), 'Pendente')
+          END,
+          pagamento_atualizado_em = CASE
+            WHEN LOWER(status) = 'finalizada'
+              THEN COALESCE(
+                pagamento_atualizado_em,
+                data_finalizacao,
+                data_inicio,
+                data_abertura,
+                '$agora'
+              )
+            ELSE pagamento_atualizado_em
+          END
+      ''');
+
+    await database.execute('''
+        INSERT INTO ordem_servico_pagamentos (
+          ordem_servico_id,
+          status,
+          valor,
+          forma_pagamento,
+          data_pagamento,
+          observacoes,
+          criado_em,
+          atualizado_em
+        )
+        SELECT
+          os.id,
+          'Pago',
+          MAX(COALESCE(os.valor_total, 0) - COALESCE(os.desconto, 0), 0),
+          CASE
+            WHEN TRIM(COALESCE(os.forma_pagamento, '')) = ''
+              THEN 'Não informado'
+            ELSE os.forma_pagamento
+          END,
+          COALESCE(os.data_finalizacao, os.data_inicio, os.data_abertura, '$agora'),
+          'Pagamento migrado automaticamente da versão anterior.',
+          COALESCE(os.data_finalizacao, os.data_inicio, os.data_abertura, '$agora'),
+          '$agora'
+        FROM ordens_servico os
+        WHERE LOWER(os.status) = 'finalizada'
+          AND COALESCE(os.lancado_financeiro, 0) = 1
+          AND MAX(COALESCE(os.valor_total, 0) - COALESCE(os.desconto, 0), 0) > 0
+          AND NOT EXISTS (
+            SELECT 1
+            FROM ordem_servico_pagamentos p
+            WHERE p.ordem_servico_id = os.id
+          )
+      ''');
+
+    if (await _tabelaExiste(database, 'movimentos_financeiros')) {
+      await database.execute('''
+          UPDATE movimentos_financeiros
+          SET ordem_servico_id = (
+            SELECT os.id
+            FROM ordens_servico os
+            WHERE movimentos_financeiros.descricao =
+              'Ordem de Serviço finalizada: ' || os.numero
+            LIMIT 1
+          )
+          WHERE ordem_servico_id IS NULL
+            AND LOWER(tipo) = 'entrada'
+            AND descricao LIKE 'Ordem de Serviço finalizada:%'
+        ''');
+      await database.execute('''
+          UPDATE movimentos_financeiros
+          SET pagamento_id = (
+            SELECT p.id
+            FROM ordem_servico_pagamentos p
+            WHERE p.ordem_servico_id = movimentos_financeiros.ordem_servico_id
+              AND p.status = 'Pago'
+            ORDER BY p.id ASC
+            LIMIT 1
+          )
+          WHERE pagamento_id IS NULL
+            AND ordem_servico_id IS NOT NULL
+            AND LOWER(tipo) = 'entrada'
+        ''');
+    }
+  }
+
+  Future<void> _atualizarParaVersao23(Database database) async {
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'desconto_negociacao',
+      definicao: 'REAL NOT NULL DEFAULT 0',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'acrescimo_negociacao',
+      definicao: 'REAL NOT NULL DEFAULT 0',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordens_servico',
+      coluna: 'juros_parcelamento',
+      definicao: 'REAL NOT NULL DEFAULT 0',
+    );
+
+    await _criarTabelaAjustesFinanceirosOrdemServico(database);
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_pagamentos',
+      coluna: 'taxa_percentual',
+      definicao: 'REAL',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_pagamentos',
+      coluna: 'taxa_operacao',
+      definicao: 'REAL NOT NULL DEFAULT 0',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_pagamentos',
+      coluna: 'valor_liquido',
+      definicao: 'REAL NOT NULL DEFAULT 0',
+    );
+
+    await database.execute('''
+        UPDATE ordens_servico
+        SET
+          desconto_negociacao = COALESCE(desconto_negociacao, 0),
+          acrescimo_negociacao = COALESCE(acrescimo_negociacao, 0),
+          juros_parcelamento = COALESCE(juros_parcelamento, 0)
+      ''');
+
+    if (await _tabelaExiste(database, 'ordem_servico_pagamentos')) {
+      await database.execute('''
+          UPDATE ordem_servico_pagamentos
+          SET
+            taxa_operacao = COALESCE(taxa_operacao, 0),
+            valor_liquido = CASE
+              WHEN status = 'Pago'
+                THEN MAX(COALESCE(valor, 0) - COALESCE(taxa_operacao, 0), 0)
+              ELSE 0
+            END
+        ''');
+    }
+  }
+
+  Future<void> _atualizarParaVersao24(Database database) async {
+    await _criarTabelaPlanoContasFinanceiro(database);
+    await _inserirPlanoContasFinanceiroPadrao(database);
+    await _criarTabelaContasFinanceiras(database);
+    await _inserirContaFinanceiraPadrao(database);
+    await _criarTabelaFornecedores(database);
+    await _criarTabelaTransferenciasFinanceiras(database);
+
+    final novasColunas = <String, String>{
+      'plano_conta_id':
+          'INTEGER REFERENCES financeiro_plano_contas (id) ON DELETE SET NULL',
+      'conta_id':
+          'INTEGER REFERENCES financeiro_contas (id) ON DELETE SET NULL',
+      'fornecedor_id':
+          'INTEGER REFERENCES fornecedores (id) ON DELETE SET NULL',
+      'transferencia_id':
+          'INTEGER REFERENCES financeiro_transferencias (id) ON DELETE CASCADE',
+      'natureza': "TEXT NOT NULL DEFAULT 'Não classificado'",
+      'origem': "TEXT NOT NULL DEFAULT 'Manual'",
+      'status': "TEXT NOT NULL DEFAULT 'Realizado'",
+      'data_competencia': 'TEXT',
+      'data_vencimento': 'TEXT',
+      'data_pagamento': 'TEXT',
+      'numero_documento': "TEXT NOT NULL DEFAULT ''",
+      'observacoes': "TEXT NOT NULL DEFAULT ''",
+      'impacta_dre': 'INTEGER NOT NULL DEFAULT 1',
+    };
+
+    for (final item in novasColunas.entries) {
+      await _adicionarColunaSeNecessario(
+        database: database,
+        tabela: 'movimentos_financeiros',
+        coluna: item.key,
+        definicao: item.value,
+      );
+    }
+
+    if (!await _tabelaExiste(database, 'movimentos_financeiros')) {
+      await _criarTabelaMovimentosFinanceiros(database);
+      return;
+    }
+
+    await database.execute('''
+        UPDATE movimentos_financeiros
+        SET
+          status = COALESCE(NULLIF(TRIM(status), ''), 'Realizado'),
+          data_competencia = COALESCE(data_competencia, data),
+          data_pagamento = CASE
+            WHEN COALESCE(NULLIF(TRIM(status), ''), 'Realizado') = 'Realizado'
+              THEN COALESCE(data_pagamento, data)
+            ELSE data_pagamento
+          END,
+          origem = CASE
+            WHEN pagamento_id IS NOT NULL
+              AND LOWER(descricao) LIKE 'taxa da maquininha%'
+              THEN 'Taxa de pagamento'
+            WHEN pagamento_id IS NOT NULL
+              AND LOWER(descricao) LIKE 'estorno de pagamento%'
+              THEN 'Estorno de pagamento'
+            WHEN pagamento_id IS NOT NULL
+              THEN 'Pagamento de OS'
+            WHEN ordem_servico_id IS NOT NULL
+              THEN 'Ordem de Serviço'
+            ELSE COALESCE(NULLIF(TRIM(origem), ''), 'Manual legado')
+          END,
+          numero_documento = COALESCE(numero_documento, ''),
+          observacoes = COALESCE(observacoes, '')
+      ''');
+
+    await database.execute('''
+        UPDATE movimentos_financeiros
+        SET plano_conta_id = CASE
+          WHEN LOWER(descricao) LIKE 'taxa da maquininha%'
+            THEN (SELECT id FROM financeiro_plano_contas WHERE codigo = '2.02.01')
+          WHEN LOWER(descricao) LIKE 'estorno de pagamento%'
+            THEN (SELECT id FROM financeiro_plano_contas WHERE codigo = '1.02.01')
+          WHEN LOWER(descricao) LIKE '%transfer%'
+            THEN (SELECT id FROM financeiro_plano_contas WHERE codigo = '9.01')
+          WHEN LOWER(tipo) = 'entrada'
+            AND (
+              LOWER(descricao) LIKE 'pagamento da os %'
+              OR LOWER(descricao) LIKE 'ordem de serviço finalizada:%'
+            )
+            THEN (SELECT id FROM financeiro_plano_contas WHERE codigo = '1.01')
+          WHEN LOWER(tipo) = 'entrada'
+            THEN (SELECT id FROM financeiro_plano_contas WHERE codigo = '1.99.01')
+          ELSE (SELECT id FROM financeiro_plano_contas WHERE codigo = '2.99.01')
+        END
+        WHERE plano_conta_id IS NULL
+      ''');
+
+    await database.execute('''
+        UPDATE movimentos_financeiros
+        SET
+          natureza = COALESCE(
+            (
+              SELECT pc.natureza
+              FROM financeiro_plano_contas pc
+              WHERE pc.id = movimentos_financeiros.plano_conta_id
+            ),
+            COALESCE(NULLIF(TRIM(natureza), ''), 'Não classificado')
+          ),
+          impacta_dre = CASE
+            WHEN COALESCE(
+              (
+                SELECT pc.grupo_dre
+                FROM financeiro_plano_contas pc
+                WHERE pc.id = movimentos_financeiros.plano_conta_id
+              ),
+              'Não DRE'
+            ) = 'Não DRE'
+              THEN 0
+            ELSE 1
+          END
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_plano_conta_id
+        ON movimentos_financeiros (plano_conta_id)
+      ''');
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_conta_id
+        ON movimentos_financeiros (conta_id)
+      ''');
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_fornecedor_id
+        ON movimentos_financeiros (fornecedor_id)
+      ''');
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_transferencia_id
+        ON movimentos_financeiros (transferencia_id)
+      ''');
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_status_vencimento
+        ON movimentos_financeiros (status, data_vencimento)
+      ''');
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_competencia
+        ON movimentos_financeiros (data_competencia)
+      ''');
+  }
+
+  Future<void> _atualizarParaVersao25(Database database) async {
+    await _criarTabelaCustosFixos(database);
+    await _criarTabelaColaboradoresCusto(database);
+    await _criarTabelaMaoObraOrdemServico(database);
+  }
+
+  Future<void> _atualizarParaVersao26(Database database) async {
+    await _criarTabelaPlanoContasFinanceiro(database);
+    await _inserirPlanoContasFinanceiroPadrao(database);
+    await _criarTabelaRegrasTaxaCartao(database);
+    await _criarTabelaMetasFinanceiras(database);
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_pagamentos',
+      coluna: 'regra_taxa_id',
+      definicao:
+          'INTEGER REFERENCES financeiro_regras_taxa (id) ON DELETE SET NULL',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_pagamentos',
+      coluna: 'parcelas_taxa',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    if (await _tabelaExiste(database, 'financeiro_plano_contas')) {
+      await database.execute('''
+        UPDATE financeiro_plano_contas
+        SET
+          nome = 'Produtos consumidos em serviços',
+          natureza = 'Custo de produto consumido',
+          atualizado_em = '${DateTime.now().toIso8601String()}'
+        WHERE codigo = '2.03.01'
+          AND nome = 'Produtos'
+      ''');
+    }
+
+    if (await _tabelaExiste(database, 'movimentos_financeiros')) {
+      await database.execute('''
+        UPDATE movimentos_financeiros
+        SET impacta_dre = 0
+        WHERE plano_conta_id IN (
+          SELECT id
+          FROM financeiro_plano_contas
+          WHERE grupo_dre = 'Não DRE'
+        )
+      ''');
+    }
+  }
+
+  Future<void> _atualizarParaVersao27(Database database) async {
+    await _criarTabelaRegrasTaxaCartao(database);
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'financeiro_regras_taxa',
+      coluna: 'repassar_cliente',
+      definicao: 'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_ajustes_financeiros',
+      coluna: 'origem',
+      definicao: "TEXT NOT NULL DEFAULT 'Manual'",
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_ajustes_financeiros',
+      coluna: 'regra_taxa_id',
+      definicao:
+          'INTEGER REFERENCES financeiro_regras_taxa (id) ON DELETE SET NULL',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'ordem_servico_ajustes_financeiros',
+      coluna: 'pagamento_id',
+      definicao:
+          'INTEGER REFERENCES ordem_servico_pagamentos (id) ON DELETE SET NULL',
+    );
+
+    if (await _tabelaExiste(database, 'ordem_servico_ajustes_financeiros')) {
+      await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_os_ajustes_financeiros_pagamento
+        ON ordem_servico_ajustes_financeiros (pagamento_id, status)
+      ''');
+    }
   }
 
   String _normalizarUnidadeBase(String unidade) {

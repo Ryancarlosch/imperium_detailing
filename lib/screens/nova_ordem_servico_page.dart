@@ -16,6 +16,8 @@ import '../repositories/estoque_repository.dart';
 import '../database/app_database.dart';
 import '../repositories/veiculo_repository.dart';
 import '../repositories/servico_repository.dart';
+import '../repositories/precificacao_repository.dart';
+import '../repositories/fidelidade_repository.dart';
 
 class NovaOrdemServicoPage extends StatefulWidget {
   const NovaOrdemServicoPage({super.key, this.orcamentoId, this.agendamento});
@@ -42,6 +44,10 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
 
   final ServicoRepository _servicoRepository = ServicoRepository();
 
+  final PrecificacaoRepository _precificacaoRepository =
+      PrecificacaoRepository();
+  final FidelidadeRepository _fidelidadeRepository = FidelidadeRepository();
+
   final TextEditingController _numeroController = TextEditingController();
 
   final TextEditingController _responsavelController = TextEditingController();
@@ -63,6 +69,17 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
   List<ItemEstoque> _itensEstoque = [];
   List<ServicoCatalogo> _catalogoServicos = [];
   final List<_ProdutoOsFormulario> _produtos = [];
+  PrecificacaoPainel? _precificacao;
+  Map<int, PrecificacaoServico> _precificacaoPorId = const {};
+  String _perfilPreco = 'cliente';
+  DescontoDocumentoSnapshot? _snapshotDescontoOrcamento;
+  double _descontoImportadoOrcamento = 0;
+  FidelidadeConfig _fidelidadeConfig = const FidelidadeConfig();
+  FidelidadeBeneficio? _beneficioFidelidade;
+  String _origemDesconto = 'nenhum';
+  double _descontoFidelidadeSugerido = 0;
+  double _percentualFidelidadeAplicado = 0;
+  bool _alterandoDescontoInternamente = false;
 
   Cliente? _clienteSelecionado;
   Veiculo? _veiculoSelecionado;
@@ -111,7 +128,23 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
       final itensEstoque = resultados[2] as List<ItemEstoque>;
       final catalogoServicos = resultados[3] as List<ServicoCatalogo>;
 
+      PrecificacaoPainel? precificacao;
+      try {
+        precificacao = await _precificacaoRepository.carregar();
+      } catch (_) {
+        // A criação da OS continua funcionando com o preço padrão do catálogo
+        // caso a análise de precificação não esteja disponível.
+      }
+
+      FidelidadeConfig fidelidadeConfig;
+      try {
+        fidelidadeConfig = await _fidelidadeRepository.carregarConfig();
+      } catch (_) {
+        fidelidadeConfig = const FidelidadeConfig();
+      }
+
       Map<String, dynamic>? orcamento;
+      DescontoDocumentoSnapshot? snapshotDescontoOrcamento;
       List<Veiculo> veiculos = [];
 
       if (widget.agendamento != null) {
@@ -127,6 +160,16 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
 
         if (orcamento == null) {
           throw Exception('Orçamento não encontrado.');
+        }
+
+        try {
+          snapshotDescontoOrcamento =
+              await _fidelidadeRepository.buscarDescontoDocumento(
+            documentoTipo: 'ORCAMENTO',
+            documentoId: widget.orcamentoId!,
+          );
+        } catch (_) {
+          snapshotDescontoOrcamento = null;
         }
 
         final clienteId = _converterInt(orcamento['cliente_id']);
@@ -235,12 +278,60 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
           _servicos.add(_ServicoFormulario(aoAlterar: _atualizarTela));
         }
 
+        final descontoImportado = _converterNumero(orcamento['desconto']);
+
         _descontoController.text = _formatarNumeroCampo(
-          _converterNumero(orcamento['desconto']),
+          descontoImportado,
         );
+        _descontoImportadoOrcamento = descontoImportado;
 
         _observacoesController.text = (orcamento['observacoes'] ?? '')
             .toString();
+      }
+
+      _vincularServicosAoCatalogo(catalogoServicos);
+
+      final mapaPrecificacao = <int, PrecificacaoServico>{};
+      if (precificacao != null) {
+        for (final servico in precificacao.servicos) {
+          mapaPrecificacao[servico.id] = servico;
+        }
+      }
+
+      FidelidadeBeneficio? beneficioFidelidade;
+
+      if (clienteSelecionado?.id != null) {
+        try {
+          beneficioFidelidade =
+              await _fidelidadeRepository.avaliarCliente(
+            clienteSelecionado!.id!,
+          );
+        } catch (_) {
+          beneficioFidelidade = null;
+        }
+      }
+
+      var perfilInicial = 'cliente';
+
+      if (widget.agendamento != null) {
+        perfilInicial = 'informado';
+      }
+
+      if (orcamento != null) {
+        final perfilOrcamento =
+            (orcamento['perfil_preco'] ?? 'informado').toString().trim();
+
+        const perfisValidos = <String>{
+          'informado',
+          'cliente',
+          'parceiro_1_4',
+          'parceiro_5_9',
+          'parceiro_10_mais',
+        };
+
+        perfilInicial = perfisValidos.contains(perfilOrcamento)
+            ? perfilOrcamento
+            : 'informado';
       }
 
       setState(() {
@@ -251,8 +342,23 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
         _numeroController.text = numero;
         _itensEstoque = itensEstoque;
         _catalogoServicos = catalogoServicos;
+        _precificacao = precificacao;
+        _precificacaoPorId = mapaPrecificacao;
+        _perfilPreco = perfilInicial;
+        _snapshotDescontoOrcamento = snapshotDescontoOrcamento;
+        _fidelidadeConfig = fidelidadeConfig;
+        _beneficioFidelidade = beneficioFidelidade;
+        _origemDesconto = snapshotDescontoOrcamento?.origem ??
+            (_desconto > 0 ? 'manual' : 'nenhum');
+        _percentualFidelidadeAplicado =
+            snapshotDescontoOrcamento?.percentual ?? 0;
         _carregando = false;
       });
+
+      _recalcularSugestaoFidelidadeOs(
+        aplicarAutomatico: false,
+        reaplicarExistente: false,
+      );
     } catch (erro) {
       if (!mounted) {
         return;
@@ -297,6 +403,541 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
     return valor.toStringAsFixed(2).replaceAll('.', ',');
   }
 
+  void _vincularServicosAoCatalogo(List<ServicoCatalogo> catalogo) {
+    for (final formulario in _servicos) {
+      if (formulario.servicoCatalogoId != null) {
+        continue;
+      }
+
+      final nome = formulario.nomeController.text.trim().toLowerCase();
+      if (nome.isEmpty) {
+        continue;
+      }
+
+      final candidatos = catalogo.where(
+        (item) => item.nome.trim().toLowerCase() == nome,
+      );
+
+      if (candidatos.length == 1) {
+        formulario.servicoCatalogoId = candidatos.first.id;
+      }
+    }
+  }
+
+  PrecificacaoServico? _precificacaoDoCatalogo(ServicoCatalogo servico) {
+    final id = servico.id;
+    if (id == null) {
+      return null;
+    }
+    return _precificacaoPorId[id];
+  }
+
+  double _precoDoPerfil(ServicoCatalogo servico) {
+    final precificacao = _precificacaoDoCatalogo(servico);
+
+    if (_perfilPreco == 'informado') {
+      return servico.precoPadrao;
+    }
+
+    if (_perfilPreco == 'cliente') {
+      final sugerido = precificacao?.precoSugerido ?? 0;
+      return sugerido > 0 ? sugerido : servico.precoPadrao;
+    }
+
+    if (precificacao == null || !precificacao.aceitaRevenda) {
+      final sugerido = precificacao?.precoSugerido ?? 0;
+      return sugerido > 0 ? sugerido : servico.precoPadrao;
+    }
+
+    final fallbackCliente = precificacao.precoSugerido > 0
+        ? precificacao.precoSugerido
+        : servico.precoPadrao;
+
+    switch (_perfilPreco) {
+      case 'parceiro_1_4':
+        return precificacao.precoRevenda1a4 > 0
+            ? precificacao.precoRevenda1a4
+            : fallbackCliente;
+      case 'parceiro_5_9':
+        return precificacao.precoRevenda5a9 > 0
+            ? precificacao.precoRevenda5a9
+            : fallbackCliente;
+      case 'parceiro_10_mais':
+        return precificacao.precoRevenda10Mais > 0
+            ? precificacao.precoRevenda10Mais
+            : fallbackCliente;
+      default:
+        return servico.precoPadrao;
+    }
+  }
+
+  String _nomePerfilPreco(String perfil) {
+    switch (perfil) {
+      case 'cliente':
+        return 'Cliente final';
+      case 'parceiro_1_4':
+        return 'Parceiro • 1 a 4/mês';
+      case 'parceiro_5_9':
+        return 'Parceiro • 5 a 9/mês';
+      case 'parceiro_10_mais':
+        return 'Parceiro • 10+/mês';
+      case 'informado':
+      default:
+        return 'Preço informado / combinado';
+    }
+  }
+
+  String _descricaoPerfilPreco(String perfil) {
+    switch (perfil) {
+      case 'cliente':
+        return 'Usa a sugestão de cliente final da Precificação.';
+      case 'parceiro_1_4':
+        return 'Usa a faixa de parceiro de 1 a 4 serviços por mês.';
+      case 'parceiro_5_9':
+        return 'Usa a faixa de parceiro de 5 a 9 serviços por mês.';
+      case 'parceiro_10_mais':
+        return 'Usa a faixa de parceiro de 10 ou mais serviços por mês.';
+      case 'informado':
+      default:
+        return 'Mantém os valores já informados ou combinados.';
+    }
+  }
+
+  bool get _perfilEhParceiro => _perfilPreco.startsWith('parceiro_');
+
+  Future<void> _alterarPerfilPreco(String novoPerfil) async {
+    if (novoPerfil == _perfilPreco) {
+      return;
+    }
+
+    final temServicosCatalogo = _servicos.any(
+      (item) => item.servicoCatalogoId != null,
+    );
+
+    if (temServicosCatalogo && novoPerfil != 'informado') {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Aplicar perfil de preço?'),
+            content: Text(
+              'Os valores dos serviços selecionados do catálogo serão '
+              'recalculados para:\n\n'
+              '${_nomePerfilPreco(novoPerfil)}\n\n'
+              'Serviços digitados manualmente não serão alterados. '
+              'Depois você ainda poderá ajustar qualquer valor manualmente.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Aplicar'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirmar != true || !mounted) {
+        return;
+      }
+    }
+
+    setState(() {
+      _perfilPreco = novoPerfil;
+    });
+
+    if (novoPerfil != 'informado') {
+      _aplicarPerfilAosServicos();
+    }
+
+    _recalcularSugestaoFidelidadeOs(
+      aplicarAutomatico: _fidelidadeConfig.automatica,
+      reaplicarExistente: true,
+    );
+  }
+
+  void _aplicarPerfilAosServicos() {
+    var atualizados = 0;
+    var naoElegiveisParceiro = 0;
+
+    for (final formulario in _servicos) {
+      final servicoId = formulario.servicoCatalogoId;
+      if (servicoId == null) {
+        continue;
+      }
+
+      ServicoCatalogo? catalogo;
+      for (final item in _catalogoServicos) {
+        if (item.id == servicoId) {
+          catalogo = item;
+          break;
+        }
+      }
+
+      if (catalogo == null) {
+        continue;
+      }
+
+      final precificacao = _precificacaoDoCatalogo(catalogo);
+      if (_perfilEhParceiro &&
+          (precificacao == null || !precificacao.aceitaRevenda)) {
+        naoElegiveisParceiro++;
+      }
+
+      formulario.valorController.text = _formatarNumeroCampo(
+        _precoDoPerfil(catalogo),
+      );
+      atualizados++;
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+
+    if (atualizados > 0) {
+      final complemento = naoElegiveisParceiro > 0
+          ? ' $naoElegiveisParceiro serviço'
+                '${naoElegiveisParceiro == 1 ? '' : 's'} não '
+                '${naoElegiveisParceiro == 1 ? 'está habilitado' : 'estão habilitados'} '
+                'para revenda; nesses casos foi mantido o preço de '
+                'cliente final.'
+          : '';
+
+      _mostrarMensagem(
+        'Perfil ${_nomePerfilPreco(_perfilPreco)} aplicado.$complemento',
+      );
+    }
+  }
+
+  double _calcularDescontoFidelidadeSeguroOs() {
+    if (!_fidelidadeConfig.ativa) {
+      return 0;
+    }
+
+    if (_perfilEhParceiro && !_fidelidadeConfig.permitirParceiro) {
+      return 0;
+    }
+
+    final beneficio = _beneficioFidelidade;
+
+    if (beneficio == null || !beneficio.elegivel) {
+      return 0;
+    }
+
+    final subtotalGeral = _subtotal;
+    var subtotalElegivel = 0.0;
+    double? limiteGlobalSeguro;
+
+    if (subtotalGeral <= 0) {
+      return 0;
+    }
+
+    for (final formulario in _servicos) {
+      final servicoId = formulario.servicoCatalogoId;
+      final precificacao =
+          servicoId == null ? null : _precificacaoPorId[servicoId];
+
+      if (precificacao == null) {
+        continue;
+      }
+
+      final quantidade = _converterValor(
+        formulario.quantidadeController.text,
+      );
+      final valorUnitario = _converterValor(
+        formulario.valorController.text,
+      );
+
+      if (quantidade <= 0 || valorUnitario <= 0) {
+        continue;
+      }
+
+      final subtotalItem = quantidade * valorUnitario;
+      subtotalElegivel += subtotalItem;
+
+      final folgaUnitaria =
+          valorUnitario - precificacao.precoMinimoSeguro;
+      final folgaItem = folgaUnitaria > 0
+          ? folgaUnitaria * quantidade
+          : 0.0;
+
+      final limiteDoItem = folgaItem <= 0
+          ? 0.0
+          : folgaItem * subtotalGeral / subtotalItem;
+
+      limiteGlobalSeguro = limiteGlobalSeguro == null
+          ? limiteDoItem
+          : (limiteDoItem < limiteGlobalSeguro
+              ? limiteDoItem
+              : limiteGlobalSeguro);
+    }
+
+    if (subtotalElegivel <= 0 ||
+        limiteGlobalSeguro == null ||
+        limiteGlobalSeguro <= 0) {
+      return 0;
+    }
+
+    final desejado = subtotalElegivel * beneficio.percentual / 100;
+
+    return desejado.clamp(0, limiteGlobalSeguro).toDouble();
+  }
+
+  void _recalcularSugestaoFidelidadeOs({
+    bool aplicarAutomatico = false,
+    bool reaplicarExistente = false,
+  }) {
+    final sugerido = _calcularDescontoFidelidadeSeguroOs();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _descontoFidelidadeSugerido = sugerido;
+    });
+
+    final fidelidadeJaAplicada =
+        _origemDesconto.startsWith('fidelidade');
+
+    if (reaplicarExistente && fidelidadeJaAplicada) {
+      _definirDescontoOs(
+        sugerido,
+        origem: _origemDesconto,
+        percentual: _beneficioFidelidade?.percentual ?? 0,
+      );
+      return;
+    }
+
+    if (!aplicarAutomatico ||
+        !_fidelidadeConfig.automatica ||
+        sugerido <= 0) {
+      return;
+    }
+
+    final descontoManualAtivo =
+        _desconto > 0 && !fidelidadeJaAplicada;
+
+    if (descontoManualAtivo) {
+      return;
+    }
+
+    _definirDescontoOs(
+      sugerido,
+      origem: 'fidelidade_automatica',
+      percentual: _beneficioFidelidade?.percentual ?? 0,
+    );
+  }
+
+  Future<void> _atualizarFidelidadeClienteOs({
+    bool aplicarAutomatico = false,
+  }) async {
+    final clienteId = _clienteSelecionado?.id;
+
+    if (clienteId == null) {
+      if (mounted) {
+        setState(() {
+          _beneficioFidelidade = null;
+          _descontoFidelidadeSugerido = 0;
+        });
+      }
+      return;
+    }
+
+    try {
+      final beneficio = await _fidelidadeRepository.avaliarCliente(
+        clienteId,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      final tinhaFidelidade =
+          _origemDesconto.startsWith('fidelidade');
+
+      setState(() {
+        _beneficioFidelidade = beneficio;
+      });
+
+      if (tinhaFidelidade && !aplicarAutomatico) {
+        _definirDescontoOs(0, origem: 'nenhum');
+      }
+
+      _recalcularSugestaoFidelidadeOs(
+        aplicarAutomatico: aplicarAutomatico,
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _beneficioFidelidade = null;
+          _descontoFidelidadeSugerido = 0;
+        });
+      }
+    }
+  }
+
+  void _definirDescontoOs(
+    double valor, {
+    required String origem,
+    double percentual = 0,
+  }) {
+    _alterandoDescontoInternamente = true;
+    _descontoController.text = _formatarNumeroCampo(valor);
+    _alterandoDescontoInternamente = false;
+
+    if (mounted) {
+      setState(() {
+        _origemDesconto = valor <= 0 ? 'nenhum' : origem;
+        _percentualFidelidadeAplicado =
+            valor <= 0 ? 0 : percentual;
+      });
+    }
+  }
+
+  void _descontoAlteradoManualOs() {
+    if (_alterandoDescontoInternamente) {
+      return;
+    }
+
+    setState(() {
+      _origemDesconto = _desconto <= 0 ? 'nenhum' : 'manual';
+      _percentualFidelidadeAplicado = 0;
+    });
+  }
+
+  Future<void> _aplicarFidelidadeSugeridaOs() async {
+    final sugerido = _descontoFidelidadeSugerido;
+    final beneficio = _beneficioFidelidade;
+
+    if (sugerido <= 0 || beneficio == null || !beneficio.elegivel) {
+      return;
+    }
+
+    if (_desconto > 0 &&
+        !_origemDesconto.startsWith('fidelidade')) {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Substituir desconto atual?'),
+            content: Text(
+              'A OS já possui desconto manual de '
+              '${_moeda.format(_desconto)}.\n\n'
+              'Aplicar fidelidade substituirá por '
+              '${_moeda.format(sugerido)}.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Manter manual'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Aplicar fidelidade'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirmar != true || !mounted) {
+        return;
+      }
+    }
+
+    _definirDescontoOs(
+      sugerido,
+      origem: 'fidelidade_sugerida',
+      percentual: beneficio.percentual,
+    );
+  }
+
+  Future<void> _editarClienteDesdeOs() async {
+    final clienteId = _clienteSelecionado?.id;
+
+    if (clienteId == null) {
+      return;
+    }
+
+    DateTime? atual = _beneficioFidelidade?.clienteDesde;
+
+    try {
+      atual ??= await _fidelidadeRepository.buscarClienteDesde(clienteId);
+    } catch (_) {}
+
+    if (!mounted) {
+      return;
+    }
+
+    final escolhida = await showDatePicker(
+      context: context,
+      initialDate: atual ?? DateTime.now(),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+      helpText: 'Cliente desde',
+    );
+
+    if (escolhida == null) {
+      return;
+    }
+
+    try {
+      await _fidelidadeRepository.salvarClienteDesde(
+        clienteId,
+        escolhida,
+      );
+
+      await _atualizarFidelidadeClienteOs(
+        aplicarAutomatico: _fidelidadeConfig.automatica,
+      );
+
+      if (mounted) {
+        _mostrarMensagem(
+          'Data "Cliente desde" atualizada.',
+        );
+      }
+    } catch (erro) {
+      if (mounted) {
+        _mostrarMensagem('$erro', erro: true);
+      }
+    }
+  }
+
+  String _origemDescontoTextoOs() {
+    switch (_origemDesconto) {
+      case 'fidelidade_sugerida':
+        return 'Fidelidade aplicada após sugestão';
+      case 'fidelidade_automatica':
+        return 'Fidelidade automática';
+      case 'manual':
+        return 'Desconto manual';
+      case 'nenhum':
+      default:
+        return 'Sem desconto';
+    }
+  }
+
+  String _tempoRelacionamentoOs(int meses) {
+    final anos = meses ~/ 12;
+    final resto = meses % 12;
+
+    if (anos <= 0) {
+      return '$meses ${meses == 1 ? 'mês' : 'meses'}';
+    }
+
+    if (resto == 0) {
+      return '$anos ${anos == 1 ? 'ano' : 'anos'}';
+    }
+
+    return '$anos ${anos == 1 ? 'ano' : 'anos'} e '
+        '$resto ${resto == 1 ? 'mês' : 'meses'}';
+  }
+
   Future<void> _selecionarCliente(Cliente? cliente) async {
     setState(() {
       _clienteSelecionado = cliente;
@@ -307,6 +948,15 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
     final clienteId = cliente?.id;
 
     if (clienteId == null) {
+      setState(() {
+        _beneficioFidelidade = null;
+        _descontoFidelidadeSugerido = 0;
+      });
+
+      if (_origemDesconto.startsWith('fidelidade')) {
+        _definirDescontoOs(0, origem: 'nenhum');
+      }
+
       return;
     }
 
@@ -331,6 +981,10 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
           _veiculoSelecionado = veiculos.first;
         }
       });
+
+      await _atualizarFidelidadeClienteOs(
+        aplicarAutomatico: _fidelidadeConfig.automatica,
+      );
     } catch (erro) {
       if (!mounted) {
         return;
@@ -446,7 +1100,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                             title: Text(servico.nome),
                             subtitle: Text(
                               '${servico.categoria.isEmpty ? "Sem categoria" : servico.categoria}'
-                              ' • ${_moeda.format(servico.precoPadrao)}'
+                              ' • ${_moeda.format(_precoDoPerfil(servico))}'
                               ' • ${servico.duracaoFormatada}',
                             ),
                             onTap: () {
@@ -474,10 +1128,19 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
     formulario.nomeController.text = selecionado.nome;
     formulario.descricaoController.text = selecionado.descricao;
     formulario.quantidadeController.text = '1';
-    formulario.valorController.text = _formatarNumeroCampo(
-      selecionado.precoPadrao,
-    );
+    final precoAplicado = _precoDoPerfil(selecionado);
+    formulario.valorController.text = _formatarNumeroCampo(precoAplicado);
     formulario.servicoCatalogoId = selecionado.id;
+
+    final precificacaoSelecionada = _precificacaoDoCatalogo(selecionado);
+    if (_perfilEhParceiro &&
+        (precificacaoSelecionada == null ||
+            !precificacaoSelecionada.aceitaRevenda)) {
+      _mostrarMensagem(
+        '${selecionado.nome} não está habilitado para revenda. '
+        'Foi usado o preço de cliente final.',
+      );
+    }
 
     if (selecionado.observacoesPadrao.trim().isNotEmpty) {
       final atual = _observacoesController.text.trim();
@@ -493,6 +1156,10 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
 
     if (mounted) {
       setState(() {});
+      _recalcularSugestaoFidelidadeOs(
+        aplicarAutomatico: _fidelidadeConfig.automatica,
+        reaplicarExistente: true,
+      );
     }
   }
 
@@ -594,11 +1261,19 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
     servico.dispose();
 
     setState(() {});
+    _recalcularSugestaoFidelidadeOs(
+      aplicarAutomatico: _fidelidadeConfig.automatica,
+      reaplicarExistente: true,
+    );
   }
 
   void _atualizarTela() {
     if (mounted) {
       setState(() {});
+      _recalcularSugestaoFidelidadeOs(
+        aplicarAutomatico: _fidelidadeConfig.automatica,
+        reaplicarExistente: true,
+      );
     }
   }
 
@@ -740,6 +1415,23 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
       }
     }
 
+    final preservandoDescontoDoOrcamento =
+        widget.orcamentoId != null &&
+        (_desconto - _descontoImportadoOrcamento).abs() <= 0.01 &&
+        _snapshotDescontoOrcamento != null &&
+        _origemDesconto == _snapshotDescontoOrcamento!.origem;
+
+    if (_origemDesconto.startsWith('fidelidade') &&
+        !preservandoDescontoDoOrcamento &&
+        _desconto > _descontoFidelidadeSugerido + 0.01) {
+      _mostrarMensagem(
+        'O desconto de fidelidade ultrapassou o limite seguro atual. '
+        'Reaplique o benefício antes de salvar a OS.',
+        erro: true,
+      );
+      return;
+    }
+
     setState(() {
       _salvando = true;
     });
@@ -785,6 +1477,58 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
         ordem,
         itens: itens,
       );
+
+      try {
+        await _precificacaoRepository.registrarPerfilDocumento(
+          documentoTipo: 'OS',
+          documentoId: ordemServicoId,
+          perfil: _perfilPreco,
+        );
+      } catch (_) {
+        // O perfil é metadado gerencial. Uma falha ao registrar esse snapshot
+        // não deve impedir a criação da Ordem de Serviço.
+      }
+
+      try {
+        final snapshotOrcamento = _snapshotDescontoOrcamento;
+        final preservouDescontoOrcamento =
+            widget.orcamentoId != null &&
+            (_desconto - _descontoImportadoOrcamento).abs() <= 0.01;
+
+        final origem = preservouDescontoOrcamento &&
+                snapshotOrcamento != null
+            ? snapshotOrcamento.origem
+            : (_desconto > 0 ? _origemDesconto : 'nenhum');
+
+        final double percentual = preservouDescontoOrcamento &&
+                snapshotOrcamento != null
+            ? snapshotOrcamento.percentual
+            : (_origemDesconto.startsWith('fidelidade')
+                ? _percentualFidelidadeAplicado
+                : (_subtotal > 0 ? (_desconto / _subtotal) * 100 : 0.0));
+
+        await _fidelidadeRepository.registrarDescontoDocumento(
+          DescontoDocumentoSnapshot(
+            documentoTipo: 'OS',
+            documentoId: ordemServicoId,
+            origem: origem,
+            valorDesconto: _desconto,
+            percentual: percentual,
+            valorSugerido: preservouDescontoOrcamento
+                ? (snapshotOrcamento?.valorSugerido ?? 0)
+                : _descontoFidelidadeSugerido,
+            clienteDesde: preservouDescontoOrcamento
+                ? snapshotOrcamento?.clienteDesde
+                : _beneficioFidelidade?.clienteDesde,
+            faixaMeses: preservouDescontoOrcamento
+                ? snapshotOrcamento?.faixaMeses
+                : _beneficioFidelidade?.faixaMeses,
+            perfilPreco: _perfilPreco,
+          ),
+        );
+      } catch (_) {
+        // A origem do desconto é metadado gerencial e não bloqueia a OS.
+      }
 
       final database = await AppDatabase.instance.database;
 
@@ -1356,6 +2100,328 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
     );
   }
 
+  Widget _construirPerfilPreco() {
+    final config = _precificacao?.config;
+    final precificacaoDisponivel = _precificacao != null;
+
+    String margem(double valor) {
+      return '${valor.toStringAsFixed(1).replaceAll('.', ',')}%';
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.sell_outlined),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Perfil de preço',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Escolha como o Imperium deve preencher o valor dos serviços '
+              'selecionados do catálogo. O valor continua editável depois.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              key: ValueKey(_perfilPreco),
+              initialValue: _perfilPreco,
+              decoration: const InputDecoration(
+                labelText: 'Tipo de preço da OS',
+                prefixIcon: Icon(Icons.price_change_outlined),
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem(
+                  value: 'informado',
+                  child: Text('Preço informado / combinado'),
+                ),
+                DropdownMenuItem(
+                  value: 'cliente',
+                  child: Text(
+                    config == null
+                        ? 'Cliente final'
+                        : 'Cliente final • ${margem(config.margemCliente)}',
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'parceiro_1_4',
+                  enabled: precificacaoDisponivel,
+                  child: Text(
+                    config == null
+                        ? 'Parceiro • 1 a 4/mês'
+                        : 'Parceiro • 1 a 4/mês • '
+                              '${margem(config.margemRevenda1a4)}',
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'parceiro_5_9',
+                  enabled: precificacaoDisponivel,
+                  child: Text(
+                    config == null
+                        ? 'Parceiro • 5 a 9/mês'
+                        : 'Parceiro • 5 a 9/mês • '
+                              '${margem(config.margemRevenda5a9)}',
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'parceiro_10_mais',
+                  enabled: precificacaoDisponivel,
+                  child: Text(
+                    config == null
+                        ? 'Parceiro • 10+/mês'
+                        : 'Parceiro • 10+/mês • '
+                              '${margem(config.margemRevenda10Mais)}',
+                  ),
+                ),
+              ],
+              onChanged: _salvando
+                  ? null
+                  : (valor) {
+                      if (valor != null) {
+                        _alterarPerfilPreco(valor);
+                      }
+                    },
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _perfilEhParceiro
+                      ? Icons.handshake_outlined
+                      : Icons.info_outline_rounded,
+                  size: 17,
+                  color: _perfilEhParceiro
+                      ? const Color(0xFFD6A84B)
+                      : null,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    _descricaoPerfilPreco(_perfilPreco),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (!precificacaoDisponivel) ...[
+              const SizedBox(height: 8),
+              Text(
+                'A Precificação não pôde ser carregada. Cliente final usa '
+                'o preço padrão do catálogo e as faixas de parceiro ficam '
+                'indisponíveis.',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: Colors.orange.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            if (widget.orcamentoId != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _perfilPreco == 'informado'
+                    ? 'Esta OS veio de orçamento. O valor combinado foi '
+                          'preservado como preço informado.'
+                    : 'Perfil herdado do orçamento: '
+                          '${_nomePerfilPreco(_perfilPreco)}. Os valores '
+                          'combinados foram preservados e só serão '
+                          'recalculados se você trocar o perfil.',
+                style: const TextStyle(fontSize: 11.5),
+              ),
+            ] else if (widget.agendamento != null) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Esta OS veio de agendamento. O valor informado foi '
+                'preservado e só muda quando você escolher outro perfil.',
+                style: TextStyle(fontSize: 11.5),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirFidelidadeOs() {
+    final config = _fidelidadeConfig;
+    final beneficio = _beneficioFidelidade;
+    final clienteDesde = beneficio?.clienteDesde;
+    final parceiroBloqueado =
+        _perfilEhParceiro && !config.permitirParceiro;
+
+    String modoTexto() {
+      switch (config.modo) {
+        case 'sugerir':
+          return 'Sugerir desconto';
+        case 'automatico':
+          return 'Aplicar automaticamente';
+        default:
+          return 'Desativado';
+      }
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.loyalty_outlined),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Fidelidade do cliente',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _LinhaValor(
+              titulo: 'Funcionamento',
+              valor: modoTexto(),
+            ),
+            if (!config.ativa) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Desativada. Nenhum desconto por tempo de cliente será '
+                'sugerido ou aplicado nesta OS.',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ] else if (_clienteSelecionado == null) ...[
+              const SizedBox(height: 8),
+              const Text('Selecione um cliente para verificar a fidelidade.'),
+            ] else ...[
+              const SizedBox(height: 8),
+              _LinhaValor(
+                titulo: 'Cliente desde',
+                valor: clienteDesde == null
+                    ? 'Não informado'
+                    : DateFormat('dd/MM/yyyy').format(clienteDesde),
+              ),
+              if (beneficio != null && clienteDesde != null) ...[
+                const SizedBox(height: 6),
+                _LinhaValor(
+                  titulo: 'Tempo',
+                  valor: _tempoRelacionamentoOs(
+                    beneficio.mesesRelacionamento,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _LinhaValor(
+                  titulo: 'Benefício da faixa',
+                  valor: beneficio.percentual > 0
+                      ? '${beneficio.percentual.toStringAsFixed(1).replaceAll('.', ',')}%'
+                      : 'Ainda não atingiu uma faixa',
+                ),
+              ],
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _salvando ? null : _editarClienteDesdeOs,
+                icon: const Icon(Icons.event_outlined),
+                label: Text(
+                  clienteDesde == null
+                      ? 'Definir "Cliente desde"'
+                      : 'Corrigir "Cliente desde"',
+                ),
+              ),
+              if (parceiroBloqueado) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  'A fidelidade não está autorizada a acumular com preço '
+                  'de parceiro.',
+                  style: TextStyle(fontSize: 11.5),
+                ),
+              ] else if (beneficio != null && beneficio.elegivel) ...[
+                const SizedBox(height: 10),
+                _LinhaValor(
+                  titulo: 'Desconto seguro',
+                  valor: _moeda.format(_descontoFidelidadeSugerido),
+                  destaque: true,
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  _descontoFidelidadeSugerido > 0
+                      ? 'Limitado pela margem mínima segura dos serviços '
+                            'vinculados ao catálogo.'
+                      : 'Não há folga segura para desconto nos serviços '
+                            'atuais.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (config.sugerir &&
+                    _descontoFidelidadeSugerido > 0) ...[
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    onPressed: _salvando
+                        ? null
+                        : _aplicarFidelidadeSugeridaOs,
+                    icon: const Icon(Icons.redeem_outlined),
+                    label: const Text('Aplicar benefício de fidelidade'),
+                  ),
+                ],
+                if (config.automatica) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _origemDesconto == 'fidelidade_automatica'
+                        ? 'Benefício aplicado automaticamente.'
+                        : _desconto > 0 &&
+                                !_origemDesconto.startsWith('fidelidade')
+                        ? 'Existe um desconto manual; ele não foi '
+                              'sobrescrito automaticamente.'
+                        : 'Será aplicado automaticamente quando houver '
+                              'valor seguro disponível.',
+                    style: const TextStyle(fontSize: 11.5),
+                  ),
+                ],
+              ],
+            ],
+            const Divider(height: 22),
+            _LinhaValor(
+              titulo: 'Origem do desconto',
+              valor: _origemDescontoTextoOs(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _construirServicos() {
     return Card(
       margin: EdgeInsets.zero,
@@ -1566,7 +2632,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
               ],
               onChanged: (_) {
-                setState(() {});
+                _descontoAlteradoManualOs();
               },
               decoration: const InputDecoration(
                 labelText: 'Desconto',
@@ -1591,6 +2657,11 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
             _LinhaValor(titulo: 'Subtotal', valor: _moeda.format(_subtotal)),
             const SizedBox(height: 8),
             _LinhaValor(titulo: 'Desconto', valor: _moeda.format(_desconto)),
+            const SizedBox(height: 6),
+            _LinhaValor(
+              titulo: 'Origem',
+              valor: _origemDescontoTextoOs(),
+            ),
             const Divider(height: 24),
             _LinhaValor(
               titulo: 'Total final',
@@ -1657,6 +2728,10 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                   _construirCabecalho(),
                   const SizedBox(height: 12),
                   _construirClienteVeiculo(),
+                  const SizedBox(height: 12),
+                  _construirPerfilPreco(),
+                  const SizedBox(height: 12),
+                  _construirFidelidadeOs(),
                   const SizedBox(height: 12),
                   _construirServicos(),
                   const SizedBox(height: 12),

@@ -20,6 +20,8 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
   late final TextEditingController _observacoesController;
   late final TextEditingController _quilometragemController;
   late final TextEditingController _combustivelController;
+  late final TextEditingController _dataEntradaController;
+  late final TextEditingController _dataSaidaController;
   late final TextEditingController _horaEntradaController;
   late final TextEditingController _horaSaidaController;
   late final TextEditingController _motivoController;
@@ -40,6 +42,12 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
     _combustivelController = TextEditingController(
       text: _texto('combustivel_entrada'),
     );
+    _dataEntradaController = TextEditingController(
+      text: _formatarDataTela(_texto('data_inicio')),
+    );
+    _dataSaidaController = TextEditingController(
+      text: _formatarDataTela(_texto('data_finalizacao')),
+    );
     _horaEntradaController = TextEditingController(
       text: _texto('hora_entrada'),
     );
@@ -53,6 +61,8 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
     _observacoesController.dispose();
     _quilometragemController.dispose();
     _combustivelController.dispose();
+    _dataEntradaController.dispose();
+    _dataSaidaController.dispose();
     _horaEntradaController.dispose();
     _horaSaidaController.dispose();
     _motivoController.dispose();
@@ -77,6 +87,74 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
     return int.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
+  String _formatarDataTela(String valor) {
+    final texto = valor.trim();
+    if (texto.isEmpty) {
+      return '';
+    }
+
+    final data = DateTime.tryParse(texto);
+    if (data == null) {
+      return texto;
+    }
+
+    final dia = data.day.toString().padLeft(2, '0');
+    final mes = data.month.toString().padLeft(2, '0');
+    return '$dia/$mes/${data.year.toString().padLeft(4, '0')}';
+  }
+
+  DateTime? _lerDataController(TextEditingController controller) {
+    final texto = controller.text.trim();
+    if (texto.isEmpty) {
+      return null;
+    }
+
+    final iso = DateTime.tryParse(texto);
+    if (iso != null) {
+      return DateTime(iso.year, iso.month, iso.day);
+    }
+
+    final partes = texto.split('/');
+    if (partes.length != 3) {
+      return null;
+    }
+
+    final dia = int.tryParse(partes[0]);
+    final mes = int.tryParse(partes[1]);
+    final ano = int.tryParse(partes[2]);
+    if (dia == null || mes == null || ano == null) {
+      return null;
+    }
+
+    final data = DateTime(ano, mes, dia);
+    if (data.year != ano || data.month != mes || data.day != dia) {
+      return null;
+    }
+
+    return data;
+  }
+
+  Future<void> _selecionarData(TextEditingController controller) async {
+    final atual = _lerDataController(controller) ?? DateTime.now();
+    final data = await showDatePicker(
+      context: context,
+      initialDate: atual,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'Selecionar data',
+    );
+
+    if (data == null || !mounted) {
+      return;
+    }
+
+    final dia = data.day.toString().padLeft(2, '0');
+    final mes = data.month.toString().padLeft(2, '0');
+    setState(() {
+      controller.text = '$dia/$mes/${data.year.toString().padLeft(4, '0')}';
+    });
+  }
+
   Future<void> _selecionarHorario(TextEditingController controller) async {
     TimeOfDay horarioInicial = TimeOfDay.now();
     final partes = controller.text.trim().split(':');
@@ -98,6 +176,7 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
     final horario = await showTimePicker(
       context: context,
       initialTime: horarioInicial,
+      helpText: 'Selecionar horário',
     );
 
     if (horario == null || !mounted) {
@@ -107,7 +186,9 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
     final hora = horario.hour.toString().padLeft(2, '0');
     final minuto = horario.minute.toString().padLeft(2, '0');
 
-    controller.text = '$hora:$minuto';
+    setState(() {
+      controller.text = '$hora:$minuto';
+    });
   }
 
   Future<void> _salvar() async {
@@ -136,6 +217,8 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
         observacoes: _observacoesController.text,
         quilometragemEntrada: _quilometragemController.text,
         combustivelEntrada: _combustivelController.text,
+        dataInicio: _dataEntradaController.text,
+        dataFinalizacao: _dataSaidaController.text,
         horaEntrada: _horaEntradaController.text,
         horaSaida: _horaSaidaController.text,
       );
@@ -176,6 +259,31 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
       );
   }
 
+  Widget _campoData({
+    required String titulo,
+    required TextEditingController controller,
+  }) {
+    return TextFormField(
+      controller: controller,
+      readOnly: true,
+      onTap: _salvando ? null : () => _selecionarData(controller),
+      decoration: InputDecoration(
+        labelText: titulo,
+        prefixIcon: const Icon(Icons.calendar_today_outlined),
+        border: const OutlineInputBorder(),
+      ),
+      validator: (valor) {
+        if ((valor ?? '').trim().isEmpty) {
+          return 'Informe a data.';
+        }
+        if (_lerDataController(controller) == null) {
+          return 'Data inválida.';
+        }
+        return null;
+      },
+    );
+  }
+
   Widget _campoHorario({
     required String titulo,
     required TextEditingController controller,
@@ -183,11 +291,7 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
     return TextFormField(
       controller: controller,
       readOnly: true,
-      onTap: _salvando
-          ? null
-          : () {
-              _selecionarHorario(controller);
-            },
+      onTap: _salvando ? null : () => _selecionarHorario(controller),
       decoration: InputDecoration(
         labelText: titulo,
         prefixIcon: const Icon(Icons.access_time_outlined),
@@ -232,8 +336,9 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
                     Expanded(
                       child: Text(
                         'Esta correção preserva o status finalizado e cria '
-                        'um registro de auditoria. Serviços, valores, produtos, '
-                        'estoque e financeiro não serão alterados.',
+                        'um registro de auditoria. As datas e horários reais '
+                        'de entrada e saída podem ser corrigidos sem alterar '
+                        'pagamentos, estoque ou valores da OS.',
                       ),
                     ),
                   ],
@@ -274,6 +379,30 @@ class _CorrigirOrdemServicoPageState extends State<CorrigirOrdemServicoPage> {
                 prefixIcon: Icon(Icons.local_gas_station_outlined),
                 border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Entrada e saída do veículo',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _campoData(
+                    titulo: 'Data de entrada',
+                    controller: _dataEntradaController,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _campoData(
+                    titulo: 'Data de saída',
+                    controller: _dataSaidaController,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
             Row(

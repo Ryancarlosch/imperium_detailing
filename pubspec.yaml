@@ -14,10 +14,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-
   # Banco de dados
   sqflite: ^2.4.3
   path: ^1.9.1
+
+  # Segurança local de PIN
+  crypto: ^3.0.7
 
   # Fotos
   image_picker: ^1.2.0
