@@ -1,0 +1,33 @@
+MODO SEM ERRO DE DIRETÓRIO
+
+1. Extraia o ZIP.
+2. Você terá a pasta:
+   PATCH_MAQUININHA_V27
+
+3. Mova ESSA PASTA INTEIRA para dentro da pasta principal do projeto Imperium.
+
+A estrutura deve ficar exatamente assim:
+
+SUA_PASTA_DO_IMPERIUM
+│   pubspec.yaml
+│
+├── lib
+│   ├── pages
+│   └── repositories
+│
+└── PATCH_MAQUININHA_V27
+    │   APLICAR_AQUI.bat
+    │
+    └── arquivos
+
+4. Abra PATCH_MAQUININHA_V27.
+5. Dê dois cliques em APLICAR_AQUI.bat.
+6. O BAT detecta automaticamente que o projeto é a pasta acima.
+7. Ele cria backup antes de substituir os 3 arquivos.
+
+NÃO coloque a PATCH dentro de:
+- lib
+- lib/pages
+- Downloads, se o projeto estiver em outra pasta
+
+Ela precisa ficar diretamente dentro da pasta onde está pubspec.yaml.
