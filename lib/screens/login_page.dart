@@ -1,193 +1,435 @@
 import 'package:flutter/material.dart';
-import 'package:imperium_detailing/screens/dashboard_page.dart';
+
+import '../repositories/usuario_repository.dart';
+import 'dashboard_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.onLogin});
+
+  final ValueChanged<Map<String, dynamic>>? onLogin;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _usuarioController = TextEditingController();
-  final TextEditingController _senhaController = TextEditingController();
+  final UsuarioRepository _usuarioRepository = UsuarioRepository();
 
-  bool _ocultarSenha = true;
+  final TextEditingController _usuarioController = TextEditingController();
+  final TextEditingController _pinController = TextEditingController();
+  final TextEditingController _confirmarPinController = TextEditingController();
+
+  bool _ocultarPin = true;
+  bool _ocultarConfirmacao = true;
   bool _carregando = false;
+  bool _verificandoPrimeiroAcesso = true;
+  bool _primeiroAcesso = false;
+  bool _manterConectado = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _prepararLogin();
+  }
 
   @override
   void dispose() {
     _usuarioController.dispose();
-    _senhaController.dispose();
+    _pinController.dispose();
+    _confirmarPinController.dispose();
     super.dispose();
   }
 
-  Future<void> _entrar() async {
-    final usuario = _usuarioController.text.trim().toLowerCase();
-    final senha = _senhaController.text.trim();
+  Future<void> _prepararLogin() async {
+    try {
+      await _usuarioRepository.garantirEstrutura();
 
-    if (usuario.isEmpty || senha.isEmpty) {
-      _mostrarMensagem('Informe o usuário e a senha.');
+      final possuiAdminComPin = await _usuarioRepository
+          .possuiAdministradorComPin();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _primeiroAcesso = !possuiAdminComPin;
+        _verificandoPrimeiroAcesso = false;
+
+        if (_primeiroAcesso && _usuarioController.text.trim().isEmpty) {
+          _usuarioController.text = 'admin';
+        }
+      });
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _verificandoPrimeiroAcesso = false;
+      });
+
+      _mostrarMensagem(
+        'Não foi possível preparar o login: ${_textoErro(erro)}',
+        erro: true,
+      );
+    }
+  }
+
+  Future<void> _entrar() async {
+    if (_carregando || _verificandoPrimeiroAcesso) {
       return;
+    }
+
+    final usuario = _usuarioController.text.trim().toLowerCase();
+    final pin = _pinController.text.trim();
+    final confirmarPin = _confirmarPinController.text.trim();
+
+    if (usuario.isEmpty || pin.isEmpty) {
+      _mostrarMensagem(
+        _primeiroAcesso
+            ? 'Informe o usuário e crie um PIN.'
+            : 'Informe o usuário e o PIN.',
+        erro: true,
+      );
+      return;
+    }
+
+    if (_primeiroAcesso) {
+      if (!RegExp(r'^\d{4,8}$').hasMatch(pin)) {
+        _mostrarMensagem('O PIN deve ter entre 4 e 8 números.', erro: true);
+        return;
+      }
+
+      if (pin != confirmarPin) {
+        _mostrarMensagem('A confirmação do PIN está diferente.', erro: true);
+        return;
+      }
     }
 
     setState(() {
       _carregando = true;
     });
 
-    await Future<void>.delayed(
-      const Duration(milliseconds: 250),
+    try {
+      if (_primeiroAcesso) {
+        await _configurarPrimeiroAcesso(usuario: usuario, pin: pin);
+      }
+
+      final sessao = await _usuarioRepository.autenticar(
+        login: usuario,
+        pin: pin,
+        manterConectado: _manterConectado,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (widget.onLogin != null) {
+        widget.onLogin!(Map<String, dynamic>.from(sessao));
+        return;
+      }
+
+      await Navigator.of(context).pushReplacement<void, void>(
+        MaterialPageRoute<void>(builder: (_) => DashboardPage(sessao: sessao)),
+      );
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      _mostrarMensagem(_textoErro(erro), erro: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _carregando = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _configurarPrimeiroAcesso({
+    required String usuario,
+    required String pin,
+  }) async {
+    final usuarios = await _usuarioRepository.listarUsuarios(
+      incluirInativos: false,
     );
 
+    Map<String, dynamic>? administrador;
+
+    for (final item in usuarios) {
+      final login = (item['login'] ?? '').toString().trim().toLowerCase();
+      final perfil = (item['perfil'] ?? '').toString().trim();
+
+      if (login == usuario && perfil == UsuarioRepository.perfilAdministrador) {
+        administrador = item;
+        break;
+      }
+    }
+
+    if (administrador == null) {
+      throw StateError(
+        'No primeiro acesso, use o login do Administrador. '
+        'O login padrão é admin.',
+      );
+    }
+
+    final usuarioId = _int(administrador['id']);
+
+    if (usuarioId <= 0) {
+      throw StateError('Não foi possível identificar o usuário Administrador.');
+    }
+
+    await _usuarioRepository.definirPin(usuarioId: usuarioId, pin: pin);
+
+    if (mounted) {
+      setState(() {
+        _primeiroAcesso = false;
+      });
+    }
+  }
+
+  int _int(dynamic valor) {
+    if (valor is int) {
+      return valor;
+    }
+
+    if (valor is num) {
+      return valor.toInt();
+    }
+
+    return int.tryParse(valor?.toString() ?? '') ?? 0;
+  }
+
+  String _textoErro(Object erro) {
+    var texto = erro.toString().trim();
+
+    const prefixos = <String>[
+      'Bad state: ',
+      'Invalid argument(s): ',
+      'Exception: ',
+    ];
+
+    for (final prefixo in prefixos) {
+      if (texto.startsWith(prefixo)) {
+        texto = texto.substring(prefixo.length).trim();
+      }
+    }
+
+    return texto;
+  }
+
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
     if (!mounted) {
       return;
     }
 
-    final loginValido = usuario == 'admin' && senha == '1234';
-
-    setState(() {
-      _carregando = false;
-    });
-
-    if (!loginValido) {
-      _mostrarMensagem('Usuário ou senha incorretos.');
-      return;
-    }
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => DashboardPage(),
-      ),
-    );
-  }
-
-  void _mostrarMensagem(String mensagem) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensagem),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(mensagem),
+          backgroundColor: erro ? Colors.red.shade700 : null,
+        ),
+      );
   }
 
   @override
   Widget build(BuildContext context) {
+    final primeiroAcesso = _primeiroAcesso;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 420,
-              ),
+              constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.directions_car_filled_rounded,
-                    size: 76,
-                  ),
+                  const Icon(Icons.directions_car_filled_rounded, size: 76),
                   const SizedBox(height: 22),
                   Text(
                     'Imperium Detailing',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium
-                        ?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Acesso ao sistema',
+                    primeiroAcesso
+                        ? 'Configuração do primeiro acesso'
+                        : 'Acesso ao sistema',
+                    textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
-                  const SizedBox(height: 40),
-                  TextField(
-                    controller: _usuarioController,
-                    keyboardType: TextInputType.text,
-                    textInputAction: TextInputAction.next,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Usuário',
-                      prefixIcon: Icon(
-                        Icons.person_outline_rounded,
-                      ),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _senhaController,
-                    obscureText: _ocultarSenha,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _entrar(),
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    decoration: InputDecoration(
-                      labelText: 'Senha',
-                      prefixIcon: const Icon(
-                        Icons.lock_outline_rounded,
-                      ),
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        tooltip: _ocultarSenha
-                            ? 'Mostrar senha'
-                            : 'Ocultar senha',
-                        onPressed: () {
-                          setState(() {
-                            _ocultarSenha = !_ocultarSenha;
-                          });
-                        },
-                        icon: Icon(
-                          _ocultarSenha
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: FilledButton.icon(
-                      onPressed: _carregando ? null : _entrar,
-                      icon: _carregando
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.login_rounded,
-                            ),
-                      label: Text(
-                        _carregando ? 'Entrando...' : 'Entrar',
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 28),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Acesso de teste',
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(
-                          fontWeight: FontWeight.bold,
+                  if (_verificandoPrimeiroAcesso) ...[
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 14),
+                    const Text('Preparando acesso...'),
+                  ] else ...[
+                    if (primeiroAcesso) ...[
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.admin_panel_settings_outlined),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Primeiro acesso: use o login admin '
+                                  'e escolha um PIN de 4 a 8 números. '
+                                  'Depois disso, o mesmo PIN será usado '
+                                  'nos próximos acessos.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                  ),
-                  const SizedBox(height: 8),
-                  const SelectableText(
-                    'Usuário: admin\nSenha: 1234',
-                    textAlign: TextAlign.center,
-                  ),
+                      ),
+                      const SizedBox(height: 18),
+                    ],
+                    TextField(
+                      controller: _usuarioController,
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      enabled: !_carregando,
+                      decoration: const InputDecoration(
+                        labelText: 'Usuário',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _pinController,
+                      obscureText: _ocultarPin,
+                      keyboardType: TextInputType.number,
+                      textInputAction: primeiroAcesso
+                          ? TextInputAction.next
+                          : TextInputAction.done,
+                      onSubmitted: primeiroAcesso ? null : (_) => _entrar(),
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      enabled: !_carregando,
+                      maxLength: 8,
+                      decoration: InputDecoration(
+                        labelText: primeiroAcesso ? 'Criar PIN' : 'PIN',
+                        counterText: '',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          tooltip: _ocultarPin ? 'Mostrar PIN' : 'Ocultar PIN',
+                          onPressed: _carregando
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _ocultarPin = !_ocultarPin;
+                                  });
+                                },
+                          icon: Icon(
+                            _ocultarPin
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (primeiroAcesso) ...[
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _confirmarPinController,
+                        obscureText: _ocultarConfirmacao,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _entrar(),
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        enabled: !_carregando,
+                        maxLength: 8,
+                        decoration: InputDecoration(
+                          labelText: 'Confirmar PIN',
+                          counterText: '',
+                          prefixIcon: const Icon(Icons.lock_reset_rounded),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            tooltip: _ocultarConfirmacao
+                                ? 'Mostrar confirmação'
+                                : 'Ocultar confirmação',
+                            onPressed: _carregando
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _ocultarConfirmacao =
+                                          !_ocultarConfirmacao;
+                                    });
+                                  },
+                            icon: Icon(
+                              _ocultarConfirmacao
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    CheckboxListTile(
+                      value: _manterConectado,
+                      onChanged: _carregando
+                          ? null
+                          : (valor) {
+                              setState(() {
+                                _manterConectado = valor ?? true;
+                              });
+                            },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Manter conectado'),
+                      subtitle: const Text(
+                        'Abrir direto no Dashboard '
+                        'neste aparelho.',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: FilledButton.icon(
+                        onPressed: _carregando ? null : _entrar,
+                        icon: _carregando
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                primeiroAcesso
+                                    ? Icons.admin_panel_settings_rounded
+                                    : Icons.login_rounded,
+                              ),
+                        label: Text(
+                          _carregando
+                              ? 'Aguarde...'
+                              : primeiroAcesso
+                              ? 'Configurar e entrar'
+                              : 'Entrar',
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
