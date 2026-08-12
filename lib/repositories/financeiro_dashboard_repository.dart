@@ -3,7 +3,6 @@ import 'custos_repository.dart';
 import 'dre_repository.dart';
 import 'financeiro_repository.dart';
 import 'meta_financeira_repository.dart';
-import 'pagamento_repository.dart';
 
 class FinanceiroDashboardData {
   const FinanceiroDashboardData({
@@ -32,10 +31,19 @@ class FinanceiroDashboardData {
   final DateTime fim;
   final DreResultado dreCompetencia;
   final DreResultado dreCaixa;
+
+  /// Saldo total ainda em aberto das OS finalizadas.
   final double aReceber;
+
+  /// Somente parcelas/saldos cujo vencimento já passou.
   final double vencido;
+
+  /// Dinheiro de pagamentos de OS efetivamente recebido no mês.
   final double recebido;
+
+  /// Taxas de cartão efetivamente lançadas no mês.
   final double taxas;
+
   final double custoFixoMensal;
   final double custoMaoObraMensal;
   final double metaReceita;
@@ -48,8 +56,12 @@ class FinanceiroDashboardData {
   final List<Map<String, dynamic>> topResultadosOs;
   final List<Map<String, dynamic>> evolucao;
 
+  double get vendasFinalizadas => dreCompetencia.receitaLiquida;
+  double get recebidoLiquido => recebido - taxas;
+  double get resultadoCaixa => dreCaixa.resultadoGerencial;
+
   double get progressoReceita =>
-      metaReceita <= 0 ? 0 : dreCompetencia.receitaLiquida / metaReceita;
+      metaReceita <= 0 ? 0 : recebido / metaReceita;
 
   double get progressoDespesa {
     final referencia = despesaPrevista > despesaRealizada
@@ -65,13 +77,16 @@ class FinanceiroDashboardData {
 
 class FinanceiroDashboardRepository {
   final DreRepository _dreRepository = DreRepository();
-  final PagamentoRepository _pagamentoRepository = PagamentoRepository();
   final CustosRepository _custosRepository = CustosRepository();
-  final MetaFinanceiraRepository _metaRepository = MetaFinanceiraRepository();
-  final FinanceiroRepository _financeiroRepository = FinanceiroRepository();
+  final MetaFinanceiraRepository _metaRepository =
+      MetaFinanceiraRepository();
+  final FinanceiroRepository _financeiroRepository =
+      FinanceiroRepository();
   final AppDatabase _appDatabase = AppDatabase.instance;
 
-  Future<FinanceiroDashboardData> carregar({required DateTime mes}) async {
+  Future<FinanceiroDashboardData> carregar({
+    required DateTime mes,
+  }) async {
     final inicio = DateTime(mes.year, mes.month, 1);
     final fim = DateTime(mes.year, mes.month + 1, 0, 23, 59, 59);
 
@@ -86,7 +101,7 @@ class FinanceiroDashboardRepository {
         fim: fim,
         regime: DreRegime.caixa,
       ),
-      _pagamentoRepository.obterResumoGeral(),
+      _resumoContasReceber(),
       _resumoPagamentosPeriodo(inicio, fim),
       _custosRepository.obterResumoEstruturaCustos(),
       _metaRepository.obterResumoMes(mes.year, mes.month),
@@ -98,7 +113,7 @@ class FinanceiroDashboardRepository {
       ),
     ]);
 
-    final pagamentos = Map<String, double>.from(
+    final contasReceber = Map<String, double>.from(
       resultados[2] as Map<String, double>,
     );
     final pagamentosPeriodo = Map<String, double>.from(
@@ -117,26 +132,27 @@ class FinanceiroDashboardRepository {
       resultados[8] as Map<String, double>,
     );
 
-    final filtradas =
-        ordens.where((item) {
-          final data = DateTime.tryParse(
-            (item['data_finalizacao'] ?? '').toString(),
-          );
-          return data != null &&
-              data.year == mes.year &&
-              data.month == mes.month;
-        }).toList()..sort(
-          (a, b) =>
-              _double(b['resultado_os']).compareTo(_double(a['resultado_os'])),
-        );
+    final filtradas = ordens.where((item) {
+      final data = DateTime.tryParse(
+        (item['data_finalizacao'] ?? '').toString(),
+      );
+      return data != null &&
+          data.year == mes.year &&
+          data.month == mes.month;
+    }).toList()
+      ..sort(
+        (a, b) => _double(b['resultado_os']).compareTo(
+          _double(a['resultado_os']),
+        ),
+      );
 
     return FinanceiroDashboardData(
       inicio: inicio,
       fim: fim,
       dreCompetencia: resultados[0] as DreResultado,
       dreCaixa: resultados[1] as DreResultado,
-      aReceber: pagamentos['a_receber'] ?? 0,
-      vencido: pagamentos['vencido'] ?? 0,
+      aReceber: contasReceber['a_receber'] ?? 0,
+      vencido: contasReceber['vencido'] ?? 0,
       recebido: pagamentosPeriodo['recebido'] ?? 0,
       taxas: pagamentosPeriodo['taxas'] ?? 0,
       custoFixoMensal: custos['custo_fixo_mensal'] ?? 0,
@@ -144,13 +160,92 @@ class FinanceiroDashboardRepository {
       metaReceita: metas['Receita'] ?? 0,
       metaDespesa: metas['Despesa'] ?? 0,
       metaResultado: metas['Resultado'] ?? 0,
-      receitaPrevista: previstoRealizado['entrada_prevista'] ?? 0,
-      receitaRealizada: previstoRealizado['entrada_realizada'] ?? 0,
-      despesaPrevista: previstoRealizado['saida_prevista'] ?? 0,
-      despesaRealizada: previstoRealizado['saida_realizada'] ?? 0,
+      receitaPrevista:
+          previstoRealizado['entrada_prevista'] ?? 0,
+      receitaRealizada:
+          previstoRealizado['entrada_realizada'] ?? 0,
+      despesaPrevista:
+          previstoRealizado['saida_prevista'] ?? 0,
+      despesaRealizada:
+          previstoRealizado['saida_realizada'] ?? 0,
       topResultadosOs: filtradas.take(5).toList(),
-      evolucao: List<Map<String, dynamic>>.from(resultados[7] as List<dynamic>),
+      evolucao: List<Map<String, dynamic>>.from(
+        resultados[7] as List<dynamic>,
+      ),
     );
+  }
+
+  Future<Map<String, double>> _resumoContasReceber() async {
+    final database = await _appDatabase.database;
+
+    final resultado = await database.rawQuery(
+      '''
+      WITH resumo AS (
+        SELECT
+          os.id,
+          MAX(
+            COALESCE(os.valor_total, 0)
+            - COALESCE(os.desconto, 0)
+            - COALESCE(os.desconto_negociacao, 0)
+            + COALESCE(os.acrescimo_negociacao, 0)
+            + COALESCE(os.juros_parcelamento, 0),
+            0
+          ) AS total,
+          COALESCE((
+            SELECT SUM(p.valor)
+            FROM ordem_servico_pagamentos p
+            WHERE p.ordem_servico_id = os.id
+              AND p.status = 'Pago'
+          ), 0) AS recebido,
+          COALESCE((
+            SELECT COUNT(*)
+            FROM ordem_servico_pagamentos p
+            WHERE p.ordem_servico_id = os.id
+              AND p.status = 'Pendente'
+              AND p.parcela_numero IS NOT NULL
+          ), 0) AS parcelas_pendentes,
+          COALESCE((
+            SELECT SUM(p.valor)
+            FROM ordem_servico_pagamentos p
+            WHERE p.ordem_servico_id = os.id
+              AND p.status = 'Pendente'
+              AND p.parcela_numero IS NOT NULL
+              AND p.vencimento IS NOT NULL
+              AND TRIM(p.vencimento) != ''
+              AND date(p.vencimento) < date('now', 'localtime')
+          ), 0) AS parcelas_vencidas,
+          os.vencimento_pagamento
+        FROM ordens_servico os
+        WHERE os.status = 'Finalizada'
+      ),
+      calculado AS (
+        SELECT
+          *,
+          MAX(total - recebido, 0) AS saldo
+        FROM resumo
+      )
+      SELECT
+        COALESCE(SUM(saldo), 0) AS a_receber,
+        COALESCE(SUM(
+          CASE
+            WHEN saldo <= 0.000001 THEN 0
+            WHEN parcelas_pendentes > 0
+              THEN MIN(parcelas_vencidas, saldo)
+            WHEN vencimento_pagamento IS NOT NULL
+              AND TRIM(vencimento_pagamento) != ''
+              AND date(vencimento_pagamento) < date('now', 'localtime')
+              THEN saldo
+            ELSE 0
+          END
+        ), 0) AS vencido
+      FROM calculado
+      ''',
+    );
+
+    return {
+      'a_receber': _double(resultado.first['a_receber']),
+      'vencido': _double(resultado.first['vencido']),
+    };
   }
 
   Future<Map<String, double>> _resumoPagamentosPeriodo(
@@ -158,6 +253,7 @@ class FinanceiroDashboardRepository {
     DateTime fim,
   ) async {
     final database = await _appDatabase.database;
+
     final resultado = await database.rawQuery(
       '''
       SELECT
@@ -171,7 +267,8 @@ class FinanceiroDashboardRepository {
           WHEN LOWER(m.tipo) IN ('saída', 'saida')
             AND (
               LOWER(COALESCE(m.origem, '')) = 'taxa de pagamento'
-              OR LOWER(COALESCE(m.descricao, '')) LIKE 'taxa da maquininha%'
+              OR LOWER(COALESCE(m.descricao, ''))
+                LIKE 'taxa da maquininha%'
             )
           THEN m.valor
           ELSE 0
@@ -210,46 +307,96 @@ class FinanceiroDashboardRepository {
     DateTime mesFinal,
   ) async {
     final itens = <Map<String, dynamic>>[];
+
     for (var deslocamento = 5; deslocamento >= 0; deslocamento--) {
-      final mes = DateTime(mesFinal.year, mesFinal.month - deslocamento, 1);
-      final fim = DateTime(mes.year, mes.month + 1, 0, 23, 59, 59);
-      final dre = await _dreRepository.calcular(
-        inicio: mes,
-        fim: fim,
-        regime: DreRegime.competencia,
+      final mes = DateTime(
+        mesFinal.year,
+        mesFinal.month - deslocamento,
+        1,
       );
+      final fim = DateTime(
+        mes.year,
+        mes.month + 1,
+        0,
+        23,
+        59,
+        59,
+      );
+
+      final resultados = await Future.wait<dynamic>([
+        _dreRepository.calcular(
+          inicio: mes,
+          fim: fim,
+          regime: DreRegime.competencia,
+        ),
+        _dreRepository.calcular(
+          inicio: mes,
+          fim: fim,
+          regime: DreRegime.caixa,
+        ),
+        _resumoPagamentosPeriodo(mes, fim),
+      ]);
+
+      final competencia = resultados[0] as DreResultado;
+      final caixa = resultados[1] as DreResultado;
+      final pagamentos = Map<String, double>.from(
+        resultados[2] as Map<String, double>,
+      );
+
+      final recebido = pagamentos['recebido'] ?? 0;
+      final taxas = pagamentos['taxas'] ?? 0;
+
       itens.add({
         'ano': mes.year,
         'mes': mes.month,
-        'receita': dre.receitaLiquida,
-        'resultado': dre.resultadoGerencial,
-        'margem': dre.margemPercentual,
+
+        // "receita" é mantido para compatibilidade com telas antigas,
+        // mas agora representa o faturamento recebido.
+        'receita': recebido,
+        'recebido': recebido,
+        'vendas': competencia.receitaLiquida,
+        'taxas': taxas,
+        'recebido_liquido': recebido - taxas,
+        'resultado': competencia.resultadoGerencial,
+        'resultado_caixa': caixa.resultadoGerencial,
+        'margem': competencia.margemPercentual,
       });
     }
+
     return itens;
   }
 
   Future<Map<String, double>> saldosContas() async {
     final database = await _appDatabase.database;
-    final resultado = await database.rawQuery('''
+
+    final resultado = await database.rawQuery(
+      '''
       SELECT
         c.id,
         c.nome,
         COALESCE(c.saldo_inicial, 0) +
         COALESCE(SUM(CASE
-          WHEN m.status = 'Realizado' AND LOWER(m.tipo) = 'entrada' THEN m.valor
-          WHEN m.status = 'Realizado' AND LOWER(m.tipo) IN ('saída', 'saida') THEN -m.valor
+          WHEN m.status = 'Realizado'
+            AND LOWER(m.tipo) = 'entrada'
+            THEN m.valor
+          WHEN m.status = 'Realizado'
+            AND LOWER(m.tipo) IN ('saída', 'saida')
+            THEN -m.valor
           ELSE 0
         END), 0) AS saldo
       FROM financeiro_contas c
-      LEFT JOIN movimentos_financeiros m ON m.conta_id = c.id
+      LEFT JOIN movimentos_financeiros m
+        ON m.conta_id = c.id
       WHERE c.ativo = 1
       GROUP BY c.id, c.nome, c.saldo_inicial
       ORDER BY c.nome COLLATE NOCASE ASC
-    ''');
+      ''',
+    );
+
     return {
       for (final item in resultado)
-        (item['nome'] ?? '').toString(): _double(item['saldo']),
+        (item['nome'] ?? '').toString():
+            _double(item['saldo']),
     };
   }
 
@@ -261,9 +408,10 @@ class FinanceiroDashboardRepository {
   }
 
   static double _double(dynamic valor) {
-    if (valor is num) {
-      return valor.toDouble();
-    }
-    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0;
+    if (valor is num) return valor.toDouble();
+    return double.tryParse(
+          valor?.toString().trim().replaceAll(',', '.') ?? '',
+        ) ??
+        0;
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/conta_financeira.dart';
+import 'extrato_conta_page.dart';
 import '../repositories/conta_financeira_repository.dart';
 
 class ContasFinanceirasPage extends StatefulWidget {
@@ -43,6 +44,15 @@ class _ContasFinanceirasPageState extends State<ContasFinanceirasPage> {
       if (!mounted) return;
       setState(() => _carregando = false);
       _mensagem('$erro', erro: true);
+    }
+  }
+
+  Future<void> _abrirExtrato(ContaFinanceira conta) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => ExtratoContaPage(conta: conta)));
+    if (mounted) {
+      await _carregar();
     }
   }
 
@@ -154,7 +164,7 @@ class _ContasFinanceirasPageState extends State<ContasFinanceirasPage> {
                       (conta) => Card(
                         margin: const EdgeInsets.only(bottom: 9),
                         child: ListTile(
-                          enabled: conta.ativo,
+                          enabled: true,
                           leading: Icon(
                             _iconeTipo(conta.tipo),
                             color: conta.ativo
@@ -209,9 +219,7 @@ class _ContasFinanceirasPageState extends State<ContasFinanceirasPage> {
                               ),
                             ],
                           ),
-                          onTap: conta.ativo
-                              ? () => _abrirFormulario(conta: conta)
-                              : null,
+                          onTap: () => _abrirExtrato(conta),
                         ),
                       ),
                     ),

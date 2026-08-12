@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../repositories/dre_repository.dart';
+import '../repositories/meta_financeira_repository.dart';
 import '../repositories/precificacao_repository.dart';
+
+enum _DreVisualizacao { resumo, detalhado }
 
 class DrePage extends StatefulWidget {
   const DrePage({super.key});
@@ -13,6 +16,7 @@ class DrePage extends StatefulWidget {
 
 class _DrePageState extends State<DrePage> {
   final DreRepository _repository = DreRepository();
+  final MetaFinanceiraRepository _metaRepository = MetaFinanceiraRepository();
   final PrecificacaoRepository _precificacaoRepository =
       PrecificacaoRepository();
   final NumberFormat _moeda = NumberFormat.currency(
@@ -22,6 +26,7 @@ class _DrePageState extends State<DrePage> {
   final DateFormat _data = DateFormat('dd/MM/yyyy');
 
   DreRegime _regime = DreRegime.competencia;
+  _DreVisualizacao _visualizacao = _DreVisualizacao.resumo;
   DateTimeRange _periodo = DateTimeRange(
     start: DateTime(DateTime.now().year, DateTime.now().month, 1),
     end: DateTime(DateTime.now().year, DateTime.now().month + 1, 0),
@@ -30,6 +35,7 @@ class _DrePageState extends State<DrePage> {
   DreResultado? _resultado;
   List<DreServicoResultado> _servicos = const [];
   Map<String, PrecificacaoServico> _precificacaoPorServico = const {};
+  Map<String, double> _metas = const {};
   double _margemAlvoPrecificacao = 0;
 
   @override
@@ -52,6 +58,32 @@ class _DrePageState extends State<DrePage> {
         } catch (_) {
           // A DRE continua funcionando mesmo se a precificação ainda não
           // puder ser carregada. Nesse caso apenas escondemos a comparação.
+        }
+      }
+
+      var metas = const <String, double>{};
+
+      if (_regime == DreRegime.competencia) {
+        final ultimoDiaMes = DateTime(
+          _periodo.start.year,
+          _periodo.start.month + 1,
+          0,
+        ).day;
+        final periodoEhMesCompleto =
+            _periodo.start.year == _periodo.end.year &&
+            _periodo.start.month == _periodo.end.month &&
+            _periodo.start.day == 1 &&
+            _periodo.end.day == ultimoDiaMes;
+
+        if (periodoEhMesCompleto) {
+          try {
+            metas = await _metaRepository.obterResumoMes(
+              _periodo.start.year,
+              _periodo.start.month,
+            );
+          } catch (_) {
+            metas = const <String, double>{};
+          }
         }
       }
 
@@ -84,8 +116,8 @@ class _DrePageState extends State<DrePage> {
         _resultado = resultado;
         _servicos = servicos;
         _precificacaoPorServico = mapaPrecificacao;
-        _margemAlvoPrecificacao =
-            precificacao?.config.margemCliente ?? 0;
+        _metas = metas;
+        _margemAlvoPrecificacao = precificacao?.config.margemCliente ?? 0;
         _carregando = false;
       });
     } catch (erro) {
@@ -279,9 +311,7 @@ class _DrePageState extends State<DrePage> {
                 Text(
                   'Origem dos ${_moeda.format(detalhe.valor)}',
                   style: TextStyle(
-                    color: Theme.of(
-                      bottomContext,
-                    ).colorScheme.onSurfaceVariant,
+                    color: Theme.of(bottomContext).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -327,7 +357,6 @@ class _DrePageState extends State<DrePage> {
       },
     );
   }
-
 
   Future<void> _mostrarOrdensServico(DreServicoResultado servico) async {
     showDialog<void>(
@@ -392,9 +421,7 @@ class _DrePageState extends State<DrePage> {
                   'Resultado gerencial '
                   '${_moeda.format(servico.resultadoGerencialEstimado)}',
                   style: TextStyle(
-                    color: Theme.of(
-                      bottomContext,
-                    ).colorScheme.onSurfaceVariant,
+                    color: Theme.of(bottomContext).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -427,9 +454,7 @@ class _DrePageState extends State<DrePage> {
                           ),
                           title: Text(
                             ordem.numero,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           subtitle: Text(
                             [
@@ -626,10 +651,36 @@ class _DrePageState extends State<DrePage> {
                     ],
                     selected: {_regime},
                     onSelectionChanged: (selecionado) {
-                      setState(() => _regime = selecionado.first);
+                      setState(() {
+                        _regime = selecionado.first;
+                        if (_regime == DreRegime.caixa) {
+                          _visualizacao = _DreVisualizacao.detalhado;
+                        }
+                      });
                       _carregar();
                     },
                   ),
+                  if (_regime == DreRegime.competencia) ...[
+                    const SizedBox(height: 10),
+                    SegmentedButton<_DreVisualizacao>(
+                      segments: const [
+                        ButtonSegment(
+                          value: _DreVisualizacao.resumo,
+                          icon: Icon(Icons.speed_rounded),
+                          label: Text('Resumo'),
+                        ),
+                        ButtonSegment(
+                          value: _DreVisualizacao.detalhado,
+                          icon: Icon(Icons.account_tree_outlined),
+                          label: Text('Detalhado'),
+                        ),
+                      ],
+                      selected: {_visualizacao},
+                      onSelectionChanged: (selecionado) {
+                        setState(() => _visualizacao = selecionado.first);
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   _ExplicacaoRegime(regime: _regime),
                   const SizedBox(height: 10),
@@ -642,169 +693,180 @@ class _DrePageState extends State<DrePage> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _ResultadoPrincipal(
-                    resultado: resultado,
-                    moeda: _moeda,
-                    regime: _regime,
-                    percentual: _percentual,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _regime == DreRegime.competencia
-                        ? 'Como chegamos ao resultado'
-                        : 'Como o caixa se comportou',
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
+                  if (_regime == DreRegime.competencia &&
+                      _visualizacao == _DreVisualizacao.resumo) ...[
+                    _DreResumoExecutivo(
+                      resultado: resultado,
+                      metas: _metas,
+                      servicos: _servicos,
+                      moeda: _moeda,
+                      percentual: _percentual,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Toque em uma linha para ver o que compõe o valor.',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ] else ...[
+                    _ResultadoPrincipal(
+                      resultado: resultado,
+                      moeda: _moeda,
+                      regime: _regime,
+                      percentual: _percentual,
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  _BlocoDre(
-                    titulo: _regime == DreRegime.competencia
-                        ? 'Faturamento bruto'
-                        : 'Entradas reconhecidas',
-                    valor: resultado.receitaBruta,
-                    moeda: _moeda,
-                    icone: Icons.trending_up_rounded,
-                    onTap: () => _mostrarDetalhes(
+                    const SizedBox(height: 16),
+                    Text(
+                      _regime == DreRegime.competencia
+                          ? 'Como chegamos ao resultado'
+                          : 'Como o caixa se comportou',
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Toque em uma linha para ver o que compõe o valor.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _BlocoDre(
                       titulo: _regime == DreRegime.competencia
                           ? 'Faturamento bruto'
                           : 'Entradas reconhecidas',
-                      grupos: const ['Receita Bruta'],
-                      resultado: resultado,
-                      explicacao: _regime == DreRegime.competencia
-                          ? 'Vendas e serviços reconhecidos no período.'
-                          : 'Receitas consideradas pelo regime de caixa.',
-                    ),
-                  ),
-                  if (resultado.deducoes.abs() > 0.000001)
-                    _BlocoDre(
-                      titulo: 'Descontos e deduções',
-                      valor: -resultado.deducoes,
+                      valor: resultado.receitaBruta,
                       moeda: _moeda,
-                      icone: Icons.remove_circle_outline,
-                      compacto: true,
+                      icone: Icons.trending_up_rounded,
                       onTap: () => _mostrarDetalhes(
+                        titulo: _regime == DreRegime.competencia
+                            ? 'Faturamento bruto'
+                            : 'Entradas reconhecidas',
+                        grupos: const ['Receita Bruta'],
+                        resultado: resultado,
+                        explicacao: _regime == DreRegime.competencia
+                            ? 'Vendas e serviços reconhecidos no período.'
+                            : 'Receitas consideradas pelo regime de caixa.',
+                      ),
+                    ),
+                    if (resultado.deducoes.abs() > 0.000001)
+                      _BlocoDre(
                         titulo: 'Descontos e deduções',
-                        grupos: const ['Deduções'],
-                        resultado: resultado,
+                        valor: -resultado.deducoes,
+                        moeda: _moeda,
+                        icone: Icons.remove_circle_outline,
+                        compacto: true,
+                        onTap: () => _mostrarDetalhes(
+                          titulo: 'Descontos e deduções',
+                          grupos: const ['Deduções'],
+                          resultado: resultado,
+                        ),
                       ),
-                    ),
-                  _BlocoDre(
-                    titulo: _regime == DreRegime.competencia
-                        ? 'Receita líquida'
-                        : 'Entradas líquidas',
-                    valor: resultado.receitaLiquida,
-                    moeda: _moeda,
-                    icone: Icons.payments_outlined,
-                    destaque: true,
-                  ),
-                  if (_regime == DreRegime.competencia) ...[
-                    const SizedBox(height: 8),
-                    _ResultadoServicosSection(
-                      servicos: _servicos,
-                      precificacaoPorServico: _precificacaoPorServico,
-                      margemAlvoPrecificacao: _margemAlvoPrecificacao,
-                      moeda: _moeda,
-                      percentual: _percentual,
-                      quantidade: _quantidadeServico,
-                      onAbrirOrdens: _mostrarOrdensServico,
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  _BlocoDre(
-                    titulo: 'Custos das vendas',
-                    valor: -resultado.custosVariaveis,
-                    moeda: _moeda,
-                    icone: Icons.inventory_2_outlined,
-                    onTap: () => _mostrarDetalhes(
-                      titulo: 'Custos das vendas',
-                      grupos: const ['Custos Variáveis'],
-                      resultado: resultado,
-                      explicacao:
-                          'Produtos consumidos, taxas de cartão, comissões e '
-                          'outros custos diretamente ligados às vendas.',
-                    ),
-                  ),
-                  _BlocoDre(
-                    titulo: _regime == DreRegime.competencia
-                        ? 'Margem de contribuição'
-                        : 'Caixa após custos das vendas',
-                    valor: resultado.margemContribuicao,
-                    moeda: _moeda,
-                    icone: Icons.pie_chart_outline_rounded,
-                    destaque: true,
-                    complemento: _regime == DreRegime.competencia
-                        ? _percentual(
-                            _margemContribuicaoPercentual(resultado),
-                          )
-                        : 'Sobre entradas '
-                              '${_percentual(_margemContribuicaoPercentual(resultado))}',
-                  ),
-                  const SizedBox(height: 8),
-                  _BlocoDre(
-                    titulo: 'Despesas da empresa',
-                    valor: -_despesasEmpresa(resultado),
-                    moeda: _moeda,
-                    icone: Icons.business_outlined,
-                    onTap: () => _mostrarDetalhes(
-                      titulo: 'Despesas da empresa',
-                      grupos: const [
-                        'Despesas Operacionais',
-                        'Resultado Financeiro',
-                        'Outras Despesas',
-                      ],
-                      resultado: resultado,
-                      explicacao:
-                          'Estrutura da empresa, tarifas, juros e demais '
-                          'despesas reconhecidas no período.',
-                    ),
-                  ),
-                  if (resultado.outrasReceitas.abs() > 0.000001)
                     _BlocoDre(
-                      titulo: 'Outras receitas',
-                      valor: resultado.outrasReceitas,
+                      titulo: _regime == DreRegime.competencia
+                          ? 'Receita líquida'
+                          : 'Entradas líquidas',
+                      valor: resultado.receitaLiquida,
                       moeda: _moeda,
-                      icone: Icons.add_circle_outline,
-                      compacto: true,
+                      icone: Icons.payments_outlined,
+                      destaque: true,
+                    ),
+                    if (_regime == DreRegime.competencia) ...[
+                      const SizedBox(height: 8),
+                      _ResultadoServicosSection(
+                        servicos: _servicos,
+                        precificacaoPorServico: _precificacaoPorServico,
+                        margemAlvoPrecificacao: _margemAlvoPrecificacao,
+                        moeda: _moeda,
+                        percentual: _percentual,
+                        quantidade: _quantidadeServico,
+                        onAbrirOrdens: _mostrarOrdensServico,
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    _BlocoDre(
+                      titulo: 'Custos das vendas',
+                      valor: -resultado.custosVariaveis,
+                      moeda: _moeda,
+                      icone: Icons.inventory_2_outlined,
                       onTap: () => _mostrarDetalhes(
-                        titulo: 'Outras receitas',
-                        grupos: const ['Outras Receitas'],
+                        titulo: 'Custos das vendas',
+                        grupos: const ['Custos Variáveis'],
                         resultado: resultado,
+                        explicacao:
+                            'Produtos consumidos, taxas de cartão, comissões e '
+                            'outros custos diretamente ligados às vendas.',
                       ),
                     ),
-                  const SizedBox(height: 8),
-                  _BlocoDre(
-                    titulo: _regime == DreRegime.competencia
-                        ? 'Resultado do período'
-                        : 'Resultado de caixa',
-                    valor: resultado.resultadoGerencial,
-                    moeda: _moeda,
-                    icone: resultado.resultadoGerencial >= 0
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.warning_amber_rounded,
-                    destaqueFinal: true,
-                    complemento: _regime == DreRegime.competencia
-                        ? 'Margem ${_percentual(resultado.margemPercentual)}'
-                        : 'Sobre entradas '
-                              '${_percentual(resultado.margemPercentual)}',
-                  ),
-                  const SizedBox(height: 20),
-                  _DetalhamentoCompleto(
-                    resultado: resultado,
-                    moeda: _moeda,
-                    nomeGrupo: _nomeAmigavelGrupo,
-                    onDetalheTap: _mostrarOrigens,
-                  ),
-                  const SizedBox(height: 12),
-                  _NotaDre(regime: _regime),
+                    _BlocoDre(
+                      titulo: _regime == DreRegime.competencia
+                          ? 'Margem de contribuição'
+                          : 'Caixa após custos das vendas',
+                      valor: resultado.margemContribuicao,
+                      moeda: _moeda,
+                      icone: Icons.pie_chart_outline_rounded,
+                      destaque: true,
+                      complemento: _regime == DreRegime.competencia
+                          ? _percentual(
+                              _margemContribuicaoPercentual(resultado),
+                            )
+                          : 'Sobre entradas '
+                                '${_percentual(_margemContribuicaoPercentual(resultado))}',
+                    ),
+                    const SizedBox(height: 8),
+                    _BlocoDre(
+                      titulo: 'Despesas da empresa',
+                      valor: -_despesasEmpresa(resultado),
+                      moeda: _moeda,
+                      icone: Icons.business_outlined,
+                      onTap: () => _mostrarDetalhes(
+                        titulo: 'Despesas da empresa',
+                        grupos: const [
+                          'Despesas Operacionais',
+                          'Resultado Financeiro',
+                          'Outras Despesas',
+                        ],
+                        resultado: resultado,
+                        explicacao:
+                            'Estrutura da empresa, tarifas, juros e demais '
+                            'despesas reconhecidas no período.',
+                      ),
+                    ),
+                    if (resultado.outrasReceitas.abs() > 0.000001)
+                      _BlocoDre(
+                        titulo: 'Outras receitas',
+                        valor: resultado.outrasReceitas,
+                        moeda: _moeda,
+                        icone: Icons.add_circle_outline,
+                        compacto: true,
+                        onTap: () => _mostrarDetalhes(
+                          titulo: 'Outras receitas',
+                          grupos: const ['Outras Receitas'],
+                          resultado: resultado,
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    _BlocoDre(
+                      titulo: _regime == DreRegime.competencia
+                          ? 'Resultado do período'
+                          : 'Resultado de caixa',
+                      valor: resultado.resultadoGerencial,
+                      moeda: _moeda,
+                      icone: resultado.resultadoGerencial >= 0
+                          ? Icons.check_circle_outline_rounded
+                          : Icons.warning_amber_rounded,
+                      destaqueFinal: true,
+                      complemento: _regime == DreRegime.competencia
+                          ? 'Margem ${_percentual(resultado.margemPercentual)}'
+                          : 'Sobre entradas '
+                                '${_percentual(resultado.margemPercentual)}',
+                    ),
+                    const SizedBox(height: 20),
+                    _DetalhamentoCompleto(
+                      resultado: resultado,
+                      moeda: _moeda,
+                      nomeGrupo: _nomeAmigavelGrupo,
+                      onDetalheTap: _mostrarOrigens,
+                    ),
+                    const SizedBox(height: 12),
+                    _NotaDre(regime: _regime),
+                  ],
                 ],
               ),
             ),
@@ -812,6 +874,488 @@ class _DrePageState extends State<DrePage> {
   }
 }
 
+class _DreResumoExecutivo extends StatelessWidget {
+  const _DreResumoExecutivo({
+    required this.resultado,
+    required this.metas,
+    required this.servicos,
+    required this.moeda,
+    required this.percentual,
+  });
+
+  final DreResultado resultado;
+  final Map<String, double> metas;
+  final List<DreServicoResultado> servicos;
+  final NumberFormat moeda;
+  final String Function(double) percentual;
+
+  @override
+  Widget build(BuildContext context) {
+    final despesas =
+        resultado.custosVariaveis +
+        resultado.despesasOperacionais +
+        resultado.resultadoFinanceiro +
+        resultado.outrasDespesas;
+
+    final metaReceita = metas['Receita'] ?? 0;
+    final metaDespesa = metas['Despesa'] ?? 0;
+    final metaResultado = metas['Resultado'] ?? 0;
+
+    final porCategoria = <String, List<DreServicoResultado>>{};
+    for (final servico in servicos) {
+      final categoria = servico.categoria.trim().isEmpty
+          ? 'Sem categoria'
+          : servico.categoria.trim();
+      porCategoria
+          .putIfAbsent(categoria, () => <DreServicoResultado>[])
+          .add(servico);
+    }
+
+    final categorias = porCategoria.entries.toList()
+      ..sort((a, b) {
+        final receitaA = a.value.fold<double>(
+          0,
+          (soma, item) => soma + item.receitaLiquida,
+        );
+        final receitaB = b.value.fold<double>(
+          0,
+          (soma, item) => soma + item.receitaLiquida,
+        );
+        return receitaB.compareTo(receitaA);
+      });
+
+    final ranking = [...servicos]
+      ..sort(
+        (a, b) => b.resultadoGerencialEstimado.compareTo(
+          a.resultadoGerencialEstimado,
+        ),
+      );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.speed_rounded),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Meta x Resultado',
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        metas.isEmpty
+                            ? 'Visão rápida do resultado. Para comparar com '
+                                  'metas, selecione um mês completo e defina '
+                                  'as metas financeiras do período.'
+                            : 'Visão rápida para entender faturamento, gastos '
+                                  'e resultado sem precisar abrir toda a DRE.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _ResumoMetaCard(
+          titulo: 'Receita líquida',
+          meta: metaReceita,
+          realizado: resultado.receitaLiquida,
+          moeda: moeda,
+          positivoQuandoMaior: true,
+          icone: Icons.trending_up_rounded,
+        ),
+        const SizedBox(height: 8),
+        _ResumoMetaCard(
+          titulo: 'Custos + despesas',
+          meta: metaDespesa,
+          realizado: despesas,
+          moeda: moeda,
+          positivoQuandoMaior: false,
+          icone: Icons.trending_down_rounded,
+        ),
+        const SizedBox(height: 8),
+        _ResumoMetaCard(
+          titulo: 'Resultado do período',
+          meta: metaResultado,
+          realizado: resultado.resultadoGerencial,
+          moeda: moeda,
+          positivoQuandoMaior: true,
+          icone: Icons.account_balance_wallet_outlined,
+          complemento: 'Margem ${percentual(resultado.margemPercentual)}',
+          destaque: true,
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _IndicadorResumo(
+                titulo: 'Margem de contribuição',
+                valor: percentual(
+                  resultado.receitaLiquida.abs() <= 0.000001
+                      ? 0
+                      : resultado.margemContribuicao /
+                            resultado.receitaLiquida *
+                            100,
+                ),
+                subtitulo: moeda.format(resultado.margemContribuicao),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _IndicadorResumo(
+                titulo: 'Margem líquida',
+                valor: percentual(resultado.margemPercentual),
+                subtitulo: moeda.format(resultado.resultadoGerencial),
+              ),
+            ),
+          ],
+        ),
+        if (categorias.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          const Text(
+            'Receita por categoria de serviço',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'As categorias vêm diretamente do cadastro de serviços.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (var index = 0; index < categorias.length; index++) ...[
+                  Builder(
+                    builder: (context) {
+                      final entry = categorias[index];
+                      final receita = entry.value.fold<double>(
+                        0,
+                        (soma, item) => soma + item.receitaLiquida,
+                      );
+                      final resultadoCategoria = entry.value.fold<double>(
+                        0,
+                        (soma, item) => soma + item.resultadoGerencialEstimado,
+                      );
+                      final margem = receita.abs() <= 0.000001
+                          ? 0.0
+                          : resultadoCategoria / receita * 100;
+
+                      return ListTile(
+                        leading: const Icon(Icons.folder_outlined),
+                        title: Text(
+                          entry.key,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: Text(
+                          '${entry.value.length} '
+                          '${entry.value.length == 1 ? 'serviço' : 'serviços'}'
+                          ' • margem ${percentual(margem)}',
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              moeda.format(receita),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'lucro ${moeda.format(resultadoCategoria)}',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: resultadoCategoria >= 0
+                                    ? Colors.green.shade500
+                                    : Colors.red.shade400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  if (index < categorias.length - 1) const Divider(height: 1),
+                ],
+              ],
+            ),
+          ),
+        ],
+        if (ranking.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          const Text(
+            'Serviços mais rentáveis',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (
+                  var index = 0;
+                  index < ranking.length && index < 5;
+                  index++
+                ) ...[
+                  ListTile(
+                    leading: CircleAvatar(
+                      radius: 16,
+                      child: Text('${index + 1}'),
+                    ),
+                    title: Text(
+                      ranking[index].servico,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      '${ranking[index].categoria} • '
+                      'margem ${percentual(ranking[index].margemGerencial)}',
+                    ),
+                    trailing: Text(
+                      moeda.format(ranking[index].resultadoGerencialEstimado),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: ranking[index].resultadoGerencialEstimado >= 0
+                            ? Colors.green.shade500
+                            : Colors.red.shade400,
+                      ),
+                    ),
+                  ),
+                  if (index < ranking.length - 1 && index < 4)
+                    const Divider(height: 1),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ResumoMetaCard extends StatelessWidget {
+  const _ResumoMetaCard({
+    required this.titulo,
+    required this.meta,
+    required this.realizado,
+    required this.moeda,
+    required this.positivoQuandoMaior,
+    required this.icone,
+    this.complemento,
+    this.destaque = false,
+  });
+
+  final String titulo;
+  final double meta;
+  final double realizado;
+  final NumberFormat moeda;
+  final bool positivoQuandoMaior;
+  final IconData icone;
+  final String? complemento;
+  final bool destaque;
+
+  @override
+  Widget build(BuildContext context) {
+    final temMeta = meta > 0.000001;
+    final percentualMeta = temMeta ? realizado / meta * 100 : 0.0;
+    final diferenca = realizado - meta;
+    final favoravel = !temMeta
+        ? true
+        : positivoQuandoMaior
+        ? diferenca >= 0
+        : diferenca <= 0;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icone),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    titulo,
+                    style: TextStyle(
+                      fontSize: destaque ? 18 : 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (complemento != null)
+                  Text(
+                    complemento!,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (temMeta)
+                  Expanded(
+                    child: _ValorResumo(
+                      titulo: 'Meta',
+                      valor: moeda.format(meta),
+                    ),
+                  ),
+                Expanded(
+                  child: _ValorResumo(
+                    titulo: 'Resultado',
+                    valor: moeda.format(realizado),
+                    destaque: true,
+                  ),
+                ),
+                if (temMeta)
+                  Expanded(
+                    child: _ValorResumo(
+                      titulo: 'Atingimento',
+                      valor:
+                          '${percentualMeta.toStringAsFixed(1).replaceAll('.', ',')}%',
+                      destaque: favoravel,
+                    ),
+                  ),
+              ],
+            ),
+            if (temMeta) ...[
+              const SizedBox(height: 10),
+              LinearProgressIndicator(
+                value: (realizado / meta).clamp(0, 1).toDouble(),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                positivoQuandoMaior
+                    ? (diferenca >= 0
+                          ? 'Acima da meta em ${moeda.format(diferenca)}'
+                          : 'Falta ${moeda.format(diferenca.abs())} para a meta')
+                    : (diferenca <= 0
+                          ? 'Dentro da meta por ${moeda.format(diferenca.abs())}'
+                          : 'Acima da meta em ${moeda.format(diferenca)}'),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: favoravel
+                      ? Colors.green.shade500
+                      : Colors.orange.shade500,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ValorResumo extends StatelessWidget {
+  const _ValorResumo({
+    required this.titulo,
+    required this.valor,
+    this.destaque = false,
+  });
+
+  final String titulo;
+  final String valor;
+  final bool destaque;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          titulo,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          valor,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: destaque ? 17 : 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _IndicadorResumo extends StatelessWidget {
+  const _IndicadorResumo({
+    required this.titulo,
+    required this.valor,
+    required this.subtitulo,
+  });
+
+  final String titulo;
+  final String valor;
+  final String subtitulo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(13),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              titulo,
+              style: TextStyle(
+                fontSize: 11.5,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              valor,
+              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitulo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _ResultadoServicosSection extends StatelessWidget {
   const _ResultadoServicosSection({
@@ -846,6 +1390,29 @@ class _ResultadoServicosSection extends StatelessWidget {
       0,
       (soma, item) => soma + item.resultadoGerencialEstimado,
     );
+
+    final porCategoria = <String, List<DreServicoResultado>>{};
+    for (final item in servicos) {
+      final categoria = item.categoria.trim().isEmpty
+          ? 'Sem categoria'
+          : item.categoria.trim();
+      porCategoria
+          .putIfAbsent(categoria, () => <DreServicoResultado>[])
+          .add(item);
+    }
+
+    final categoriasOrdenadas = porCategoria.entries.toList()
+      ..sort((a, b) {
+        final resultadoA = a.value.fold<double>(
+          0,
+          (soma, item) => soma + item.resultadoGerencialEstimado,
+        );
+        final resultadoB = b.value.fold<double>(
+          0,
+          (soma, item) => soma + item.resultadoGerencialEstimado,
+        );
+        return resultadoB.compareTo(resultadoA);
+      });
 
     return Card(
       margin: EdgeInsets.zero,
@@ -886,22 +1453,127 @@ class _ResultadoServicosSection extends StatelessWidget {
             ),
           ),
           if (servicos.isNotEmpty)
-            for (var index = 0; index < servicos.length; index++) ...[
-              _ServicoResultadoTile(
-                posicao: index + 1,
-                servico: servicos[index],
-                precificacao: precificacaoPorServico[
-                    servicos[index].servico.trim().toLowerCase()
-                ],
+            for (
+              var index = 0;
+              index < categoriasOrdenadas.length;
+              index++
+            ) ...[
+              _CategoriaServicosResultado(
+                categoria: categoriasOrdenadas[index].key,
+                servicos: categoriasOrdenadas[index].value,
+                precificacaoPorServico: precificacaoPorServico,
                 margemAlvoPrecificacao: margemAlvoPrecificacao,
                 faturamentoTotalServicos: faturamentoServicos,
                 moeda: moeda,
                 percentual: percentual,
                 quantidade: quantidade,
-                onAbrirOrdens: () => onAbrirOrdens(servicos[index]),
+                onAbrirOrdens: onAbrirOrdens,
               ),
-              if (index < servicos.length - 1) const SizedBox(height: 7),
+              if (index < categoriasOrdenadas.length - 1)
+                const SizedBox(height: 8),
             ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoriaServicosResultado extends StatelessWidget {
+  const _CategoriaServicosResultado({
+    required this.categoria,
+    required this.servicos,
+    required this.precificacaoPorServico,
+    required this.margemAlvoPrecificacao,
+    required this.faturamentoTotalServicos,
+    required this.moeda,
+    required this.percentual,
+    required this.quantidade,
+    required this.onAbrirOrdens,
+  });
+
+  final String categoria;
+  final List<DreServicoResultado> servicos;
+  final Map<String, PrecificacaoServico> precificacaoPorServico;
+  final double margemAlvoPrecificacao;
+  final double faturamentoTotalServicos;
+  final NumberFormat moeda;
+  final String Function(double) percentual;
+  final String Function(double) quantidade;
+  final Future<void> Function(DreServicoResultado) onAbrirOrdens;
+
+  @override
+  Widget build(BuildContext context) {
+    final faturamento = servicos.fold<double>(
+      0,
+      (soma, item) => soma + item.receitaLiquida,
+    );
+    final resultado = servicos.fold<double>(
+      0,
+      (soma, item) => soma + item.resultadoGerencialEstimado,
+    );
+    final margem = faturamento.abs() <= 0.000001
+        ? 0.0
+        : resultado / faturamento * 100;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        leading: const Icon(Icons.folder_outlined),
+        title: Text(
+          categoria,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        subtitle: Text(
+          '${servicos.length} ${servicos.length == 1 ? 'serviço' : 'serviços'}'
+          ' • ${moeda.format(faturamento)} faturados',
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              moeda.format(resultado),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: resultado >= 0
+                    ? Colors.green.shade500
+                    : Colors.red.shade400,
+              ),
+            ),
+            Text(
+              'margem ${percentual(margem)}',
+              style: TextStyle(
+                fontSize: 10.5,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+        children: [
+          for (var index = 0; index < servicos.length; index++) ...[
+            _ServicoResultadoTile(
+              posicao: index + 1,
+              servico: servicos[index],
+              precificacao:
+                  precificacaoPorServico[servicos[index].servico
+                      .trim()
+                      .toLowerCase()],
+              margemAlvoPrecificacao: margemAlvoPrecificacao,
+              faturamentoTotalServicos: faturamentoTotalServicos,
+              moeda: moeda,
+              percentual: percentual,
+              quantidade: quantidade,
+              onAbrirOrdens: () => onAbrirOrdens(servicos[index]),
+            ),
+            if (index < servicos.length - 1) const SizedBox(height: 7),
+          ],
         ],
       ),
     );
@@ -938,11 +1610,10 @@ class _ServicoResultadoTile extends StatelessWidget {
         : servico.faturamentoBruto / faturamentoTotalServicos * 100;
     final positivo = servico.resultadoGerencialEstimado >= 0;
     final preco = precificacao;
-    final precisaRevisar = preco != null &&
-        (
-          preco.precoAtual < preco.precoMinimoSeguro ||
-          preco.precoSugerido > preco.precoAtual * 1.05
-        );
+    final precisaRevisar =
+        preco != null &&
+        (preco.precoAtual < preco.precoMinimoSeguro ||
+            preco.precoSugerido > preco.precoAtual * 1.05);
 
     return Container(
       decoration: BoxDecoration(
@@ -958,10 +1629,7 @@ class _ServicoResultadoTile extends StatelessWidget {
           radius: 17,
           child: Text(
             '$posicao',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(
@@ -983,9 +1651,7 @@ class _ServicoResultadoTile extends StatelessWidget {
               moeda.format(servico.resultadoGerencialEstimado),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: positivo
-                    ? Colors.green.shade500
-                    : Colors.red.shade400,
+                color: positivo ? Colors.green.shade500 : Colors.red.shade400,
               ),
             ),
             Text(
@@ -1090,9 +1756,7 @@ class _ServicoResultadoTile extends StatelessWidget {
                           precisaRevisar
                               ? 'Precificação recomenda revisão'
                               : 'Precificação dentro da faixa',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
@@ -1345,9 +2009,7 @@ class _ResultadoPrincipal extends StatelessWidget {
                       ? Icons.trending_up_rounded
                       : Icons.trending_down_rounded,
                   size: 18,
-                  color: positivo
-                      ? Colors.green.shade500
-                      : Colors.red.shade400,
+                  color: positivo ? Colors.green.shade500 : Colors.red.shade400,
                 ),
                 const SizedBox(width: 5),
                 Text(
@@ -1406,7 +2068,11 @@ class _BlocoDre extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: 13,
-            vertical: compacto ? 10 : destaqueFinal ? 16 : 13,
+            vertical: compacto
+                ? 10
+                : destaqueFinal
+                ? 16
+                : 13,
           ),
           child: Row(
             children: [
@@ -1424,8 +2090,7 @@ class _BlocoDre extends StatelessWidget {
                       titulo,
                       style: TextStyle(
                         fontSize: destaqueFinal ? 17 : 15,
-                        fontWeight:
-                            destaque || destaqueFinal
+                        fontWeight: destaque || destaqueFinal
                             ? FontWeight.bold
                             : FontWeight.w500,
                       ),
@@ -1436,9 +2101,7 @@ class _BlocoDre extends StatelessWidget {
                         complemento!,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -1449,9 +2112,12 @@ class _BlocoDre extends StatelessWidget {
               Text(
                 moeda.format(valor),
                 style: TextStyle(
-                  fontSize: destaqueFinal ? 18 : destaque ? 16 : 15,
-                  fontWeight:
-                      destaque || destaqueFinal
+                  fontSize: destaqueFinal
+                      ? 18
+                      : destaque
+                      ? 16
+                      : 15,
+                  fontWeight: destaque || destaqueFinal
                       ? FontWeight.bold
                       : FontWeight.w600,
                   color: destaqueFinal ? corResultado : null,
@@ -1502,9 +2168,7 @@ class _DetalhamentoCompleto extends StatelessWidget {
           'Detalhamento completo',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: const Text(
-          'Abra para conferir a composição dos valores',
-        ),
+        subtitle: const Text('Abra para conferir a composição dos valores'),
         children: grupos.entries.map((grupo) {
           final total = grupo.value.fold<double>(
             0,
@@ -1609,9 +2273,7 @@ class _OrigemTile extends StatelessWidget {
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        child: Icon(_iconeOrigem(origem.tipo), size: 19),
-      ),
+      leading: CircleAvatar(child: Icon(_iconeOrigem(origem.tipo), size: 19)),
       title: Text(
         origem.titulo,
         style: const TextStyle(fontWeight: FontWeight.w600),

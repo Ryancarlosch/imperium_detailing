@@ -79,6 +79,17 @@ class BackupService {
     );
   }
 
+  /// Cria uma cópia silenciosa usada pelo agendamento automático.
+  ///
+  /// O prefixo exclusivo permite aplicar retenção somente nas cópias
+  /// automáticas sem apagar backups manuais compartilhados pelo usuário.
+  Future<BackupResumo> criarBackupAutomatico() async {
+    return _criarBackupInterno(
+      registrarNoBanco: true,
+      prefixoArquivo: 'imperium_backup_auto',
+    );
+  }
+
   Future<RestauracaoResumo> restaurarBackup(String caminhoArquivo) async {
     final arquivoBackup = File(caminhoArquivo);
 

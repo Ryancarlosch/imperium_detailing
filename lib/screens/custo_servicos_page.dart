@@ -888,7 +888,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                     labelText: 'Horas produtivas/mês',
                     suffixText: 'h',
                     border: OutlineInputBorder(),
-                    helperText: 'Você escolhe a capacidade mensal usada.',
+                    helperText: 'Informe a capacidade produtiva total da equipe no mês (ex.: 3 pessoas × 220h = 660h).',
                   ),
                 ),
               ),
@@ -1288,12 +1288,15 @@ class _CabecalhoPrecificacao extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               resumo.usouHistoricoFinanceiro
-                  ? 'Baseada nos ${resumo.mesesConsiderados} meses completos '
-                        'de ${data.format(resumo.inicioHistorico)} a '
+                  ? 'A média realizada dos ${resumo.mesesConsiderados} meses '
+                        'completos ficou acima da estrutura cadastrada e foi '
+                        'usada como proteção de custo. Período: '
+                        '${data.format(resumo.inicioHistorico)} a '
                         '${data.format(resumo.fimHistorico)}.'
-                  : 'Ainda não há histórico financeiro suficiente nesse '
-                        'período. O cálculo está usando os custos estruturais '
-                        'cadastrados.',
+                  : 'A estrutura cadastrada foi usada como proteção de custo. '
+                        'O Imperium compara a média mensal realizada com os '
+                        'custos fixos + equipe e sempre usa a maior referência '
+                        'para evitar subprecificação.',
               style: TextStyle(
                 fontSize: 11.5,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -1349,6 +1352,17 @@ class _ServicoPrecificacaoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final diferenca = servico.diferencaSugerida;
     final diferencaAbs = diferenca.abs();
+    final taxaDecimal =
+        resumo.taxaCartaoMediaPercentual.clamp(0.0, 30.0).toDouble() / 100;
+    final resultadoAtual =
+        servico.precoAtual -
+        servico.custoBase -
+        (servico.precoAtual * taxaDecimal);
+    final resultadoSugerido =
+        servico.precoSugerido -
+        servico.custoBase -
+        (servico.precoSugerido * taxaDecimal);
+    final ganhoResultado = resultadoSugerido - resultadoAtual;
 
     late final String saude;
     late final IconData icone;
@@ -1477,6 +1491,33 @@ class _ServicoPrecificacaoCard extends StatelessWidget {
             moeda,
             texto: percentual(servico.margemAtual),
           ),
+          _LinhaPreco(
+            'Resultado estimado no preço atual',
+            resultadoAtual,
+            moeda,
+            destaque: resultadoAtual < 0,
+          ),
+          _LinhaPreco(
+            'Resultado estimado no preço sugerido',
+            resultadoSugerido,
+            moeda,
+            destaque: true,
+          ),
+          if (ganhoResultado > 0.01)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Potencial de resultado: +${moeda.format(ganhoResultado)} '
+                  'por execução ao aplicar o preço sugerido.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade500,
+                  ),
+                ),
+              ),
+            ),
           if (servico.aceitaRevenda) ...[
             const SizedBox(height: 8),
             Container(

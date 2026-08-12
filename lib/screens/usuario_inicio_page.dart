@@ -13,8 +13,7 @@ import 'orcamentos_page.dart';
 import 'ordens_servico_page.dart';
 import 'pagamentos_funcionarios_page.dart';
 
-class UsuarioInicioPage
-    extends StatelessWidget {
+class UsuarioInicioPage extends StatelessWidget {
   const UsuarioInicioPage({
     super.key,
     required this.sessao,
@@ -26,8 +25,7 @@ class UsuarioInicioPage
 
   bool _pode(String modulo) {
     if ((sessao['perfil'] ?? '').toString() ==
-        UsuarioRepository
-            .perfilAdministrador) {
+        UsuarioRepository.perfilAdministrador) {
       return true;
     }
 
@@ -46,25 +44,16 @@ class UsuarioInicioPage
     if (valor is int) return valor;
     if (valor is num) return valor.toInt();
 
-    return int.tryParse(
-      valor?.toString() ?? '',
-    );
+    return int.tryParse(valor?.toString() ?? '');
   }
 
-  Future<void> _abrir(
-    BuildContext context,
-    Widget pagina,
-  ) async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => pagina,
-      ),
-    );
+  Future<void> _abrir(BuildContext context, Widget pagina) async {
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => pagina));
   }
 
-  List<_ModuloUsuario> _modulos(
-    BuildContext context,
-  ) {
+  List<_ModuloUsuario> _modulos(BuildContext context) {
     final itens = <_ModuloUsuario>[];
 
     void adicionar(
@@ -78,27 +67,23 @@ class UsuarioInicioPage
           _ModuloUsuario(
             titulo: titulo,
             icone: icone,
-            onTap: () =>
-                _abrir(context, pagina),
+            onTap: () => _abrir(context, pagina),
           ),
         );
       }
     }
 
-    if (_pode('ponto') &&
-        _colaboradorId != null) {
+    if (_pode('ponto') && _colaboradorId != null) {
       itens.add(
         _ModuloUsuario(
           titulo: 'Meu ponto',
-          icone:
-              Icons.fingerprint_rounded,
+          icone: Icons.fingerprint_rounded,
           onTap: () => _abrir(
             context,
             MeuPontoPage(
-              colaboradorId:
-                  _colaboradorId!,
-              nome: (sessao[
-                              'colaborador_nome'] ??
+              colaboradorId: _colaboradorId!,
+              nome:
+                  (sessao['colaborador_nome'] ??
                           sessao['nome'] ??
                           'Funcionário')
                       .toString(),
@@ -133,9 +118,7 @@ class UsuarioInicioPage
       'ordens_servico',
       'Ordens de Serviço',
       Icons.car_repair_outlined,
-      const OrdensServicoPage(
-        statusInicial: 'Todos',
-      ),
+      const OrdensServicoPage(statusInicial: 'Todos'),
     );
 
     adicionar(
@@ -152,12 +135,7 @@ class UsuarioInicioPage
       const FinanceiroPage(),
     );
 
-    adicionar(
-      'dre',
-      'DRE',
-      Icons.analytics_outlined,
-      const DrePage(),
-    );
+    adicionar('dre', 'DRE', Icons.analytics_outlined, const DrePage());
 
     adicionar(
       'precificacao',
@@ -194,50 +172,34 @@ class UsuarioInicioPage
           IconButton(
             tooltip: 'Sair',
             onPressed: onLogout,
-            icon: const Icon(
-              Icons.logout_rounded,
-            ),
+            icon: const Icon(Icons.logout_rounded),
           ),
         ],
       ),
       body: ListView(
-        padding:
-            const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         children: [
           Card(
             margin: EdgeInsets.zero,
             child: Padding(
-              padding:
-                  const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const CircleAvatar(
-                    child: Icon(
-                      Icons.person_outline_rounded,
-                    ),
-                  ),
+                  const CircleAvatar(child: Icon(Icons.person_outline_rounded)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          (sessao['nome'] ??
-                                  'Usuário')
-                              .toString(),
-                          style:
-                              const TextStyle(
+                          (sessao['nome'] ?? 'Usuário').toString(),
+                          style: const TextStyle(
                             fontSize: 18,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          (sessao['perfil'] ?? '')
-                              .toString(),
-                        ),
+                        Text((sessao['perfil'] ?? '').toString()),
                       ],
                     ),
                   ),
@@ -249,61 +211,43 @@ class UsuarioInicioPage
           if (modulos.isEmpty)
             const Card(
               child: Padding(
-                padding:
-                    EdgeInsets.all(18),
+                padding: EdgeInsets.all(18),
                 child: Text(
                   'Nenhum módulo foi liberado para este usuário.',
-                  textAlign:
-                      TextAlign.center,
+                  textAlign: TextAlign.center,
                 ),
               ),
             )
           else
             GridView.builder(
               shrinkWrap: true,
-              physics:
-                  const NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: modulos.length,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
                 childAspectRatio: 1.45,
               ),
               itemBuilder: (_, index) {
-                final item =
-                    modulos[index];
+                final item = modulos[index];
 
                 return Card(
                   margin: EdgeInsets.zero,
                   child: InkWell(
-                    borderRadius:
-                        BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12),
                     onTap: item.onTap,
                     child: Padding(
-                      padding:
-                          const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(14),
                       child: Column(
-                        mainAxisAlignment:
-                            MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            item.icone,
-                            size: 30,
-                          ),
-                          const SizedBox(
-                            height: 9,
-                          ),
+                          Icon(item.icone, size: 30),
+                          const SizedBox(height: 9),
                           Text(
                             item.titulo,
-                            textAlign:
-                                TextAlign.center,
-                            style:
-                                const TextStyle(
-                              fontWeight:
-                                  FontWeight.w600,
-                            ),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),

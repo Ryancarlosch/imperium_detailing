@@ -1289,7 +1289,7 @@ class OrdemServicoRepository {
           formaPagamento: formaPagamentoLimpa,
           dataPagamento: pagamentoEfetivo,
           contaFinanceiraId: contaFinanceiraId,
-          parcelasTaxa: parcelasTaxa.clamp(1, 48).toInt(),
+          parcelasTaxa: parcelasTaxa.clamp(1, 12).toInt(),
         );
       }
     });

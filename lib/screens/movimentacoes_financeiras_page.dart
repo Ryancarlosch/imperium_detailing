@@ -828,6 +828,38 @@ class _MovimentoFormSheetState extends State<_MovimentoFormSheet> {
     }
   }
 
+  PlanoContaFinanceiro? _categoriaPorCodigo(String codigo) {
+    for (final item in widget.dados.plano) {
+      if (item.codigo == codigo && item.ativo) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  void _selecionarGastoPessoalProprietario() {
+    final categoria = _categoriaPorCodigo('2.01.02');
+    if (categoria?.id == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'A categoria de gastos pessoais do proprietário não está disponível.',
+            ),
+          ),
+        );
+      return;
+    }
+
+    setState(() {
+      _tipo = 'Saída';
+      _planoContaId = categoria!.id;
+      _clienteId = null;
+      _fornecedorId = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final teclado = MediaQuery.viewInsetsOf(context).bottom;
@@ -880,6 +912,28 @@ class _MovimentoFormSheetState extends State<_MovimentoFormSheet> {
                       },
               ),
               const SizedBox(height: 12),
+              if (_categoriaPorCodigo('2.01.02') != null) ...[
+                OutlinedButton.icon(
+                  onPressed: _salvando
+                      ? null
+                      : _selecionarGastoPessoalProprietario,
+                  icon: const Icon(Icons.person_outline_rounded),
+                  label: const Text('Selecionar gasto pessoal do proprietário'),
+                ),
+                if (_planoContaId == _categoriaPorCodigo('2.01.02')?.id) ...[
+                  const SizedBox(height: 7),
+                  Text(
+                    'Este valor será tratado como despesa efetivamente paga '
+                    'ao proprietário e entrará na DRE. O valor cadastrado em '
+                    'Mão de Obra continua apenas na precificação.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+              ],
               DropdownButtonFormField<int?>(
                 key: ValueKey('plano-$_tipo-$_planoContaId'),
                 initialValue: _planoContaId,

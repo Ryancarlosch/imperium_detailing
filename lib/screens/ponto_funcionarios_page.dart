@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/colaborador_custo.dart';
 import '../repositories/custos_repository.dart';
 import '../repositories/ponto_repository.dart';
+import '../repositories/ponto_sincronizado_repository.dart';
 import 'funcionarios_resumo_page.dart';
 import 'usuarios_permissoes_page.dart';
 
@@ -16,7 +17,7 @@ class PontoFuncionariosPage extends StatefulWidget {
 
 class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
   final CustosRepository _custosRepository = CustosRepository();
-  final PontoRepository _repository = PontoRepository();
+  final PontoRepository _repository = PontoSincronizadoRepository();
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
@@ -24,6 +25,8 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
 
   DateTime _mes = DateTime(DateTime.now().year, DateTime.now().month);
   bool _carregando = true;
+  bool _carregandoDetalhes = false;
+
   List<ColaboradorCusto> _colaboradores = const [];
   Map<int, Map<String, dynamic>> _resumos = const {};
   Map<int, Map<String, dynamic>> _estadosBatida = const {};
@@ -39,42 +42,99 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
 
   Future<void> _carregar() async {
     if (mounted) {
-      setState(() => _carregando = true);
+      setState(() {
+        _carregando = true;
+        _carregandoDetalhes = false;
+      });
     }
 
     try {
-      await _repository.garantirEstrutura();
+      // A lista de funcionários é local e deve aparecer imediatamente.
       final colaboradores = await _custosRepository.listarColaboradores();
-
-      final resumos = <int, Map<String, dynamic>>{};
-      final estadosBatida = <int, Map<String, dynamic>>{};
-
-      for (final colaborador in colaboradores) {
-        final id = colaborador.id;
-        if (id == null) continue;
-
-        resumos[id] = await _repository.obterFechamentoMes(
-          colaboradorId: id,
-          inicio: _inicioMes,
-          fim: _fimMes,
-        );
-
-        estadosBatida[id] =
-            await _repository.obterEstadoBatidaHoje(id);
-      }
 
       if (!mounted) return;
 
       setState(() {
         _colaboradores = colaboradores;
+        _resumos = const {};
+        _estadosBatida = const {};
+        _carregando = false;
+        _carregandoDetalhes = colaboradores.isNotEmpty;
+      });
+
+      if (colaboradores.isEmpty) {
+        return;
+      }
+
+      await _repository.garantirEstrutura();
+
+      // Carrega os funcionários e seus resumos em paralelo.
+      final tarefas = colaboradores
+          .where((colaborador) => colaborador.id != null)
+          .map((colaborador) async {
+            final id = colaborador.id!;
+
+            try {
+              final detalhes = await Future.wait<dynamic>([
+                _repository.obterFechamentoMes(
+                  colaboradorId: id,
+                  inicio: _inicioMes,
+                  fim: _fimMes,
+                ),
+                _repository.obterEstadoBatidaHoje(id),
+              ]);
+
+              return <String, dynamic>{
+                'id': id,
+                'resumo': Map<String, dynamic>.from(detalhes[0] as Map),
+                'estado': Map<String, dynamic>.from(detalhes[1] as Map),
+              };
+            } catch (_) {
+              return <String, dynamic>{'id': id};
+            }
+          })
+          .toList();
+
+      final detalhes = await Future.wait<Map<String, dynamic>>(tarefas);
+
+      if (!mounted) return;
+
+      final resumos = <int, Map<String, dynamic>>{};
+      final estadosBatida = <int, Map<String, dynamic>>{};
+
+      for (final item in detalhes) {
+        final id = item['id'];
+        if (id is! int) continue;
+
+        final resumo = item['resumo'];
+        final estado = item['estado'];
+
+        if (resumo is Map) {
+          resumos[id] = Map<String, dynamic>.from(resumo);
+        }
+
+        if (estado is Map) {
+          estadosBatida[id] = Map<String, dynamic>.from(estado);
+        }
+      }
+
+      setState(() {
         _resumos = resumos;
         _estadosBatida = estadosBatida;
-        _carregando = false;
+        _carregandoDetalhes = false;
       });
     } catch (erro) {
       if (!mounted) return;
-      setState(() => _carregando = false);
-      _mensagem('Não foi possível carregar o ponto.\n$erro', erro: true);
+
+      setState(() {
+        _carregando = false;
+        _carregandoDetalhes = false;
+      });
+
+      _mensagem(
+        'Não foi possível atualizar os detalhes do ponto.\n$erro',
+        erro: true,
+      );
     }
   }
 
@@ -120,10 +180,10 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
       }
 
       final entrada = (registro['entrada'] ?? '').toString().trim();
-      final intervaloInicio =
-          (registro['intervalo_inicio'] ?? '').toString().trim();
-      final intervaloFim =
-          (registro['intervalo_fim'] ?? '').toString().trim();
+      final intervaloInicio = (registro['intervalo_inicio'] ?? '')
+          .toString()
+          .trim();
+      final intervaloFim = (registro['intervalo_fim'] ?? '').toString().trim();
       final saida = (registro['saida'] ?? '').toString().trim();
 
       if (saida.isNotEmpty) return 'Concluído';
@@ -184,15 +244,12 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
     return resultado;
   }
 
-  Future<void> _baterPonto(
-    ColaboradorCusto colaborador,
-  ) async {
+  Future<void> _baterPonto(ColaboradorCusto colaborador) async {
     final id = colaborador.id;
     if (id == null) return;
 
     final estado = _estadosBatida[id];
-    final rotulo =
-        (estado?['rotulo'] ?? 'Registrar batida').toString();
+    final rotulo = (estado?['rotulo'] ?? 'Registrar batida').toString();
 
     final confirmou = await showDialog<bool>(
       context: context,
@@ -205,13 +262,11 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('Confirmar'),
           ),
         ],
@@ -221,9 +276,7 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
     if (confirmou != true) return;
 
     try {
-      final resultado = await _repository.registrarBatida(
-        colaboradorId: id,
-      );
+      final resultado = await _repository.registrarBatida(colaboradorId: id);
 
       await _carregar();
 
@@ -251,9 +304,7 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(
-            decimal: true,
-          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
             labelText: 'Adicional',
             suffixText: '%',
@@ -343,10 +394,7 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
           repository: _repository,
           colaborador: colaborador,
           mes: _mes,
-          onEditar: ({
-            required DateTime data,
-            Map<String, dynamic>? registro,
-          }) {
+          onEditar: ({required DateTime data, Map<String, dynamic>? registro}) {
             return _novoLancamento(
               colaborador: colaborador,
               data: data,
@@ -386,15 +434,12 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                 : () async {
                     await Navigator.of(context).push<void>(
                       MaterialPageRoute(
-                        builder: (_) =>
-                            const UsuariosPermissoesPage(),
+                        builder: (_) => const UsuariosPermissoesPage(),
                       ),
                     );
                     await _carregar();
                   },
-            icon: const Icon(
-              Icons.manage_accounts_outlined,
-            ),
+            icon: const Icon(Icons.manage_accounts_outlined),
           ),
           IconButton(
             tooltip: 'Resumo dos funcionários',
@@ -403,8 +448,7 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                 : () async {
                     await Navigator.of(context).push<void>(
                       MaterialPageRoute(
-                        builder: (_) =>
-                            const FuncionariosResumoPage(),
+                        builder: (_) => const FuncionariosResumoPage(),
                       ),
                     );
                     await _carregar();
@@ -472,6 +516,10 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  if (_carregandoDetalhes) ...[
+                    const LinearProgressIndicator(),
+                    const SizedBox(height: 12),
+                  ],
                   _PainelHojeCard(
                     data: DateTime.now(),
                     contagem: _contagemHoje,
@@ -503,17 +551,15 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                   else
                     ..._colaboradores.map((colaborador) {
                       final id = colaborador.id;
-                      final resumo =
-                          id == null ? null : _resumos[id];
-                      final estadoBatida =
-                          id == null ? null : _estadosBatida[id];
-                      final registroHojeBruto =
-                          estadoBatida?['registro'];
+                      final resumo = id == null ? null : _resumos[id];
+                      final estadoBatida = id == null
+                          ? null
+                          : _estadosBatida[id];
+                      final registroHojeBruto = estadoBatida?['registro'];
                       final registroHoje = registroHojeBruto is Map
                           ? Map<String, dynamic>.from(registroHojeBruto)
                           : null;
-                      final batidaConcluida =
-                          estadoBatida?['concluido'] == 1;
+                      final batidaConcluida = estadoBatida?['concluido'] == 1;
                       final statusHoje = _statusHoje(estadoBatida);
 
                       return Card(
@@ -602,9 +648,8 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                                           FilledButton.tonalIcon(
                                             onPressed: batidaConcluida
                                                 ? null
-                                                : () => _baterPonto(
-                                                      colaborador,
-                                                    ),
+                                                : () =>
+                                                      _baterPonto(colaborador),
                                             icon: Icon(
                                               batidaConcluida
                                                   ? Icons.check_rounded
@@ -626,14 +671,12 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                                                 .toString()
                                                 .isNotEmpty)
                                               'Entrada ${registroHoje['entrada']}',
-                                            if ((registroHoje[
-                                                        'intervalo_inicio'] ??
+                                            if ((registroHoje['intervalo_inicio'] ??
                                                     '')
                                                 .toString()
                                                 .isNotEmpty)
                                               'Intervalo ${registroHoje['intervalo_inicio']}',
-                                            if ((registroHoje[
-                                                        'intervalo_fim'] ??
+                                            if ((registroHoje['intervalo_fim'] ??
                                                     '')
                                                 .toString()
                                                 .isNotEmpty)
@@ -645,9 +688,9 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                                           ].join(' • '),
                                           style: TextStyle(
                                             fontSize: 11.5,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                       ],
@@ -668,9 +711,7 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                                     ),
                                     _IndicadorPonto(
                                       titulo: 'Extras',
-                                      valor: _horas(
-                                        resumo?['minutos_extras'],
-                                      ),
+                                      valor: _horas(resumo?['minutos_extras']),
                                       icone: Icons.add_alarm_outlined,
                                     ),
                                     _IndicadorPonto(
@@ -682,20 +723,17 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                                     ),
                                     _IndicadorPonto(
                                       titulo: 'Faltas',
-                                      valor:
-                                          '${resumo?['faltas'] ?? 0}',
+                                      valor: '${resumo?['faltas'] ?? 0}',
                                       icone: Icons.event_busy_outlined,
                                     ),
                                     _IndicadorPonto(
                                       titulo: 'Pendentes',
-                                      valor:
-                                          '${resumo?['pendencias'] ?? 0}',
+                                      valor: '${resumo?['pendencias'] ?? 0}',
                                       icone: Icons.pending_actions_outlined,
                                     ),
                                     _IndicadorPonto(
                                       titulo: 'Incompletos',
-                                      valor:
-                                          '${resumo?['incompletos'] ?? 0}',
+                                      valor: '${resumo?['incompletos'] ?? 0}',
                                       icone: Icons.error_outline_rounded,
                                     ),
                                     _IndicadorPonto(
@@ -704,9 +742,9 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                                           '${resumo?['fechamento_status'] ?? 'Aberto'}',
                                       icone:
                                           resumo?['fechamento_status'] ==
-                                                  'Fechado'
-                                              ? Icons.lock_outline_rounded
-                                              : Icons.lock_open_rounded,
+                                              'Fechado'
+                                          ? Icons.lock_outline_rounded
+                                          : Icons.lock_open_rounded,
                                     ),
                                   ],
                                 ),
@@ -756,10 +794,7 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
 }
 
 class _PainelHojeCard extends StatelessWidget {
-  const _PainelHojeCard({
-    required this.data,
-    required this.contagem,
-  });
+  const _PainelHojeCard({required this.data, required this.contagem});
 
   final DateTime data;
   final Map<String, int> contagem;
@@ -800,9 +835,7 @@ class _PainelHojeCard extends StatelessWidget {
                   '$totalAtivos funcionários',
                   style: TextStyle(
                     fontSize: 11.5,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurfaceVariant,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -870,14 +903,9 @@ class _StatusHojeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-        ),
+        border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -887,9 +915,7 @@ class _StatusHojeChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             '$titulo: $quantidade',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -925,14 +951,8 @@ class _IndicadorPonto extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                titulo,
-                style: const TextStyle(fontSize: 11),
-              ),
-              Text(
-                valor,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
+              Text(titulo, style: const TextStyle(fontSize: 11)),
+              Text(valor, style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
         ],
@@ -971,8 +991,7 @@ class _ValorPontoResumo extends StatelessWidget {
             valor,
             style: TextStyle(
               fontSize: destaque ? 15 : 13,
-              fontWeight:
-                  destaque ? FontWeight.bold : FontWeight.w600,
+              fontWeight: destaque ? FontWeight.bold : FontWeight.w600,
             ),
           ),
         ],
@@ -995,7 +1014,8 @@ class _EspelhoPontoPage extends StatefulWidget {
   final Future<void> Function({
     required DateTime data,
     Map<String, dynamic>? registro,
-  }) onEditar;
+  })
+  onEditar;
 
   @override
   State<_EspelhoPontoPage> createState() => _EspelhoPontoPageState();
@@ -1006,14 +1026,11 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
     locale: 'pt_BR',
     symbol: 'R\$',
   );
-
   bool _carregando = true;
   Map<String, dynamic>? _espelho;
 
-  DateTime get _inicio =>
-      DateTime(widget.mes.year, widget.mes.month, 1);
-  DateTime get _fim =>
-      DateTime(widget.mes.year, widget.mes.month + 1, 0);
+  DateTime get _inicio => DateTime(widget.mes.year, widget.mes.month, 1);
+  DateTime get _fim => DateTime(widget.mes.year, widget.mes.month + 1, 0);
 
   @override
   void initState() {
@@ -1067,10 +1084,8 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
     final espelho = _espelho;
     if (espelho == null) return;
 
-    final pendencias =
-        (espelho['pendencias'] as num?)?.toInt() ?? 0;
-    final incompletos =
-        (espelho['incompletos'] as num?)?.toInt() ?? 0;
+    final pendencias = (espelho['pendencias'] as num?)?.toInt() ?? 0;
+    final incompletos = (espelho['incompletos'] as num?)?.toInt() ?? 0;
 
     if (pendencias > 0 || incompletos > 0) {
       final partes = <String>[];
@@ -1083,9 +1098,7 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Resolva ${partes.join(' e ')} antes do fechamento.',
-          ),
+          content: Text('Resolva ${partes.join(' e ')} antes do fechamento.'),
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -1107,13 +1120,11 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Cancelar'),
           ),
           FilledButton.icon(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             icon: const Icon(Icons.lock_outline_rounded),
             label: const Text('Fechar mês'),
           ),
@@ -1135,17 +1146,12 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ponto mensal fechado e aprovado.'),
-        ),
+        const SnackBar(content: Text('Ponto mensal fechado e aprovado.')),
       );
     } catch (erro) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$erro'),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text('$erro'), backgroundColor: Colors.red.shade700),
       );
     }
   }
@@ -1170,8 +1176,7 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancelar'),
           ),
           FilledButton(
@@ -1204,17 +1209,12 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ponto mensal reaberto para correção.'),
-        ),
+        const SnackBar(content: Text('Ponto mensal reaberto para correção.')),
       );
     } catch (erro) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$erro'),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text('$erro'), backgroundColor: Colors.red.shade700),
       );
     }
   }
@@ -1235,8 +1235,7 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
           Text(
             '$prefixo${_moeda.format(numero)}',
             style: TextStyle(
-              fontWeight:
-                  destaque ? FontWeight.bold : FontWeight.w500,
+              fontWeight: destaque ? FontWeight.bold : FontWeight.w500,
             ),
           ),
         ],
@@ -1248,15 +1247,11 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
   Widget build(BuildContext context) {
     final espelho = _espelho;
     final dias = espelho?['dias'] is List
-        ? List<Map<String, dynamic>>.from(
-            espelho!['dias'] as List<dynamic>,
-          )
+        ? List<Map<String, dynamic>>.from(espelho!['dias'] as List<dynamic>)
         : const <Map<String, dynamic>>[];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.colaborador.nome),
-      ),
+      appBar: AppBar(title: Text(widget.colaborador.nome)),
       body: _carregando
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -1278,9 +1273,7 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
                           Text(
                             'Trabalhadas: ${_horas(espelho?['minutos_trabalhados'])}',
                           ),
-                          Text(
-                            'Extras: ${_horas(espelho?['minutos_extras'])}',
-                          ),
+                          Text('Extras: ${_horas(espelho?['minutos_extras'])}'),
                           Text(
                             'Faltantes: ${_horas(espelho?['minutos_faltantes'])}',
                           ),
@@ -1288,9 +1281,7 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
                           Text('Atestados: ${espelho?['atestados'] ?? 0}'),
                           Text('Folgas: ${espelho?['folgas'] ?? 0}'),
                           Text('Pendentes: ${espelho?['pendencias'] ?? 0}'),
-                          Text(
-                            'Incompletos: ${espelho?['incompletos'] ?? 0}',
-                          ),
+                          Text('Incompletos: ${espelho?['incompletos'] ?? 0}'),
                         ],
                       ),
                     ),
@@ -1310,8 +1301,7 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   espelho?['fechamento_status'] == 'Fechado'
@@ -1328,9 +1318,9 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
                                       : 'Resolva pendências antes de fechar o mês.',
                                   style: TextStyle(
                                     fontSize: 11.5,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -1396,8 +1386,8 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
                             destaque: true,
                           ),
                           if ((espelho?['pago_acima_estimado'] as num?)
-                                  ?.toDouble() !=
-                              null &&
+                                      ?.toDouble() !=
+                                  null &&
                               ((espelho?['pago_acima_estimado'] as num?)
                                           ?.toDouble() ??
                                       0) >
@@ -1423,8 +1413,9 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
                   ),
                   const SizedBox(height: 14),
                   ...dias.map((dia) {
-                    final data =
-                        DateTime.tryParse(dia['data']?.toString() ?? '');
+                    final data = DateTime.tryParse(
+                      dia['data']?.toString() ?? '',
+                    );
                     if (data == null) {
                       return const SizedBox.shrink();
                     }
@@ -1433,12 +1424,9 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
                     final registro = registroBruto is Map
                         ? Map<String, dynamic>.from(registroBruto)
                         : null;
-                    final status =
-                        (dia['status_exibido'] ?? '').toString();
-                    final entrada =
-                        registro?['entrada']?.toString() ?? '';
-                    final saida =
-                        registro?['saida']?.toString() ?? '';
+                    final status = (dia['status_exibido'] ?? '').toString();
+                    final entrada = registro?['entrada']?.toString() ?? '';
+                    final saida = registro?['saida']?.toString() ?? '';
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
@@ -1466,13 +1454,13 @@ class _EspelhoPontoPageState extends State<_EspelhoPontoPage> {
                         subtitle: Text(
                           registro != null && status == 'Trabalhado'
                               ? '${entrada.isEmpty ? '--:--' : entrada} → '
-                                  '${saida.isEmpty ? '--:--' : saida} • '
-                                  '${_horas(dia['minutos_trabalhados'])}'
+                                    '${saida.isEmpty ? '--:--' : saida} • '
+                                    '${_horas(dia['minutos_trabalhados'])}'
                               : dia['jornada_ativa'] == 1
-                                  ? 'Previsto: '
-                                      '${dia['jornada_entrada'] ?? '--:--'} → '
-                                      '${dia['jornada_saida'] ?? '--:--'}'
-                                  : 'Sem jornada prevista',
+                              ? 'Previsto: '
+                                    '${dia['jornada_entrada'] ?? '--:--'} → '
+                                    '${dia['jornada_saida'] ?? '--:--'}'
+                              : 'Sem jornada prevista',
                         ),
                         trailing: Icon(
                           espelho?['fechamento_status'] == 'Fechado'
@@ -1537,22 +1525,19 @@ class _PontoFormSheetState extends State<_PontoFormSheet> {
   void initState() {
     super.initState();
 
-    _colaborador = widget.colaboradorInicial ??
-        (widget.colaboradores.length == 1
-            ? widget.colaboradores.first
-            : null);
+    _colaborador =
+        widget.colaboradorInicial ??
+        (widget.colaboradores.length == 1 ? widget.colaboradores.first : null);
     _data = widget.dataInicial ?? DateTime.now();
 
     final registro = widget.registroExistente;
     if (registro != null) {
-      _situacao =
-          (registro['situacao'] ?? 'Trabalhado').toString();
+      _situacao = (registro['situacao'] ?? 'Trabalhado').toString();
       _entrada = _textoNulo(registro['entrada']);
       _intervaloInicio = _textoNulo(registro['intervalo_inicio']);
       _intervaloFim = _textoNulo(registro['intervalo_fim']);
       _saida = _textoNulo(registro['saida']);
-      _observacoes.text =
-          (registro['observacoes'] ?? '').toString();
+      _observacoes.text = (registro['observacoes'] ?? '').toString();
     }
   }
 
@@ -1595,10 +1580,7 @@ class _PontoFormSheetState extends State<_PontoFormSheet> {
       }
     }
 
-    final hora = await showTimePicker(
-      context: context,
-      initialTime: inicial,
-    );
+    final hora = await showTimePicker(context: context, initialTime: inicial);
 
     if (hora == null) return null;
 
@@ -1649,10 +1631,7 @@ class _PontoFormSheetState extends State<_PontoFormSheet> {
       if (!mounted) return;
       setState(() => _salvando = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$erro'),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text('$erro'), backgroundColor: Colors.red.shade700),
       );
     }
   }
@@ -1698,10 +1677,7 @@ class _PontoFormSheetState extends State<_PontoFormSheet> {
                     .map(
                       (item) => DropdownMenuItem(
                         value: item,
-                        child: Text(
-                          item.nome,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text(item.nome, overflow: TextOverflow.ellipsis),
                       ),
                     )
                     .toList(),
@@ -1715,9 +1691,7 @@ class _PontoFormSheetState extends State<_PontoFormSheet> {
               OutlinedButton.icon(
                 onPressed: _editando || _salvando ? null : _selecionarData,
                 icon: const Icon(Icons.calendar_today_outlined),
-                label: Text(
-                  'Data: ${DateFormat('dd/MM/yyyy').format(_data)}',
-                ),
+                label: Text('Data: ${DateFormat('dd/MM/yyyy').format(_data)}'),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -1728,10 +1702,8 @@ class _PontoFormSheetState extends State<_PontoFormSheet> {
                 ),
                 items: PontoRepository.situacoes
                     .map(
-                      (item) => DropdownMenuItem(
-                        value: item,
-                        child: Text(item),
-                      ),
+                      (item) =>
+                          DropdownMenuItem(value: item, child: Text(item)),
                     )
                     .toList(),
                 onChanged: _salvando
@@ -1767,9 +1739,7 @@ class _PontoFormSheetState extends State<_PontoFormSheet> {
                         ),
                         onLimpar: _intervaloInicio == null
                             ? null
-                            : () => setState(
-                                  () => _intervaloInicio = null,
-                                ),
+                            : () => setState(() => _intervaloInicio = null),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1784,9 +1754,7 @@ class _PontoFormSheetState extends State<_PontoFormSheet> {
                         ),
                         onLimpar: _intervaloFim == null
                             ? null
-                            : () => setState(
-                                  () => _intervaloFim = null,
-                                ),
+                            : () => setState(() => _intervaloFim = null),
                       ),
                     ),
                   ],
@@ -1795,11 +1763,8 @@ class _PontoFormSheetState extends State<_PontoFormSheet> {
                 _CampoHoraPonto(
                   titulo: 'Saída *',
                   valor: _saida,
-                  onTap: () => _editarHora(
-                    'Saída',
-                    _saida,
-                    (valor) => _saida = valor,
-                  ),
+                  onTap: () =>
+                      _editarHora('Saída', _saida, (valor) => _saida = valor),
                 ),
               ],
               const SizedBox(height: 12),
@@ -1985,10 +1950,7 @@ class _JornadaPontoPageState extends State<_JornadaPontoPage> {
     } catch (erro) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$erro'),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text('$erro'), backgroundColor: Colors.red.shade700),
       );
     }
   }
@@ -2028,7 +1990,7 @@ class _JornadaPontoPageState extends State<_JornadaPontoPage> {
                       subtitle: Text(
                         ativo
                             ? '${dia['entrada'] ?? '--:--'} → '
-                                '${dia['saida'] ?? '--:--'}'
+                                  '${dia['saida'] ?? '--:--'}'
                             : 'Sem expediente',
                       ),
                       trailing: const Icon(Icons.edit_outlined),
@@ -2074,10 +2036,7 @@ class _JornadaDiaDialogState extends State<_JornadaDiaDialog> {
     _saida = widget.dia['saida']?.toString();
   }
 
-  Future<void> _editar(
-    String? atual,
-    void Function(String?) aplicar,
-  ) async {
+  Future<void> _editar(String? atual, void Function(String?) aplicar) async {
     final valor = await widget.selecionarHora(atual);
     if (valor != null && mounted) {
       setState(() => aplicar(valor));
@@ -2103,10 +2062,7 @@ class _JornadaDiaDialogState extends State<_JornadaDiaDialog> {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Entrada'),
                 trailing: Text(_entrada ?? '--:--'),
-                onTap: () => _editar(
-                  _entrada,
-                  (valor) => _entrada = valor,
-                ),
+                onTap: () => _editar(_entrada, (valor) => _entrada = valor),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -2121,19 +2077,14 @@ class _JornadaDiaDialogState extends State<_JornadaDiaDialog> {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Fim intervalo'),
                 trailing: Text(_intervaloFim ?? '--:--'),
-                onTap: () => _editar(
-                  _intervaloFim,
-                  (valor) => _intervaloFim = valor,
-                ),
+                onTap: () =>
+                    _editar(_intervaloFim, (valor) => _intervaloFim = valor),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Saída'),
                 trailing: Text(_saida ?? '--:--'),
-                onTap: () => _editar(
-                  _saida,
-                  (valor) => _saida = valor,
-                ),
+                onTap: () => _editar(_saida, (valor) => _saida = valor),
               ),
               TextButton(
                 onPressed: () {

@@ -1058,14 +1058,14 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
                     ),
                   ),
                 ),
-                if (contas.where((conta) => conta.id != null).isEmpty)
+                if (contas.where((conta) => conta.id != null && conta.tipo == 'Maquininha').isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(18),
                     child: Text(
                       'Nenhuma conta de maquininha foi cadastrada.',
                     ),
                   ),
-                ...contas.where((conta) => conta.id != null).map(
+                ...contas.where((conta) => conta.id != null && conta.tipo == 'Maquininha').map(
                   (conta) => ListTile(
                     leading: const Icon(Icons.account_balance_wallet_outlined),
                     title: Text(conta.nome),
@@ -1107,7 +1107,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
                 ),
                 Expanded(
                   child: ListView.builder(
-                    itemCount: 24,
+                    itemCount: 12,
                     itemBuilder: (_, index) {
                       final parcelas = index + 1;
                       return ListTile(

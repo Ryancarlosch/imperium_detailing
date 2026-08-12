@@ -133,7 +133,8 @@ class PontoRepository {
       )
     ''');
 
-    final quantidade = Sqflite.firstIntValue(
+    final quantidade =
+        Sqflite.firstIntValue(
           await database.rawQuery(
             'SELECT COUNT(*) FROM financeiro_ponto_jornada',
           ),
@@ -144,48 +145,36 @@ class PontoRepository {
       final agora = DateTime.now().toIso8601String();
 
       for (var dia = DateTime.monday; dia <= DateTime.friday; dia++) {
-        await database.insert(
-          'financeiro_ponto_jornada',
-          {
-            'dia_semana': dia,
-            'ativo': 1,
-            'entrada': '08:00',
-            'intervalo_inicio': '12:00',
-            'intervalo_fim': '13:00',
-            'saida': '17:00',
-            'atualizado_em': agora,
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
-      }
-
-      await database.insert(
-        'financeiro_ponto_jornada',
-        {
-          'dia_semana': DateTime.saturday,
+        await database.insert('financeiro_ponto_jornada', {
+          'dia_semana': dia,
           'ativo': 1,
           'entrada': '08:00',
-          'intervalo_inicio': null,
-          'intervalo_fim': null,
-          'saida': '12:00',
+          'intervalo_inicio': '12:00',
+          'intervalo_fim': '13:00',
+          'saida': '17:00',
           'atualizado_em': agora,
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }
 
-      await database.insert(
-        'financeiro_ponto_jornada',
-        {
-          'dia_semana': DateTime.sunday,
-          'ativo': 0,
-          'entrada': null,
-          'intervalo_inicio': null,
-          'intervalo_fim': null,
-          'saida': null,
-          'atualizado_em': agora,
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      await database.insert('financeiro_ponto_jornada', {
+        'dia_semana': DateTime.saturday,
+        'ativo': 1,
+        'entrada': '08:00',
+        'intervalo_inicio': null,
+        'intervalo_fim': null,
+        'saida': '12:00',
+        'atualizado_em': agora,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+
+      await database.insert('financeiro_ponto_jornada', {
+        'dia_semana': DateTime.sunday,
+        'ativo': 0,
+        'entrada': null,
+        'intervalo_inicio': null,
+        'intervalo_fim': null,
+        'saida': null,
+        'atualizado_em': agora,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 
@@ -204,9 +193,10 @@ class PontoRepository {
       return 50.0;
     }
 
-    return _double(resultado.first['adicional_hora_extra'], 50.0)
-        .clamp(0.0, 500.0)
-        .toDouble();
+    return _double(
+      resultado.first['adicional_hora_extra'],
+      50.0,
+    ).clamp(0.0, 500.0).toDouble();
   }
 
   Future<void> salvarAdicionalHoraExtra(double percentual) async {
@@ -219,14 +209,10 @@ class PontoRepository {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
 
-    await database.update(
-      'financeiro_ponto_config',
-      {
-        'adicional_hora_extra': percentual,
-        'atualizado_em': DateTime.now().toIso8601String(),
-      },
-      where: 'id = 1',
-    );
+    await database.update('financeiro_ponto_config', {
+      'adicional_hora_extra': percentual,
+      'atualizado_em': DateTime.now().toIso8601String(),
+    }, where: 'id = 1');
   }
 
   Future<List<Map<String, dynamic>>> listarJornada() async {
@@ -282,19 +268,15 @@ class PontoRepository {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
 
-    await database.insert(
-      'financeiro_ponto_jornada',
-      {
-        'dia_semana': diaSemana,
-        'ativo': ativo ? 1 : 0,
-        'entrada': ativo ? _horaNula(entrada) : null,
-        'intervalo_inicio': ativo ? _horaNula(intervaloInicio) : null,
-        'intervalo_fim': ativo ? _horaNula(intervaloFim) : null,
-        'saida': ativo ? _horaNula(saida) : null,
-        'atualizado_em': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert('financeiro_ponto_jornada', {
+      'dia_semana': diaSemana,
+      'ativo': ativo ? 1 : 0,
+      'entrada': ativo ? _horaNula(entrada) : null,
+      'intervalo_inicio': ativo ? _horaNula(intervaloInicio) : null,
+      'intervalo_fim': ativo ? _horaNula(intervaloFim) : null,
+      'saida': ativo ? _horaNula(saida) : null,
+      'atualizado_em': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Map<String, dynamic>?> obterFechamentoCompetencia({
@@ -307,10 +289,7 @@ class PontoRepository {
     final resultado = await database.query(
       'financeiro_ponto_fechamentos',
       where: 'colaborador_id = ? AND competencia = ?',
-      whereArgs: [
-        colaboradorId,
-        _competencia(competencia),
-      ],
+      whereArgs: [colaboradorId, _competencia(competencia)],
       limit: 1,
     );
 
@@ -331,10 +310,7 @@ class PontoRepository {
     return database.query(
       'financeiro_ponto_fechamento_historico',
       where: 'colaborador_id = ? AND competencia = ?',
-      whereArgs: [
-        colaboradorId,
-        _competencia(competencia),
-      ],
+      whereArgs: [colaboradorId, _competencia(competencia)],
       orderBy: 'id DESC',
     );
   }
@@ -343,16 +319,8 @@ class PontoRepository {
     required int colaboradorId,
     required DateTime competencia,
   }) async {
-    final inicio = DateTime(
-      competencia.year,
-      competencia.month,
-      1,
-    );
-    final fim = DateTime(
-      competencia.year,
-      competencia.month + 1,
-      0,
-    );
+    final inicio = DateTime(competencia.year, competencia.month, 1);
+    final fim = DateTime(competencia.year, competencia.month + 1, 0);
     final hoje = DateTime.now();
     final hojeDia = DateTime(hoje.year, hoje.month, hoje.day);
 
@@ -388,9 +356,7 @@ class PontoRepository {
         );
       }
 
-      throw StateError(
-        'Resolva ${partes.join(' e ')} antes de fechar o mês.',
-      );
+      throw StateError('Resolva ${partes.join(' e ')} antes de fechar o mês.');
     }
 
     final database = await _appDatabase.database;
@@ -463,13 +429,8 @@ class PontoRepository {
 
       final resultado = await transaction.query(
         'financeiro_ponto_fechamentos',
-        where:
-            'colaborador_id = ? AND competencia = ? AND status = ?',
-        whereArgs: [
-          colaboradorId,
-          _competencia(competencia),
-          'Fechado',
-        ],
+        where: 'colaborador_id = ? AND competencia = ? AND status = ?',
+        whereArgs: [colaboradorId, _competencia(competencia), 'Fechado'],
         limit: 1,
       );
 
@@ -515,13 +476,8 @@ class PontoRepository {
     final resultado = await executor.query(
       'financeiro_ponto_fechamentos',
       columns: ['id'],
-      where:
-          'colaborador_id = ? AND competencia = ? AND status = ?',
-      whereArgs: [
-        colaboradorId,
-        _competencia(data),
-        'Fechado',
-      ],
+      where: 'colaborador_id = ? AND competencia = ? AND status = ?',
+      whereArgs: [colaboradorId, _competencia(data), 'Fechado'],
       limit: 1,
     );
 
@@ -541,82 +497,116 @@ class PontoRepository {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
 
-    final jornada = await database.query(
+    final jornadaResultado = await database.query(
       'financeiro_ponto_jornada',
       where: 'dia_semana = ?',
       whereArgs: [momento.weekday],
       limit: 1,
     );
 
-    final jornadaDia = jornada.isEmpty
-        ? <String, dynamic>{'ativo': 0}
-        : Map<String, dynamic>.from(jornada.first);
+    final jornada = jornadaResultado.isEmpty
+        ? <String, dynamic>{
+            'dia_semana': momento.weekday,
+            'ativo': 0,
+            'entrada': null,
+            'intervalo_inicio': null,
+            'intervalo_fim': null,
+            'saida': null,
+          }
+        : Map<String, dynamic>.from(jornadaResultado.first);
 
-    final registro = await buscarRegistro(
-      colaboradorId: colaboradorId,
-      data: momento,
+    final jornadaAtiva = _int(jornada['ativo']) == 1;
+
+    final registroResultado = await database.query(
+      'financeiro_ponto_registros',
+      where: 'colaborador_id = ? AND data = ?',
+      whereArgs: [colaboradorId, _data(momento)],
+      limit: 1,
     );
 
-    final ativo = _int(jornadaDia['ativo']) == 1;
-    final temIntervalo =
-        _horaNula(jornadaDia['intervalo_inicio']?.toString()) != null &&
-        _horaNula(jornadaDia['intervalo_fim']?.toString()) != null;
-
-    String proximaAcao;
-    String rotulo;
-    bool concluido = false;
+    final registro = registroResultado.isEmpty
+        ? null
+        : Map<String, dynamic>.from(registroResultado.first);
 
     if (registro == null) {
-      proximaAcao = 'entrada';
-      rotulo = 'Registrar entrada';
-    } else {
-      final situacao = (registro['situacao'] ?? '').toString();
-
-      if (situacao != 'Trabalhado') {
-        proximaAcao = 'bloqueado';
-        rotulo = 'Dia marcado: $situacao';
-        concluido = true;
-      } else {
-        final entrada = _horaNula(registro['entrada']?.toString());
-        final intervaloInicio =
-            _horaNula(registro['intervalo_inicio']?.toString());
-        final intervaloFim =
-            _horaNula(registro['intervalo_fim']?.toString());
-        final saida = _horaNula(registro['saida']?.toString());
-
-        if (entrada == null) {
-          proximaAcao = 'entrada';
-          rotulo = 'Registrar entrada';
-        } else if (saida != null) {
-          proximaAcao = 'concluido';
-          rotulo = 'Ponto concluído';
-          concluido = true;
-        } else if (!temIntervalo) {
-          proximaAcao = 'saida';
-          rotulo = 'Registrar saída';
-        } else if (intervaloInicio == null) {
-          proximaAcao = 'intervalo_inicio';
-          rotulo = 'Iniciar intervalo';
-        } else if (intervaloFim == null) {
-          proximaAcao = 'intervalo_fim';
-          rotulo = 'Voltar do intervalo';
-        } else {
-          proximaAcao = 'saida';
-          rotulo = 'Registrar saída';
-        }
+      if (!jornadaAtiva) {
+        return {
+          'colaborador_id': colaboradorId,
+          'data': _data(momento),
+          'jornada_ativa': 0,
+          'jornada': jornada,
+          'registro': null,
+          'proxima_acao': null,
+          'rotulo': 'Sem expediente',
+          'concluido': 1,
+        };
       }
+
+      return {
+        'colaborador_id': colaboradorId,
+        'data': _data(momento),
+        'jornada_ativa': 1,
+        'jornada': jornada,
+        'registro': null,
+        'proxima_acao': 'entrada',
+        'rotulo': 'Registrar entrada',
+        'concluido': 0,
+      };
+    }
+
+    final situacao = (registro['situacao'] ?? '').toString();
+
+    if (situacao != 'Trabalhado') {
+      return {
+        'colaborador_id': colaboradorId,
+        'data': _data(momento),
+        'jornada_ativa': jornadaAtiva ? 1 : 0,
+        'jornada': jornada,
+        'registro': registro,
+        'proxima_acao': null,
+        'rotulo': situacao,
+        'concluido': 1,
+      };
+    }
+
+    final entrada = _horaNula(registro['entrada']?.toString());
+    final saida = _horaNula(registro['saida']?.toString());
+
+    if (saida != null) {
+      return {
+        'colaborador_id': colaboradorId,
+        'data': _data(momento),
+        'jornada_ativa': jornadaAtiva ? 1 : 0,
+        'jornada': jornada,
+        'registro': registro,
+        'proxima_acao': null,
+        'rotulo': 'Ponto concluído',
+        'concluido': 1,
+      };
+    }
+
+    if (entrada == null) {
+      return {
+        'colaborador_id': colaboradorId,
+        'data': _data(momento),
+        'jornada_ativa': jornadaAtiva ? 1 : 0,
+        'jornada': jornada,
+        'registro': registro,
+        'proxima_acao': null,
+        'rotulo': 'Ponto precisa de correção',
+        'concluido': 1,
+      };
     }
 
     return {
       'colaborador_id': colaboradorId,
       'data': _data(momento),
-      'jornada_ativa': ativo ? 1 : 0,
-      'tem_intervalo': temIntervalo ? 1 : 0,
-      'proxima_acao': proximaAcao,
-      'rotulo': rotulo,
-      'concluido': concluido ? 1 : 0,
+      'jornada_ativa': jornadaAtiva ? 1 : 0,
+      'jornada': jornada,
       'registro': registro,
-      'jornada': jornadaDia,
+      'proxima_acao': 'saida',
+      'rotulo': 'Registrar saída',
+      'concluido': 0,
     };
   }
 
@@ -655,20 +645,24 @@ class PontoRepository {
         data: agora,
       );
 
-      final jornada = await transaction.query(
+      final jornadaResultado = await transaction.query(
         'financeiro_ponto_jornada',
         where: 'dia_semana = ?',
         whereArgs: [agora.weekday],
         limit: 1,
       );
 
-      final jornadaDia = jornada.isEmpty
-          ? <String, dynamic>{'ativo': 0}
-          : Map<String, dynamic>.from(jornada.first);
+      final jornada = jornadaResultado.isEmpty
+          ? <String, dynamic>{
+              'ativo': 0,
+              'entrada': null,
+              'intervalo_inicio': null,
+              'intervalo_fim': null,
+              'saida': null,
+            }
+          : Map<String, dynamic>.from(jornadaResultado.first);
 
-      final temIntervalo =
-          _horaNula(jornadaDia['intervalo_inicio']?.toString()) != null &&
-          _horaNula(jornadaDia['intervalo_fim']?.toString()) != null;
+      final jornadaAtiva = _int(jornada['ativo']) == 1;
 
       final existente = await transaction.query(
         'financeiro_ponto_registros',
@@ -681,26 +675,29 @@ class PontoRepository {
       late Map<String, dynamic> depois;
       late String acao;
 
+      var intervaloAutomatico = false;
+      var requerConferencia = false;
+
       if (existente.isEmpty) {
+        if (!jornadaAtiva) {
+          throw StateError('Hoje não há jornada de trabalho configurada.');
+        }
+
         acao = 'Entrada';
         final criadoEm = agora.toIso8601String();
 
-        final id = await transaction.insert(
-          'financeiro_ponto_registros',
-          {
-            'colaborador_id': colaboradorId,
-            'data': dataBanco,
-            'situacao': 'Trabalhado',
-            'entrada': horaBanco,
-            'intervalo_inicio': null,
-            'intervalo_fim': null,
-            'saida': null,
-            'observacoes': '',
-            'criado_em': criadoEm,
-            'atualizado_em': criadoEm,
-          },
-          conflictAlgorithm: ConflictAlgorithm.abort,
-        );
+        final id = await transaction.insert('financeiro_ponto_registros', {
+          'colaborador_id': colaboradorId,
+          'data': dataBanco,
+          'situacao': 'Trabalhado',
+          'entrada': horaBanco,
+          'intervalo_inicio': null,
+          'intervalo_fim': null,
+          'saida': null,
+          'observacoes': '',
+          'criado_em': criadoEm,
+          'atualizado_em': criadoEm,
+        }, conflictAlgorithm: ConflictAlgorithm.abort);
 
         depois = {
           'id': id,
@@ -719,47 +716,82 @@ class PontoRepository {
         antes = Map<String, dynamic>.from(existente.first);
 
         final situacao = (antes['situacao'] ?? '').toString();
+
         if (situacao != 'Trabalhado') {
           throw StateError(
-            'Este dia está marcado como "$situacao". '
-            'Use a edição manual para alterar a situação.',
+            'Este dia está marcado como '
+            '"$situacao". Use a edição manual.',
           );
         }
 
         final entrada = _horaNula(antes['entrada']?.toString());
-        final intervaloInicio =
-            _horaNula(antes['intervalo_inicio']?.toString());
-        final intervaloFim =
-            _horaNula(antes['intervalo_fim']?.toString());
-        final saida = _horaNula(antes['saida']?.toString());
+        final saidaAtual = _horaNula(antes['saida']?.toString());
+
+        if (entrada == null) {
+          throw StateError(
+            'Este ponto está sem entrada. '
+            'Use a correção administrativa.',
+          );
+        }
+
+        if (saidaAtual != null) {
+          throw StateError('O ponto de hoje já foi concluído.');
+        }
+
+        acao = 'Saída';
 
         final alteracoes = <String, dynamic>{
+          'saida': horaBanco,
           'atualizado_em': agora.toIso8601String(),
         };
 
-        if (entrada == null) {
-          acao = 'Entrada';
-          alteracoes['entrada'] = horaBanco;
-        } else if (saida != null) {
-          throw StateError('O ponto de hoje já foi concluído.');
-        } else if (!temIntervalo) {
-          acao = 'Saída';
-          alteracoes['saida'] = horaBanco;
-        } else if (intervaloInicio == null) {
-          acao = 'Início do intervalo';
-          alteracoes['intervalo_inicio'] = horaBanco;
-        } else if (intervaloFim == null) {
-          acao = 'Fim do intervalo';
-          alteracoes['intervalo_fim'] = horaBanco;
-        } else {
-          acao = 'Saída';
-          alteracoes['saida'] = horaBanco;
+        final intervaloInicioAtual = _horaNula(
+          antes['intervalo_inicio']?.toString(),
+        );
+        final intervaloFimAtual = _horaNula(antes['intervalo_fim']?.toString());
+
+        final intervaloInicioPrevisto = _horaNula(
+          jornada['intervalo_inicio']?.toString(),
+        );
+        final intervaloFimPrevisto = _horaNula(
+          jornada['intervalo_fim']?.toString(),
+        );
+
+        final temIntervaloPrevisto =
+            intervaloInicioPrevisto != null && intervaloFimPrevisto != null;
+
+        if (temIntervaloPrevisto) {
+          final entradaMin = _minutosHora(entrada);
+          final saidaMin = _minutosHora(horaBanco);
+          final inicioPrevistoMin = _minutosHora(intervaloInicioPrevisto);
+          final fimPrevistoMin = _minutosHora(intervaloFimPrevisto);
+
+          if (intervaloInicioAtual == null &&
+              intervaloFimAtual == null &&
+              entradaMin != null &&
+              saidaMin != null &&
+              inicioPrevistoMin != null &&
+              fimPrevistoMin != null &&
+              entradaMin <= inicioPrevistoMin &&
+              saidaMin >= fimPrevistoMin) {
+            alteracoes['intervalo_inicio'] = intervaloInicioPrevisto;
+            alteracoes['intervalo_fim'] = intervaloFimPrevisto;
+            intervaloAutomatico = true;
+          } else if (intervaloInicioAtual != null &&
+              intervaloFimAtual == null &&
+              saidaMin != null &&
+              fimPrevistoMin != null &&
+              saidaMin >= fimPrevistoMin) {
+            final inicioAtualMin = _minutosHora(intervaloInicioAtual);
+
+            if (inicioAtualMin != null && inicioAtualMin < fimPrevistoMin) {
+              alteracoes['intervalo_fim'] = intervaloFimPrevisto;
+              intervaloAutomatico = true;
+            }
+          }
         }
 
-        _validarSequenciaBatida(
-          anterior: antes,
-          alteracoes: alteracoes,
-        );
+        _validarSequenciaBatida(anterior: antes, alteracoes: alteracoes);
 
         await transaction.update(
           'financeiro_ponto_registros',
@@ -768,29 +800,30 @@ class PontoRepository {
           whereArgs: [_int(antes['id'])],
         );
 
-        depois = {
-          ...antes,
-          ...alteracoes,
-        };
+        depois = {...antes, ...alteracoes};
+
+        final inicioDepois = _horaNula(depois['intervalo_inicio']?.toString());
+        final fimDepois = _horaNula(depois['intervalo_fim']?.toString());
+
+        requerConferencia =
+            temIntervaloPrevisto && (inicioDepois == null || fimDepois == null);
       }
 
-      await transaction.insert(
-        'financeiro_ponto_ajustes',
-        {
-          'colaborador_id': colaboradorId,
-          'data': dataBanco,
-          'acao': 'Batida - $acao',
-          'motivo': 'Batida registrada no controle de ponto',
-          'antes_json': antes == null ? null : jsonEncode(antes),
-          'depois_json': jsonEncode(depois),
-          'criado_em': agora.toIso8601String(),
-        },
-        conflictAlgorithm: ConflictAlgorithm.abort,
-      );
+      await transaction.insert('financeiro_ponto_ajustes', {
+        'colaborador_id': colaboradorId,
+        'data': dataBanco,
+        'acao': 'Batida - $acao',
+        'motivo': 'Batida registrada no controle de ponto',
+        'antes_json': antes == null ? null : jsonEncode(antes),
+        'depois_json': jsonEncode(depois),
+        'criado_em': agora.toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.abort);
 
       return {
         'acao': acao,
         'hora': horaBanco,
+        'intervalo_automatico': intervaloAutomatico,
+        'requer_conferencia': requerConferencia,
         'registro': depois,
       };
     });
@@ -804,14 +837,11 @@ class PontoRepository {
       (alteracoes['entrada'] ?? anterior['entrada'])?.toString(),
     );
     final intervaloInicio = _minutosHora(
-      (alteracoes['intervalo_inicio'] ??
-              anterior['intervalo_inicio'])
+      (alteracoes['intervalo_inicio'] ?? anterior['intervalo_inicio'])
           ?.toString(),
     );
     final intervaloFim = _minutosHora(
-      (alteracoes['intervalo_fim'] ??
-              anterior['intervalo_fim'])
-          ?.toString(),
+      (alteracoes['intervalo_fim'] ?? anterior['intervalo_fim'])?.toString(),
     );
     final saida = _minutosHora(
       (alteracoes['saida'] ?? anterior['saida'])?.toString(),
@@ -829,9 +859,7 @@ class PontoRepository {
 
     if (intervaloFim != null) {
       if (intervaloInicio == null) {
-        throw StateError(
-          'Registre o início do intervalo antes da volta.',
-        );
+        throw StateError('Registre o início do intervalo antes da volta.');
       }
       if (intervaloFim <= intervaloInicio) {
         throw StateError(
@@ -934,10 +962,12 @@ class PontoRepository {
         'data': dataBanco,
         'situacao': situacao,
         'entrada': situacao == 'Trabalhado' ? _horaNula(entrada) : null,
-        'intervalo_inicio':
-            situacao == 'Trabalhado' ? _horaNula(intervaloInicio) : null,
-        'intervalo_fim':
-            situacao == 'Trabalhado' ? _horaNula(intervaloFim) : null,
+        'intervalo_inicio': situacao == 'Trabalhado'
+            ? _horaNula(intervaloInicio)
+            : null,
+        'intervalo_fim': situacao == 'Trabalhado'
+            ? _horaNula(intervaloFim)
+            : null,
         'saida': situacao == 'Trabalhado' ? _horaNula(saida) : null,
         'observacoes': observacoes.trim(),
         'atualizado_em': agora,
@@ -972,25 +1002,17 @@ class PontoRepository {
         acao = 'Edicao';
       }
 
-      await transaction.insert(
-        'financeiro_ponto_ajustes',
-        {
-          'colaborador_id': colaboradorId,
-          'data': dataBanco,
-          'acao': acao,
-          'motivo': anterior.isEmpty
-              ? 'Lançamento manual pelo administrador'
-              : motivoAjuste.trim(),
-          'antes_json':
-              anterior.isEmpty ? null : jsonEncode(anterior.first),
-          'depois_json': jsonEncode({
-            ...dados,
-            'id': id,
-          }),
-          'criado_em': agora,
-        },
-        conflictAlgorithm: ConflictAlgorithm.abort,
-      );
+      await transaction.insert('financeiro_ponto_ajustes', {
+        'colaborador_id': colaboradorId,
+        'data': dataBanco,
+        'acao': acao,
+        'motivo': anterior.isEmpty
+            ? 'Lançamento manual pelo administrador'
+            : motivoAjuste.trim(),
+        'antes_json': anterior.isEmpty ? null : jsonEncode(anterior.first),
+        'depois_json': jsonEncode({...dados, 'id': id}),
+        'criado_em': agora,
+      }, conflictAlgorithm: ConflictAlgorithm.abort);
 
       return id;
     });
@@ -1041,19 +1063,15 @@ class PontoRepository {
         whereArgs: [registroId],
       );
 
-      await transaction.insert(
-        'financeiro_ponto_ajustes',
-        {
-          'colaborador_id': colaboradorId,
-          'data': data,
-          'acao': 'Exclusao',
-          'motivo': motivoLimpo,
-          'antes_json': jsonEncode(anterior.first),
-          'depois_json': null,
-          'criado_em': DateTime.now().toIso8601String(),
-        },
-        conflictAlgorithm: ConflictAlgorithm.abort,
-      );
+      await transaction.insert('financeiro_ponto_ajustes', {
+        'colaborador_id': colaboradorId,
+        'data': data,
+        'acao': 'Exclusao',
+        'motivo': motivoLimpo,
+        'antes_json': jsonEncode(anterior.first),
+        'depois_json': null,
+        'criado_em': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.abort);
     });
   }
 
@@ -1070,6 +1088,32 @@ class PontoRepository {
       whereArgs: [colaboradorId, _data(data)],
       orderBy: 'id DESC',
     );
+  }
+
+  Future<Set<String>> listarDiasCorrigidos({
+    required int colaboradorId,
+    required DateTime inicio,
+    required DateTime fim,
+  }) async {
+    final database = await _appDatabase.database;
+    await _garantirEstrutura(database);
+
+    final resultado = await database.rawQuery(
+      '''
+      SELECT DISTINCT data
+      FROM financeiro_ponto_ajustes
+      WHERE colaborador_id = ?
+        AND date(data) BETWEEN date(?) AND date(?)
+        AND acao IN ('Criacao', 'Edicao', 'Exclusao')
+      ORDER BY data ASC
+      ''',
+      [colaboradorId, _data(inicio), _data(fim)],
+    );
+
+    return resultado
+        .map((item) => item['data']?.toString().trim() ?? '')
+        .where((data) => data.isNotEmpty)
+        .toSet();
   }
 
   Future<Map<String, dynamic>> obterEspelhoMes({
@@ -1116,8 +1160,8 @@ class PontoRepository {
     final fimDia = DateTime(fim.year, fim.month, fim.day);
 
     while (!cursor.isAfter(fimDia)) {
-      final jornadaDia = jornadaPorDia[cursor.weekday] ??
-          <String, dynamic>{'ativo': 0};
+      final jornadaDia =
+          jornadaPorDia[cursor.weekday] ?? <String, dynamic>{'ativo': 0};
       final ativo = _int(jornadaDia['ativo']) == 1;
       final previsto = ativo ? _minutosJornada(jornadaDia) : 0;
 
@@ -1137,14 +1181,14 @@ class PontoRepository {
 
       if (registro != null) {
         if (situacao == 'Trabalhado') {
-          final entradaRegistrada =
-              _horaNula(registro['entrada']?.toString());
-          final saidaRegistrada =
-              _horaNula(registro['saida']?.toString());
-          final inicioIntervaloRegistrado =
-              _horaNula(registro['intervalo_inicio']?.toString());
-          final fimIntervaloRegistrado =
-              _horaNula(registro['intervalo_fim']?.toString());
+          final entradaRegistrada = _horaNula(registro['entrada']?.toString());
+          final saidaRegistrada = _horaNula(registro['saida']?.toString());
+          final inicioIntervaloRegistrado = _horaNula(
+            registro['intervalo_inicio']?.toString(),
+          );
+          final fimIntervaloRegistrado = _horaNula(
+            registro['intervalo_fim']?.toString(),
+          );
 
           final jornadaTemIntervalo =
               _horaNula(jornadaDia['intervalo_inicio']?.toString()) != null &&
@@ -1272,46 +1316,33 @@ class PontoRepository {
       fim: fim,
     );
 
-    final salarioBase = _double(
-      colaborador.first['remuneracao_mensal'],
-    );
-    final horasBaseMensal = _double(
-      colaborador.first['horas_produtivas_mes'],
-    );
+    final salarioBase = _double(colaborador.first['remuneracao_mensal']);
+    final horasBaseMensal = _double(colaborador.first['horas_produtivas_mes']);
 
-    final valorHora = horasBaseMensal > 0
-        ? salarioBase / horasBaseMensal
-        : 0.0;
+    final valorHora = horasBaseMensal > 0 ? salarioBase / horasBaseMensal : 0.0;
 
     final adicionalPercentual = await obterAdicionalHoraExtra();
     final minutosExtras = _int(espelho['minutos_extras']);
     final minutosFaltantes = _int(espelho['minutos_faltantes']);
 
     final valorExtras =
-        (minutosExtras / 60.0) *
-        valorHora *
-        (1 + adicionalPercentual / 100.0);
+        (minutosExtras / 60.0) * valorHora * (1 + adicionalPercentual / 100.0);
 
-    final descontoHorasFaltantes =
-        (minutosFaltantes / 60.0) * valorHora;
+    final descontoHorasFaltantes = (minutosFaltantes / 60.0) * valorHora;
 
-    final valorEstimado = (salarioBase -
-            descontoHorasFaltantes +
-            valorExtras)
+    final valorEstimado = (salarioBase - descontoHorasFaltantes + valorExtras)
         .clamp(0, double.infinity)
         .toDouble();
 
     var jaPago = 0.0;
 
-    final tabelaPagamentos = await database.rawQuery(
-      '''
+    final tabelaPagamentos = await database.rawQuery('''
       SELECT name
       FROM sqlite_master
       WHERE type = 'table'
         AND name = 'financeiro_pagamentos_colaboradores'
       LIMIT 1
-      ''',
-    );
+      ''');
 
     if (tabelaPagamentos.isNotEmpty) {
       final pagamentos = await database.rawQuery(
@@ -1321,11 +1352,7 @@ class PontoRepository {
         WHERE colaborador_id = ?
           AND date(data_pagamento) BETWEEN date(?) AND date(?)
         ''',
-        [
-          colaboradorId,
-          _data(inicio),
-          _data(fim),
-        ],
+        [colaboradorId, _data(inicio), _data(fim)],
       );
 
       if (pagamentos.isNotEmpty) {
@@ -1358,13 +1385,8 @@ class PontoRepository {
 
     final fechamento = await database.query(
       'financeiro_ponto_fechamentos',
-      where:
-          'colaborador_id = ? AND competencia = ? AND status = ?',
-      whereArgs: [
-        colaboradorId,
-        _competencia(inicio),
-        'Fechado',
-      ],
+      where: 'colaborador_id = ? AND competencia = ? AND status = ?',
+      whereArgs: [colaboradorId, _competencia(inicio), 'Fechado'],
       limit: 1,
     );
 
@@ -1373,8 +1395,7 @@ class PontoRepository {
     }
 
     Map<String, dynamic> snapshot = <String, dynamic>{};
-    final textoSnapshot =
-        fechamento.first['snapshot_json']?.toString() ?? '';
+    final textoSnapshot = fechamento.first['snapshot_json']?.toString() ?? '';
 
     if (textoSnapshot.isNotEmpty) {
       try {
@@ -1418,8 +1439,7 @@ class PontoRepository {
       return 0;
     }
 
-    final inicioIntervalo =
-        _minutosHora(item['intervalo_inicio']?.toString());
+    final inicioIntervalo = _minutosHora(item['intervalo_inicio']?.toString());
     final fimIntervalo = _minutosHora(item['intervalo_fim']?.toString());
 
     var total = saida - entrada;
@@ -1441,8 +1461,7 @@ class PontoRepository {
       return 0;
     }
 
-    final inicioIntervalo =
-        _minutosHora(item['intervalo_inicio']?.toString());
+    final inicioIntervalo = _minutosHora(item['intervalo_inicio']?.toString());
     final fimIntervalo = _minutosHora(item['intervalo_fim']?.toString());
 
     var total = saida - entrada;
@@ -1561,17 +1580,12 @@ class PontoRepository {
     return '$ano-$mes-$dia';
   }
 
-  static double _double(
-    dynamic valor, [
-    double padrao = 0.0,
-  ]) {
+  static double _double(dynamic valor, [double padrao = 0.0]) {
     if (valor is num) {
       return valor.toDouble();
     }
 
-    return double.tryParse(
-          valor?.toString().replaceAll(',', '.') ?? '',
-        ) ??
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ??
         padrao;
   }
 

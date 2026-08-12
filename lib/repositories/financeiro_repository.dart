@@ -20,14 +20,14 @@ class FinanceiroRepository {
     final resultado = await database.query(
       'movimentos_financeiros',
       orderBy:
-      'COALESCE(data_pagamento, data_vencimento, data_competencia, data) DESC, id DESC',
+          'COALESCE(data_pagamento, data_vencimento, data_competencia, data) DESC, id DESC',
     );
 
     return resultado
         .map(
           (item) =>
-          MovimentoFinanceiro.fromMap(Map<String, dynamic>.from(item)),
-    )
+              MovimentoFinanceiro.fromMap(Map<String, dynamic>.from(item)),
+        )
         .toList();
   }
 
@@ -146,8 +146,8 @@ class FinanceiroRepository {
     return resultado
         .map(
           (item) =>
-          MovimentoFinanceiro.fromMap(Map<String, dynamic>.from(item)),
-    )
+              MovimentoFinanceiro.fromMap(Map<String, dynamic>.from(item)),
+        )
         .toList();
   }
 
@@ -211,8 +211,8 @@ class FinanceiroRepository {
       whereArgs: [id],
       limit: 1,
     );
-    final contaResolvida = contaId ??
-        (atual.isEmpty ? null : _int(atual.first['conta_id']));
+    final contaResolvida =
+        contaId ?? (atual.isEmpty ? null : _int(atual.first['conta_id']));
 
     if (contaResolvida == null) {
       throw StateError(
@@ -299,16 +299,16 @@ class FinanceiroRepository {
 
       final transferenciaId = await transaction
           .insert('financeiro_transferencias', {
-        'conta_origem_id': contaOrigemId,
-        'conta_destino_id': contaDestinoId,
-        'valor': valor,
-        'data': dataIso,
-        'descricao': descricao.trim().isEmpty
-            ? 'Transferência entre contas'
-            : descricao.trim(),
-        'observacoes': observacoes.trim(),
-        'criado_em': agora,
-      }, conflictAlgorithm: ConflictAlgorithm.abort);
+            'conta_origem_id': contaOrigemId,
+            'conta_destino_id': contaDestinoId,
+            'valor': valor,
+            'data': dataIso,
+            'descricao': descricao.trim().isEmpty
+                ? 'Transferência entre contas'
+                : descricao.trim(),
+            'observacoes': observacoes.trim(),
+            'criado_em': agora,
+          }, conflictAlgorithm: ConflictAlgorithm.abort);
 
       final comum = <String, Object?>{
         'descricao': descricao.trim().isEmpty
@@ -587,6 +587,168 @@ class FinanceiroRepository {
     );
   }
 
+  /// Quebra as receitas de OS por categoria e serviço do catálogo.
+  ///
+  /// Mantém a mesma regra do Previsto x Realizado geral:
+  /// - Previsto preserva o valor originalmente programado.
+  /// - Realizado usa o que efetivamente foi recebido no período.
+  ///
+  /// Cada recebimento é rateado proporcionalmente entre os itens da OS.
+  Future<List<Map<String, dynamic>>> listarPrevistoRealizadoPorServico({
+    required DateTime inicio,
+    required DateTime fim,
+  }) async {
+    final database = await AppDatabase.instance.database;
+    final inicioDia = _dataDia(inicio);
+    final fimDia = _dataDia(fim);
+
+    return database.rawQuery(
+      '''
+      WITH itens_os AS (
+        SELECT
+          item.ordem_servico_id,
+          TRIM(item.servico) AS servico,
+          COALESCE(SUM(
+            COALESCE(item.quantidade, 0) *
+            COALESCE(item.valor_unitario, 0)
+          ), 0) AS valor_item
+        FROM ordem_servico_itens item
+        WHERE TRIM(COALESCE(item.servico, '')) != ''
+        GROUP BY item.ordem_servico_id, TRIM(item.servico)
+      ),
+      totais_os AS (
+        SELECT
+          ordem_servico_id,
+          COALESCE(SUM(valor_item), 0) AS total_itens
+        FROM itens_os
+        GROUP BY ordem_servico_id
+      ),
+      comparacao AS (
+        SELECT
+          m.ordem_servico_id,
+          m.valor,
+          1 AS previsto,
+          0 AS realizado
+        FROM movimentos_financeiros m
+        LEFT JOIN financeiro_plano_contas pc
+          ON pc.id = m.plano_conta_id
+        WHERE LOWER(m.tipo) = 'entrada'
+          AND m.ordem_servico_id IS NOT NULL
+          AND m.status IN ('Previsto', 'Realizado')
+          AND m.transferencia_id IS NULL
+          AND COALESCE(m.impacta_dre, 1) = 1
+          AND COALESCE(pc.grupo_dre, '') != 'Não DRE'
+          AND (
+            m.status = 'Previsto'
+            OR (
+              m.status = 'Realizado'
+              AND m.data_vencimento IS NOT NULL
+            )
+          )
+          AND date(COALESCE(
+            m.data_vencimento,
+            m.data_competencia,
+            m.data
+          )) BETWEEN date(?) AND date(?)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM ordem_servico_pagamentos p
+            WHERE p.id = m.pagamento_id
+              AND p.status = 'Estornado'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM movimentos_financeiros devolucao
+                WHERE devolucao.pagamento_id = p.id
+                  AND devolucao.status = 'Realizado'
+                  AND LOWER(COALESCE(devolucao.origem, '')) =
+                      'devolução ao cliente'
+              )
+          )
+
+        UNION ALL
+
+        SELECT
+          m.ordem_servico_id,
+          m.valor,
+          0 AS previsto,
+          1 AS realizado
+        FROM movimentos_financeiros m
+        LEFT JOIN financeiro_plano_contas pc
+          ON pc.id = m.plano_conta_id
+        WHERE LOWER(m.tipo) = 'entrada'
+          AND m.ordem_servico_id IS NOT NULL
+          AND m.status = 'Realizado'
+          AND m.transferencia_id IS NULL
+          AND COALESCE(m.impacta_dre, 1) = 1
+          AND COALESCE(pc.grupo_dre, '') != 'Não DRE'
+          AND date(COALESCE(
+            m.data_pagamento,
+            m.data
+          )) BETWEEN date(?) AND date(?)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM ordem_servico_pagamentos p
+            WHERE p.id = m.pagamento_id
+              AND p.status = 'Estornado'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM movimentos_financeiros devolucao
+                WHERE devolucao.pagamento_id = p.id
+                  AND devolucao.status = 'Realizado'
+                  AND LOWER(COALESCE(devolucao.origem, '')) =
+                      'devolução ao cliente'
+              )
+          )
+      )
+      SELECT
+        io.servico AS servico,
+        COALESCE(
+          (
+            SELECT COALESCE(
+              NULLIF(TRIM(c.nome), ''),
+              NULLIF(TRIM(sc.categoria), '')
+            )
+            FROM servicos_catalogo sc
+            LEFT JOIN servico_categorias c
+              ON c.id = sc.categoria_id
+            WHERE LOWER(TRIM(sc.nome)) = LOWER(TRIM(io.servico))
+            ORDER BY sc.ativo DESC, sc.id DESC
+            LIMIT 1
+          ),
+          'Sem categoria'
+        ) AS categoria,
+        COALESCE(SUM(
+          CASE
+            WHEN comp.previsto = 1
+            THEN comp.valor * io.valor_item / t.total_itens
+            ELSE 0
+          END
+        ), 0) AS previsto,
+        COALESCE(SUM(
+          CASE
+            WHEN comp.realizado = 1
+            THEN comp.valor * io.valor_item / t.total_itens
+            ELSE 0
+          END
+        ), 0) AS realizado
+      FROM comparacao comp
+      INNER JOIN itens_os io
+        ON io.ordem_servico_id = comp.ordem_servico_id
+      INNER JOIN totais_os t
+        ON t.ordem_servico_id = comp.ordem_servico_id
+      WHERE t.total_itens > 0
+      GROUP BY io.servico
+      HAVING previsto > 0.000001 OR realizado > 0.000001
+      ORDER BY
+        categoria COLLATE NOCASE ASC,
+        realizado DESC,
+        previsto DESC,
+        servico COLLATE NOCASE ASC
+      ''',
+      [inicioDia, fimDia, inicioDia, fimDia],
+    );
+  }
+
   Future<Map<String, double>> obterResumoFinanceiro({
     String? dataInicial,
     String? dataFinal,
@@ -745,9 +907,9 @@ class FinanceiroRepository {
   }
 
   Future<MovimentoFinanceiro> _prepararMovimento(
-      Database database,
-      MovimentoFinanceiro movimento,
-      ) async {
+    Database database,
+    MovimentoFinanceiro movimento,
+  ) async {
     if (movimento.valor <= 0) {
       throw ArgumentError('O valor deve ser maior que zero.');
     }
@@ -791,7 +953,7 @@ class FinanceiroRepository {
     }
 
     final status =
-    const {'Previsto', 'Realizado', 'Cancelado'}.contains(movimento.status)
+        const {'Previsto', 'Realizado', 'Cancelado'}.contains(movimento.status)
         ? movimento.status
         : 'Realizado';
 
@@ -897,8 +1059,8 @@ class FinanceiroRepository {
   static double _double(dynamic valor) {
     if (valor is num) return valor.toDouble();
     return double.tryParse(
-      valor?.toString().trim().replaceAll(',', '.') ?? '',
-    ) ??
+          valor?.toString().trim().replaceAll(',', '.') ?? '',
+        ) ??
         0;
   }
 

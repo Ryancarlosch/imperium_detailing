@@ -17,15 +17,13 @@ import 'financeiro_page.dart';
 import 'fotos_page.dart';
 import 'orcamentos_page.dart';
 import 'ordens_servico_page.dart';
+import 'ponto_funcionarios_page.dart';
+import 'pendencias_operacionais_page.dart';
 import 'servicos_page.dart';
 import 'veiculos_page.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({
-    super.key,
-    this.sessao,
-    this.onLogout,
-  });
+  const DashboardPage({super.key, this.sessao, this.onLogout});
 
   final Map<String, dynamic>? sessao;
   final VoidCallback? onLogout;
@@ -41,8 +39,7 @@ class _DashboardPageState extends State<DashboardPage> {
   final ClienteRepository _clienteRepository = ClienteRepository();
   final ConfiguracaoRepository _configuracaoRepository =
       ConfiguracaoRepository();
-  final UsuarioRepository _usuarioRepository =
-      UsuarioRepository();
+  final UsuarioRepository _usuarioRepository = UsuarioRepository();
   final NumberFormat _formatoMoeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
@@ -199,8 +196,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   bool _pode(String modulo) {
-    final sessao =
-        widget.sessao ?? _usuarioRepository.sessaoAtual;
+    final sessao = widget.sessao ?? _usuarioRepository.sessaoAtual;
 
     if (sessao == null) {
       return false;
@@ -230,9 +226,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           const SnackBar(
-            content: Text(
-              'Seu usuário não possui permissão para este módulo.',
-            ),
+            content: Text('Seu usuário não possui permissão para este módulo.'),
           ),
         );
     }
@@ -289,6 +283,12 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _abrirOrcamentos() async {
     if (!_validarAcesso('orcamentos')) return;
     await _abrirPagina(const OrcamentosPage());
+  }
+
+  Future<void> _abrirPonto() async {
+    if (!_validarAcesso('funcionarios')) return;
+
+    await _abrirPagina(const PontoFuncionariosPage());
   }
 
   int? _normalizarIdCliente(dynamic valor) {
@@ -409,6 +409,11 @@ class _DashboardPageState extends State<DashboardPage> {
         title: const Text('Dashboard'),
         actions: [
           IconButton(
+            tooltip: 'Pendências operacionais',
+            onPressed: () => _abrirPagina(const PendenciasOperacionaisPage()),
+            icon: const Icon(Icons.notification_important_outlined),
+          ),
+          IconButton(
             onPressed: _carregarResumo,
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -435,6 +440,10 @@ class _DashboardPageState extends State<DashboardPage> {
               onSelecionarPeriodo: _selecionarPeriodo,
             ),
             const SizedBox(height: 14),
+            if (_pode('funcionarios')) ...[
+              _PontoDashboardCard(onTap: _abrirPonto),
+              const SizedBox(height: 14),
+            ],
             if (_carregando)
               const _LoadingCard()
             else if (_mensagemErro != null)
@@ -529,6 +538,66 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PontoDashboardCard extends StatelessWidget {
+  const _PontoDashboardCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF171717),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFFD6A84B).withValues(alpha: 0.28),
+            ),
+          ),
+          child: const Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Color(0x22D6A84B),
+                child: Icon(
+                  Icons.fingerprint_rounded,
+                  color: Color(0xFFD6A84B),
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ponto',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Funcionários, horários, correções e fechamento mensal',
+                      style: TextStyle(color: Colors.white60, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: Colors.white54),
+            ],
+          ),
         ),
       ),
     );
@@ -642,9 +711,7 @@ class _ResumoRapidoSection extends StatelessWidget {
     final itens = [
       _IndicadorResumo(
         'Faturado',
-        saldosVisiveis
-            ? formatoMoeda.format(dados.faturamentoCompetencia)
-            : 'R\$ ••••••',
+        saldosVisiveis ? formatoMoeda.format(dados.faturamento) : 'R\$ ••••••',
         Icons.payments_outlined,
         const Color(0xFFD6A84B),
         onAbrirFinanceiro,
@@ -877,7 +944,6 @@ class _SaldosContasCard extends StatelessWidget {
   }
 }
 
-
 class _VisaoFinanceiraMesCard extends StatelessWidget {
   const _VisaoFinanceiraMesCard({
     required this.dados,
@@ -908,13 +974,14 @@ class _VisaoFinanceiraMesCard extends StatelessWidget {
     final progresso = meta <= 0
         ? 0.0
         : (faturado / meta).clamp(0.0, 1.0).toDouble();
-    final faltaFaturar = (meta - faturado).clamp(0.0, double.infinity).toDouble();
+    final faltaFaturar = (meta - faturado)
+        .clamp(0.0, double.infinity)
+        .toDouble();
 
     final hoje = DateTime.now();
     final mesAtualSelecionado =
         dados.inicio.year == hoje.year && dados.inicio.month == hoje.month;
-    final mesFuturo =
-        dados.inicio.isAfter(DateTime(hoje.year, hoje.month, 1));
+    final mesFuturo = dados.inicio.isAfter(DateTime(hoje.year, hoje.month, 1));
     final ultimoDiaMesSelecionado = DateTime(
       dados.inicio.year,
       dados.inicio.month + 1,
@@ -953,10 +1020,7 @@ class _VisaoFinanceiraMesCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.insights_rounded,
-                color: Color(0xFFD6A84B),
-              ),
+              const Icon(Icons.insights_rounded, color: Color(0xFFD6A84B)),
               const SizedBox(width: 9),
               Expanded(
                 child: Column(
@@ -1118,10 +1182,7 @@ class _VisaoFinanceiraMesCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     const Text(
                       'Meta de faturamento atingida neste período.',
-                      style: TextStyle(
-                        color: Colors.white60,
-                        fontSize: 11.5,
-                      ),
+                      style: TextStyle(color: Colors.white60, fontSize: 11.5),
                     ),
                   ],
                 ],
@@ -1207,10 +1268,7 @@ class _MiniKpiFinanceiro extends StatelessWidget {
             titulo,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 10.5,
-            ),
+            style: const TextStyle(color: Colors.white54, fontSize: 10.5),
           ),
         ],
       ),
@@ -1219,10 +1277,7 @@ class _MiniKpiFinanceiro extends StatelessWidget {
 }
 
 class _LinhaMetaDashboard extends StatelessWidget {
-  const _LinhaMetaDashboard({
-    required this.titulo,
-    required this.valor,
-  });
+  const _LinhaMetaDashboard({required this.titulo, required this.valor});
 
   final String titulo;
   final String valor;

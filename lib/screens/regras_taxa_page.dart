@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
 
-import '../database/app_database.dart';
 import '../models/conta_financeira.dart';
+import '../models/regra_taxa_cartao.dart';
 import '../repositories/conta_financeira_repository.dart';
+import '../repositories/regra_taxa_repository.dart';
 
 class RegrasTaxaPage extends StatefulWidget {
   const RegrasTaxaPage({super.key});
@@ -13,12 +13,21 @@ class RegrasTaxaPage extends StatefulWidget {
 }
 
 class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
+  final RegraTaxaRepository _repository = RegraTaxaRepository();
   final ContaFinanceiraRepository _contasRepository =
       ContaFinanceiraRepository();
 
   bool _carregando = true;
-  List<_GrupoRegraTaxa> _grupos = const [];
+  List<RegraTaxaCartao> _regras = const [];
   List<ContaFinanceira> _contas = const [];
+
+  List<ContaFinanceira> get _maquininhas {
+    return _contas.where((conta) => conta.tipo == 'Maquininha').toList();
+  }
+
+  List<ContaFinanceira> get _maquininhasAtivas {
+    return _maquininhas.where((conta) => conta.ativo).toList();
+  }
 
   @override
   void initState() {
@@ -32,84 +41,75 @@ class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
     }
 
     try {
-      final database = await AppDatabase.instance.database;
       final resultados = await Future.wait<dynamic>([
-        database.rawQuery(
-          '''
-          SELECT
-            r.*,
-            c.nome AS conta_nome
-          FROM financeiro_regras_taxa r
-          LEFT JOIN financeiro_contas c ON c.id = r.conta_id
-          ORDER BY
-            r.ativo DESC,
-            r.nome COLLATE NOCASE,
-            r.forma_pagamento,
-            r.parcelas,
-            r.id
-          ''',
-        ),
+        _repository.listar(incluirInativas: true),
         _contasRepository.listar(incluirInativas: true),
       ]);
 
-      final linhas = List<Map<String, Object?>>.from(
-        resultados[0] as List<dynamic>,
-      );
-      final contas = List<ContaFinanceira>.from(
-        resultados[1] as List<dynamic>,
-      );
-
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
-        _grupos = _agrupar(linhas);
-        _contas = contas;
+        _regras = List<RegraTaxaCartao>.from(
+          resultados[0] as List<dynamic>,
+        );
+        _contas = List<ContaFinanceira>.from(
+          resultados[1] as List<dynamic>,
+        );
         _carregando = false;
       });
     } catch (erro) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       setState(() => _carregando = false);
-      _mensagem('Não foi possível carregar as regras.\n$erro', erro: true);
+      _mensagem(
+        'Não foi possível carregar as regras.\n$erro',
+        erro: true,
+      );
     }
   }
 
-  List<_GrupoRegraTaxa> _agrupar(List<Map<String, Object?>> linhas) {
-    final grupos = <String, List<_LinhaRegraTaxa>>{};
+  List<_GrupoRegra> get _grupos {
+    final mapa = <String, List<RegraTaxaCartao>>{};
 
-    for (final linha in linhas) {
-      final item = _LinhaRegraTaxa.fromMap(linha);
+    for (final regra in _regras) {
       final chave = [
-        item.nome.trim().toLowerCase(),
-        item.formaPagamento,
-        item.contaId?.toString() ?? 'null',
+        regra.nome.trim().toLowerCase(),
+        regra.formaPagamento,
+        regra.contaId?.toString() ?? 'null',
       ].join('|');
 
-      grupos.putIfAbsent(chave, () => <_LinhaRegraTaxa>[]).add(item);
+      mapa.putIfAbsent(chave, () => <RegraTaxaCartao>[]).add(regra);
     }
 
-    final resultado = grupos.values
-        .map((itens) => _GrupoRegraTaxa(itens: itens))
+    final grupos = mapa.values
+        .map((itens) {
+          itens.sort((a, b) => a.parcelas.compareTo(b.parcelas));
+          return _GrupoRegra(itens);
+        })
         .toList();
 
-    resultado.sort((a, b) {
+    grupos.sort((a, b) {
       if (a.ativo != b.ativo) {
         return a.ativo ? -1 : 1;
       }
-      return a.nome.toLowerCase().compareTo(b.nome.toLowerCase());
+      final porConta = a.contaNome(_contas).compareTo(
+        b.contaNome(_contas),
+      );
+      if (porConta != 0) return porConta;
+      final porNome = a.nome.toLowerCase().compareTo(
+        b.nome.toLowerCase(),
+      );
+      if (porNome != 0) return porNome;
+      return a.formaPagamento.compareTo(b.formaPagamento);
     });
 
-    return resultado;
+    return grupos;
   }
 
-  Future<void> _abrirEditor([_GrupoRegraTaxa? grupo]) async {
-    if (_contas.where((conta) => conta.ativo).isEmpty && grupo == null) {
+  Future<void> _abrirEditor([_GrupoRegra? grupo]) async {
+    if (_maquininhasAtivas.isEmpty && grupo == null) {
       _mensagem(
-        'Cadastre primeiro uma conta do tipo Maquininha em Contas e caixa.',
+        'Cadastre primeiro uma conta ativa do tipo Maquininha em '
+        'Financeiro > Contas e caixa.',
         erro: true,
       );
       return;
@@ -120,10 +120,10 @@ class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _EditorRegraTaxaSheet(
+      builder: (_) => _EditorRegraSheet(
+        repository: _repository,
         grupo: grupo,
-        contas: _contas,
-        salvar: _salvarGrupo,
+        contas: _maquininhas,
       ),
     );
 
@@ -133,130 +133,47 @@ class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
     }
   }
 
-  Future<void> _salvarGrupo({
-    required _GrupoRegraTaxa? grupoAnterior,
-    required String nome,
-    required String formaPagamento,
-    required int contaId,
-    required bool ativo,
-    required bool repassarCliente,
-    required Map<int, double> taxas,
-  }) async {
-    final database = await AppDatabase.instance.database;
-    final agora = DateTime.now().toIso8601String();
-
-    await database.transaction((transaction) async {
-      final limite = formaPagamento == 'Cartão de crédito' ? 12 : 1;
-      final anteriores = <int, _LinhaRegraTaxa>{};
-
-      if (grupoAnterior != null) {
-        for (final item in grupoAnterior.itens) {
-          anteriores[item.parcelas] = item;
-        }
-      }
-
-      for (var parcelas = 1; parcelas <= limite; parcelas++) {
-        final taxa = taxas[parcelas];
-        if (taxa == null || taxa < 0 || taxa > 100) {
-          throw ArgumentError('Taxa inválida para ${parcelas}x.');
-        }
-
-        final anterior = anteriores[parcelas];
-
-        final dados = <String, Object?>{
-          'nome': nome.trim(),
-          'forma_pagamento': formaPagamento,
-          'parcelas': parcelas,
-          'conta_id': contaId,
-          'taxa_percentual': taxa,
-          'taxa_fixa': anterior?.taxaFixa ?? 0,
-          'prazo_recebimento_dias':
-              anterior?.prazoRecebimentoDias ?? 0,
-          'prioridade': anterior?.prioridade ?? 0,
-          'repassar_cliente': repassarCliente ? 1 : 0,
-          'observacoes': anterior?.observacoes ?? '',
-          'ativo': ativo ? 1 : 0,
-          'atualizado_em': agora,
-        };
-
-        if (anterior?.id != null) {
-          await transaction.update(
-            'financeiro_regras_taxa',
-            dados,
-            where: 'id = ?',
-            whereArgs: [anterior!.id],
-          );
-        } else {
-          dados['criado_em'] = agora;
-          await transaction.insert(
-            'financeiro_regras_taxa',
-            dados,
-            conflictAlgorithm: ConflictAlgorithm.abort,
-          );
-        }
-      }
-
-      if (grupoAnterior != null) {
-        final idsMantidos = <int>{};
-
-        for (var parcelas = 1; parcelas <= limite; parcelas++) {
-          final id = anteriores[parcelas]?.id;
-          if (id != null) {
-            idsMantidos.add(id);
-          }
-        }
-
-        final idsExcluir = grupoAnterior.itens
-            .map((item) => item.id)
-            .whereType<int>()
-            .where((id) => !idsMantidos.contains(id))
-            .toList();
-
-        if (idsExcluir.isNotEmpty) {
-          final placeholders = List.filled(idsExcluir.length, '?').join(',');
-          await transaction.delete(
-            'financeiro_regras_taxa',
-            where: 'id IN ($placeholders)',
-            whereArgs: idsExcluir,
-          );
-        }
-      }
-    });
-  }
-
-  Future<void> _alternar(_GrupoRegraTaxa grupo) async {
-    final ids = grupo.itens.map((item) => item.id).whereType<int>().toList();
-    if (ids.isEmpty) {
-      return;
-    }
-
+  Future<void> _alternar(_GrupoRegra grupo) async {
     try {
-      final database = await AppDatabase.instance.database;
-      final placeholders = List.filled(ids.length, '?').join(',');
+      final novoAtivo = !grupo.ativo;
+      final agora = DateTime.now().toIso8601String();
 
-      await database.update(
-        'financeiro_regras_taxa',
-        {
-          'ativo': grupo.ativo ? 0 : 1,
-          'atualizado_em': DateTime.now().toIso8601String(),
-        },
-        where: 'id IN ($placeholders)',
-        whereArgs: ids,
-      );
+      for (final regra in grupo.itens) {
+        await _repository.salvar(
+          RegraTaxaCartao(
+            id: regra.id,
+            nome: regra.nome,
+            formaPagamento: regra.formaPagamento,
+            parcelas: regra.parcelas,
+            contaId: regra.contaId,
+            taxaPercentual: regra.taxaPercentual,
+            taxaFixa: regra.taxaFixa,
+            prazoRecebimentoDias: regra.prazoRecebimentoDias,
+            prioridade: regra.prioridade,
+            repassarCliente: regra.repassarCliente,
+            observacoes: regra.observacoes,
+            ativo: novoAtivo,
+            criadoEm: regra.criadoEm,
+            atualizadoEm: agora,
+          ),
+        );
+      }
 
       await _carregar();
+      _mensagem(novoAtivo ? 'Regra ativada.' : 'Regra desativada.');
     } catch (erro) {
       _mensagem('Não foi possível alterar a regra.\n$erro', erro: true);
     }
   }
 
-  Future<void> _excluir(_GrupoRegraTaxa grupo) async {
+  Future<void> _arquivar(_GrupoRegra grupo) async {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Excluir regra'),
+        title: const Text('Arquivar regra'),
         content: Text(
-          'Excluir "${grupo.nome}" e todas as taxas cadastradas de parcelas?',
+          'Arquivar "${grupo.nome}"? Ela deixará de ser usada nos novos '
+          'pagamentos, mas o histórico dos pagamentos antigos será preservado.',
         ),
         actions: [
           TextButton(
@@ -265,42 +182,29 @@ class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Excluir'),
+            child: const Text('Arquivar'),
           ),
         ],
       ),
     );
 
-    if (confirmar != true) {
-      return;
-    }
-
-    final ids = grupo.itens.map((item) => item.id).whereType<int>().toList();
-    if (ids.isEmpty) {
-      return;
-    }
+    if (confirmar != true) return;
 
     try {
-      final database = await AppDatabase.instance.database;
-      final placeholders = List.filled(ids.length, '?').join(',');
-
-      await database.delete(
-        'financeiro_regras_taxa',
-        where: 'id IN ($placeholders)',
-        whereArgs: ids,
-      );
-
+      for (final regra in grupo.itens) {
+        if (regra.id != null) {
+          await _repository.arquivar(regra.id!);
+        }
+      }
       await _carregar();
-      _mensagem('Regra excluída.');
+      _mensagem('Regra arquivada.');
     } catch (erro) {
-      _mensagem('Não foi possível excluir a regra.\n$erro', erro: true);
+      _mensagem('Não foi possível arquivar a regra.\n$erro', erro: true);
     }
   }
 
   void _mensagem(String texto, {bool erro = false}) {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -314,6 +218,8 @@ class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
 
   @override
   Widget build(BuildContext context) {
+    final grupos = _grupos;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Regras de maquininha'),
@@ -332,41 +238,80 @@ class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
       ),
       body: _carregando
           ? const Center(child: CircularProgressIndicator())
-          : _grupos.isEmpty
+          : grupos.isEmpty
               ? _EstadoVazio(onCriar: () => _abrirEditor())
               : RefreshIndicator(
                   onRefresh: _carregar,
-                  child: ListView.separated(
+                  child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                    itemCount: _grupos.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final grupo = _grupos[index];
-                      return _CardGrupoRegra(
-                        grupo: grupo,
-                        onEditar: () => _abrirEditor(grupo),
-                        onAlternar: () => _alternar(grupo),
-                        onExcluir: () => _excluir(grupo),
-                      );
-                    },
+                    children: [
+                      const _AvisoRegras(),
+                      const SizedBox(height: 12),
+                      ...grupos.map(
+                        (grupo) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _CardRegra(
+                            grupo: grupo,
+                            contas: _contas,
+                            onEditar: () => _abrirEditor(grupo),
+                            onAlternar: () => _alternar(grupo),
+                            onArquivar: () => _arquivar(grupo),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
     );
   }
 }
 
-class _CardGrupoRegra extends StatelessWidget {
-  const _CardGrupoRegra({
+class _AvisoRegras extends StatelessWidget {
+  const _AvisoRegras();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.info_outline_rounded,
+              color: Color(0xFFD6A84B),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Cada regra fica vinculada a uma conta do tipo Maquininha. '
+                'No recebimento por cartão, o sistema identifica automaticamente '
+                'a taxa pela forma e pela quantidade de parcelas.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CardRegra extends StatelessWidget {
+  const _CardRegra({
     required this.grupo,
+    required this.contas,
     required this.onEditar,
     required this.onAlternar,
-    required this.onExcluir,
+    required this.onArquivar,
   });
 
-  final _GrupoRegraTaxa grupo;
+  final _GrupoRegra grupo;
+  final List<ContaFinanceira> contas;
   final VoidCallback onEditar;
   final VoidCallback onAlternar;
-  final VoidCallback onExcluir;
+  final VoidCallback onArquivar;
 
   @override
   Widget build(BuildContext context) {
@@ -419,7 +364,7 @@ class _CardGrupoRegra extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${grupo.formaPagamento} • ${grupo.contaNome}',
+                      '${grupo.formaPagamento} • ${grupo.contaNome(contas)}',
                       style: const TextStyle(color: Colors.white60),
                     ),
                     if (grupo.repassarCliente) ...[
@@ -441,7 +386,7 @@ class _CardGrupoRegra extends StatelessWidget {
                           Chip(
                             visualDensity: VisualDensity.compact,
                             label: Text(
-                              '${parcela}x ${_formatarPercentual(grupo.taxa(parcela))}',
+                              '${parcela}x ${_percentual(grupo.taxa(parcela))}',
                             ),
                           ),
                       ],
@@ -453,8 +398,8 @@ class _CardGrupoRegra extends StatelessWidget {
                 onSelected: (valor) {
                   if (valor == 'alternar') {
                     onAlternar();
-                  } else if (valor == 'excluir') {
-                    onExcluir();
+                  } else if (valor == 'arquivar') {
+                    onArquivar();
                   }
                 },
                 itemBuilder: (_) => [
@@ -463,8 +408,8 @@ class _CardGrupoRegra extends StatelessWidget {
                     child: Text(grupo.ativo ? 'Desativar' : 'Ativar'),
                   ),
                   const PopupMenuItem(
-                    value: 'excluir',
-                    child: Text('Excluir'),
+                    value: 'arquivar',
+                    child: Text('Arquivar'),
                   ),
                 ],
               ),
@@ -476,69 +421,75 @@ class _CardGrupoRegra extends StatelessWidget {
   }
 }
 
-class _EditorRegraTaxaSheet extends StatefulWidget {
-  const _EditorRegraTaxaSheet({
+class _EditorRegraSheet extends StatefulWidget {
+  const _EditorRegraSheet({
+    required this.repository,
     required this.grupo,
     required this.contas,
-    required this.salvar,
   });
 
-  final _GrupoRegraTaxa? grupo;
+  final RegraTaxaRepository repository;
+  final _GrupoRegra? grupo;
   final List<ContaFinanceira> contas;
-  final Future<void> Function({
-    required _GrupoRegraTaxa? grupoAnterior,
-    required String nome,
-    required String formaPagamento,
-    required int contaId,
-    required bool ativo,
-    required bool repassarCliente,
-    required Map<int, double> taxas,
-  }) salvar;
 
   @override
-  State<_EditorRegraTaxaSheet> createState() => _EditorRegraTaxaSheetState();
+  State<_EditorRegraSheet> createState() => _EditorRegraSheetState();
 }
 
-class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nomeController;
+class _EditorRegraSheetState extends State<_EditorRegraSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nome;
   final Map<int, TextEditingController> _taxas = {};
 
-  late String _formaPagamento;
+  late String _forma;
   int? _contaId;
+  bool _repassar = false;
   bool _ativo = true;
-  bool _repassarCliente = false;
   bool _salvando = false;
 
-  bool get _credito => _formaPagamento == 'Cartão de crédito';
+  bool get _credito => _forma == 'Cartão de crédito';
+
+  List<ContaFinanceira> get _contasDisponiveis {
+    final atualId = widget.grupo?.contaId;
+    return widget.contas
+        .where(
+          (conta) =>
+              conta.id != null &&
+              (conta.ativo || conta.id == atualId),
+        )
+        .toList();
+  }
 
   @override
   void initState() {
     super.initState();
 
     final grupo = widget.grupo;
-    _nomeController = TextEditingController(text: grupo?.nome ?? '');
-    _formaPagamento = grupo?.formaPagamento ?? 'Cartão de crédito';
+    _nome = TextEditingController(text: grupo?.nome ?? '');
+    _forma = grupo?.formaPagamento ?? 'Cartão de crédito';
     _contaId = grupo?.contaId;
+    _repassar = grupo?.repassarCliente ?? false;
     _ativo = grupo?.ativo ?? true;
-    _repassarCliente = grupo?.repassarCliente ?? false;
 
-    final ativas = widget.contas.where((conta) => conta.ativo).toList();
+    final ativas = widget.contas
+        .where((conta) => conta.ativo && conta.id != null)
+        .toList();
+
     if (_contaId == null && ativas.length == 1) {
       _contaId = ativas.single.id;
     }
 
     for (var parcela = 1; parcela <= 12; parcela++) {
-      final taxa = grupo?.taxaNula(parcela);
+      final valor = grupo?.taxaNula(parcela);
       _taxas[parcela] = TextEditingController(
-        text: taxa == null ? '' : _campoPercentual(taxa),
+        text: valor == null ? '' : _campoPercentual(valor),
       );
     }
   }
 
   @override
   void dispose() {
-    _nomeController.dispose();
+    _nome.dispose();
     for (final controller in _taxas.values) {
       controller.dispose();
     }
@@ -551,46 +502,84 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
     }
 
     final contaId = _contaId;
-    if (contaId == null) {
+    if (contaId == null) return;
+
+    final conta = widget.contas.where((item) => item.id == contaId).firstOrNull;
+    if (conta == null || conta.tipo != 'Maquininha') {
+      _mensagem('Selecione uma conta do tipo Maquininha.');
+      return;
+    }
+
+    if (_ativo && !conta.ativo) {
+      _mensagem('A conta selecionada está inativa.');
       return;
     }
 
     final limite = _credito ? 12 : 1;
-    final taxas = <int, double>{};
-
-    for (var parcela = 1; parcela <= limite; parcela++) {
-      taxas[parcela] = _lerPercentual(_taxas[parcela]!.text)!;
-    }
+    final agora = DateTime.now().toIso8601String();
+    final anteriores = <int, RegraTaxaCartao>{
+      for (final item in widget.grupo?.itens ?? const <RegraTaxaCartao>[])
+        item.parcelas: item,
+    };
 
     setState(() => _salvando = true);
 
     try {
-      await widget.salvar(
-        grupoAnterior: widget.grupo,
-        nome: _nomeController.text.trim(),
-        formaPagamento: _formaPagamento,
-        contaId: contaId,
-        ativo: _ativo,
-        repassarCliente: _repassarCliente,
-        taxas: taxas,
-      );
+      for (var parcela = 1; parcela <= limite; parcela++) {
+        final taxa = _lerPercentual(_taxas[parcela]!.text);
+        if (taxa == null) {
+          throw ArgumentError('Informe a taxa de ${parcela}x.');
+        }
+
+        final anterior = anteriores[parcela];
+
+        await widget.repository.salvar(
+          RegraTaxaCartao(
+            id: anterior?.id,
+            nome: _nome.text.trim(),
+            formaPagamento: _forma,
+            parcelas: parcela,
+            contaId: contaId,
+            taxaPercentual: taxa,
+            taxaFixa: anterior?.taxaFixa ?? 0,
+            prazoRecebimentoDias:
+                anterior?.prazoRecebimentoDias ?? 0,
+            prioridade: anterior?.prioridade ?? 0,
+            repassarCliente: _repassar,
+            observacoes: anterior?.observacoes ?? '',
+            ativo: _ativo,
+            criadoEm: anterior?.criadoEm.isNotEmpty == true
+                ? anterior!.criadoEm
+                : agora,
+            atualizadoEm: agora,
+          ),
+        );
+      }
+
+      for (final anterior in anteriores.values) {
+        if (anterior.parcelas > limite && anterior.id != null) {
+          await widget.repository.arquivar(anterior.id!);
+        }
+      }
 
       if (mounted) {
         Navigator.of(context).pop(true);
       }
     } catch (erro) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       setState(() => _salvando = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Não foi possível salvar a regra.\n$erro'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      _mensagem('Não foi possível salvar.\n$erro');
     }
+  }
+
+  void _mensagem(String texto) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(texto),
+        backgroundColor: Colors.red.shade700,
+      ),
+    );
   }
 
   @override
@@ -602,7 +591,7 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.94,
       ),
-      padding: EdgeInsets.fromLTRB(18, 10, 18, teclado + 20),
+      padding: EdgeInsets.fromLTRB(18, 12, 18, teclado + 20),
       decoration: const BoxDecoration(
         color: Color(0xFF151515),
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
@@ -613,17 +602,6 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 45,
-                  height: 5,
-                  margin: const EdgeInsets.only(bottom: 18),
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-              ),
               Text(
                 widget.grupo == null ? 'Nova regra' : 'Editar regra',
                 style: const TextStyle(
@@ -631,35 +609,28 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 5),
               const Text(
-                'Cadastre todas as taxas uma única vez. No pagamento você só escolhe a quantidade de parcelas.',
+                'Crédito usa taxas de 1x a 12x. Débito usa apenas 1x.',
                 style: TextStyle(color: Colors.white60),
               ),
               const SizedBox(height: 18),
               TextFormField(
-                controller: _nomeController,
+                controller: _nome,
                 enabled: !_salvando,
-                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Nome da regra',
                   hintText: 'Ex.: Stone Visa/Mastercard',
-                  prefixIcon: Icon(Icons.badge_outlined),
                 ),
-                validator: (valor) {
-                  if ((valor ?? '').trim().length < 2) {
-                    return 'Informe o nome da regra.';
-                  }
-                  return null;
-                },
+                validator: (valor) =>
+                    (valor ?? '').trim().length < 2
+                        ? 'Informe o nome da regra.'
+                        : null,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: _formaPagamento,
-                decoration: const InputDecoration(
-                  labelText: 'Forma',
-                  prefixIcon: Icon(Icons.credit_card_outlined),
-                ),
+                initialValue: _forma,
+                decoration: const InputDecoration(labelText: 'Forma'),
                 items: const [
                   DropdownMenuItem(
                     value: 'Cartão de crédito',
@@ -673,28 +644,27 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
                 onChanged: _salvando
                     ? null
                     : (valor) {
-                        if (valor == null) {
-                          return;
-                        }
-                        setState(() => _formaPagamento = valor);
+                        if (valor == null) return;
+                        setState(() => _forma = valor);
                       },
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               DropdownButtonFormField<int>(
                 initialValue: _contaId,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Conta da maquininha',
-                  prefixIcon: Icon(Icons.account_balance_wallet_outlined),
                   helperText:
-                      'O recebimento e a taxa serão lançados automaticamente nesta conta.',
+                      'Somente contas cadastradas como tipo Maquininha aparecem aqui.',
                 ),
-                items: widget.contas
+                items: _contasDisponiveis
                     .map(
                       (conta) => DropdownMenuItem<int>(
                         value: conta.id,
                         child: Text(
-                          conta.ativo ? conta.nome : '${conta.nome} (inativa)',
+                          conta.ativo
+                              ? conta.nome
+                              : '${conta.nome} (inativa)',
                         ),
                       ),
                     )
@@ -702,12 +672,8 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
                 onChanged: _salvando
                     ? null
                     : (valor) => setState(() => _contaId = valor),
-                validator: (valor) {
-                  if (valor == null) {
-                    return 'Selecione a conta da maquininha.';
-                  }
-                  return null;
-                },
+                validator: (valor) =>
+                    valor == null ? 'Selecione a maquininha.' : null,
               ),
               const SizedBox(height: 18),
               Text(
@@ -717,19 +683,13 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                _credito
-                    ? 'Preencha de 1x até 12x.'
-                    : 'No débito será usada somente a taxa de 1x.',
-                style: const TextStyle(color: Colors.white60),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final colunas = constraints.maxWidth >= 520 ? 3 : 2;
                   final largura =
-                      (constraints.maxWidth - ((colunas - 1) * 10)) / colunas;
+                      (constraints.maxWidth - ((colunas - 1) * 10)) /
+                          colunas;
 
                   return Wrap(
                     spacing: 10,
@@ -743,16 +703,16 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
                             enabled: !_salvando,
                             keyboardType:
                                 const TextInputType.numberWithOptions(
-                                  decimal: true,
-                                ),
+                              decimal: true,
+                            ),
                             decoration: InputDecoration(
                               labelText: '${parcela}x',
                               suffixText: '%',
                             ),
                             validator: (valor) {
                               final taxa = _lerPercentual(valor ?? '');
-                              if (taxa == null || taxa < 0 || taxa > 100) {
-                                return '0 a 100';
+                              if (taxa == null || taxa < 0 || taxa >= 100) {
+                                return '0 a 99,99';
                               }
                               return null;
                             },
@@ -765,13 +725,14 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
               const SizedBox(height: 12),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                value: _repassarCliente,
+                value: _repassar,
                 onChanged: _salvando
                     ? null
-                    : (valor) => setState(() => _repassarCliente = valor),
+                    : (valor) => setState(() => _repassar = valor),
                 title: const Text('Repassar taxa ao cliente'),
                 subtitle: const Text(
-                  'Desligado: a empresa absorve a taxa. Ligado: o sistema calcula o acréscimo necessário.',
+                  'Desligado: a empresa absorve a taxa. '
+                  'Ligado: o sistema acrescenta o valor necessário.',
                 ),
               ),
               SwitchListTile(
@@ -781,9 +742,6 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
                     ? null
                     : (valor) => setState(() => _ativo = valor),
                 title: const Text('Regra ativa'),
-                subtitle: const Text(
-                  'Somente regras ativas são usadas automaticamente.',
-                ),
               ),
               const SizedBox(height: 14),
               Row(
@@ -804,10 +762,14 @@ class _EditorRegraTaxaSheetState extends State<_EditorRegraTaxaSheet> {
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
                             )
                           : const Icon(Icons.save_outlined),
-                      label: Text(_salvando ? 'Salvando...' : 'Salvar regra'),
+                      label: Text(
+                        _salvando ? 'Salvando...' : 'Salvar regra',
+                      ),
                     ),
                   ),
                 ],
@@ -841,11 +803,15 @@ class _EstadoVazio extends StatelessWidget {
             const SizedBox(height: 16),
             const Text(
               'Nenhuma regra cadastrada',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Cadastre a maquininha, a conta e as taxas de 1x a 12x.',
+              'Cadastre uma conta do tipo Maquininha e depois informe '
+              'as taxas de débito ou crédito.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white60),
             ),
@@ -862,105 +828,40 @@ class _EstadoVazio extends StatelessWidget {
   }
 }
 
-class _GrupoRegraTaxa {
-  const _GrupoRegraTaxa({required this.itens});
+class _GrupoRegra {
+  _GrupoRegra(this.itens);
 
-  final List<_LinhaRegraTaxa> itens;
+  final List<RegraTaxaCartao> itens;
 
-  _LinhaRegraTaxa get principal => itens.first;
+  RegraTaxaCartao get principal => itens.first;
   String get nome => principal.nome;
   String get formaPagamento => principal.formaPagamento;
   int? get contaId => principal.contaId;
-  String get contaNome => principal.contaNome.isEmpty
-      ? 'Sem conta vinculada'
-      : principal.contaNome;
-  bool get ativo => itens.any((item) => item.ativo);
-  bool get repassarCliente => itens.any((item) => item.repassarCliente);
   bool get credito => formaPagamento == 'Cartão de crédito';
+  bool get ativo => itens.any((item) => item.ativo);
+  bool get repassarCliente =>
+      itens.any((item) => item.repassarCliente);
 
-  double taxa(int parcelas) => taxaNula(parcelas) ?? 0;
-
-  double? taxaNula(int parcelas) {
-    for (final item in itens.reversed) {
-      if (item.parcelas == parcelas) {
-        return item.taxaPercentual;
+  double? taxaNula(int parcela) {
+    for (final regra in itens) {
+      if (regra.parcelas == parcela) {
+        return regra.taxaPercentual;
       }
     }
     return null;
   }
-}
 
-class _LinhaRegraTaxa {
-  const _LinhaRegraTaxa({
-    required this.id,
-    required this.nome,
-    required this.formaPagamento,
-    required this.parcelas,
-    required this.contaId,
-    required this.contaNome,
-    required this.taxaPercentual,
-    required this.taxaFixa,
-    required this.prazoRecebimentoDias,
-    required this.prioridade,
-    required this.repassarCliente,
-    required this.observacoes,
-    required this.ativo,
-  });
+  double taxa(int parcela) => taxaNula(parcela) ?? 0;
 
-  final int? id;
-  final String nome;
-  final String formaPagamento;
-  final int parcelas;
-  final int? contaId;
-  final String contaNome;
-  final double taxaPercentual;
-  final double taxaFixa;
-  final int prazoRecebimentoDias;
-  final int prioridade;
-  final bool repassarCliente;
-  final String observacoes;
-  final bool ativo;
-
-  factory _LinhaRegraTaxa.fromMap(Map<String, Object?> map) {
-    return _LinhaRegraTaxa(
-      id: _int(map['id']),
-      nome: _texto(map['nome']),
-      formaPagamento: _texto(map['forma_pagamento']),
-      parcelas: _int(map['parcelas']) ?? 1,
-      contaId: _int(map['conta_id']),
-      contaNome: _texto(map['conta_nome']),
-      taxaPercentual: _double(map['taxa_percentual']),
-      taxaFixa: _double(map['taxa_fixa']),
-      prazoRecebimentoDias: _int(map['prazo_recebimento_dias']) ?? 0,
-      prioridade: _int(map['prioridade']) ?? 0,
-      repassarCliente: _int(map['repassar_cliente']) == 1,
-      observacoes: _texto(map['observacoes']),
-      ativo: _int(map['ativo']) == 1,
-    );
+  String contaNome(List<ContaFinanceira> contas) {
+    for (final conta in contas) {
+      if (conta.id == contaId) {
+        return conta.ativo ? conta.nome : '${conta.nome} (inativa)';
+      }
+    }
+    return 'Conta não encontrada';
   }
 }
-
-int? _int(dynamic valor) {
-  if (valor is int) {
-    return valor;
-  }
-  if (valor is num) {
-    return valor.toInt();
-  }
-  return int.tryParse(valor?.toString().trim() ?? '');
-}
-
-double _double(dynamic valor) {
-  if (valor is num) {
-    return valor.toDouble();
-  }
-  return double.tryParse(
-        valor?.toString().trim().replaceAll(',', '.') ?? '',
-      ) ??
-      0;
-}
-
-String _texto(dynamic valor) => valor?.toString().trim() ?? '';
 
 double? _lerPercentual(String texto) {
   final limpo = texto
@@ -968,9 +869,7 @@ double? _lerPercentual(String texto) {
       .replaceAll('%', '')
       .replaceAll(' ', '');
 
-  if (limpo.isEmpty) {
-    return null;
-  }
+  if (limpo.isEmpty) return null;
 
   if (limpo.contains(',') && limpo.contains('.')) {
     return double.tryParse(
@@ -989,4 +888,4 @@ String _campoPercentual(double valor) {
       .replaceAll('.', ',');
 }
 
-String _formatarPercentual(double valor) => '${_campoPercentual(valor)}%';
+String _percentual(double valor) => '${_campoPercentual(valor)}%';

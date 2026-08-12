@@ -3,12 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
 import '../models/plano_conta_financeiro.dart';
 
-enum PlanoContaSecao {
-  receita,
-  custoVenda,
-  despesaEmpresa,
-  naoAfetaResultado,
-}
+enum PlanoContaSecao { receita, custoVenda, despesaEmpresa, naoAfetaResultado }
 
 class PlanoContasRepository {
   static const Set<String> codigosAutomaticos = <String>{
@@ -17,6 +12,7 @@ class PlanoContasRepository {
     '2.02.01',
     '2.03.01',
     '9.01',
+    '9.04',
     '9.06',
   };
 
@@ -29,6 +25,7 @@ class PlanoContasRepository {
     '1.99.01',
     '2',
     '2.01',
+    '2.01.02',
     '2.02',
     '2.02.01',
     '2.03',
@@ -39,6 +36,7 @@ class PlanoContasRepository {
     '2.99.01',
     '9',
     '9.01',
+    '9.04',
     '9.06',
   };
 
@@ -185,22 +183,18 @@ class PlanoContasRepository {
     );
     final agora = DateTime.now().toIso8601String();
 
-    final id = await database.insert(
-      'financeiro_plano_contas',
-      {
-        'codigo': codigo,
-        'nome': nomeLimpo,
-        'tipo': configuracao.tipo,
-        'natureza': configuracao.natureza,
-        'grupo_dre': configuracao.grupoDre,
-        'parent_id': parentId,
-        'ativo': 1,
-        'ordem': configuracao.ordemBase + _numeroSufixo(codigo),
-        'criado_em': agora,
-        'atualizado_em': agora,
-      },
-      conflictAlgorithm: ConflictAlgorithm.abort,
-    );
+    final id = await database.insert('financeiro_plano_contas', {
+      'codigo': codigo,
+      'nome': nomeLimpo,
+      'tipo': configuracao.tipo,
+      'natureza': configuracao.natureza,
+      'grupo_dre': configuracao.grupoDre,
+      'parent_id': parentId,
+      'ativo': 1,
+      'ordem': configuracao.ordemBase + _numeroSufixo(codigo),
+      'criado_em': agora,
+      'atualizado_em': agora,
+    }, conflictAlgorithm: ConflictAlgorithm.abort);
 
     final criado = await buscarPorId(id);
     if (criado == null) {
@@ -209,10 +203,7 @@ class PlanoContasRepository {
     return criado;
   }
 
-  Future<void> renomear({
-    required int id,
-    required String nome,
-  }) async {
+  Future<void> renomear({required int id, required String nome}) async {
     final conta = await buscarPorId(id);
     if (conta == null) {
       throw StateError('Categoria financeira não encontrada.');
@@ -226,19 +217,13 @@ class PlanoContasRepository {
     final database = await AppDatabase.instance.database;
     await database.update(
       'financeiro_plano_contas',
-      {
-        'nome': nomeLimpo,
-        'atualizado_em': DateTime.now().toIso8601String(),
-      },
+      {'nome': nomeLimpo, 'atualizado_em': DateTime.now().toIso8601String()},
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
-  Future<void> alterarAtivo({
-    required int id,
-    required bool ativo,
-  }) async {
+  Future<void> alterarAtivo({required int id, required bool ativo}) async {
     final conta = await buscarPorId(id);
     if (conta == null) {
       throw StateError('Categoria financeira não encontrada.');
@@ -279,7 +264,8 @@ class PlanoContasRepository {
     }
 
     final database = await AppDatabase.instance.database;
-    final filhos = Sqflite.firstIntValue(
+    final filhos =
+        Sqflite.firstIntValue(
           await database.rawQuery(
             'SELECT COUNT(*) FROM financeiro_plano_contas WHERE parent_id = ?',
             [id],
@@ -301,7 +287,8 @@ class PlanoContasRepository {
 
   Future<bool> possuiMovimentacoes(int id) async {
     final database = await AppDatabase.instance.database;
-    final total = Sqflite.firstIntValue(
+    final total =
+        Sqflite.firstIntValue(
           await database.rawQuery(
             'SELECT COUNT(*) FROM movimentos_financeiros WHERE plano_conta_id = ?',
             [id],
@@ -325,6 +312,8 @@ class PlanoContasRepository {
     switch (conta.codigo) {
       case '2.01.01':
         return nome == 'Folha de pagamento' ? 'Funcionários' : nome;
+      case '2.01.02':
+        return 'Gastos pessoais do proprietário';
       case '2.03.01':
         return nome == 'Produtos consumidos em serviços'
             ? 'Produtos e materiais usados nos serviços'
@@ -340,9 +329,7 @@ class PlanoContasRepository {
       case '9.03':
         return nome == 'Aportes' ? 'Aporte dos sócios' : nome;
       case '9.04':
-        return nome == 'Retiradas e gastos pessoais'
-            ? 'Retirada dos sócios'
-            : nome;
+        return 'Retirada do sócio (não entra no DRE)';
       case '9.05':
         return nome == 'Correção de caixa' ? 'Ajuste de saldo' : nome;
       default:
@@ -367,7 +354,8 @@ class PlanoContasRepository {
       case '2.01.01':
         return 'Salários e custos recorrentes da equipe.';
       case '2.01.02':
-        return 'Remuneração dos proprietários pelo trabalho na empresa.';
+        return 'Valores efetivamente pagos ou gastos pelo proprietário. '
+            'Entram nas despesas da DRE e podem ser detalhados por lançamento.';
       case '2.02.01':
         return 'Taxas das maquininhas de cartão. O Imperium lança automaticamente.';
       case '2.02.02':
@@ -401,7 +389,8 @@ class PlanoContasRepository {
       case '9.03':
         return 'Dinheiro colocado pelos sócios na empresa. Não é faturamento.';
       case '9.04':
-        return 'Retiradas dos sócios. Não são despesas operacionais da empresa.';
+        return 'Use somente quando a retirada não deve reduzir o resultado '
+            'da empresa. Esta categoria fica fora da DRE.';
       case '9.05':
         return 'Correções manuais para ajustar um saldo ao valor real.';
       case '9.06':
@@ -494,7 +483,8 @@ class PlanoContasRepository {
   ) async {
     for (var numero = 1; numero <= 999; numero++) {
       final codigo = '$prefixo${numero.toString().padLeft(2, '0')}';
-      final existe = Sqflite.firstIntValue(
+      final existe =
+          Sqflite.firstIntValue(
             await database.rawQuery(
               'SELECT COUNT(*) FROM financeiro_plano_contas WHERE codigo = ?',
               [codigo],

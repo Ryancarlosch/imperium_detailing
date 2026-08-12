@@ -102,4 +102,326 @@ class ContaFinanceiraRepository {
       whereArgs: [id],
     );
   }
+
+  Future<Map<String, dynamic>> obterExtratoMensal({
+    required int contaId,
+    required DateTime mes,
+  }) async {
+    final database = await AppDatabase.instance.database;
+    final inicio = DateTime(mes.year, mes.month, 1);
+    final fimExclusivo = DateTime(mes.year, mes.month + 1, 1);
+
+    final conta = await database.query(
+      'financeiro_contas',
+      columns: [
+        'id',
+        'nome',
+        'tipo',
+        'instituicao',
+        'saldo_inicial',
+        'data_saldo_inicial',
+        'ativo',
+      ],
+      where: 'id = ?',
+      whereArgs: [contaId],
+      limit: 1,
+    );
+
+    if (conta.isEmpty) {
+      throw StateError('Conta financeira não encontrada.');
+    }
+
+    final anteriores = await database.rawQuery(
+      '''
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN LOWER(tipo) = 'entrada' THEN valor
+          WHEN LOWER(tipo) IN ('saída', 'saida') THEN -valor
+          ELSE 0
+        END
+      ), 0) AS total
+      FROM movimentos_financeiros
+      WHERE conta_id = ?
+        AND status = 'Realizado'
+        AND date(COALESCE(data_pagamento, data)) < date(?)
+      ''',
+      [contaId, inicio.toIso8601String()],
+    );
+
+    final saldoBase = _double(conta.first['saldo_inicial']);
+    final movimentoAnterior = _double(anteriores.first['total']);
+    final saldoInicialMes = saldoBase + movimentoAnterior;
+
+    final movimentos = await database.rawQuery(
+      '''
+      SELECT
+        m.*,
+        pc.codigo AS plano_codigo,
+        pc.nome AS plano_nome,
+        pc.grupo_dre AS plano_grupo_dre
+      FROM movimentos_financeiros m
+      LEFT JOIN financeiro_plano_contas pc
+        ON pc.id = m.plano_conta_id
+      WHERE m.conta_id = ?
+        AND m.status = 'Realizado'
+        AND date(COALESCE(m.data_pagamento, m.data)) >= date(?)
+        AND date(COALESCE(m.data_pagamento, m.data)) < date(?)
+      ORDER BY
+        datetime(COALESCE(m.data_pagamento, m.data)) ASC,
+        m.id ASC
+      ''',
+      [contaId, inicio.toIso8601String(), fimExclusivo.toIso8601String()],
+    );
+
+    var entradas = 0.0;
+    var saidas = 0.0;
+    for (final item in movimentos) {
+      final tipo = (item['tipo'] ?? '').toString().trim().toLowerCase();
+      final valor = _double(item['valor']);
+      if (tipo == 'entrada') {
+        entradas += valor;
+      } else if (tipo == 'saída' || tipo == 'saida') {
+        saidas += valor;
+      }
+    }
+
+    return {
+      'conta': Map<String, dynamic>.from(conta.first),
+      'saldo_inicial_mes': saldoInicialMes,
+      'entradas': entradas,
+      'saidas': saidas,
+      'saldo_final_mes': saldoInicialMes + entradas - saidas,
+      'movimentos': movimentos
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(),
+    };
+  }
+
+  Future<void> _garantirTabelaConciliacoes(DatabaseExecutor executor) async {
+    await executor.execute('''
+      CREATE TABLE IF NOT EXISTS financeiro_conciliacoes_conta (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conta_id INTEGER NOT NULL,
+        data_conciliacao TEXT NOT NULL,
+        saldo_calculado REAL NOT NULL DEFAULT 0,
+        saldo_informado REAL NOT NULL DEFAULT 0,
+        diferenca REAL NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'Conciliado',
+        movimento_ajuste_id INTEGER,
+        observacoes TEXT NOT NULL DEFAULT '',
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (conta_id)
+          REFERENCES financeiro_contas (id)
+          ON DELETE RESTRICT,
+        FOREIGN KEY (movimento_ajuste_id)
+          REFERENCES movimentos_financeiros (id)
+          ON DELETE SET NULL,
+        CHECK (status IN ('Conciliado', 'Divergente', 'Ajustado'))
+      )
+    ''');
+
+    await executor.execute('''
+      CREATE INDEX IF NOT EXISTS idx_fin_conciliacoes_conta_data
+      ON financeiro_conciliacoes_conta (conta_id, data_conciliacao)
+    ''');
+  }
+
+  Future<double> _saldoCalculadoAte(
+    DatabaseExecutor executor, {
+    required int contaId,
+    required DateTime data,
+  }) async {
+    final conta = await executor.query(
+      'financeiro_contas',
+      columns: ['id', 'saldo_inicial'],
+      where: 'id = ?',
+      whereArgs: [contaId],
+      limit: 1,
+    );
+
+    if (conta.isEmpty) {
+      throw StateError('Conta financeira não encontrada.');
+    }
+
+    final movimentos = await executor.rawQuery(
+      '''
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN LOWER(tipo) = 'entrada' THEN valor
+          WHEN LOWER(tipo) IN ('saída', 'saida') THEN -valor
+          ELSE 0
+        END
+      ), 0) AS total
+      FROM movimentos_financeiros
+      WHERE conta_id = ?
+        AND status = 'Realizado'
+        AND date(COALESCE(data_pagamento, data)) <= date(?)
+      ''',
+      [contaId, data.toIso8601String()],
+    );
+
+    return _double(conta.first['saldo_inicial']) +
+        _double(movimentos.first['total']);
+  }
+
+  Future<double> obterSaldoCalculadoAte({
+    required int contaId,
+    required DateTime data,
+  }) async {
+    final database = await AppDatabase.instance.database;
+    return _saldoCalculadoAte(database, contaId: contaId, data: data);
+  }
+
+  Future<List<Map<String, dynamic>>> listarConciliacoesMes({
+    required int contaId,
+    required DateTime mes,
+  }) async {
+    final database = await AppDatabase.instance.database;
+    await _garantirTabelaConciliacoes(database);
+
+    final inicio = DateTime(mes.year, mes.month, 1);
+    final fimExclusivo = DateTime(mes.year, mes.month + 1, 1);
+
+    final resultado = await database.rawQuery(
+      '''
+      SELECT
+        c.*,
+        m.descricao AS ajuste_descricao
+      FROM financeiro_conciliacoes_conta c
+      LEFT JOIN movimentos_financeiros m
+        ON m.id = c.movimento_ajuste_id
+      WHERE c.conta_id = ?
+        AND date(c.data_conciliacao) >= date(?)
+        AND date(c.data_conciliacao) < date(?)
+      ORDER BY date(c.data_conciliacao) DESC, c.id DESC
+      ''',
+      [contaId, inicio.toIso8601String(), fimExclusivo.toIso8601String()],
+    );
+
+    return resultado.map((item) => Map<String, dynamic>.from(item)).toList();
+  }
+
+  Future<int> registrarConciliacaoConta({
+    required int contaId,
+    required DateTime data,
+    required double saldoInformado,
+    required bool criarAjuste,
+    String observacoes = '',
+  }) async {
+    final database = await AppDatabase.instance.database;
+
+    return database.transaction<int>((transaction) async {
+      await _garantirTabelaConciliacoes(transaction);
+
+      final conta = await transaction.query(
+        'financeiro_contas',
+        columns: ['id', 'nome', 'ativo'],
+        where: 'id = ?',
+        whereArgs: [contaId],
+        limit: 1,
+      );
+
+      if (conta.isEmpty) {
+        throw StateError('Conta financeira não encontrada.');
+      }
+
+      final saldoCalculado = await _saldoCalculadoAte(
+        transaction,
+        contaId: contaId,
+        data: data,
+      );
+
+      var diferenca = saldoInformado - saldoCalculado;
+      if (diferenca.abs() < 0.005) diferenca = 0;
+
+      int? movimentoAjusteId;
+      var status = diferenca == 0 ? 'Conciliado' : 'Divergente';
+
+      if (criarAjuste && diferenca != 0) {
+        if (_int(conta.first['ativo']) != 1) {
+          throw StateError(
+            'Não é possível criar ajuste em uma conta financeira inativa.',
+          );
+        }
+
+        final plano = await transaction.query(
+          'financeiro_plano_contas',
+          columns: ['id', 'natureza'],
+          where: 'codigo = ?',
+          whereArgs: ['9.05'],
+          limit: 1,
+        );
+
+        if (plano.isEmpty) {
+          throw StateError(
+            'A categoria Correção de caixa (9.05) não foi encontrada.',
+          );
+        }
+
+        final nomeConta = (conta.first['nome'] ?? 'Conta').toString().trim();
+        final tipo = diferenca > 0 ? 'Entrada' : 'Saída';
+        final valor = diferenca.abs();
+        final dataIso = data.toIso8601String();
+
+        movimentoAjusteId = await transaction.insert('movimentos_financeiros', {
+          'tipo': tipo,
+          'descricao': 'Ajuste de conciliação - $nomeConta',
+          'valor': valor,
+          'forma_pagamento': 'Ajuste',
+          'data': dataIso,
+          'cliente_id': null,
+          'agendamento_id': null,
+          'ordem_servico_id': null,
+          'pagamento_id': null,
+          'plano_conta_id': _int(plano.first['id']),
+          'conta_id': contaId,
+          'fornecedor_id': null,
+          'transferencia_id': null,
+          'natureza': (plano.first['natureza'] ?? 'Ajuste de caixa').toString(),
+          'origem': 'Conciliação de conta',
+          'status': 'Realizado',
+          'data_competencia': dataIso,
+          'data_vencimento': null,
+          'data_pagamento': dataIso,
+          'numero_documento': '',
+          'observacoes': observacoes.trim().isEmpty
+              ? 'Ajuste criado pela conciliação da conta.'
+              : observacoes.trim(),
+          'impacta_dre': 0,
+        }, conflictAlgorithm: ConflictAlgorithm.abort);
+
+        status = 'Ajustado';
+      }
+
+      return transaction.insert(
+        'financeiro_conciliacoes_conta',
+        {
+          'conta_id': contaId,
+          'data_conciliacao': data.toIso8601String(),
+          'saldo_calculado': saldoCalculado,
+          'saldo_informado': saldoInformado,
+          'diferenca': diferenca,
+          'status': status,
+          'movimento_ajuste_id': movimentoAjusteId,
+          'observacoes': observacoes.trim(),
+          'criado_em': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+    });
+  }
+
+  static int? _int(dynamic valor) {
+    if (valor is int) return valor;
+    if (valor is num) return valor.toInt();
+    return int.tryParse(valor?.toString().trim() ?? '');
+  }
+
+  static double _double(dynamic valor) {
+    if (valor is num) return valor.toDouble();
+    return double.tryParse(
+          valor?.toString().trim().replaceAll(',', '.') ?? '',
+        ) ??
+        0;
+  }
 }

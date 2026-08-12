@@ -540,8 +540,13 @@ class PrecificacaoRepository {
     final mediaMensalReal = totalHistorico / config.mesesMedia;
     final estruturaCadastrada = _double(estrutura.first['total']);
 
-    final usouHistorico = mediaMensalReal > 0.000001;
-    final baseMensal = usouHistorico ? mediaMensalReal : estruturaCadastrada;
+    final possuiHistorico = mediaMensalReal > 0.000001;
+    final usouHistorico =
+        possuiHistorico &&
+        mediaMensalReal >= estruturaCadastrada;
+    final baseMensal = mediaMensalReal > estruturaCadastrada
+        ? mediaMensalReal
+        : estruturaCadastrada;
     final custoHora = config.horasProdutivasMes > 0
         ? baseMensal / config.horasProdutivasMes
         : 0.0;

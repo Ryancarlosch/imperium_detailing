@@ -14,7 +14,10 @@ import 'package:share_plus/share_plus.dart';
 import '../models/configuracao.dart';
 import '../repositories/configuracao_repository.dart';
 import '../services/backup_service.dart';
+import '../widgets/backup_automatico_card.dart';
 import '../services/primeiro_uso_assistente.dart';
+
+import 'supabase_conta_page.dart';
 
 class ConfiguracoesPage extends StatefulWidget {
   const ConfiguracoesPage({super.key});
@@ -1314,11 +1317,45 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                     ),
                     const SizedBox(height: 14),
                     _SecaoConfiguracao(
+                      titulo: 'Nuvem e sincronização',
+                      subtitulo:
+                          'Conecte a identidade do Supabase e valide as permissões da empresa.',
+                      icone: Icons.cloud_outlined,
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.verified_user_outlined),
+                          title: const Text('Conta na nuvem'),
+                          subtitle: const Text(
+                            'Autenticação, empresa vinculada e teste das políticas RLS.',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => SupabaseContaPage(
+                                  emailInicial: _emailController.text.trim(),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'A sincronização dos dados ainda não está ativa nesta etapa.',
+                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _SecaoConfiguracao(
                       titulo: 'Backup e restauração',
                       subtitulo:
                           'Crie um backup local compartilhável ou restaure um arquivo válido com segurança.',
                       icone: Icons.backup_outlined,
                       children: [
+                        const BackupAutomaticoCard(),
+                        const SizedBox(height: 12),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),

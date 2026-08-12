@@ -40,10 +40,10 @@ class DreOrigemDetalhe {
   final int? movimentoId;
 }
 
-
 class DreServicoResultado {
   const DreServicoResultado({
     required this.servico,
+    this.categoria = 'Sem categoria',
     required this.quantidade,
     required this.quantidadeOrdens,
     required this.faturamentoBruto,
@@ -58,6 +58,7 @@ class DreServicoResultado {
   });
 
   final String servico;
+  final String categoria;
   final double quantidade;
   final int quantidadeOrdens;
   final double faturamentoBruto;
@@ -78,9 +79,7 @@ class DreServicoResultado {
   }
 
   double get resultadoGerencialEstimado {
-    return resultadoComercial -
-        custoMaoObraGerencial -
-        custoEstruturaRateada;
+    return resultadoComercial - custoMaoObraGerencial - custoEstruturaRateada;
   }
 
   double get margemGerencial {
@@ -132,9 +131,7 @@ class DreServicoOrdem {
   }
 
   double get resultadoGerencialEstimado {
-    return resultadoComercial -
-        custoMaoObraGerencial -
-        custoEstruturaRateada;
+    return resultadoComercial - custoMaoObraGerencial - custoEstruturaRateada;
   }
 
   double get margemGerencial {
@@ -256,9 +253,7 @@ class DreRepository {
         detalhes: detalhes,
         porGrupo: porGrupo,
         grupo: 'Custos Variáveis',
-        codigo: regime == DreRegime.competencia
-            ? 'FIFO'
-            : 'FIFO-CAIXA',
+        codigo: regime == DreRegime.competencia ? 'FIFO' : 'FIFO-CAIXA',
         nome: regime == DreRegime.competencia
             ? 'Produtos consumidos nas OS (FIFO/snapshot)'
             : 'Produtos das OS proporcionais aos recebimentos',
@@ -406,8 +401,7 @@ class DreRepository {
           valor: receitaOs,
         ),
       );
-      porGrupo['Receita Bruta'] =
-          (porGrupo['Receita Bruta'] ?? 0) + receitaOs;
+      porGrupo['Receita Bruta'] = (porGrupo['Receita Bruta'] ?? 0) + receitaOs;
     }
 
     _adicionarDetalhe(
@@ -625,16 +619,10 @@ class DreRepository {
     }
 
     detalhes.add(
-      DreDetalhe(
-        grupo: grupo,
-        codigo: codigo,
-        nome: nome,
-        valor: valor,
-      ),
+      DreDetalhe(grupo: grupo, codigo: codigo, nome: nome, valor: valor),
     );
     porGrupo[grupo] = (porGrupo[grupo] ?? 0) + valor;
   }
-
 
   Future<bool> _tabelaExiste(Database database, String nome) async {
     final resultado = await database.rawQuery(
@@ -663,9 +651,7 @@ class DreRepository {
       );
 
       if (config.isNotEmpty) {
-        horasProdutivasMes = _double(
-          config.first['horas_produtivas_mes'],
-        );
+        horasProdutivasMes = _double(config.first['horas_produtivas_mes']);
         mesesMedia = (_int(config.first['meses_media']) ?? 3)
             .clamp(1, 12)
             .toInt();
@@ -726,13 +712,11 @@ class DreRepository {
 
     if (mediaEstrutura <= 0.000001 &&
         await _tabelaExiste(database, 'financeiro_custos_fixos')) {
-      final fallback = await database.rawQuery(
-        '''
+      final fallback = await database.rawQuery('''
         SELECT COALESCE(SUM(valor_mensal), 0) AS total
         FROM financeiro_custos_fixos
         WHERE ativo = 1
-        ''',
-      );
+        ''');
       mediaEstrutura = _double(fallback.first['total']);
     }
 
@@ -744,28 +728,44 @@ class DreRepository {
       return 0;
     }
 
-    final resultado = await database.rawQuery(
-      '''
+    final resultado = await database.rawQuery('''
       SELECT
         COALESCE(SUM(
           remuneracao_mensal +
           encargos_mensais +
           outros_custos_mensais
         ), 0) AS custo_total,
-        COALESCE(SUM(horas_produtivas_mes), 0) AS horas_total
+        COALESCE(MAX(horas_produtivas_mes), 0) AS horas_equipe
       FROM financeiro_colaboradores_custo
       WHERE ativo = 1
-      ''',
-    );
+      ''');
 
     final custoTotal = _double(resultado.first['custo_total']);
-    final horasTotal = _double(resultado.first['horas_total']);
+    var horasEquipe = _double(resultado.first['horas_equipe']);
 
-    if (horasTotal <= 0.000001) {
+    // A equipe trabalha no mesmo periodo. A carga horaria mensal da empresa
+    // e compartilhada e nao deve ser somada por colaborador.
+    if (await _tabelaExiste(database, 'financeiro_precificacao_config')) {
+      final config = await database.query(
+        'financeiro_precificacao_config',
+        columns: ['horas_produtivas_mes'],
+        where: 'id = 1',
+        limit: 1,
+      );
+
+      if (config.isNotEmpty) {
+        final horasConfiguradas = _double(config.first['horas_produtivas_mes']);
+        if (horasConfiguradas > 0.000001) {
+          horasEquipe = horasConfiguradas;
+        }
+      }
+    }
+
+    if (horasEquipe <= 0.000001) {
       return 0;
     }
 
-    return custoTotal / horasTotal;
+    return custoTotal / horasEquipe;
   }
 
   Future<Map<String, Map<String, double>>> _carregarGerencialPorServico({
@@ -987,6 +987,61 @@ class DreRepository {
     return mapa;
   }
 
+  Future<Map<String, String>> _carregarCategoriasPorServico(
+    Database database,
+  ) async {
+    if (!await _tabelaExiste(database, 'servicos_catalogo')) {
+      return const <String, String>{};
+    }
+
+    final temTabelaCategorias = await _tabelaExiste(
+      database,
+      'servico_categorias',
+    );
+
+    final List<Map<String, Object?>> resultado;
+
+    if (temTabelaCategorias) {
+      resultado = await database.rawQuery('''
+        SELECT
+          s.nome,
+          COALESCE(
+            NULLIF(TRIM(c.nome), ''),
+            NULLIF(TRIM(s.categoria), ''),
+            'Sem categoria'
+          ) AS categoria
+        FROM servicos_catalogo s
+        LEFT JOIN servico_categorias c
+          ON c.id = s.categoria_id
+        ORDER BY s.ativo DESC, s.id DESC
+        ''');
+    } else {
+      resultado = await database.rawQuery('''
+        SELECT
+          nome,
+          COALESCE(NULLIF(TRIM(categoria), ''), 'Sem categoria') AS categoria
+        FROM servicos_catalogo
+        ORDER BY ativo DESC, id DESC
+        ''');
+    }
+
+    final mapa = <String, String>{};
+
+    for (final linha in resultado) {
+      final nome = (linha['nome'] ?? '').toString().trim().toLowerCase();
+      if (nome.isEmpty || mapa.containsKey(nome)) {
+        continue;
+      }
+
+      final categoria = (linha['categoria'] ?? 'Sem categoria')
+          .toString()
+          .trim();
+      mapa[nome] = categoria.isEmpty ? 'Sem categoria' : categoria;
+    }
+
+    return mapa;
+  }
+
   Future<List<DreServicoResultado>> listarResultadoServicos({
     required DateTime inicio,
     required DateTime fim,
@@ -1135,6 +1190,7 @@ class DreRepository {
       inicioDia: inicioDia,
       fimDia: fimDia,
     );
+    final categorias = await _carregarCategoriasPorServico(database);
 
     final servicos = resultado.map((linha) {
       final nome = (linha['servico'] ?? 'Serviço').toString().trim();
@@ -1142,6 +1198,7 @@ class DreRepository {
 
       return DreServicoResultado(
         servico: nome,
+        categoria: categorias[nome.toLowerCase()] ?? 'Sem categoria',
         quantidade: _double(linha['quantidade']),
         quantidadeOrdens: _int(linha['quantidade_ordens']) ?? 0,
         faturamentoBruto: _double(linha['faturamento_bruto']),
@@ -1382,8 +1439,7 @@ class DreRepository {
       );
     }
 
-    if (regime == DreRegime.competencia &&
-        detalhe.codigo == '2.02.01') {
+    if (regime == DreRegime.competencia && detalhe.codigo == '2.02.01') {
       return _origensTaxasCartaoCompetencia(
         database: database,
         inicioDia: inicioDia,
@@ -1635,9 +1691,9 @@ class DreRepository {
       [inicioDia, fimDia],
     );
 
-    return resultado
-        .where((linha) => _double(linha['valor']) > 0.000001)
-        .map((linha) {
+    return resultado.where((linha) => _double(linha['valor']) > 0.000001).map((
+      linha,
+    ) {
       final numero = (linha['numero'] ?? 'OS').toString().trim();
       final cliente = (linha['cliente_nome'] ?? '').toString().trim();
       final quantidade = _double(linha['quantidade']);
@@ -1721,9 +1777,9 @@ class DreRepository {
       [inicioDia, fimDia],
     );
 
-    return resultado
-        .where((linha) => _double(linha['valor']) > 0.000001)
-        .map((linha) {
+    return resultado.where((linha) => _double(linha['valor']) > 0.000001).map((
+      linha,
+    ) {
       final numero = (linha['numero'] ?? 'OS').toString().trim();
       final cliente = (linha['cliente_nome'] ?? '').toString().trim();
 

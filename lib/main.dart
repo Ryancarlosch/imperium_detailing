@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'repositories/usuario_repository.dart';
+import 'services/backup_automatico_service.dart';
 import 'screens/dashboard_page.dart';
 import 'screens/login_page.dart';
+import 'screens/usuario_inicio_page.dart';
 
-void main() {
+import 'services/supabase_bootstrap.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await SupabaseBootstrap.inicializar();
+
   runApp(const ImperiumApp());
 }
 
@@ -51,6 +58,12 @@ class _SessaoGateState extends State<_SessaoGate> {
     _inicializar();
   }
 
+  void _agendarBackupAutomatico() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      BackupAutomaticoService.instance.verificarEExecutar();
+    });
+  }
+
   Future<void> _inicializar() async {
     if (mounted) {
       setState(() {
@@ -72,6 +85,10 @@ class _SessaoGateState extends State<_SessaoGate> {
         _sessao = sessao;
         _carregando = false;
       });
+      // backup-auto: sessao-restaurada
+      if (sessao != null) {
+        _agendarBackupAutomatico();
+      }
     } catch (erro) {
       if (!mounted) {
         return;
@@ -94,19 +111,19 @@ class _SessaoGateState extends State<_SessaoGate> {
       _sessao = Map<String, dynamic>.from(sessao);
       _erroInicializacao = null;
     });
+    // backup-auto: login-manual
+    _agendarBackupAutomatico();
   }
 
   Future<void> _sair() async {
     try {
       await _usuarioRepository.sair();
     } finally {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _sessao = null;
+        });
       }
-
-      setState(() {
-        _sessao = null;
-      });
     }
   }
 
@@ -192,6 +209,17 @@ class _SessaoGateState extends State<_SessaoGate> {
 
     if (sessao == null) {
       return LoginPage(onLogin: _aoEntrar);
+    }
+
+    final perfil = (sessao['perfil'] ?? '').toString().trim();
+
+    if (perfil == UsuarioRepository.perfilFuncionario) {
+      return UsuarioInicioPage(
+        sessao: sessao,
+        onLogout: () {
+          _sair();
+        },
+      );
     }
 
     return DashboardPage(

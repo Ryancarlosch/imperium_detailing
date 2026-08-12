@@ -529,7 +529,7 @@ class AppDatabase {
       },
       {
         'codigo': '2.01.02',
-        'nome': 'Pró-labore',
+        'nome': 'Gastos pessoais do proprietário',
         'tipo': 'Saída',
         'natureza': 'Mão de obra',
         'grupo_dre': 'Despesas Operacionais',
@@ -840,7 +840,6 @@ class AppDatabase {
     }
   }
 
-
   Future<void> _aplicarPlanoContasSimplificado(Database database) async {
     if (!await _tabelaExiste(database, 'financeiro_plano_contas')) {
       return;
@@ -851,6 +850,44 @@ class AppDatabase {
     await _inserirPlanoContasFinanceiroPadrao(database);
 
     final agora = DateTime.now().toIso8601String();
+    // Regra gerencial do proprietário:
+    // 2.01.02 representa somente valores efetivamente pagos/gastos pelo
+    // proprietário e entra no DRE. O valor mensal cadastrado em Mão de Obra
+    // continua sendo apenas referência para precificação e não gera lançamento.
+    await database.update(
+      'financeiro_plano_contas',
+      {
+        'nome': 'Gastos pessoais do proprietário',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
+        'grupo_dre': 'Despesas Operacionais',
+        'ativo': 1,
+        'atualizado_em': agora,
+      },
+      where: '''
+        codigo = '2.01.02'
+        AND nome IN (
+          'Pró-labore',
+          'Remuneração dos proprietários',
+          'Gastos pessoais do proprietário'
+        )
+      ''',
+    );
+
+    // Mantemos também a retirada que NÃO afeta resultado, mas com um nome
+    // explícito para evitar confundir com o gasto pessoal usado no DRE.
+    await database.update(
+      'financeiro_plano_contas',
+      {'nome': 'Retirada do sócio (não entra no DRE)', 'atualizado_em': agora},
+      where: '''
+        codigo = '9.04'
+        AND nome IN (
+          'Retiradas e gastos pessoais',
+          'Retirada dos sócios',
+          'Retirada do sócio (não entra no DRE)'
+        )
+      ''',
+    );
 
     Future<void> garantirConta({
       required String codigo,
@@ -862,22 +899,18 @@ class AppDatabase {
       required int ordem,
     }) async {
       final parentId = await _idPlanoContaPorCodigo(database, parentCodigo);
-      await database.insert(
-        'financeiro_plano_contas',
-        {
-          'codigo': codigo,
-          'nome': nome,
-          'tipo': tipo,
-          'natureza': natureza,
-          'grupo_dre': grupoDre,
-          'parent_id': parentId,
-          'ativo': 1,
-          'ordem': ordem,
-          'criado_em': agora,
-          'atualizado_em': agora,
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      await database.insert('financeiro_plano_contas', {
+        'codigo': codigo,
+        'nome': nome,
+        'tipo': tipo,
+        'natureza': natureza,
+        'grupo_dre': grupoDre,
+        'parent_id': parentId,
+        'ativo': 1,
+        'ordem': ordem,
+        'criado_em': agora,
+        'atualizado_em': agora,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
 
     // Novas categorias resumidas para quem está começando.
@@ -908,38 +941,17 @@ class AppDatabase {
     // amigáveis diretamente no banco. Se isso ocorreu, restauramos apenas
     // esses aliases exatos. Nomes personalizados pelo usuário são preservados.
     const nomesCanonicos = <String, Map<String, String>>{
-      '2.01': {
-        'alias': 'Equipe',
-        'canonico': 'Colaboradores',
-      },
-      '2.01.01': {
-        'alias': 'Funcionários',
-        'canonico': 'Folha de pagamento',
-      },
-      '2.02': {
-        'alias': 'Custos das vendas',
-        'canonico': 'Custo de venda',
-      },
-      '2.03': {
-        'alias': 'Produtos e materiais',
-        'canonico': 'Materiais',
-      },
+      '2.01': {'alias': 'Equipe', 'canonico': 'Colaboradores'},
+      '2.01.01': {'alias': 'Funcionários', 'canonico': 'Folha de pagamento'},
+      '2.02': {'alias': 'Custos das vendas', 'canonico': 'Custo de venda'},
+      '2.03': {'alias': 'Produtos e materiais', 'canonico': 'Materiais'},
       '2.03.01': {
         'alias': 'Produtos e materiais usados nos serviços',
         'canonico': 'Produtos consumidos em serviços',
       },
-      '2.04': {
-        'alias': 'Despesas da empresa',
-        'canonico': 'Empresa',
-      },
-      '2.04.05': {
-        'alias': 'Contabilidade',
-        'canonico': 'Contador',
-      },
-      '2.04.07': {
-        'alias': 'Combustível e veículos',
-        'canonico': 'Combustível',
-      },
+      '2.04': {'alias': 'Despesas da empresa', 'canonico': 'Empresa'},
+      '2.04.05': {'alias': 'Contabilidade', 'canonico': 'Contador'},
+      '2.04.07': {'alias': 'Combustível e veículos', 'canonico': 'Combustível'},
       '2.05.01': {
         'alias': 'Tarifas e juros bancários',
         'canonico': 'Juros e tarifas bancárias',
@@ -948,27 +960,18 @@ class AppDatabase {
         'alias': 'Não afeta o resultado',
         'canonico': 'Movimentos sem efeito na DRE',
       },
-      '9.03': {
-        'alias': 'Aporte dos sócios',
-        'canonico': 'Aportes',
-      },
+      '9.03': {'alias': 'Aporte dos sócios', 'canonico': 'Aportes'},
       '9.04': {
         'alias': 'Retirada dos sócios',
         'canonico': 'Retiradas e gastos pessoais',
       },
-      '9.05': {
-        'alias': 'Ajuste de saldo',
-        'canonico': 'Correção de caixa',
-      },
+      '9.05': {'alias': 'Ajuste de saldo', 'canonico': 'Correção de caixa'},
     };
 
     for (final item in nomesCanonicos.entries) {
       await database.update(
         'financeiro_plano_contas',
-        {
-          'nome': item.value['canonico'],
-          'atualizado_em': agora,
-        },
+        {'nome': item.value['canonico'], 'atualizado_em': agora},
         where: 'codigo = ? AND nome = ?',
         whereArgs: [item.key, item.value['alias']],
       );
@@ -990,10 +993,7 @@ class AppDatabase {
     for (final codigo in codigosLegadosServicos) {
       await database.update(
         'financeiro_plano_contas',
-        {
-          'ativo': 0,
-          'atualizado_em': agora,
-        },
+        {'ativo': 0, 'atualizado_em': agora},
         where: 'codigo = ?',
         whereArgs: [codigo],
       );
@@ -1014,10 +1014,7 @@ class AppDatabase {
     for (final codigo in codigosConsolidados) {
       await database.update(
         'financeiro_plano_contas',
-        {
-          'ativo': 0,
-          'atualizado_em': agora,
-        },
+        {'ativo': 0, 'atualizado_em': agora},
         where: 'codigo = ?',
         whereArgs: [codigo],
       );
@@ -1038,10 +1035,7 @@ class AppDatabase {
     for (final codigo in codigosEssenciais) {
       await database.update(
         'financeiro_plano_contas',
-        {
-          'ativo': 1,
-          'atualizado_em': agora,
-        },
+        {'ativo': 1, 'atualizado_em': agora},
         where: 'codigo = ?',
         whereArgs: [codigo],
       );

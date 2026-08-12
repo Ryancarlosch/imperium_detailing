@@ -133,6 +133,19 @@ class CustosRepository {
     );
   }
 
+  Future<void> sincronizarHorasProdutivasEquipe(double horas) async {
+    if (horas <= 0) {
+      throw ArgumentError('Informe uma carga horária mensal maior que zero.');
+    }
+
+    final database = await _appDatabase.database;
+
+    await database.update('financeiro_colaboradores_custo', {
+      'horas_produtivas_mes': horas,
+      'atualizado_em': DateTime.now().toIso8601String(),
+    }, where: 'ativo = 1');
+  }
+
   Future<Map<String, double>> obterResumoEstruturaCustos() async {
     final database = await _appDatabase.database;
 
@@ -152,35 +165,23 @@ class CustosRepository {
       WHERE ativo = 1
     ''');
 
-    // A equipe trabalha no mesmo período. Portanto, as horas disponíveis
-    // NÃO devem ser somadas por colaborador (ex.: 220h x 3 = 660h).
-    // O custo mensal de todos continua somado, mas é dividido por uma única
-    // carga horária mensal da operação/equipe.
-    //
-    // Preferência:
-    // 1) horas produtivas configuradas na tela de Precificação;
-    // 2) fallback para a maior carga horária entre colaboradores ativos.
     double horasEquipeConfiguradas = 0.0;
 
-    final tabelaPrecificacao = await database.rawQuery(
-      '''
+    final tabelaPrecificacao = await database.rawQuery('''
       SELECT name
       FROM sqlite_master
       WHERE type = 'table'
         AND name = 'financeiro_precificacao_config'
       LIMIT 1
-      ''',
-    );
+      ''');
 
     if (tabelaPrecificacao.isNotEmpty) {
-      final configHoras = await database.rawQuery(
-        '''
+      final configHoras = await database.rawQuery('''
         SELECT COALESCE(horas_produtivas_mes, 0) AS horas_produtivas_mes
         FROM financeiro_precificacao_config
         WHERE id = 1
         LIMIT 1
-        ''',
-      );
+        ''');
 
       if (configHoras.isNotEmpty) {
         horasEquipeConfiguradas = _double(
@@ -192,6 +193,7 @@ class CustosRepository {
     final custoFixoMensal = _double(fixos.first['total']);
     final custoMaoObraMensal = _double(maoObra.first['custo_mensal']);
     final horasFallback = _double(maoObra.first['horas_equipe_fallback']);
+
     final horasProdutivas = horasEquipeConfiguradas > 0
         ? horasEquipeConfiguradas
         : horasFallback;
@@ -199,6 +201,7 @@ class CustosRepository {
     final custoMaoObraHora = horasProdutivas > 0
         ? custoMaoObraMensal / horasProdutivas
         : 0.0;
+
     final custoFixoHora = horasProdutivas > 0
         ? custoFixoMensal / horasProdutivas
         : 0.0;
@@ -458,11 +461,8 @@ class CustosRepository {
     );
   }
 
-
-  static const String _origemPagamentoColaborador =
-      'Pagamento de funcionário';
-  static const String _marcadorMaoObraAutomatica =
-      'AUTO_OS_FINALIZACAO';
+  static const String _origemPagamentoColaborador = 'Pagamento de funcionário';
+  static const String _marcadorMaoObraAutomatica = 'AUTO_OS_FINALIZACAO';
 
   Future<void> _garantirTabelaPagamentosColaboradores(
     DatabaseExecutor executor,
@@ -587,8 +587,7 @@ class CustosRepository {
         whereArgs: ['2.01.01'],
         limit: 1,
       );
-      final planoContaId =
-          plano.isEmpty ? null : _int(plano.first['id']);
+      final planoContaId = plano.isEmpty ? null : _int(plano.first['id']);
 
       final nome = (colaborador.first['nome'] ?? 'Funcionário')
           .toString()
@@ -599,34 +598,30 @@ class CustosRepository {
           ? 'Não informado'
           : formaPagamento.trim();
 
-      final movimentoId = await transaction.insert(
-        'movimentos_financeiros',
-        {
-          'tipo': 'saída',
-          'descricao': 'Pagamento de funcionário - $nome',
-          'valor': valor,
-          'forma_pagamento': forma,
-          'data': dataIso,
-          'cliente_id': null,
-          'agendamento_id': null,
-          'ordem_servico_id': null,
-          'pagamento_id': null,
-          'plano_conta_id': planoContaId,
-          'conta_id': contaId,
-          'fornecedor_id': null,
-          'transferencia_id': null,
-          'natureza': 'Mão de obra',
-          'origem': _origemPagamentoColaborador,
-          'status': 'Realizado',
-          'data_competencia': dataIso,
-          'data_vencimento': null,
-          'data_pagamento': dataIso,
-          'numero_documento': null,
-          'observacoes': observacoes.trim(),
-          'impacta_dre': 1,
-        },
-        conflictAlgorithm: ConflictAlgorithm.abort,
-      );
+      final movimentoId = await transaction.insert('movimentos_financeiros', {
+        'tipo': 'saída',
+        'descricao': 'Pagamento de funcionário - $nome',
+        'valor': valor,
+        'forma_pagamento': forma,
+        'data': dataIso,
+        'cliente_id': null,
+        'agendamento_id': null,
+        'ordem_servico_id': null,
+        'pagamento_id': null,
+        'plano_conta_id': planoContaId,
+        'conta_id': contaId,
+        'fornecedor_id': null,
+        'transferencia_id': null,
+        'natureza': 'Mão de obra',
+        'origem': _origemPagamentoColaborador,
+        'status': 'Realizado',
+        'data_competencia': dataIso,
+        'data_vencimento': null,
+        'data_pagamento': dataIso,
+        'numero_documento': '',
+        'observacoes': observacoes.trim(),
+        'impacta_dre': 1,
+      }, conflictAlgorithm: ConflictAlgorithm.abort);
 
       return transaction.insert(
         'financeiro_pagamentos_colaboradores',
@@ -663,9 +658,7 @@ class CustosRepository {
         throw StateError('Pagamento de funcionário não encontrado.');
       }
 
-      final movimentoId = _int(
-        pagamento.first['movimento_financeiro_id'],
-      );
+      final movimentoId = _int(pagamento.first['movimento_financeiro_id']);
 
       await transaction.delete(
         'financeiro_pagamentos_colaboradores',
@@ -711,11 +704,8 @@ class CustosRepository {
     return _int(resultado.first['id']);
   }
 
-  Future<double> _custoMaoObraEquipeHora(
-    DatabaseExecutor executor,
-  ) async {
-    final maoObra = await executor.rawQuery(
-      '''
+  Future<double> _custoMaoObraEquipeHora(DatabaseExecutor executor) async {
+    final maoObra = await executor.rawQuery('''
       SELECT
         COALESCE(SUM(
           remuneracao_mensal + encargos_mensais + outros_custos_mensais
@@ -723,30 +713,25 @@ class CustosRepository {
         COALESCE(MAX(horas_produtivas_mes), 0) AS horas_equipe_fallback
       FROM financeiro_colaboradores_custo
       WHERE ativo = 1
-      ''',
-    );
+      ''');
 
     var horasEquipe = 0.0;
 
-    final tabelaConfig = await executor.rawQuery(
-      '''
+    final tabelaConfig = await executor.rawQuery('''
       SELECT name
       FROM sqlite_master
       WHERE type = 'table'
         AND name = 'financeiro_precificacao_config'
       LIMIT 1
-      ''',
-    );
+      ''');
 
     if (tabelaConfig.isNotEmpty) {
-      final config = await executor.rawQuery(
-        '''
+      final config = await executor.rawQuery('''
         SELECT COALESCE(horas_produtivas_mes, 0) AS horas
         FROM financeiro_precificacao_config
         WHERE id = 1
         LIMIT 1
-        ''',
-      );
+        ''');
 
       if (config.isNotEmpty) {
         horasEquipe = _double(config.first['horas']);
@@ -754,9 +739,7 @@ class CustosRepository {
     }
 
     if (horasEquipe <= 0) {
-      horasEquipe = _double(
-        maoObra.first['horas_equipe_fallback'],
-      );
+      horasEquipe = _double(maoObra.first['horas_equipe_fallback']);
     }
 
     final custoMensal = _double(maoObra.first['custo_mensal']);
@@ -795,24 +778,20 @@ class CustosRepository {
         ? 'Responsável não informado'
         : colaboradorNome.trim();
 
-    await transaction.insert(
-      'financeiro_os_mao_obra',
-      {
-        'ordem_servico_id': ordemServicoId,
-        'colaborador_custo_id': colaboradorId,
-        'descricao': nome,
-        'horas': horas,
-        'custo_hora_snapshot': custoHora,
-        'custo_total': horas * custoHora,
-        'data': saida.toIso8601String(),
-        'observacoes': _marcadorMaoObraAutomatica,
-        'ativo': 1,
-        'cancelado_em': null,
-        'criado_em': agora,
-        'atualizado_em': agora,
-      },
-      conflictAlgorithm: ConflictAlgorithm.abort,
-    );
+    await transaction.insert('financeiro_os_mao_obra', {
+      'ordem_servico_id': ordemServicoId,
+      'colaborador_custo_id': colaboradorId,
+      'descricao': nome,
+      'horas': horas,
+      'custo_hora_snapshot': custoHora,
+      'custo_total': horas * custoHora,
+      'data': saida.toIso8601String(),
+      'observacoes': _marcadorMaoObraAutomatica,
+      'ativo': 1,
+      'cancelado_em': null,
+      'criado_em': agora,
+      'atualizado_em': agora,
+    }, conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
   Future<void> recalcularMaoObraAutomaticaComTransacao(
@@ -836,8 +815,7 @@ class CustosRepository {
     final existentes = await transaction.query(
       'financeiro_os_mao_obra',
       columns: ['id'],
-      where:
-          'ordem_servico_id = ? AND ativo = 1 AND observacoes = ?',
+      where: 'ordem_servico_id = ? AND ativo = 1 AND observacoes = ?',
       whereArgs: [ordemServicoId, _marcadorMaoObraAutomatica],
       orderBy: 'id ASC',
     );
@@ -846,13 +824,8 @@ class CustosRepository {
       if (existentes.isNotEmpty) {
         await transaction.update(
           'financeiro_os_mao_obra',
-          {
-            'ativo': 0,
-            'cancelado_em': agora,
-            'atualizado_em': agora,
-          },
-          where:
-              'ordem_servico_id = ? AND ativo = 1 AND observacoes = ?',
+          {'ativo': 0, 'cancelado_em': agora, 'atualizado_em': agora},
+          where: 'ordem_servico_id = ? AND ativo = 1 AND observacoes = ?',
           whereArgs: [ordemServicoId, _marcadorMaoObraAutomatica],
         );
       }
@@ -900,11 +873,7 @@ class CustosRepository {
       for (final id in idsExtras) {
         await transaction.update(
           'financeiro_os_mao_obra',
-          {
-            'ativo': 0,
-            'cancelado_em': agora,
-            'atualizado_em': agora,
-          },
+          {'ativo': 0, 'cancelado_em': agora, 'atualizado_em': agora},
           where: 'id = ?',
           whereArgs: [id],
         );

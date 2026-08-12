@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Arquivos temporarios de desenvolvimento Imperium
+*.bak_*
+*.ps1
+novos_arquivos/

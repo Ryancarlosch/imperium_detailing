@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/plano_conta_financeiro.dart';
+import '../models/servico_catalogo.dart';
 import '../repositories/plano_contas_repository.dart';
+import '../repositories/servico_repository.dart';
+import 'servicos_page.dart';
 
 class PlanoContasPage extends StatefulWidget {
   const PlanoContasPage({super.key});
@@ -12,10 +15,14 @@ class PlanoContasPage extends StatefulWidget {
 
 class _PlanoContasPageState extends State<PlanoContasPage> {
   final PlanoContasRepository _repository = PlanoContasRepository();
+  final ServicoRepository _servicoRepository = ServicoRepository();
 
   bool _carregando = true;
   bool _mostrarInativas = false;
+
   List<PlanoContaFinanceiro> _contas = const [];
+  List<ServicoCatalogo> _servicos = const [];
+  List<ServicoCategoria> _categoriasServico = const [];
 
   @override
   void initState() {
@@ -29,25 +36,37 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
     }
 
     try {
-      final contas = await _repository.listar(
-        incluirInativos: _mostrarInativas,
-      );
+      final resultados = await Future.wait<dynamic>([
+        _repository.listar(incluirInativos: _mostrarInativas),
+        _servicoRepository.listarServicos(),
+        _servicoRepository.listarCategorias(somenteAtivas: !_mostrarInativas),
+      ]);
 
       if (!mounted) return;
+
       setState(() {
-        _contas = contas;
+        _contas = List<PlanoContaFinanceiro>.from(
+          resultados[0] as List<dynamic>,
+        );
+        _servicos = List<ServicoCatalogo>.from(resultados[1] as List<dynamic>);
+        _categoriasServico = List<ServicoCategoria>.from(
+          resultados[2] as List<dynamic>,
+        );
         _carregando = false;
       });
     } catch (erro) {
       if (!mounted) return;
       setState(() => _carregando = false);
-      _mensagem('Não foi possível carregar o plano de contas.\n$erro',
-          erro: true);
+      _mensagem(
+        'Não foi possível carregar o plano de contas.\n$erro',
+        erro: true,
+      );
     }
   }
 
   void _mensagem(String texto, {bool erro = false}) {
     if (!mounted) return;
+
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -58,9 +77,7 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
       );
   }
 
-  List<PlanoContaFinanceiro> get _folhas {
-    // Subcategorias inativas não impedem que a categoria geral ativa
-    // seja usada no dia a dia (ex.: Serviços).
+  List<PlanoContaFinanceiro> get _folhasFinanceiras {
     final idsPais = _contas
         .where((e) => e.ativo)
         .map((e) => e.parentId)
@@ -70,24 +87,61 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
     return _contas.where((conta) {
       if (conta.id == null) return false;
       if (idsPais.contains(conta.id)) return false;
+
+      if (conta.codigo == '1.01' || conta.codigo.startsWith('1.01.')) {
+        return false;
+      }
+
       return true;
     }).toList();
   }
 
   Map<String, List<PlanoContaFinanceiro>> get _porSecao {
     final mapa = <String, List<PlanoContaFinanceiro>>{
-      'Receitas e deduções': [],
+      'Outras receitas e deduções': [],
       'Custos das vendas': [],
       'Despesas da empresa': [],
       'Não afeta o resultado': [],
     };
 
-    for (final conta in _folhas) {
-      final titulo = _repository.tituloSecao(conta);
+    for (final conta in _folhasFinanceiras) {
+      var titulo = _repository.tituloSecao(conta);
+      if (titulo == 'Receitas e deduções') {
+        titulo = 'Outras receitas e deduções';
+      }
       mapa.putIfAbsent(titulo, () => <PlanoContaFinanceiro>[]).add(conta);
     }
 
     return mapa;
+  }
+
+  Map<int?, List<ServicoCatalogo>> get _servicosPorCategoria {
+    final mapa = <int?, List<ServicoCatalogo>>{};
+
+    for (final servico in _servicos) {
+      if (!_mostrarInativas && !servico.ativo) continue;
+      mapa
+          .putIfAbsent(servico.categoriaId, () => <ServicoCatalogo>[])
+          .add(servico);
+    }
+
+    for (final lista in mapa.values) {
+      lista.sort(
+        (a, b) => a.nome.toLowerCase().compareTo(b.nome.toLowerCase()),
+      );
+    }
+
+    return mapa;
+  }
+
+  Future<void> _abrirServicos() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const ServicosPage()),
+    );
+
+    if (!mounted) return;
+    await _carregar();
   }
 
   Future<void> _novaCategoria() async {
@@ -114,8 +168,8 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
   }
 
   Future<void> _editar(PlanoContaFinanceiro conta) async {
-    final nomeAtualExibido = _repository.nomeExibicao(conta);
-    final controller = TextEditingController(text: nomeAtualExibido);
+    final nomeAtual = _repository.nomeExibicao(conta);
+    final controller = TextEditingController(text: nomeAtual);
 
     final novoNome = await showDialog<String>(
       context: context,
@@ -138,10 +192,9 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
               const SizedBox(height: 12),
               Text(
                 _repository.ehProtegida(conta)
-                    ? 'Esta categoria participa de automações do Imperium. '
-                        'Você pode alterar o nome exibido, mas a função interna '
-                        'continua protegida.'
-                    : 'O nome pode ser alterado sem modificar o histórico dos lançamentos.',
+                    ? 'Esta categoria participa de automações do sistema. '
+                          'O nome exibido pode mudar sem quebrar a função interna.'
+                    : 'O histórico dos lançamentos será preservado.',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
@@ -167,7 +220,7 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
 
     controller.dispose();
 
-    if (novoNome == null || novoNome == nomeAtualExibido) return;
+    if (novoNome == null || novoNome == nomeAtual) return;
 
     try {
       await _repository.renomear(id: conta.id!, nome: novoNome);
@@ -180,6 +233,7 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
 
   Future<void> _alternarAtivo(PlanoContaFinanceiro conta) async {
     final novoAtivo = !conta.ativo;
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -188,7 +242,7 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
           novoAtivo
               ? 'Deseja voltar a exibir "${_repository.nomeExibicao(conta)}" nos lançamentos?'
               : 'Deseja ocultar "${_repository.nomeExibicao(conta)}" dos novos lançamentos?\n\n'
-                  'O histórico existente não será apagado.',
+                    'O histórico existente não será apagado.',
         ),
         actions: [
           TextButton(
@@ -224,11 +278,11 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
           children: [
             const Row(
               children: [
-                Icon(Icons.auto_awesome_outlined),
+                Icon(Icons.account_tree_outlined),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'O Imperium já vem pronto para usar',
+                    'Plano de contas simples e integrado',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -236,33 +290,44 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Escolha a categoria pelo nome que faz sentido no dia a dia. '
-              'Códigos e regras contábeis ficam nos bastidores. '
-              'Categorias marcadas como Automático são preenchidas pelo próprio sistema.',
+              'Os serviços cadastrados alimentam automaticamente a receita. '
+              'Aqui você organiza as demais receitas, custos, despesas e '
+              'movimentações que não afetam o resultado.',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _novaCategoria,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Nova categoria'),
+                    onPressed: _abrirServicos,
+                    icon: const Icon(Icons.design_services_outlined),
+                    label: const Text('Gerenciar serviços'),
                   ),
                 ),
                 const SizedBox(width: 10),
-                FilterChip(
-                  label: const Text('Mostrar inativas'),
-                  selected: _mostrarInativas,
-                  onSelected: (valor) {
-                    setState(() => _mostrarInativas = valor);
-                    _carregar();
-                  },
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _novaCategoria,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Nova categoria financeira'),
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilterChip(
+                label: const Text('Mostrar inativas'),
+                selected: _mostrarInativas,
+                onSelected: (valor) {
+                  setState(() => _mostrarInativas = valor);
+                  _carregar();
+                },
+              ),
             ),
           ],
         ),
@@ -270,7 +335,142 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
     );
   }
 
-  Widget _secao(String titulo, List<PlanoContaFinanceiro> contas) {
+  Widget _receitasServicos() {
+    final porCategoria = _servicosPorCategoria;
+
+    final categorias = [..._categoriasServico]
+      ..sort((a, b) => a.nome.toLowerCase().compareTo(b.nome.toLowerCase()));
+
+    final idsConhecidos = categorias.map((e) => e.id).toSet();
+
+    final semCategoria = <ServicoCatalogo>[
+      ...?porCategoria[null],
+      for (final entry in porCategoria.entries)
+        if (entry.key != null && !idsConhecidos.contains(entry.key))
+          ...entry.value,
+    ];
+
+    final totalServicos = porCategoria.values.fold<int>(
+      0,
+      (total, lista) => total + lista.length,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Receitas de serviços',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Chip(
+                label: Text('$totalServicos serviços'),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+        ),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Column(
+            children: [
+              const ListTile(
+                leading: CircleAvatar(child: Icon(Icons.auto_awesome_outlined)),
+                title: Text(
+                  'Serviços',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  'Gerado automaticamente a partir do catálogo de serviços.',
+                ),
+                trailing: Chip(
+                  label: Text('Automático'),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const Divider(height: 1),
+              if (totalServicos == 0)
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Nenhum serviço cadastrado.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        onPressed: _abrirServicos,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Cadastrar serviço'),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                for (final categoria in categorias)
+                  if ((porCategoria[categoria.id] ?? const []).isNotEmpty)
+                    _categoriaServicoTile(
+                      categoria.nome,
+                      porCategoria[categoria.id]!,
+                    ),
+                if (semCategoria.isNotEmpty)
+                  _categoriaServicoTile('Sem categoria', semCategoria),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _categoriaServicoTile(
+    String categoria,
+    List<ServicoCatalogo> servicos,
+  ) {
+    return ExpansionTile(
+      leading: const Icon(Icons.folder_outlined),
+      title: Text(
+        categoria,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        '${servicos.length} ${servicos.length == 1 ? 'serviço' : 'serviços'}',
+      ),
+      children: [
+        for (final servico in servicos)
+          ListTile(
+            contentPadding: const EdgeInsets.only(left: 54, right: 16),
+            dense: true,
+            leading: Icon(
+              Icons.subdirectory_arrow_right_rounded,
+              color: servico.ativo ? null : Colors.grey,
+            ),
+            title: Text(
+              servico.nome,
+              style: TextStyle(color: servico.ativo ? null : Colors.grey),
+            ),
+            subtitle: const Text(
+              'Subcategoria de serviço • alimenta o DRE automaticamente',
+            ),
+            trailing: servico.ativo
+                ? null
+                : const Chip(
+                    label: Text('Inativo'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+            onTap: _abrirServicos,
+          ),
+      ],
+    );
+  }
+
+  Widget _secaoFinanceira(String titulo, List<PlanoContaFinanceiro> contas) {
     if (contas.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -301,8 +501,8 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
             conta.grupoDre == 'Não DRE'
                 ? Icons.swap_horiz_rounded
                 : conta.tipo == 'Entrada'
-                    ? Icons.south_west_rounded
-                    : Icons.north_east_rounded,
+                ? Icons.south_west_rounded
+                : Icons.north_east_rounded,
           ),
         ),
         title: Row(
@@ -376,12 +576,12 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Categorias financeiras'),
+        title: const Text('Plano de contas'),
         actions: [
           IconButton(
             tooltip: 'Atualizar',
             onPressed: _carregando ? null : _carregar,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
@@ -395,11 +595,13 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
         child: _carregando
             ? const Center(child: CircularProgressIndicator())
             : ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
                 children: [
                   _cabecalho(),
+                  _receitasServicos(),
                   for (final entrada in secoes.entries)
-                    _secao(entrada.key, entrada.value),
+                    _secaoFinanceira(entrada.key, entrada.value),
                 ],
               ),
       ),
@@ -408,10 +610,7 @@ class _PlanoContasPageState extends State<PlanoContasPage> {
 }
 
 class _NovaCategoriaData {
-  const _NovaCategoriaData({
-    required this.nome,
-    required this.secao,
-  });
+  const _NovaCategoriaData({required this.nome, required this.secao});
 
   final String nome;
   final PlanoContaSecao secao;
@@ -427,6 +626,7 @@ class _NovaCategoriaSheet extends StatefulWidget {
 class _NovaCategoriaSheetState extends State<_NovaCategoriaSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nome = TextEditingController();
+
   PlanoContaSecao _secao = PlanoContaSecao.despesaEmpresa;
 
   @override
@@ -437,9 +637,10 @@ class _NovaCategoriaSheetState extends State<_NovaCategoriaSheet> {
 
   void _salvar() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.of(context).pop(
-      _NovaCategoriaData(nome: _nome.text.trim(), secao: _secao),
-    );
+
+    Navigator.of(
+      context,
+    ).pop(_NovaCategoriaData(nome: _nome.text.trim(), secao: _secao));
   }
 
   @override
@@ -458,12 +659,12 @@ class _NovaCategoriaSheetState extends State<_NovaCategoriaSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Nova categoria',
+              'Nova categoria financeira',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
-              'O Imperium configura automaticamente a classificação interna.',
+              'Categorias e serviços do catálogo não precisam ser recriados aqui.',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -495,7 +696,7 @@ class _NovaCategoriaSheetState extends State<_NovaCategoriaSheet> {
               items: const [
                 DropdownMenuItem(
                   value: PlanoContaSecao.receita,
-                  child: Text('Receitas'),
+                  child: Text('Outras receitas'),
                 ),
                 DropdownMenuItem(
                   value: PlanoContaSecao.custoVenda,
@@ -519,8 +720,8 @@ class _NovaCategoriaSheetState extends State<_NovaCategoriaSheet> {
             const SizedBox(height: 18),
             FilledButton.icon(
               onPressed: _salvar,
-              icon: const Icon(Icons.check),
-              label: const Text('Salvar categoria'),
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('Criar categoria'),
             ),
           ],
         ),
