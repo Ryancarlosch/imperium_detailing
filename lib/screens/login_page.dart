@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../repositories/usuario_repository.dart';
+import '../services/funcionario_acesso_service.dart';
+import 'funcionario_primeiro_acesso_page.dart';
 import 'dashboard_page.dart';
+import 'empresa_primeiro_acesso_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, this.onLogin});
@@ -44,6 +47,15 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await _usuarioRepository.garantirEstrutura();
 
+      final funcionarioService = FuncionarioAcessoService.instance;
+
+      await funcionarioService.garantirEstruturaLocal();
+
+      final dispositivoFuncionario =
+          await funcionarioService.dispositivoFuncionario;
+
+      final loginFuncionario = await funcionarioService.loginLocal;
+
       final possuiAdminComPin = await _usuarioRepository
           .possuiAdministradorComPin();
 
@@ -52,10 +64,13 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       setState(() {
-        _primeiroAcesso = !possuiAdminComPin;
+        _primeiroAcesso = !dispositivoFuncionario && !possuiAdminComPin;
         _verificandoPrimeiroAcesso = false;
 
-        if (_primeiroAcesso && _usuarioController.text.trim().isEmpty) {
+        if (dispositivoFuncionario &&
+            (loginFuncionario?.trim().isNotEmpty ?? false)) {
+          _usuarioController.text = loginFuncionario!.trim();
+        } else if (_primeiroAcesso && _usuarioController.text.trim().isEmpty) {
           _usuarioController.text = 'admin';
         }
       });
@@ -73,6 +88,50 @@ class _LoginPageState extends State<LoginPage> {
         erro: true,
       );
     }
+  }
+
+  Future<void> _abrirPrimeiroAcessoFuncionario() async {
+    final sessao = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => const FuncionarioPrimeiroAcessoPage()),
+    );
+
+    if (!mounted || sessao == null) return;
+
+    if (widget.onLogin != null) {
+      widget.onLogin!(Map<String, dynamic>.from(sessao));
+      return;
+    }
+
+    _usuarioController.text = (sessao['login'] ?? '').toString();
+
+    _pinController.clear();
+    _confirmarPinController.clear();
+
+    _mostrarMensagem(
+      'Acesso de funcionário configurado. '
+      'Use seu PIN nos próximos acessos.',
+    );
+
+    await _prepararLogin();
+  }
+
+  Future<void> _abrirPrimeiroAcessoEmpresa() async {
+    if (_carregando) return;
+
+    final sessao = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => const EmpresaPrimeiroAcessoPage()),
+    );
+
+    if (sessao == null || !mounted) return;
+
+    if (widget.onLogin != null) {
+      widget.onLogin!(Map<String, dynamic>.from(sessao));
+      return;
+    }
+
+    await Navigator.of(context).pushReplacement<void, void>(
+      MaterialPageRoute(builder: (_) => DashboardPage(sessao: sessao)),
+    );
   }
 
   Future<void> _entrar() async {
@@ -404,6 +463,17 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _carregando
+                            ? null
+                            : _abrirPrimeiroAcessoEmpresa,
+                        icon: const Icon(Icons.business_outlined),
+                        label: const Text('Sou empresa • primeiro acesso'),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
                       height: 52,
                       child: FilledButton.icon(
                         onPressed: _carregando ? null : _entrar,
@@ -426,6 +496,19 @@ class _LoginPageState extends State<LoginPage> {
                               : primeiroAcesso
                               ? 'Configurar e entrar'
                               : 'Entrar',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _carregando
+                            ? null
+                            : _abrirPrimeiroAcessoFuncionario,
+                        icon: const Icon(Icons.badge_outlined),
+                        label: const Text(
+                          'Sou funcionário • primeiro acesso neste celular',
                         ),
                       ),
                     ),

@@ -160,21 +160,29 @@ class _BackupAutomaticoCardState extends State<BackupAutomaticoCard> {
       _processando = true;
     });
 
-    final resultado = await _service.verificarEExecutar(forcar: true);
-    await _carregar();
+    try {
+      final resultado = await _service.verificarEExecutar(forcar: true);
+      await _carregar();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _processando = false;
-    });
+      _mensagem(
+        resultado.sucesso
+            ? resultado.mensagem
+            : 'Falha no backup automático: ${resultado.mensagem}',
+        !resultado.sucesso,
+      );
+    } catch (erro) {
+      if (!mounted) return;
 
-    _mensagem(
-      resultado.sucesso
-          ? resultado.mensagem
-          : 'Falha no backup automático: ${resultado.mensagem}',
-      !resultado.sucesso,
-    );
+      _mensagem('Não foi possível concluir o backup automático: $erro', true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _processando = false;
+        });
+      }
+    }
   }
 
   Future<void> _conectarDrive() async {

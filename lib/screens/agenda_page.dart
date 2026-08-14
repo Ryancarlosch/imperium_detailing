@@ -5,6 +5,7 @@ import '../models/agendamento.dart';
 import '../models/movimento_financeiro.dart';
 import '../repositories/agendamento_repository.dart';
 import '../repositories/financeiro_repository.dart';
+import '../repositories/usuario_repository.dart';
 import '../repositories/veiculo_repository.dart';
 import '../services/notification_service.dart';
 import '../services/whatsapp_service.dart';
@@ -34,6 +35,18 @@ class _AgendaPageState extends State<AgendaPage> {
   String? _dataDestacada;
 
   int? _agendamentoAbrindoWhatsAppId;
+  bool get _podeLancarFinanceiro {
+    final sessao = UsuarioRepository().sessaoAtual;
+    if (sessao == null) return false;
+
+    if ((sessao['perfil'] ?? '').toString() ==
+        UsuarioRepository.perfilAdministrador) {
+      return true;
+    }
+
+    final permissoes = sessao['permissoes'];
+    return permissoes is Map && permissoes['financeiro'] == true;
+  }
 
   @override
   void initState() {
@@ -130,7 +143,11 @@ class _AgendaPageState extends State<AgendaPage> {
         agendamento.id!,
       );
 
-      if (atualizado != null && atualizado.status == 'Finalizado') {
+      if (
+      // modulo1-agenda-financeiro-guard
+      _podeLancarFinanceiro &&
+          atualizado != null &&
+          atualizado.status == 'Finalizado') {
         await _oferecerLancamentoFinanceiro(atualizado);
       }
     }

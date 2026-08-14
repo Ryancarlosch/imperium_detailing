@@ -92,8 +92,9 @@ class _MeuPontoPageState extends State<MeuPontoPage> {
         title: Text(rotulo),
         content: Text(
           '${widget.nome}\n\n'
-          'O aplicativo vai registrar automaticamente a data e o '
-          'horário oficial do servidor.\n\n'
+          'O aplicativo registra automaticamente a data e o horário. '
+          'Com internet, o servidor confirma o horário; sem internet, '
+          'a batida fica salva neste celular e sincroniza depois.\n\n'
           'Você só precisa confirmar a batida.',
         ),
         actions: [

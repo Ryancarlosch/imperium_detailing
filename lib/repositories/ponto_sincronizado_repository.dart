@@ -1,9 +1,11 @@
 import '../database/app_database.dart';
 import '../repositories/ponto_repository.dart';
 import '../services/ponto_nuvem_service.dart';
+import '../services/ponto_offline_sync_service.dart';
 
 class PontoSincronizadoRepository extends PontoRepository {
   final PontoNuvemService _nuvem = PontoNuvemService.instance;
+  final PontoOfflineSyncService _offline = PontoOfflineSyncService.instance;
 
   Future<bool> _usarNuvem() async {
     try {
@@ -17,6 +19,8 @@ class PontoSincronizadoRepository extends PontoRepository {
   Future<void> garantirEstrutura() async {
     await super.garantirEstrutura();
     await _nuvem.garantirEstruturaLocal();
+    // modulo1-offline-estrutura
+    await _offline.garantirEstrutura();
 
     try {
       if (await _usarNuvem()) {
@@ -121,19 +125,69 @@ class PontoSincronizadoRepository extends PontoRepository {
     required int colaboradorId,
     DateTime? momento,
   }) async {
-    if (momento == null && await _usarNuvem()) {
-      final resultado = await _nuvem.registrarBatida(colaboradorId);
+    // momento explícito é reservado a testes/rotinas locais determinísticas.
+    if (momento != null) {
+      return super.registrarBatida(
+        colaboradorId: colaboradorId,
+        momento: momento,
+      );
+    }
 
-      if (resultado != null) {
+    await _offline.garantirEstrutura();
+
+    final nuvemEsperada = await _offline.pontoNuvemEsperadoLocal(colaboradorId);
+
+    if (nuvemEsperada) {
+      await _offline.sincronizarPendentes(colaboradorLocalId: colaboradorId);
+
+      final capturado = DateTime.now();
+      final chave = _offline.novaChave(
+        colaboradorLocalId: colaboradorId,
+        ocorridoEm: capturado,
+      );
+
+      try {
+        final resultado = await _offline.registrarRemotoIdempotente(
+          colaboradorLocalId: colaboradorId,
+          ocorridoEm: capturado,
+          chave: chave,
+        );
+
+        await _nuvem.sincronizarDia(
+          colaboradorLocalId: colaboradorId,
+          data: capturado,
+        );
+
         return resultado;
+      } catch (erro) {
+        if (!_offline.ehErroConexao(erro)) rethrow;
+
+        final local = await super.registrarBatida(
+          colaboradorId: colaboradorId,
+          momento: capturado,
+        );
+
+        await _offline.enfileirar(
+          colaboradorLocalId: colaboradorId,
+          ocorridoEm: capturado,
+          chave: chave,
+          resultadoLocal: local,
+        );
+
+        return <String, dynamic>{
+          ...local,
+          'offline': true,
+          'pendente_sincronizacao': true,
+        };
       }
     }
 
-    // `momento` é usado por testes/rotinas locais e permanece determinístico.
-    return super.registrarBatida(
-      colaboradorId: colaboradorId,
-      momento: momento,
-    );
+    if (await _usarNuvem()) {
+      final resultado = await _nuvem.registrarBatida(colaboradorId);
+      if (resultado != null) return resultado;
+    }
+
+    return super.registrarBatida(colaboradorId: colaboradorId);
   }
 
   @override

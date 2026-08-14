@@ -3,11 +3,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'repositories/usuario_repository.dart';
 import 'services/backup_automatico_service.dart';
-import 'screens/dashboard_page.dart';
 import 'screens/login_page.dart';
-import 'screens/usuario_inicio_page.dart';
 
 import 'services/supabase_bootstrap.dart';
+import 'widgets/licenca_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -211,22 +210,6 @@ class _SessaoGateState extends State<_SessaoGate> {
       return LoginPage(onLogin: _aoEntrar);
     }
 
-    final perfil = (sessao['perfil'] ?? '').toString().trim();
-
-    if (perfil == UsuarioRepository.perfilFuncionario) {
-      return UsuarioInicioPage(
-        sessao: sessao,
-        onLogout: () {
-          _sair();
-        },
-      );
-    }
-
-    return DashboardPage(
-      sessao: sessao,
-      onLogout: () {
-        _sair();
-      },
-    );
+    return LicencaGate(sessao: sessao, onLogout: _sair);
   }
 }

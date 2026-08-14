@@ -3,20 +3,18 @@ import 'package:flutter/material.dart';
 import '../models/colaborador_custo.dart';
 import '../repositories/custos_repository.dart';
 import '../repositories/usuario_repository.dart';
+import '../services/funcionario_acesso_service.dart';
 
 class UsuariosPermissoesPage extends StatefulWidget {
   const UsuariosPermissoesPage({super.key});
 
   @override
-  State<UsuariosPermissoesPage> createState() =>
-      _UsuariosPermissoesPageState();
+  State<UsuariosPermissoesPage> createState() => _UsuariosPermissoesPageState();
 }
 
-class _UsuariosPermissoesPageState
-    extends State<UsuariosPermissoesPage> {
+class _UsuariosPermissoesPageState extends State<UsuariosPermissoesPage> {
   final UsuarioRepository _repository = UsuarioRepository();
-  final CustosRepository _custosRepository =
-      CustosRepository();
+  final CustosRepository _custosRepository = CustosRepository();
 
   bool _carregando = true;
   List<Map<String, dynamic>> _usuarios = const [];
@@ -44,12 +42,10 @@ class _UsuariosPermissoesPageState
       if (!mounted) return;
 
       setState(() {
-        _usuarios =
-            List<Map<String, dynamic>>.from(
+        _usuarios = List<Map<String, dynamic>>.from(
           resultados[0] as List<dynamic>,
         );
-        _colaboradores =
-            resultados[1] as List<ColaboradorCusto>;
+        _colaboradores = resultados[1] as List<ColaboradorCusto>;
         _carregando = false;
       });
     } catch (erro) {
@@ -59,9 +55,7 @@ class _UsuariosPermissoesPageState
     }
   }
 
-  Future<void> _editarUsuario([
-    Map<String, dynamic>? usuario,
-  ]) async {
+  Future<void> _editarUsuario([Map<String, dynamic>? usuario]) async {
     final salvou = await showModalBottomSheet<bool>(
       context: context,
       useSafeArea: true,
@@ -79,9 +73,7 @@ class _UsuariosPermissoesPageState
     }
   }
 
-  Future<void> _configurarPin(
-    Map<String, dynamic> usuario,
-  ) async {
+  Future<void> _configurarPin(Map<String, dynamic> usuario) async {
     final id = _int(usuario['id']);
     if (id == null) return;
 
@@ -91,9 +83,7 @@ class _UsuariosPermissoesPageState
     final salvou = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(
-          'Configurar PIN • ${usuario['nome'] ?? ''}',
-        ),
+        title: Text('Configurar PIN • ${usuario['nome'] ?? ''}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -124,30 +114,22 @@ class _UsuariosPermissoesPageState
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             onPressed: () async {
-              if (pin.text.trim() !=
-                  confirmar.text.trim()) {
-                ScaffoldMessenger.of(dialogContext)
-                    .showSnackBar(
+              if (pin.text.trim() != confirmar.text.trim()) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(
-                    content: Text(
-                      'Os PINs informados são diferentes.',
-                    ),
+                    content: Text('Os PINs informados são diferentes.'),
                   ),
                 );
                 return;
               }
 
               try {
-                await _repository.definirPin(
-                  usuarioId: id,
-                  pin: pin.text,
-                );
+                await _repository.definirPin(usuarioId: id, pin: pin.text);
 
                 if (dialogContext.mounted) {
                   Navigator.of(dialogContext).pop(true);
@@ -155,8 +137,7 @@ class _UsuariosPermissoesPageState
               } catch (erro) {
                 if (!dialogContext.mounted) return;
 
-                ScaffoldMessenger.of(dialogContext)
-                    .showSnackBar(
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   SnackBar(
                     content: Text('$erro'),
                     backgroundColor: Colors.red.shade700,
@@ -182,16 +163,12 @@ class _UsuariosPermissoesPageState
   Future<void> _abrirAcessos() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => _HistoricoAcessosPage(
-          repository: _repository,
-        ),
+        builder: (_) => _HistoricoAcessosPage(repository: _repository),
       ),
     );
   }
 
-  Future<void> _permissoes(
-    Map<String, dynamic> usuario,
-  ) async {
+  Future<void> _permissoes(Map<String, dynamic> usuario) async {
     final id = _int(usuario['id']);
     if (id == null) return;
 
@@ -223,8 +200,7 @@ class _UsuariosPermissoesPageState
       ..showSnackBar(
         SnackBar(
           content: Text(texto),
-          backgroundColor:
-              erro ? Colors.red.shade700 : null,
+          backgroundColor: erro ? Colors.red.shade700 : null,
         ),
       );
   }
@@ -248,26 +224,17 @@ class _UsuariosPermissoesPageState
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed:
-            _carregando ? null : () => _editarUsuario(),
+        onPressed: _carregando ? null : () => _editarUsuario(),
         icon: const Icon(Icons.person_add_alt_1_rounded),
         label: const Text('Usuário'),
       ),
       body: RefreshIndicator(
         onRefresh: _carregar,
         child: _carregando
-            ? const Center(
-                child: CircularProgressIndicator(),
-              )
+            ? const Center(child: CircularProgressIndicator())
             : ListView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  14,
-                  14,
-                  14,
-                  100,
-                ),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
                 children: [
                   const Card(
                     margin: EdgeInsets.zero,
@@ -283,13 +250,10 @@ class _UsuariosPermissoesPageState
                   ),
                   const SizedBox(height: 14),
                   ..._usuarios.map((usuario) {
-                    final perfil =
-                        (usuario['perfil'] ?? '').toString();
-                    final ativo =
-                        _int(usuario['ativo']) == 1;
-                    final colaborador =
-                        (usuario['colaborador_nome'] ?? '')
-                            .toString();
+                    final perfil = (usuario['perfil'] ?? '').toString();
+                    final ativo = _int(usuario['ativo']) == 1;
+                    final colaborador = (usuario['colaborador_nome'] ?? '')
+                        .toString();
                     final temPin =
                         (usuario['pin_hash'] ?? '')
                             .toString()
@@ -301,23 +265,18 @@ class _UsuariosPermissoesPageState
                             .isNotEmpty;
 
                     return Card(
-                      margin:
-                          const EdgeInsets.only(bottom: 9),
+                      margin: const EdgeInsets.only(bottom: 9),
                       child: ListTile(
                         leading: CircleAvatar(
                           child: Icon(
-                            perfil ==
-                                    UsuarioRepository
-                                        .perfilAdministrador
+                            perfil == UsuarioRepository.perfilAdministrador
                                 ? Icons.admin_panel_settings_outlined
                                 : Icons.badge_outlined,
                           ),
                         ),
                         title: Text(
                           (usuario['nome'] ?? '').toString(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
                           [
@@ -329,15 +288,13 @@ class _UsuariosPermissoesPageState
                             temPin ? 'PIN configurado' : 'Sem PIN',
                           ].join(' • '),
                         ),
-                        trailing:
-                            PopupMenuButton<String>(
+                        trailing: PopupMenuButton<String>(
                           onSelected: (valor) {
                             if (valor == 'editar') {
                               _editarUsuario(usuario);
                             } else if (valor == 'pin') {
                               _configurarPin(usuario);
-                            } else if (valor ==
-                                'permissoes') {
+                            } else if (valor == 'permissoes') {
                               _permissoes(usuario);
                             }
                           },
@@ -379,18 +336,15 @@ class _UsuarioFormSheet extends StatefulWidget {
   final Map<String, dynamic>? usuario;
 
   @override
-  State<_UsuarioFormSheet> createState() =>
-      _UsuarioFormSheetState();
+  State<_UsuarioFormSheet> createState() => _UsuarioFormSheetState();
 }
 
-class _UsuarioFormSheetState
-    extends State<_UsuarioFormSheet> {
+class _UsuarioFormSheetState extends State<_UsuarioFormSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nome = TextEditingController();
   final _login = TextEditingController();
 
-  String _perfil =
-      UsuarioRepository.perfilFuncionario;
+  String _perfil = UsuarioRepository.perfilFuncionario;
   int? _colaboradorId;
   bool _ativo = true;
   bool _salvando = false;
@@ -403,16 +357,11 @@ class _UsuarioFormSheetState
 
     final usuario = widget.usuario;
     if (usuario != null) {
-      _nome.text =
-          (usuario['nome'] ?? '').toString();
-      _login.text =
-          (usuario['login'] ?? '').toString();
-      _perfil =
-          (usuario['perfil'] ??
-                  UsuarioRepository.perfilFuncionario)
-              .toString();
-      _colaboradorId =
-          _int(usuario['colaborador_id']);
+      _nome.text = (usuario['nome'] ?? '').toString();
+      _login.text = (usuario['login'] ?? '').toString();
+      _perfil = (usuario['perfil'] ?? UsuarioRepository.perfilFuncionario)
+          .toString();
+      _colaboradorId = _int(usuario['colaborador_id']);
       _ativo = _int(usuario['ativo']) == 1;
     }
   }
@@ -431,8 +380,7 @@ class _UsuarioFormSheetState
   }
 
   Future<void> _salvar() async {
-    if (_salvando ||
-        !(_formKey.currentState?.validate() ?? false)) {
+    if (_salvando || !(_formKey.currentState?.validate() ?? false)) {
       return;
     }
 
@@ -444,8 +392,7 @@ class _UsuarioFormSheetState
         nome: _nome.text,
         login: _login.text,
         perfil: _perfil,
-        colaboradorId: _perfil ==
-                UsuarioRepository.perfilFuncionario
+        colaboradorId: _perfil == UsuarioRepository.perfilFuncionario
             ? _colaboradorId
             : null,
         ativo: _ativo,
@@ -460,33 +407,25 @@ class _UsuarioFormSheetState
       setState(() => _salvando = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$erro'),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text('$erro'), backgroundColor: Colors.red.shade700),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final teclado =
-        MediaQuery.viewInsetsOf(context).bottom;
+    final teclado = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(
-      padding:
-          EdgeInsets.fromLTRB(16, 0, 16, teclado + 18),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, teclado + 18),
       child: SingleChildScrollView(
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                _editando
-                    ? 'Editar usuário'
-                    : 'Novo usuário',
+                _editando ? 'Editar usuário' : 'Novo usuário',
                 style: const TextStyle(
                   fontSize: 21,
                   fontWeight: FontWeight.bold,
@@ -495,16 +434,13 @@ class _UsuarioFormSheetState
               const SizedBox(height: 14),
               TextFormField(
                 controller: _nome,
-                textCapitalization:
-                    TextCapitalization.words,
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Nome *',
                   border: OutlineInputBorder(),
                 ),
                 validator: (valor) =>
-                    (valor ?? '').trim().length < 2
-                        ? 'Informe o nome'
-                        : null,
+                    (valor ?? '').trim().length < 2 ? 'Informe o nome' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -514,14 +450,11 @@ class _UsuarioFormSheetState
                 decoration: const InputDecoration(
                   labelText: 'Login *',
                   prefixText: '@',
-                  helperText:
-                      'Ex.: joao, maria.silva, admin',
+                  helperText: 'Ex.: joao, maria.silva, admin',
                   border: OutlineInputBorder(),
                 ),
                 validator: (valor) =>
-                    (valor ?? '').trim().length < 3
-                        ? 'Informe um login'
-                        : null,
+                    (valor ?? '').trim().length < 3 ? 'Informe um login' : null,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -532,10 +465,8 @@ class _UsuarioFormSheetState
                 ),
                 items: UsuarioRepository.perfis
                     .map(
-                      (item) => DropdownMenuItem(
-                        value: item,
-                        child: Text(item),
-                      ),
+                      (item) =>
+                          DropdownMenuItem(value: item, child: Text(item)),
                     )
                     .toList(),
                 onChanged: _salvando
@@ -545,24 +476,20 @@ class _UsuarioFormSheetState
                           setState(() {
                             _perfil = valor;
                             if (_perfil ==
-                                UsuarioRepository
-                                    .perfilAdministrador) {
+                                UsuarioRepository.perfilAdministrador) {
                               _colaboradorId = null;
                             }
                           });
                         }
                       },
               ),
-              if (_perfil ==
-                  UsuarioRepository
-                      .perfilFuncionario) ...[
+              if (_perfil == UsuarioRepository.perfilFuncionario) ...[
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
                   initialValue: _colaboradorId,
                   isExpanded: true,
                   decoration: const InputDecoration(
-                    labelText:
-                        'Vincular ao funcionário *',
+                    labelText: 'Vincular ao funcionário *',
                     border: OutlineInputBorder(),
                   ),
                   items: widget.colaboradores
@@ -572,24 +499,19 @@ class _UsuarioFormSheetState
                           value: item.id!,
                           child: Text(
                             item.nome,
-                            overflow:
-                                TextOverflow.ellipsis,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       )
                       .toList(),
                   onChanged: _salvando
                       ? null
-                      : (valor) => setState(
-                            () => _colaboradorId = valor,
-                          ),
+                      : (valor) => setState(() => _colaboradorId = valor),
                   validator: (valor) =>
-                      _perfil ==
-                                  UsuarioRepository
-                                      .perfilFuncionario &&
-                              valor == null
-                          ? 'Selecione o funcionário'
-                          : null,
+                      _perfil == UsuarioRepository.perfilFuncionario &&
+                          valor == null
+                      ? 'Selecione o funcionário'
+                      : null,
                 ),
               ],
               const SizedBox(height: 4),
@@ -603,8 +525,7 @@ class _UsuarioFormSheetState
                 value: _ativo,
                 onChanged: _salvando
                     ? null
-                    : (valor) =>
-                        setState(() => _ativo = valor),
+                    : (valor) => setState(() => _ativo = valor),
               ),
               const SizedBox(height: 12),
               FilledButton.icon(
@@ -613,17 +534,10 @@ class _UsuarioFormSheetState
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child:
-                            CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check_rounded),
-                label: Text(
-                  _salvando
-                      ? 'Salvando...'
-                      : 'Salvar usuário',
-                ),
+                label: Text(_salvando ? 'Salvando...' : 'Salvar usuário'),
               ),
             ],
           ),
@@ -633,8 +547,7 @@ class _UsuarioFormSheetState
   }
 }
 
-class _PermissoesUsuarioPage
-    extends StatefulWidget {
+class _PermissoesUsuarioPage extends StatefulWidget {
   const _PermissoesUsuarioPage({
     required this.repository,
     required this.usuarioId,
@@ -648,18 +561,15 @@ class _PermissoesUsuarioPage
   final String perfil;
 
   @override
-  State<_PermissoesUsuarioPage> createState() =>
-      _PermissoesUsuarioPageState();
+  State<_PermissoesUsuarioPage> createState() => _PermissoesUsuarioPageState();
 }
 
-class _PermissoesUsuarioPageState
-    extends State<_PermissoesUsuarioPage> {
+class _PermissoesUsuarioPageState extends State<_PermissoesUsuarioPage> {
   bool _carregando = true;
   Map<String, bool> _permissoes = const {};
 
   bool get _administrador =>
-      widget.perfil ==
-      UsuarioRepository.perfilAdministrador;
+      widget.perfil == UsuarioRepository.perfilAdministrador;
 
   @override
   void initState() {
@@ -668,8 +578,7 @@ class _PermissoesUsuarioPageState
   }
 
   Future<void> _carregar() async {
-    final permissoes =
-        await widget.repository.obterPermissoes(
+    final permissoes = await widget.repository.obterPermissoes(
       widget.usuarioId,
     );
 
@@ -681,10 +590,7 @@ class _PermissoesUsuarioPageState
     });
   }
 
-  Future<void> _alterar(
-    String modulo,
-    bool permitido,
-  ) async {
+  Future<void> _alterar(String modulo, bool permitido) async {
     try {
       await widget.repository.salvarPermissao(
         usuarioId: widget.usuarioId,
@@ -692,15 +598,30 @@ class _PermissoesUsuarioPageState
         permitido: permitido,
       );
 
+      // modulo1-sync-permissao
+      try {
+        await FuncionarioAcessoService.instance
+            .sincronizarPermissoesUsuarioLocal(widget.usuarioId);
+      } catch (erro) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Permissão salva neste aparelho, mas a nuvem ainda não '
+                'atualizou: ${FuncionarioAcessoService.textoErro(erro)}',
+              ),
+              backgroundColor: Colors.orange.shade800,
+            ),
+          );
+        }
+      }
+
       await _carregar();
     } catch (erro) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$erro'),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text('$erro'), backgroundColor: Colors.red.shade700),
       );
     }
   }
@@ -708,19 +629,14 @@ class _PermissoesUsuarioPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Permissões • ${widget.nome}'),
-      ),
+      appBar: AppBar(title: Text('Permissões • ${widget.nome}')),
       body: _carregando
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(14),
               children: [
                 Card(
-                  margin:
-                      const EdgeInsets.only(bottom: 12),
+                  margin: const EdgeInsets.only(bottom: 12),
                   child: Padding(
                     padding: const EdgeInsets.all(13),
                     child: Text(
@@ -733,9 +649,7 @@ class _PermissoesUsuarioPageState
                 ...UsuarioRepository.modulos.map(
                   (modulo) => SwitchListTile(
                     title: Text(
-                      UsuarioRepository
-                              .nomesModulos[modulo] ??
-                          modulo,
+                      UsuarioRepository.nomesModulos[modulo] ?? modulo,
                     ),
                     subtitle: Text(
                       modulo == 'financeiro' ||
@@ -744,12 +658,10 @@ class _PermissoesUsuarioPageState
                           ? 'Área financeira/gerencial'
                           : 'Módulo do Imperium',
                     ),
-                    value:
-                        _permissoes[modulo] ?? false,
+                    value: _permissoes[modulo] ?? false,
                     onChanged: _administrador
                         ? null
-                        : (valor) =>
-                            _alterar(modulo, valor),
+                        : (valor) => _alterar(modulo, valor),
                   ),
                 ),
               ],
@@ -758,21 +670,16 @@ class _PermissoesUsuarioPageState
   }
 }
 
-
 class _HistoricoAcessosPage extends StatefulWidget {
-  const _HistoricoAcessosPage({
-    required this.repository,
-  });
+  const _HistoricoAcessosPage({required this.repository});
 
   final UsuarioRepository repository;
 
   @override
-  State<_HistoricoAcessosPage> createState() =>
-      _HistoricoAcessosPageState();
+  State<_HistoricoAcessosPage> createState() => _HistoricoAcessosPageState();
 }
 
-class _HistoricoAcessosPageState
-    extends State<_HistoricoAcessosPage> {
+class _HistoricoAcessosPageState extends State<_HistoricoAcessosPage> {
   bool _carregando = true;
   List<Map<String, dynamic>> _acessos = const [];
 
@@ -783,8 +690,7 @@ class _HistoricoAcessosPageState
   }
 
   Future<void> _carregar() async {
-    final acessos =
-        await widget.repository.listarAcessos();
+    final acessos = await widget.repository.listarAcessos();
 
     if (!mounted) return;
 
@@ -795,8 +701,7 @@ class _HistoricoAcessosPageState
   }
 
   String _data(dynamic valor) {
-    final data =
-        DateTime.tryParse(valor?.toString() ?? '');
+    final data = DateTime.tryParse(valor?.toString() ?? '');
 
     if (data == null) {
       return '';
@@ -820,18 +725,13 @@ class _HistoricoAcessosPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Histórico de acessos'),
-      ),
+      appBar: AppBar(title: const Text('Histórico de acessos')),
       body: _carregando
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _carregar,
               child: ListView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(),
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(14),
                 children: [
                   if (_acessos.isEmpty)
@@ -846,12 +746,10 @@ class _HistoricoAcessosPageState
                     )
                   else
                     ..._acessos.map((item) {
-                      final sucesso =
-                          _int(item['sucesso']) == 1;
+                      final sucesso = _int(item['sucesso']) == 1;
 
                       return Card(
-                        margin:
-                            const EdgeInsets.only(bottom: 8),
+                        margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
                           leading: Icon(
                             sucesso
@@ -863,20 +761,14 @@ class _HistoricoAcessosPageState
                                     .toString()
                                     .trim()
                                     .isNotEmpty
-                                ? (item['usuario_nome'] ?? '')
-                                    .toString()
+                                ? (item['usuario_nome'] ?? '').toString()
                                 : '@${item['login'] ?? ''}',
                           ),
                           subtitle: Text(
                             [
                               _data(item['criado_em']),
-                              (item['motivo'] ?? '')
-                                  .toString(),
-                            ]
-                                .where(
-                                  (e) => e.trim().isNotEmpty,
-                                )
-                                .join(' • '),
+                              (item['motivo'] ?? '').toString(),
+                            ].where((e) => e.trim().isNotEmpty).join(' • '),
                           ),
                         ),
                       );

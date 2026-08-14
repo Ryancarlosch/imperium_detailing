@@ -2,9 +2,15 @@ import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
 import '../models/agendamento.dart';
+import '../services/operacional_sync_service.dart';
 
 class AgendamentoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
+  final OperacionalSyncService _sync = OperacionalSyncService.instance;
+
+  Future<void> _sincronizar() async {
+    await _sync.tentarSincronizarTudo();
+  }
 
   DateTime _parseData(String valor) {
     final texto = valor.trim();
@@ -19,11 +25,11 @@ class AgendamentoRepository {
     }
 
     final partes = texto.split('/');
+
     if (partes.length == 3) {
       final dia = int.tryParse(partes[0]) ?? 1;
       final mes = int.tryParse(partes[1]) ?? 1;
       final ano = int.tryParse(partes[2]) ?? 1970;
-
       return DateTime(ano, mes, dia);
     }
 
@@ -32,15 +38,10 @@ class AgendamentoRepository {
 
   Duration _parseHora(String valor) {
     final texto = valor.trim();
-
-    if (texto.isEmpty) {
-      return Duration.zero;
-    }
+    if (texto.isEmpty) return Duration.zero;
 
     final partes = texto.split(':');
-    if (partes.length < 2) {
-      return Duration.zero;
-    }
+    if (partes.length < 2) return Duration.zero;
 
     final hora = int.tryParse(partes[0]) ?? 0;
     final minuto = int.tryParse(partes[1]) ?? 0;
@@ -75,39 +76,38 @@ class AgendamentoRepository {
       (b['hora'] ?? '').toString(),
     );
 
-    final comparacaoDataHora = momentoA.compareTo(momentoB);
-    if (comparacaoDataHora != 0) {
-      return comparacaoDataHora;
-    }
+    final comparacao = momentoA.compareTo(momentoB);
+    if (comparacao != 0) return comparacao;
 
     final idA = (a['id'] as num?)?.toInt() ?? 0;
     final idB = (b['id'] as num?)?.toInt() ?? 0;
-
     return idA.compareTo(idB);
   }
 
   Future<int> inserirAgendamento(Agendamento agendamento) async {
     final database = await _appDatabase.database;
+    final dados = agendamento.toMap()..remove('id');
 
-    final dados = agendamento.toMap();
-    dados.remove('id');
-
-    return database.insert('agendamentos', dados);
+    final id = await database.insert('agendamentos', dados);
+    await _sincronizar();
+    return id;
   }
 
   Future<List<Agendamento>> listarAgendamentos() async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.query('agendamentos');
 
-    final listaOrdenada =
+    final lista =
         resultado.map((mapa) => Map<String, dynamic>.from(mapa)).toList()
           ..sort(_compararMapasAgendamento);
 
-    return listaOrdenada.map((mapa) => Agendamento.fromMap(mapa)).toList();
+    return lista.map(Agendamento.fromMap).toList();
   }
 
   Future<List<Map<String, dynamic>>> listarAgendamentosComDetalhes() async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery('''
@@ -124,14 +124,15 @@ class AgendamentoRepository {
         ON v.id = a.veiculo_id
     ''');
 
-    final listaOrdenada =
+    final lista =
         resultado.map((mapa) => Map<String, dynamic>.from(mapa)).toList()
           ..sort(_compararMapasAgendamento);
 
-    return listaOrdenada;
+    return lista;
   }
 
   Future<Agendamento?> buscarAgendamentoPorId(int id) async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -141,14 +142,12 @@ class AgendamentoRepository {
       limit: 1,
     );
 
-    if (resultado.isEmpty) {
-      return null;
-    }
-
+    if (resultado.isEmpty) return null;
     return Agendamento.fromMap(resultado.first);
   }
 
   Future<List<Agendamento>> listarAgendamentosPorData(String data) async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -158,10 +157,11 @@ class AgendamentoRepository {
       orderBy: 'hora ASC',
     );
 
-    return resultado.map((mapa) => Agendamento.fromMap(mapa)).toList();
+    return resultado.map(Agendamento.fromMap).toList();
   }
 
   Future<List<Agendamento>> listarAgendamentosDoCliente(int clienteId) async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -171,10 +171,11 @@ class AgendamentoRepository {
       orderBy: 'data DESC, hora DESC',
     );
 
-    return resultado.map((mapa) => Agendamento.fromMap(mapa)).toList();
+    return resultado.map(Agendamento.fromMap).toList();
   }
 
   Future<List<Agendamento>> listarAgendamentosDoVeiculo(int veiculoId) async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -184,39 +185,40 @@ class AgendamentoRepository {
       orderBy: 'data DESC, hora DESC',
     );
 
-    return resultado.map((mapa) => Agendamento.fromMap(mapa)).toList();
+    return resultado.map(Agendamento.fromMap).toList();
   }
 
   Future<int> atualizarAgendamento(Agendamento agendamento) async {
     if (agendamento.id == null) {
-      throw ArgumentError(
-        'Não é possível atualizar um '
-        'agendamento sem ID.',
-      );
+      throw ArgumentError('Não é possível atualizar um agendamento sem ID.');
     }
 
     final database = await _appDatabase.database;
+    final dados = agendamento.toMap()..remove('id');
 
-    final dados = agendamento.toMap();
-    dados.remove('id');
-
-    return database.update(
+    final alterados = await database.update(
       'agendamentos',
       dados,
       where: 'id = ?',
       whereArgs: [agendamento.id],
     );
+
+    await _sincronizar();
+    return alterados;
   }
 
   Future<int> atualizarStatus(int id, String status) async {
     final database = await _appDatabase.database;
 
-    return database.update(
+    final alterados = await database.update(
       'agendamentos',
       {'status': status},
       where: 'id = ?',
       whereArgs: [id],
     );
+
+    await _sincronizar();
+    return alterados;
   }
 
   Future<int> atualizarStatusComTransacao(
@@ -224,6 +226,7 @@ class AgendamentoRepository {
     int id,
     String status,
   ) async {
+    // A próxima sincronização detecta a mudança pelo hash da linha.
     return transaction.update(
       'agendamentos',
       {'status': status},
@@ -235,6 +238,17 @@ class AgendamentoRepository {
   Future<int> excluirAgendamento(int id) async {
     final database = await _appDatabase.database;
 
-    return database.delete('agendamentos', where: 'id = ?', whereArgs: [id]);
+    final excluidos = await database.delete(
+      'agendamentos',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (excluidos > 0) {
+      await _sync.registrarExclusaoAgendamento(id);
+      await _sincronizar();
+    }
+
+    return excluidos;
   }
 }

@@ -365,24 +365,26 @@ class GoogleDriveBackupService {
     final tamanho = await arquivo.length();
     final nome = path.basename(arquivo.path);
 
-    final sessao = await http.post(
-      Uri.parse(
-        'https://www.googleapis.com/upload/drive/v3/files'
-        '?uploadType=resumable&fields=id,name,createdTime,size',
-      ),
-      headers: <String, String>{
-        ...headers,
-        'Content-Type': 'application/json; charset=UTF-8',
-        'X-Upload-Content-Type': 'application/zip',
-        'X-Upload-Content-Length': tamanho.toString(),
-      },
-      body: jsonEncode({
-        'name': nome,
-        'parents': [pastaId],
-        'mimeType': 'application/zip',
-        'description': 'Backup automático do Imperium Detailing',
-      }),
-    );
+    final sessao = await http
+        .post(
+          Uri.parse(
+            'https://www.googleapis.com/upload/drive/v3/files'
+            '?uploadType=resumable&fields=id,name,createdTime,size',
+          ),
+          headers: <String, String>{
+            ...headers,
+            'Content-Type': 'application/json; charset=UTF-8',
+            'X-Upload-Content-Type': 'application/zip',
+            'X-Upload-Content-Length': tamanho.toString(),
+          },
+          body: jsonEncode({
+            'name': nome,
+            'parents': [pastaId],
+            'mimeType': 'application/zip',
+            'description': 'Backup automático do Imperium Detailing',
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
 
     if (sessao.statusCode < 200 || sessao.statusCode >= 300) {
       throw GoogleDriveBackupException(
@@ -411,7 +413,9 @@ class GoogleDriveBackupService {
       await requisicao.sink.addStream(arquivo.openRead());
       await requisicao.sink.close();
 
-      final respostaStream = await cliente.send(requisicao);
+      final respostaStream = await cliente
+          .send(requisicao)
+          .timeout(const Duration(minutes: 2));
       final corpo = await respostaStream.stream.bytesToString();
 
       if (respostaStream.statusCode < 200 || respostaStream.statusCode >= 300) {
@@ -452,7 +456,9 @@ class GoogleDriveBackupService {
       'fields': 'files(id,name)',
     });
 
-    final resposta = await http.get(uri, headers: headers);
+    final resposta = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 30));
 
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw GoogleDriveBackupException(
@@ -473,17 +479,19 @@ class GoogleDriveBackupService {
       }
     }
 
-    final criar = await http.post(
-      Uri.parse('https://www.googleapis.com/drive/v3/files?fields=id,name'),
-      headers: <String, String>{
-        ...headers,
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode({
-        'name': _nomePasta,
-        'mimeType': 'application/vnd.google-apps.folder',
-      }),
-    );
+    final criar = await http
+        .post(
+          Uri.parse('https://www.googleapis.com/drive/v3/files?fields=id,name'),
+          headers: <String, String>{
+            ...headers,
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: jsonEncode({
+            'name': _nomePasta,
+            'mimeType': 'application/vnd.google-apps.folder',
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
 
     if (criar.statusCode < 200 || criar.statusCode >= 300) {
       throw GoogleDriveBackupException(
@@ -523,7 +531,9 @@ class GoogleDriveBackupService {
         'fields': 'files(id,name,createdTime)',
       });
 
-      final resposta = await http.get(uri, headers: headers);
+      final resposta = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 30));
 
       if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
         return;

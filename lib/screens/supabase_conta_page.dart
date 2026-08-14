@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/supabase_bootstrap.dart';
+import 'licenca_status_page.dart';
 import 'ponto_nuvem_importacao_page.dart';
+import 'imperium_empresas_page.dart';
+import 'imperium_clientes_page.dart';
 
 class SupabaseContaPage extends StatefulWidget {
   const SupabaseContaPage({super.key, this.emailInicial});
@@ -111,6 +114,13 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
     }
 
     try {
+      // Se este e-mail foi pre-cadastrado no painel comercial,
+      // o servidor vincula o usuario somente ao convite do proprio e-mail.
+      try {
+        await client.rpc('imperium_resgatar_convite');
+      } catch (_) {
+        // Sem convite pendente: segue para a validacao normal do vinculo.
+      }
       final vinculo = await client
           .from('empresa_usuarios')
           .select('empresa_id,papel,ativo')
@@ -185,7 +195,7 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
       await client.auth.signInWithOtp(
         email: email,
         emailRedirectTo: _redirectUrl,
-        shouldCreateUser: false,
+        shouldCreateUser: true,
       );
 
       if (!mounted) return;
@@ -199,6 +209,23 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
         setState(() => _enviandoLink = false);
       }
     }
+  }
+
+  Future<void> _abrirPainelEmpresas() async {
+    if (!_adminComercial) {
+      _mensagem(
+        'Painel restrito à empresa proprietária do Imperium.',
+        erro: true,
+      );
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const ImperiumEmpresasPage()),
+    );
+
+    if (!mounted) return;
+    await _carregarEstado();
   }
 
   Future<void> _sair() async {
@@ -221,6 +248,40 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
         setState(() => _saindo = false);
       }
     }
+  }
+
+  Future<void> _abrirLicenca() async {
+    if (!_rlsValidado) {
+      _mensagem('Valide primeiro a conta e a empresa na nuvem.', erro: true);
+      return;
+    }
+
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => const LicencaStatusPage()));
+  }
+
+  bool get _adminComercial {
+    const empresaImperium = 'dbbf4114-06fa-46b8-a2f6-50b3f3ead436';
+    final papel = (_papel ?? '').trim().toLowerCase();
+
+    return _empresaId == empresaImperium &&
+        const {
+          'admin',
+          'administrador',
+          'proprietario',
+          'proprietário',
+          'dono',
+          'owner',
+        }.contains(papel);
+  }
+
+  Future<void> _abrirPainelClientes() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const ImperiumClientesPage()),
+    );
+
+    await _carregarEstado();
   }
 
   Future<void> _abrirPontoNuvem() async {
@@ -302,6 +363,12 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
       appBar: AppBar(
         title: const Text('Conta na nuvem'),
         actions: [
+          if (_adminComercial)
+            IconButton(
+              tooltip: 'Painel de empresas',
+              onPressed: _carregando ? null : _abrirPainelEmpresas,
+              icon: const Icon(Icons.business_center_outlined),
+            ),
           IconButton(
             tooltip: 'Atualizar',
             onPressed: _carregando ? null : _carregarEstado,
@@ -410,6 +477,29 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
                       _linha(titulo: 'Empresa ID', valor: _empresaId ?? ''),
                       const SizedBox(height: 14),
 
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _abrirLicenca,
+                          icon: const Icon(Icons.verified_user_outlined),
+                          label: const Text('Ver licença / mensalidade'),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      if (_adminComercial) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _abrirPainelClientes,
+                            icon: const Icon(
+                              Icons.admin_panel_settings_outlined,
+                            ),
+                            label: const Text('Painel de clientes'),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       // Entrada que estava faltando no APK.
                       SizedBox(
                         width: double.infinity,

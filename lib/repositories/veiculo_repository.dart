@@ -1,19 +1,26 @@
 import '../database/app_database.dart';
 import '../models/veiculo.dart';
+import '../services/operacional_sync_service.dart';
 
 class VeiculoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
+  final OperacionalSyncService _sync = OperacionalSyncService.instance;
+
+  Future<void> _sincronizar() async {
+    await _sync.tentarSincronizarTudo();
+  }
 
   Future<int> inserirVeiculo(Veiculo veiculo) async {
     final database = await _appDatabase.database;
+    final dados = veiculo.toMap()..remove('id');
 
-    final dados = veiculo.toMap();
-    dados.remove('id');
-
-    return database.insert('veiculos', dados);
+    final id = await database.insert('veiculos', dados);
+    await _sincronizar();
+    return id;
   }
 
   Future<List<Veiculo>> listarVeiculos() async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -21,10 +28,11 @@ class VeiculoRepository {
       orderBy: 'marca ASC, modelo ASC',
     );
 
-    return resultado.map((mapa) => Veiculo.fromMap(mapa)).toList();
+    return resultado.map(Veiculo.fromMap).toList();
   }
 
   Future<List<Map<String, dynamic>>> listarVeiculosComCliente() async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     return database.rawQuery('''
@@ -36,10 +44,11 @@ class VeiculoRepository {
       INNER JOIN clientes c
         ON c.id = v.cliente_id
       ORDER BY v.marca ASC, v.modelo ASC
-      ''');
+    ''');
   }
 
   Future<Veiculo?> buscarVeiculoPorId(int id) async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -49,14 +58,12 @@ class VeiculoRepository {
       limit: 1,
     );
 
-    if (resultado.isEmpty) {
-      return null;
-    }
-
+    if (resultado.isEmpty) return null;
     return Veiculo.fromMap(resultado.first);
   }
 
   Future<Map<String, dynamic>?> buscarVeiculoComClientePorId(int id) async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.rawQuery(
@@ -75,14 +82,12 @@ class VeiculoRepository {
       [id],
     );
 
-    if (resultado.isEmpty) {
-      return null;
-    }
-
+    if (resultado.isEmpty) return null;
     return resultado.first;
   }
 
   Future<List<Veiculo>> listarVeiculosDoCliente(int clienteId) async {
+    await _sincronizar();
     final database = await _appDatabase.database;
 
     final resultado = await database.query(
@@ -92,7 +97,7 @@ class VeiculoRepository {
       orderBy: 'marca ASC, modelo ASC',
     );
 
-    return resultado.map((mapa) => Veiculo.fromMap(mapa)).toList();
+    return resultado.map(Veiculo.fromMap).toList();
   }
 
   Future<int> contarFotosDoVeiculo(int veiculoId) async {
@@ -107,20 +112,12 @@ class VeiculoRepository {
       [veiculoId],
     );
 
-    if (resultado.isEmpty) {
-      return 0;
-    }
+    if (resultado.isEmpty) return 0;
 
     final valor = resultado.first['total'];
 
-    if (valor is int) {
-      return valor;
-    }
-
-    if (valor is num) {
-      return valor.toInt();
-    }
-
+    if (valor is int) return valor;
+    if (valor is num) return valor.toInt();
     return int.tryParse(valor?.toString() ?? '') ?? 0;
   }
 
@@ -161,19 +158,13 @@ class VeiculoRepository {
       };
     }
 
-    final linha = resultado.first;
-
     int converter(dynamic valor) {
-      if (valor is int) {
-        return valor;
-      }
-
-      if (valor is num) {
-        return valor.toInt();
-      }
-
+      if (valor is int) return valor;
+      if (valor is num) return valor.toInt();
       return int.tryParse(valor?.toString() ?? '') ?? 0;
     }
+
+    final linha = resultado.first;
 
     return {
       'quantidade_fotos': converter(linha['quantidade_fotos']),
@@ -188,9 +179,7 @@ class VeiculoRepository {
   }) async {
     final database = await _appDatabase.database;
 
-    if (limite <= 0) {
-      return [];
-    }
+    if (limite <= 0) return [];
 
     return database.query(
       'fotos_servico',
@@ -208,21 +197,33 @@ class VeiculoRepository {
     }
 
     final database = await _appDatabase.database;
+    final dados = veiculo.toMap()..remove('id');
 
-    final dados = veiculo.toMap();
-    dados.remove('id');
-
-    return database.update(
+    final alterados = await database.update(
       'veiculos',
       dados,
       where: 'id = ?',
       whereArgs: [veiculo.id],
     );
+
+    await _sincronizar();
+    return alterados;
   }
 
   Future<int> excluirVeiculo(int id) async {
     final database = await _appDatabase.database;
 
-    return database.delete('veiculos', where: 'id = ?', whereArgs: [id]);
+    final excluidos = await database.delete(
+      'veiculos',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (excluidos > 0) {
+      await _sync.registrarExclusaoVeiculo(id);
+      await _sincronizar();
+    }
+
+    return excluidos;
   }
 }

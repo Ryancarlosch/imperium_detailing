@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/cliente.dart';
 import '../repositories/cliente_repository.dart';
+import '../repositories/usuario_repository.dart';
 import 'cliente_detalhes_page.dart';
+import 'cliente_operacional_page.dart';
 
 class ClientesPage extends StatefulWidget {
   const ClientesPage({super.key});
@@ -109,11 +111,18 @@ class _ClientesPageState extends State<ClientesPage> {
   }
 
   Future<void> _abrirDetalhes(Cliente cliente) async {
+    // modulo1-cliente-operacional
+    final sessao = UsuarioRepository().sessaoAtual;
+    final funcionario =
+        (sessao?['perfil'] ?? '').toString() ==
+        UsuarioRepository.perfilFuncionario;
     final resultado = await Navigator.push<Object?>(
       context,
       MaterialPageRoute(
         builder: (_) {
-          return ClienteDetalhesPage(cliente: cliente);
+          return funcionario
+              ? ClienteOperacionalPage(cliente: cliente)
+              : ClienteDetalhesPage(cliente: cliente);
         },
       ),
     );

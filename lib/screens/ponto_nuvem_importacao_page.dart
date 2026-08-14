@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/ponto_nuvem_importacao_service.dart';
 import '../services/ponto_nuvem_service.dart';
+import 'funcionarios_acesso_nuvem_page.dart';
 
 class PontoNuvemImportacaoPage extends StatefulWidget {
   const PontoNuvemImportacaoPage({super.key, required this.empresaId});
@@ -103,6 +104,17 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
         setState(() => _importando = false);
       }
     }
+  }
+
+  Future<void> _abrirAcessosFuncionarios() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) =>
+            FuncionariosAcessoNuvemPage(empresaId: widget.empresaId),
+      ),
+    );
+
+    await _carregar();
   }
 
   Future<void> _migrarHistorico() async {
@@ -339,6 +351,14 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
                       : 'Importar/atualizar funcionários',
                 ),
               ),
+              OutlinedButton.icon(
+                onPressed: _importando || _migrandoHistorico
+                    ? null
+                    : _abrirAcessosFuncionarios,
+                icon: const Icon(Icons.phonelink_outlined),
+                label: const Text('Acessos em outros celulares'),
+              ),
+              const SizedBox(height: 14),
               const SizedBox(height: 14),
               Card(
                 child: Padding(
