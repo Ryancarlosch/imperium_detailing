@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../config/imperium_regras_negocio.dart';
 import '../repositories/precificacao_repository.dart';
 import '../repositories/fidelidade_repository.dart';
 
@@ -30,8 +31,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
       TextEditingController();
   final TextEditingController _margemRevenda10MaisController =
       TextEditingController();
-  final TextEditingController _margemMinimaController =
-      TextEditingController();
+  final TextEditingController _margemMinimaController = TextEditingController();
 
   bool _carregando = true;
   bool _salvandoBase = false;
@@ -87,26 +87,21 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
   }
 
   void _preencherConfig(PrecificacaoConfig config) {
-    _horasController.text = _numero(config.horasProdutivasMes);
+    _horasController.text = _numero(ImperiumRegrasNegocio.horasMensaisPadrao);
     _margemClienteController.text = _numero(config.margemCliente);
-    _margemRevenda1a4Controller.text =
-        _numero(config.margemRevenda1a4);
-    _margemRevendaController.text =
-        _numero(config.margemRevenda5a9);
-    _margemRevenda10MaisController.text =
-        _numero(config.margemRevenda10Mais);
+    _margemRevenda1a4Controller.text = _numero(config.margemRevenda1a4);
+    _margemRevendaController.text = _numero(config.margemRevenda5a9);
+    _margemRevenda10MaisController.text = _numero(config.margemRevenda10Mais);
     _margemMinimaController.text = _numero(config.margemMinima);
     _mesesMedia = config.mesesMedia;
   }
 
   Future<void> _salvarBase() async {
-    final horas = _valor(_horasController.text);
+    const horas = ImperiumRegrasNegocio.horasMensaisPadrao;
     final margemCliente = _valor(_margemClienteController.text);
     final margemRevenda1a4 = _valor(_margemRevenda1a4Controller.text);
     final margemRevenda5a9 = _valor(_margemRevendaController.text);
-    final margemRevenda10Mais = _valor(
-      _margemRevenda10MaisController.text,
-    );
+    final margemRevenda10Mais = _valor(_margemRevenda10MaisController.text);
     final margemMinima = _valor(_margemMinimaController.text);
 
     if (horas <= 0) {
@@ -189,9 +184,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                           horasController.text = _numero(media / 60);
                         },
                         icon: const Icon(Icons.history_rounded),
-                        label: Text(
-                          'Usar média real (${_tempo(media)})',
-                        ),
+                        label: Text('Usar média real (${_tempo(media)})'),
                       ),
                       Text(
                         '${servico.amostrasTempoReal} '
@@ -356,10 +349,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                   const SizedBox(height: 18),
                   const Text(
                     'Saúde dos preços',
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -405,6 +395,15 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
   }
 
   Future<void> _editarFidelidade() async {
+    // fidelidade-tempo-ui-bloqueada-v1
+    if (kFidelidadeTempoTemporariamenteDesativada) {
+      _mensagem(
+        'O desconto por tempo de cliente está temporariamente desativado. '
+        'As configurações existentes foram preservadas.',
+      );
+      return;
+    }
+
     final atual = _fidelidadeConfig ?? const FidelidadeConfig();
 
     var modo = atual.modo;
@@ -425,13 +424,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
         .toList();
 
     if (faixas.isEmpty) {
-      faixas.add(
-        _FaixaFidelidadeEdicao(
-          meses: 12,
-          percentual: 3,
-          ativo: true,
-        ),
-      );
+      faixas.add(_FaixaFidelidadeEdicao(meses: 12, percentual: 3, ativo: true));
     }
 
     final salvar = await showDialog<bool>(
@@ -499,9 +492,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                           decimal: true,
                         ),
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'[0-9,.]'),
-                          ),
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                         ],
                         decoration: const InputDecoration(
                           labelText: 'Desconto máximo de fidelidade',
@@ -564,8 +555,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                                       child: TextField(
                                         controller: faixa.mesesController,
                                         enabled: faixa.ativo,
-                                        keyboardType:
-                                            TextInputType.number,
+                                        keyboardType: TextInputType.number,
                                         inputFormatters: [
                                           FilteringTextInputFormatter
                                               .digitsOnly,
@@ -580,13 +570,12 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: TextField(
-                                        controller:
-                                            faixa.percentualController,
+                                        controller: faixa.percentualController,
                                         enabled: faixa.ativo,
-                                        keyboardType: const TextInputType
-                                            .numberWithOptions(
-                                          decimal: true,
-                                        ),
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
                                         inputFormatters: [
                                           FilteringTextInputFormatter.allow(
                                             RegExp(r'[0-9,.]'),
@@ -621,8 +610,9 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                                       onPressed: faixas.length <= 1
                                           ? null
                                           : () {
-                                              final removida =
-                                                  faixas.removeAt(indice);
+                                              final removida = faixas.removeAt(
+                                                indice,
+                                              );
                                               removida.dispose();
                                               setModalState(() {});
                                             },
@@ -813,10 +803,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
               ),
             ),
             const SizedBox(height: 10),
-            _LinhaFidelidadeResumo(
-              titulo: 'Modo',
-              valor: modoTexto(),
-            ),
+            _LinhaFidelidadeResumo(titulo: 'Modo', valor: modoTexto()),
             _LinhaFidelidadeResumo(
               titulo: 'Desconto máximo',
               valor: _percentual(config.descontoMaximoPercentual),
@@ -826,18 +813,19 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
               valor: config.permitirParceiro ? 'Permitido' : 'Não',
             ),
             const Divider(height: 20),
-            ...config.faixas.where((item) => item.ativo).map(
-              (faixa) => _LinhaFidelidadeResumo(
-                titulo: 'Após ${faixa.mesesMinimos} meses',
-                valor: _percentual(faixa.percentual),
-              ),
-            ),
+            ...config.faixas
+                .where((item) => item.ativo)
+                .map(
+                  (faixa) => _LinhaFidelidadeResumo(
+                    titulo: 'Após ${faixa.mesesMinimos} meses',
+                    valor: _percentual(faixa.percentual),
+                  ),
+                ),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed:
-                    _salvandoFidelidade ? null : _editarFidelidade,
+                onPressed: _salvandoFidelidade ? null : _editarFidelidade,
                 icon: _salvandoFidelidade
                     ? const SizedBox(
                         width: 17,
@@ -846,9 +834,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                       )
                     : const Icon(Icons.tune_rounded),
                 label: Text(
-                  _salvandoFidelidade
-                      ? 'Salvando...'
-                      : 'Configurar fidelidade',
+                  _salvandoFidelidade ? 'Salvando...' : 'Configurar fidelidade',
                 ),
               ),
             ),
@@ -868,9 +854,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
           'Base da precificação',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: const Text(
-          'Horas produtivas, média de custos e margens',
-        ),
+        subtitle: const Text('Horas produtivas, média de custos e margens'),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
         children: [
           Row(
@@ -878,6 +862,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
               Expanded(
                 child: TextField(
                   controller: _horasController,
+                  readOnly: true, // precificacao-horas-220-readonly-v2
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
@@ -888,7 +873,8 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                     labelText: 'Horas produtivas/mês',
                     suffixText: 'h',
                     border: OutlineInputBorder(),
-                    helperText: 'Informe a capacidade produtiva total da equipe no mês (ex.: 3 pessoas × 220h = 660h).',
+                    helperText:
+                        'Base mensal atual: 220h. Não multiplique pela quantidade de funcionários.',
                   ),
                 ),
               ),
@@ -956,9 +942,9 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
             alignment: Alignment.centerLeft,
             child: Text(
               'Revenda / parceiro por volume',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(height: 4),
@@ -998,8 +984,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
                   children: [
                     for (var i = 0; i < campos.length; i++) ...[
                       campos[i],
-                      if (i < campos.length - 1)
-                        const SizedBox(height: 8),
+                      if (i < campos.length - 1) const SizedBox(height: 8),
                     ],
                   ],
                 );
@@ -1061,27 +1046,24 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
   double _valor(String texto) {
     final bruto = texto.trim();
     if (bruto.contains(',')) {
-      return double.tryParse(
-            bruto.replaceAll('.', '').replaceAll(',', '.'),
-          ) ??
+      return double.tryParse(bruto.replaceAll('.', '').replaceAll(',', '.')) ??
           0;
     }
     return double.tryParse(bruto) ?? 0;
   }
 }
 
-
 class _FaixaFidelidadeEdicao {
   _FaixaFidelidadeEdicao({
     required int meses,
     required double percentual,
     required this.ativo,
-  })  : mesesController = TextEditingController(text: meses.toString()),
-        percentualController = TextEditingController(
-          text: percentual == percentual.roundToDouble()
-              ? percentual.toInt().toString()
-              : percentual.toStringAsFixed(2).replaceAll('.', ','),
-        );
+  }) : mesesController = TextEditingController(text: meses.toString()),
+       percentualController = TextEditingController(
+         text: percentual == percentual.roundToDouble()
+             ? percentual.toInt().toString()
+             : percentual.toStringAsFixed(2).replaceAll('.', ','),
+       );
 
   final TextEditingController mesesController;
   final TextEditingController percentualController;
@@ -1096,10 +1078,7 @@ class _FaixaFidelidadeEdicao {
 }
 
 class _LinhaFidelidadeResumo extends StatelessWidget {
-  const _LinhaFidelidadeResumo({
-    required this.titulo,
-    required this.valor,
-  });
+  const _LinhaFidelidadeResumo({required this.titulo, required this.valor});
 
   final String titulo;
   final String valor;
@@ -1111,10 +1090,7 @@ class _LinhaFidelidadeResumo extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(titulo)),
-          Text(
-            valor,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+          Text(valor, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -1122,10 +1098,7 @@ class _LinhaFidelidadeResumo extends StatelessWidget {
 }
 
 class _CampoMargemRevenda extends StatelessWidget {
-  const _CampoMargemRevenda({
-    required this.controller,
-    required this.titulo,
-  });
+  const _CampoMargemRevenda({required this.controller, required this.titulo});
 
   final TextEditingController controller;
   final String titulo;
@@ -1135,9 +1108,7 @@ class _CampoMargemRevenda extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
-      ],
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]'))],
       decoration: InputDecoration(
         labelText: titulo,
         suffixText: '%',
@@ -1168,7 +1139,9 @@ class _FaixaRevendaLinha extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final economia = (precoCliente - preco).clamp(0, double.infinity).toDouble();
+    final economia = (precoCliente - preco)
+        .clamp(0, double.infinity)
+        .toDouble();
     final noLimite = preco <= precoMinimo + 0.01;
 
     return Row(
@@ -1178,10 +1151,7 @@ class _FaixaRevendaLinha extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                faixa,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
+              Text(faixa, style: const TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 2),
               Text(
                 'Margem ${percentual(margem)}'
@@ -1218,10 +1188,7 @@ class _FaixaRevendaLinha extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           moeda.format(preco),
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -1254,10 +1221,7 @@ class _CabecalhoPrecificacao extends StatelessWidget {
                 SizedBox(width: 8),
                 Text(
                   'Análise de custo mensal',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -1391,9 +1355,7 @@ class _ServicoPrecificacaoCard extends StatelessWidget {
           servico.nome,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(
-          '$saude • ${tempo(servico.tempoPrecificacaoMinutos)}',
-        ),
+        subtitle: Text('$saude • ${tempo(servico.tempoPrecificacaoMinutos)}'),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -1402,10 +1364,7 @@ class _ServicoPrecificacaoCard extends StatelessWidget {
               moeda.format(servico.precoSugerido),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            const Text(
-              'sugerido',
-              style: TextStyle(fontSize: 10.5),
-            ),
+            const Text('sugerido', style: TextStyle(fontSize: 10.5)),
           ],
         ),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
@@ -1469,11 +1428,7 @@ class _ServicoPrecificacaoCard extends StatelessWidget {
               ),
             ),
           const Divider(),
-          _LinhaPreco(
-            'Preço de equilíbrio',
-            servico.precoEquilibrio,
-            moeda,
-          ),
+          _LinhaPreco('Preço de equilíbrio', servico.precoEquilibrio, moeda),
           _LinhaPreco(
             'Preço mínimo seguro (${percentual(config.margemMinima)})',
             servico.precoMinimoSeguro,
@@ -1542,9 +1497,7 @@ class _ServicoPrecificacaoCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Revenda / parceiro por volume',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -1555,9 +1508,7 @@ class _ServicoPrecificacaoCard extends StatelessWidget {
                     'o volume mensal do parceiro.',
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -1593,10 +1544,7 @@ class _ServicoPrecificacaoCard extends StatelessWidget {
                   const SizedBox(height: 9),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.shield_outlined,
-                        size: 17,
-                      ),
+                      const Icon(Icons.shield_outlined, size: 17),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -1643,8 +1591,7 @@ class _ServicoPrecificacaoCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed:
-                      servico.precoSugerido <= 0 ? null : onAplicar,
+                  onPressed: servico.precoSugerido <= 0 ? null : onAplicar,
                   icon: const Icon(Icons.price_change_outlined),
                   label: const Text('Aplicar preço'),
                 ),

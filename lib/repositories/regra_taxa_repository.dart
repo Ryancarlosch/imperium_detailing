@@ -16,11 +16,7 @@ class RegraTaxaRepository {
     );
 
     return resultado
-        .map(
-          (item) => RegraTaxaCartao.fromMap(
-            Map<String, dynamic>.from(item),
-          ),
-        )
+        .map((item) => RegraTaxaCartao.fromMap(Map<String, dynamic>.from(item)))
         .toList();
   }
 
@@ -88,10 +84,7 @@ class RegraTaxaRepository {
           'parcelas = ?',
           'ativo = 1',
         ];
-        final argumentos = <Object?>[
-          forma,
-          regra.parcelas,
-        ];
+        final argumentos = <Object?>[forma, regra.parcelas];
 
         if (regra.contaId == null) {
           filtros.add('conta_id IS NULL');
@@ -107,10 +100,7 @@ class RegraTaxaRepository {
 
         await transaction.update(
           'financeiro_regras_taxa',
-          {
-            'ativo': 0,
-            'atualizado_em': agora,
-          },
+          {'ativo': 0, 'atualizado_em': agora},
           where: filtros.join(' AND '),
           whereArgs: argumentos,
         );
@@ -148,10 +138,7 @@ class RegraTaxaRepository {
 
     await database.update(
       'financeiro_regras_taxa',
-      {
-        'ativo': 0,
-        'atualizado_em': DateTime.now().toIso8601String(),
-      },
+      {'ativo': 0, 'atualizado_em': DateTime.now().toIso8601String()},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -200,23 +187,14 @@ class RegraTaxaRepository {
         id DESC
       LIMIT 1
       ''',
-      [
-        forma,
-        parcelas,
-        contaId,
-        contaId,
-        contaId,
-        contaId,
-      ],
+      [forma, parcelas, contaId, contaId, contaId, contaId],
     );
 
     if (resultado.isEmpty) {
       return null;
     }
 
-    return RegraTaxaCartao.fromMap(
-      Map<String, dynamic>.from(resultado.first),
-    );
+    return RegraTaxaCartao.fromMap(Map<String, dynamic>.from(resultado.first));
   }
 
   Future<Map<String, dynamic>?> calcular({

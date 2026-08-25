@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../config/imperium_regras_negocio.dart';
 import '../database/app_database.dart';
 
 class PrecificacaoConfig {
@@ -125,7 +126,7 @@ class PrecificacaoRepository {
     await database.execute('''
       CREATE TABLE IF NOT EXISTS financeiro_precificacao_config (
         id INTEGER PRIMARY KEY CHECK (id = 1),
-        horas_produtivas_mes REAL NOT NULL DEFAULT 160,
+        horas_produtivas_mes REAL NOT NULL DEFAULT 220,
         meses_media INTEGER NOT NULL DEFAULT 3,
         margem_cliente REAL NOT NULL DEFAULT 35,
         margem_revenda REAL NOT NULL DEFAULT 20,
@@ -144,10 +145,15 @@ class PrecificacaoRepository {
         margem_revenda,
         margem_minima,
         atualizado_em
-      ) VALUES (1, 160, 3, 35, 20, 10, ?)
+      ) VALUES (1, 220, 3, 35, 20, 10, ?)
       ''',
       [DateTime.now().toIso8601String()],
     );
+
+    // precificacao-forcar-220-v2
+    await database.update('financeiro_precificacao_config', {
+      'horas_produtivas_mes': ImperiumRegrasNegocio.horasMensaisPadrao,
+    }, where: 'id = 1');
 
     await database.execute('''
       CREATE TABLE IF NOT EXISTS financeiro_precificacao_servicos (
@@ -196,8 +202,7 @@ class PrecificacaoRepository {
     // essa margem antiga na faixa intermediária e cria faixas coerentes ao
     // redor dela. Isso preserva a configuração que o usuário já possuía.
     if (adicionou1a4 || adicionou5a9 || adicionou10Mais) {
-      await database.rawUpdate(
-        '''
+      await database.rawUpdate('''
         UPDATE financeiro_precificacao_config
         SET
           margem_revenda_5_9 = MIN(
@@ -213,8 +218,7 @@ class PrecificacaoRepository {
             MIN(margem_cliente, margem_revenda - 4)
           )
         WHERE id = 1
-        ''',
-      );
+        ''');
     }
   }
 
@@ -233,9 +237,7 @@ class PrecificacaoRepository {
       return false;
     }
 
-    await database.execute(
-      'ALTER TABLE $tabela ADD COLUMN $coluna $definicao',
-    );
+    await database.execute('ALTER TABLE $tabela ADD COLUMN $coluna $definicao');
     return true;
   }
 
@@ -256,17 +258,14 @@ class PrecificacaoRepository {
     );
 
     return PrecificacaoConfig(
-      horasProdutivasMes: _double(item['horas_produtivas_mes'], 160),
+      horasProdutivasMes: ImperiumRegrasNegocio.horasMensaisPadrao,
       mesesMedia: _int(item['meses_media'], 3).clamp(1, 12).toInt(),
       margemCliente: _double(item['margem_cliente'], 35),
       margemRevenda: margem5a9,
       margemMinima: _double(item['margem_minima'], 10),
       margemRevenda1a4: _double(item['margem_revenda_1_4'], 25),
       margemRevenda5a9: margem5a9,
-      margemRevenda10Mais: _double(
-        item['margem_revenda_10_mais'],
-        16,
-      ),
+      margemRevenda10Mais: _double(item['margem_revenda_10_mais'], 16),
     );
   }
 
@@ -299,10 +298,8 @@ class PrecificacaoRepository {
       );
     }
 
-    if (config.margemRevenda1a4 + 0.000001 <
-            config.margemRevenda5a9 ||
-        config.margemRevenda5a9 + 0.000001 <
-            config.margemRevenda10Mais) {
+    if (config.margemRevenda1a4 + 0.000001 < config.margemRevenda5a9 ||
+        config.margemRevenda5a9 + 0.000001 < config.margemRevenda10Mais) {
       throw ArgumentError(
         'As margens de revenda devem diminuir conforme o volume aumenta.',
       );
@@ -317,23 +314,19 @@ class PrecificacaoRepository {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
 
-    await database.update(
-      'financeiro_precificacao_config',
-      {
-        'horas_produtivas_mes': config.horasProdutivasMes,
-        'meses_media': config.mesesMedia,
-        'margem_cliente': config.margemCliente,
-        // A coluna antiga continua sincronizada com a faixa 5–9 para
-        // manter compatibilidade com qualquer tela ainda não atualizada.
-        'margem_revenda': config.margemRevenda5a9,
-        'margem_revenda_1_4': config.margemRevenda1a4,
-        'margem_revenda_5_9': config.margemRevenda5a9,
-        'margem_revenda_10_mais': config.margemRevenda10Mais,
-        'margem_minima': config.margemMinima,
-        'atualizado_em': DateTime.now().toIso8601String(),
-      },
-      where: 'id = 1',
-    );
+    await database.update('financeiro_precificacao_config', {
+      'horas_produtivas_mes': config.horasProdutivasMes,
+      'meses_media': config.mesesMedia,
+      'margem_cliente': config.margemCliente,
+      // A coluna antiga continua sincronizada com a faixa 5–9 para
+      // manter compatibilidade com qualquer tela ainda não atualizada.
+      'margem_revenda': config.margemRevenda5a9,
+      'margem_revenda_1_4': config.margemRevenda1a4,
+      'margem_revenda_5_9': config.margemRevenda5a9,
+      'margem_revenda_10_mais': config.margemRevenda10Mais,
+      'margem_minima': config.margemMinima,
+      'atualizado_em': DateTime.now().toIso8601String(),
+    }, where: 'id = 1');
   }
 
   Future<void> registrarPerfilDocumento({
@@ -352,17 +345,13 @@ class PrecificacaoRepository {
     await _garantirEstrutura(database);
     final agora = DateTime.now().toIso8601String();
 
-    await database.insert(
-      'financeiro_preco_documentos',
-      {
-        'documento_tipo': tipo,
-        'documento_id': documentoId,
-        'perfil': perfilLimpo,
-        'criado_em': agora,
-        'atualizado_em': agora,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert('financeiro_preco_documentos', {
+      'documento_tipo': tipo,
+      'documento_id': documentoId,
+      'perfil': perfilLimpo,
+      'criado_em': agora,
+      'atualizado_em': agora,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<String?> buscarPerfilDocumento({
@@ -502,8 +491,7 @@ class PrecificacaoRepository {
       [_data(inicio), _data(fim)],
     );
 
-    final estrutura = await database.rawQuery(
-      '''
+    final estrutura = await database.rawQuery('''
       SELECT
         (
           SELECT COALESCE(SUM(valor_mensal), 0)
@@ -519,8 +507,7 @@ class PrecificacaoRepository {
           FROM financeiro_colaboradores_custo
           WHERE ativo = 1
         ) AS total
-      ''',
-    );
+      ''');
 
     final taxa = await database.rawQuery(
       '''
@@ -542,8 +529,7 @@ class PrecificacaoRepository {
 
     final possuiHistorico = mediaMensalReal > 0.000001;
     final usouHistorico =
-        possuiHistorico &&
-        mediaMensalReal >= estruturaCadastrada;
+        possuiHistorico && mediaMensalReal >= estruturaCadastrada;
     final baseMensal = mediaMensalReal > estruturaCadastrada
         ? mediaMensalReal
         : estruturaCadastrada;
@@ -801,9 +787,7 @@ class PrecificacaoRepository {
 
   static double _double(dynamic valor, [double padrao = 0]) {
     if (valor is num) return valor.toDouble();
-    return double.tryParse(
-          (valor ?? '').toString().replaceAll(',', '.'),
-        ) ??
+    return double.tryParse((valor ?? '').toString().replaceAll(',', '.')) ??
         padrao;
   }
 

@@ -5,6 +5,7 @@ import 'repositories/usuario_repository.dart';
 import 'services/backup_automatico_service.dart';
 import 'screens/login_page.dart';
 
+import 'services/funcionario_acesso_service.dart';
 import 'services/supabase_bootstrap.dart';
 import 'widgets/licenca_gate.dart';
 
@@ -63,6 +64,35 @@ class _SessaoGateState extends State<_SessaoGate> {
     });
   }
 
+  Future<Map<String, dynamic>?> _validarFuncionarioAntesDeAbrir(
+    Map<String, dynamic>? sessao,
+  ) async {
+    // startup-funcionario-revogacao-v3
+    if (sessao == null) return null;
+
+    final perfil = (sessao['perfil'] ?? '').toString();
+    if (perfil != UsuarioRepository.perfilFuncionario) {
+      return sessao;
+    }
+
+    final acesso = FuncionarioAcessoService.instance;
+
+    try {
+      final remoto = await acesso.sincronizarPermissoesLocais();
+
+      if (remoto['consultado'] == true && remoto['ativo'] != true) {
+        await acesso.sairSupabase();
+        return null;
+      }
+
+      final atualizada = await _usuarioRepository.restaurarSessaoPersistida();
+
+      return atualizada ?? sessao;
+    } catch (_) {
+      return sessao;
+    }
+  }
+
   Future<void> _inicializar() async {
     if (mounted) {
       setState(() {
@@ -74,7 +104,8 @@ class _SessaoGateState extends State<_SessaoGate> {
     try {
       await _usuarioRepository.garantirEstrutura();
 
-      final sessao = await _usuarioRepository.restaurarSessaoPersistida();
+      var sessao = await _usuarioRepository.restaurarSessaoPersistida();
+      sessao = await _validarFuncionarioAntesDeAbrir(sessao);
 
       if (!mounted) {
         return;

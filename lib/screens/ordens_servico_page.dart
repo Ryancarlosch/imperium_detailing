@@ -881,9 +881,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
       return null;
     }
 
-    final contasValidas = contas
-        .where((conta) => conta.id != null)
-        .toList();
+    final contasValidas = contas.where((conta) => conta.id != null).toList();
 
     if (contasValidas.isEmpty) {
       _mostrarMensagem(
@@ -925,20 +923,16 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
                   padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Selecione onde o dinheiro realmente entrou.',
-                    ),
+                    child: Text('Selecione onde o dinheiro realmente entrou.'),
                   ),
                 ),
                 ...contasValidas.map(
                   (conta) => ListTile(
-                    leading: const Icon(
-                      Icons.account_balance_wallet_outlined,
-                    ),
+                    leading: const Icon(Icons.account_balance_wallet_outlined),
                     title: Text(conta.nome),
-                    onTap: () => Navigator.of(bottomContext).pop(
-                      _ContaFinalizacao(id: conta.id, nome: conta.nome),
-                    ),
+                    onTap: () => Navigator.of(
+                      bottomContext,
+                    ).pop(_ContaFinalizacao(id: conta.id, nome: conta.nome)),
                   ),
                 ),
               ],
@@ -1058,22 +1052,30 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
                     ),
                   ),
                 ),
-                if (contas.where((conta) => conta.id != null && conta.tipo == 'Maquininha').isEmpty)
+                if (contas
+                    .where(
+                      (conta) => conta.id != null && conta.tipo == 'Maquininha',
+                    )
+                    .isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(18),
-                    child: Text(
-                      'Nenhuma conta de maquininha foi cadastrada.',
+                    child: Text('Nenhuma conta de maquininha foi cadastrada.'),
+                  ),
+                ...contas
+                    .where(
+                      (conta) => conta.id != null && conta.tipo == 'Maquininha',
+                    )
+                    .map(
+                      (conta) => ListTile(
+                        leading: const Icon(
+                          Icons.account_balance_wallet_outlined,
+                        ),
+                        title: Text(conta.nome),
+                        onTap: () => Navigator.of(bottomContext).pop(
+                          _ContaFinalizacao(id: conta.id, nome: conta.nome),
+                        ),
+                      ),
                     ),
-                  ),
-                ...contas.where((conta) => conta.id != null && conta.tipo == 'Maquininha').map(
-                  (conta) => ListTile(
-                    leading: const Icon(Icons.account_balance_wallet_outlined),
-                    title: Text(conta.nome),
-                    onTap: () => Navigator.of(
-                      bottomContext,
-                    ).pop(_ContaFinalizacao(id: conta.id, nome: conta.nome)),
-                  ),
-                ),
               ],
             ),
           ),
@@ -1338,9 +1340,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
     }
   }
 
-  Future<bool> _confirmarExclusaoOrdemDeTeste({
-    required String numero,
-  }) async {
+  Future<bool> _confirmarExclusaoOrdemDeTeste({required String numero}) async {
     final controller = TextEditingController();
 
     final resultado = await showDialog<bool>(
@@ -1583,9 +1583,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
   Future<Map<int, PrecificacaoServico>> _carregarPrecificacaoPorId() async {
     try {
       final painel = await _precificacaoRepository.carregar();
-      return {
-        for (final servico in painel.servicos) servico.id: servico,
-      };
+      return {for (final servico in painel.servicos) servico.id: servico};
     } catch (_) {
       return const <int, PrecificacaoServico>{};
     }
@@ -1642,9 +1640,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
     List<ServicoCatalogo> servicos;
 
     try {
-      servicos = await _servicoRepository.listarServicos(
-        somenteAtivos: true,
-      );
+      servicos = await _servicoRepository.listarServicos(somenteAtivos: true);
     } catch (erro) {
       _mostrarMensagem(
         'Não foi possível carregar o catálogo de serviços.\n$erro',
@@ -1736,9 +1732,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
 
                               return ListTile(
                                 leading: const CircleAvatar(
-                                  child: Icon(
-                                    Icons.cleaning_services_outlined,
-                                  ),
+                                  child: Icon(Icons.cleaning_services_outlined),
                                 ),
                                 title: Text(servico.nome),
                                 subtitle: Text(
@@ -1890,9 +1884,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
                             const Expanded(
                               child: Text(
                                 'Valor que será acrescentado à OS',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: TextStyle(fontWeight: FontWeight.w600),
                               ),
                             ),
                             Text(
@@ -1935,9 +1927,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
                     final quantidade = _converterValorDigitado(
                       quantidadeController.text,
                     );
-                    final valor = _converterValorDigitado(
-                      valorController.text,
-                    );
+                    final valor = _converterValorDigitado(valorController.text);
 
                     if (quantidade <= 0) {
                       atualizarDialog(() {
@@ -2078,14 +2068,8 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
     }
 
     final resultadoSeguro = resultado ?? <String, dynamic>{};
-    final produtos = _obterInt(
-      resultadoSeguro,
-      'produtos_adicionados',
-    );
-    final novoSubtotal = _obterDouble(
-      resultadoSeguro,
-      'novo_subtotal_os',
-    );
+    final produtos = _obterInt(resultadoSeguro, 'produtos_adicionados');
+    final novoSubtotal = _obterDouble(resultadoSeguro, 'novo_subtotal_os');
 
     Navigator.of(context).pop();
     await _carregarOrdens();
@@ -2145,8 +2129,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
       ordemCompleta['perfil_preco'] = perfilPreco;
 
       try {
-        final snapshot =
-            await _fidelidadeRepository.buscarDescontoDocumento(
+        final snapshot = await _fidelidadeRepository.buscarDescontoDocumento(
           documentoTipo: 'OS',
           documentoId: id,
         );
@@ -2154,8 +2137,8 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
         if (snapshot != null) {
           ordemCompleta['origem_desconto'] = snapshot.origem;
           ordemCompleta['percentual_desconto_origem'] = snapshot.percentual;
-          ordemCompleta['cliente_desde_desconto'] =
-              snapshot.clienteDesde?.toIso8601String();
+          ordemCompleta['cliente_desde_desconto'] = snapshot.clienteDesde
+              ?.toIso8601String();
         }
       } catch (_) {
         // OS antigas continuam sem metadado de origem do desconto.
@@ -2250,19 +2233,10 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
       final numeroRevisao = await _repository.corrigirOrdemFinalizada(
         ordemServicoId: id,
         motivo: motivo,
-        funcionarioResponsavel: _obterTexto(
-          ordem,
-          'funcionario_responsavel',
-        ),
+        funcionarioResponsavel: _obterTexto(ordem, 'funcionario_responsavel'),
         observacoes: _obterTexto(ordem, 'observacoes'),
-        quilometragemEntrada: _obterTexto(
-          ordem,
-          'quilometragem_entrada',
-        ),
-        combustivelEntrada: _obterTexto(
-          ordem,
-          'combustivel_entrada',
-        ),
+        quilometragemEntrada: _obterTexto(ordem, 'quilometragem_entrada'),
+        combustivelEntrada: _obterTexto(ordem, 'combustivel_entrada'),
         dataInicio: _formatarDataBancoPeriodo(periodo.entrada),
         horaEntrada: _formatarHoraBancoPeriodo(periodo.entrada),
         dataFinalizacao: _formatarDataBancoPeriodo(periodo.saida),
@@ -2964,11 +2938,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
       padrao: 'Não informada',
     );
 
-    final perfilPreco = _obterTexto(
-      ordem,
-      'perfil_preco',
-      padrao: 'informado',
-    );
+    final perfilPreco = _obterTexto(ordem, 'perfil_preco', padrao: 'informado');
 
     final origemDesconto = _obterTexto(ordem, 'origem_desconto');
     final percentualDescontoOrigem = _obterDouble(

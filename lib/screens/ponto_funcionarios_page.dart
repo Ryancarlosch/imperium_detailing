@@ -355,6 +355,190 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
     await _carregar();
   }
 
+  // ponto-rapido-dia-anterior-v1
+  Future<ColaboradorCusto?> _selecionarColaboradorPontoRapido() async {
+    if (_colaboradores.isEmpty) return null;
+    if (_colaboradores.length == 1) return _colaboradores.first;
+
+    return showDialog<ColaboradorCusto>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Escolher funcionário'),
+        children: [
+          for (final colaborador in _colaboradores)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(colaborador),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.badge_outlined),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(colaborador.nome)),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pontoRapidoDiaAnterior() async {
+    if (_colaboradores.isEmpty) {
+      _mensagem('Cadastre pelo menos um funcionário ativo.', erro: true);
+      return;
+    }
+
+    final colaborador = await _selecionarColaboradorPontoRapido();
+    if (colaborador == null || !mounted) return;
+
+    final id = colaborador.id;
+    if (id == null) {
+      _mensagem('Funcionário sem identificador válido.', erro: true);
+      return;
+    }
+
+    final agora = DateTime.now();
+    final ontem = DateTime(
+      agora.year,
+      agora.month,
+      agora.day,
+    ).subtract(const Duration(days: 1));
+
+    final data = await showDatePicker(
+      context: context,
+      initialDate: ontem,
+      firstDate: DateTime(2020, 1, 1),
+      lastDate: ontem,
+      locale: const Locale('pt', 'BR'),
+      helpText: 'Dia para lançar a jornada programada',
+      cancelText: 'Cancelar',
+      confirmText: 'Continuar',
+    );
+
+    if (data == null || !mounted) return;
+
+    try {
+      final existente = await _repository.buscarRegistro(
+        colaboradorId: id,
+        data: data,
+      );
+
+      if (existente != null) {
+        _mensagem(
+          'Já existe ponto em ${DateFormat('dd/MM/yyyy').format(data)} '
+          'para ${colaborador.nome}. Abra o espelho para editar.',
+          erro: true,
+        );
+        return;
+      }
+
+      final jornada = await _repository.listarJornada();
+      Map<String, dynamic>? jornadaDia;
+
+      for (final item in jornada) {
+        final dia = item['dia_semana'];
+        final numero = dia is num
+            ? dia.toInt()
+            : int.tryParse(dia?.toString() ?? '');
+
+        if (numero == data.weekday) {
+          jornadaDia = Map<String, dynamic>.from(item);
+          break;
+        }
+      }
+
+      if (jornadaDia == null || jornadaDia['ativo'] != 1) {
+        _mensagem(
+          'Não existe jornada ativa programada para '
+          '${DateFormat('EEEE, dd/MM/yyyy', 'pt_BR').format(data)}.',
+          erro: true,
+        );
+        return;
+      }
+
+      String? horario(String chave) {
+        final valor = jornadaDia![chave]?.toString().trim() ?? '';
+        return valor.isEmpty ? null : valor;
+      }
+
+      final entrada = horario('entrada');
+      final intervaloInicio = horario('intervalo_inicio');
+      final intervaloFim = horario('intervalo_fim');
+      final saida = horario('saida');
+
+      if (entrada == null || saida == null) {
+        _mensagem(
+          'A jornada desse dia está incompleta. Revise Jornada padrão.',
+          erro: true,
+        );
+        return;
+      }
+
+      final linhas = <String>[
+        'Funcionário: ${colaborador.nome}',
+        'Data: ${DateFormat('dd/MM/yyyy').format(data)}',
+        '',
+        'Entrada: $entrada',
+        if (intervaloInicio != null) 'Intervalo: $intervaloInicio',
+        if (intervaloFim != null) 'Volta: $intervaloFim',
+        'Saída: $saida',
+        '',
+        'Esses horários serão lançados exatamente conforme a jornada programada.',
+      ];
+
+      // ponto-rapido-context-mounted-v3
+      // Protege BuildContext depois das consultas assincronas do ponto rapido.
+      if (!mounted) {
+        return;
+      }
+      final confirmou = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Lançar ponto rápido?'),
+          content: Text(linhas.join('\n')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.bolt_rounded),
+              label: const Text('Lançar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmou != true) return;
+
+      await _repository.salvarRegistro(
+        colaboradorId: id,
+        data: data,
+        situacao: 'Trabalhado',
+        entrada: entrada,
+        intervaloInicio: intervaloInicio,
+        intervaloFim: intervaloFim,
+        saida: saida,
+        observacoes: 'Ponto rápido lançado conforme a jornada programada.',
+        motivoAjuste: 'Ponto rápido conforme jornada programada',
+      );
+
+      await _carregar();
+
+      if (!mounted) return;
+
+      _mensagem(
+        'Ponto rápido de ${DateFormat('dd/MM/yyyy').format(data)} '
+        'lançado para ${colaborador.nome}.',
+      );
+    } catch (erro) {
+      _mensagem('$erro', erro: true);
+    }
+  }
+
   Future<void> _novoLancamento({
     ColaboradorCusto? colaborador,
     DateTime? data,
@@ -535,6 +719,29 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                         'entrada, intervalo e saída. Correções continuam '
                         'sendo feitas manualmente e ficam auditadas.',
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // ponto-rapido-card-v1
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: ListTile(
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.bolt_rounded),
+                      ),
+                      title: const Text(
+                        'Ponto rápido de dia anterior',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: const Text(
+                        'Escolha funcionário e data. O sistema lança '
+                        'automaticamente a jornada programada daquele dia.',
+                      ),
+                      trailing: FilledButton.tonal(
+                        onPressed: _carregando ? null : _pontoRapidoDiaAnterior,
+                        child: const Text('Lançar'),
+                      ),
+                      onTap: _carregando ? null : _pontoRapidoDiaAnterior,
                     ),
                   ),
                   const SizedBox(height: 14),

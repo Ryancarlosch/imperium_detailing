@@ -49,21 +49,14 @@ class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
       if (!mounted) return;
 
       setState(() {
-        _regras = List<RegraTaxaCartao>.from(
-          resultados[0] as List<dynamic>,
-        );
-        _contas = List<ContaFinanceira>.from(
-          resultados[1] as List<dynamic>,
-        );
+        _regras = List<RegraTaxaCartao>.from(resultados[0] as List<dynamic>);
+        _contas = List<ContaFinanceira>.from(resultados[1] as List<dynamic>);
         _carregando = false;
       });
     } catch (erro) {
       if (!mounted) return;
       setState(() => _carregando = false);
-      _mensagem(
-        'Não foi possível carregar as regras.\n$erro',
-        erro: true,
-      );
+      _mensagem('Não foi possível carregar as regras.\n$erro', erro: true);
     }
   }
 
@@ -80,24 +73,18 @@ class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
       mapa.putIfAbsent(chave, () => <RegraTaxaCartao>[]).add(regra);
     }
 
-    final grupos = mapa.values
-        .map((itens) {
-          itens.sort((a, b) => a.parcelas.compareTo(b.parcelas));
-          return _GrupoRegra(itens);
-        })
-        .toList();
+    final grupos = mapa.values.map((itens) {
+      itens.sort((a, b) => a.parcelas.compareTo(b.parcelas));
+      return _GrupoRegra(itens);
+    }).toList();
 
     grupos.sort((a, b) {
       if (a.ativo != b.ativo) {
         return a.ativo ? -1 : 1;
       }
-      final porConta = a.contaNome(_contas).compareTo(
-        b.contaNome(_contas),
-      );
+      final porConta = a.contaNome(_contas).compareTo(b.contaNome(_contas));
       if (porConta != 0) return porConta;
-      final porNome = a.nome.toLowerCase().compareTo(
-        b.nome.toLowerCase(),
-      );
+      final porNome = a.nome.toLowerCase().compareTo(b.nome.toLowerCase());
       if (porNome != 0) return porNome;
       return a.formaPagamento.compareTo(b.formaPagamento);
     });
@@ -239,29 +226,29 @@ class _RegrasTaxaPageState extends State<RegrasTaxaPage> {
       body: _carregando
           ? const Center(child: CircularProgressIndicator())
           : grupos.isEmpty
-              ? _EstadoVazio(onCriar: () => _abrirEditor())
-              : RefreshIndicator(
-                  onRefresh: _carregar,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                    children: [
-                      const _AvisoRegras(),
-                      const SizedBox(height: 12),
-                      ...grupos.map(
-                        (grupo) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _CardRegra(
-                            grupo: grupo,
-                            contas: _contas,
-                            onEditar: () => _abrirEditor(grupo),
-                            onAlternar: () => _alternar(grupo),
-                            onArquivar: () => _arquivar(grupo),
-                          ),
-                        ),
+          ? _EstadoVazio(onCriar: () => _abrirEditor())
+          : RefreshIndicator(
+              onRefresh: _carregar,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                children: [
+                  const _AvisoRegras(),
+                  const SizedBox(height: 12),
+                  ...grupos.map(
+                    (grupo) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _CardRegra(
+                        grupo: grupo,
+                        contas: _contas,
+                        onEditar: () => _abrirEditor(grupo),
+                        onAlternar: () => _alternar(grupo),
+                        onArquivar: () => _arquivar(grupo),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -278,10 +265,7 @@ class _AvisoRegras extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.info_outline_rounded,
-              color: Color(0xFFD6A84B),
-            ),
+            const Icon(Icons.info_outline_rounded, color: Color(0xFFD6A84B)),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -371,10 +355,7 @@ class _CardRegra extends StatelessWidget {
                       const SizedBox(height: 4),
                       const Text(
                         'Taxa repassada ao cliente',
-                        style: TextStyle(
-                          color: Colors.amber,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.amber, fontSize: 12),
                       ),
                     ],
                     const SizedBox(height: 10),
@@ -453,9 +434,7 @@ class _EditorRegraSheetState extends State<_EditorRegraSheet> {
     final atualId = widget.grupo?.contaId;
     return widget.contas
         .where(
-          (conta) =>
-              conta.id != null &&
-              (conta.ativo || conta.id == atualId),
+          (conta) => conta.id != null && (conta.ativo || conta.id == atualId),
         )
         .toList();
   }
@@ -542,8 +521,7 @@ class _EditorRegraSheetState extends State<_EditorRegraSheet> {
             contaId: contaId,
             taxaPercentual: taxa,
             taxaFixa: anterior?.taxaFixa ?? 0,
-            prazoRecebimentoDias:
-                anterior?.prazoRecebimentoDias ?? 0,
+            prazoRecebimentoDias: anterior?.prazoRecebimentoDias ?? 0,
             prioridade: anterior?.prioridade ?? 0,
             repassarCliente: _repassar,
             observacoes: anterior?.observacoes ?? '',
@@ -575,10 +553,7 @@ class _EditorRegraSheetState extends State<_EditorRegraSheet> {
   void _mensagem(String texto) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(texto),
-        backgroundColor: Colors.red.shade700,
-      ),
+      SnackBar(content: Text(texto), backgroundColor: Colors.red.shade700),
     );
   }
 
@@ -622,10 +597,9 @@ class _EditorRegraSheetState extends State<_EditorRegraSheet> {
                   labelText: 'Nome da regra',
                   hintText: 'Ex.: Stone Visa/Mastercard',
                 ),
-                validator: (valor) =>
-                    (valor ?? '').trim().length < 2
-                        ? 'Informe o nome da regra.'
-                        : null,
+                validator: (valor) => (valor ?? '').trim().length < 2
+                    ? 'Informe o nome da regra.'
+                    : null,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -662,9 +636,7 @@ class _EditorRegraSheetState extends State<_EditorRegraSheet> {
                       (conta) => DropdownMenuItem<int>(
                         value: conta.id,
                         child: Text(
-                          conta.ativo
-                              ? conta.nome
-                              : '${conta.nome} (inativa)',
+                          conta.ativo ? conta.nome : '${conta.nome} (inativa)',
                         ),
                       ),
                     )
@@ -688,8 +660,7 @@ class _EditorRegraSheetState extends State<_EditorRegraSheet> {
                 builder: (context, constraints) {
                   final colunas = constraints.maxWidth >= 520 ? 3 : 2;
                   final largura =
-                      (constraints.maxWidth - ((colunas - 1) * 10)) /
-                          colunas;
+                      (constraints.maxWidth - ((colunas - 1) * 10)) / colunas;
 
                   return Wrap(
                     spacing: 10,
@@ -701,8 +672,7 @@ class _EditorRegraSheetState extends State<_EditorRegraSheet> {
                           child: TextFormField(
                             controller: _taxas[parcela],
                             enabled: !_salvando,
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
+                            keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
                             decoration: InputDecoration(
@@ -762,14 +732,10 @@ class _EditorRegraSheetState extends State<_EditorRegraSheet> {
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.save_outlined),
-                      label: Text(
-                        _salvando ? 'Salvando...' : 'Salvar regra',
-                      ),
+                      label: Text(_salvando ? 'Salvando...' : 'Salvar regra'),
                     ),
                   ),
                 ],
@@ -803,10 +769,7 @@ class _EstadoVazio extends StatelessWidget {
             const SizedBox(height: 16),
             const Text(
               'Nenhuma regra cadastrada',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -839,8 +802,7 @@ class _GrupoRegra {
   int? get contaId => principal.contaId;
   bool get credito => formaPagamento == 'Cartão de crédito';
   bool get ativo => itens.any((item) => item.ativo);
-  bool get repassarCliente =>
-      itens.any((item) => item.repassarCliente);
+  bool get repassarCliente => itens.any((item) => item.repassarCliente);
 
   double? taxaNula(int parcela) {
     for (final regra in itens) {
@@ -864,17 +826,12 @@ class _GrupoRegra {
 }
 
 double? _lerPercentual(String texto) {
-  final limpo = texto
-      .trim()
-      .replaceAll('%', '')
-      .replaceAll(' ', '');
+  final limpo = texto.trim().replaceAll('%', '').replaceAll(' ', '');
 
   if (limpo.isEmpty) return null;
 
   if (limpo.contains(',') && limpo.contains('.')) {
-    return double.tryParse(
-      limpo.replaceAll('.', '').replaceAll(',', '.'),
-    );
+    return double.tryParse(limpo.replaceAll('.', '').replaceAll(',', '.'));
   }
 
   return double.tryParse(limpo.replaceAll(',', '.'));

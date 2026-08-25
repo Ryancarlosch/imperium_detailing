@@ -77,10 +77,10 @@ void main() {
 
       expect(resumo['custo_fixo_mensal'], closeTo(2500, 0.001));
       expect(resumo['custo_mao_obra_mensal'], closeTo(5000, 0.001));
-      expect(resumo['horas_produtivas'], closeTo(100, 0.001));
-      expect(resumo['custo_mao_obra_hora'], closeTo(50, 0.001));
-      expect(resumo['custo_fixo_hora'], closeTo(25, 0.001));
-      expect(resumo['custo_estrutura_hora'], closeTo(75, 0.001));
+      expect(resumo['horas_produtivas'], closeTo(220, 0.001));
+      expect(resumo['custo_mao_obra_hora'], closeTo(5000 / 220, 0.001));
+      expect(resumo['custo_fixo_hora'], closeTo(2500 / 220, 0.001));
+      expect(resumo['custo_estrutura_hora'], closeTo(7500 / 220, 0.001));
     },
   );
 
@@ -248,12 +248,15 @@ void main() {
       );
       expect(
         (resultado['rateio_custo_fixo'] as num).toDouble(),
-        closeTo(50, 0.001),
+        closeTo((1000 / 220) * 5, 0.001),
       );
-      expect((resultado['custo_total'] as num).toDouble(), closeTo(340, 0.001));
+      expect(
+        (resultado['custo_total'] as num).toDouble(),
+        closeTo(150 + 40 + 100 + ((1000 / 220) * 5), 0.001),
+      );
       expect(
         (resultado['resultado_os'] as num).toDouble(),
-        closeTo(860, 0.001),
+        closeTo(1200 - (150 + 40 + 100 + ((1000 / 220) * 5)), 0.001),
       );
     },
   );

@@ -12,8 +12,7 @@ class RelatoriosFinanceirosPage extends StatefulWidget {
       _RelatoriosFinanceirosPageState();
 }
 
-class _RelatoriosFinanceirosPageState
-    extends State<RelatoriosFinanceirosPage> {
+class _RelatoriosFinanceirosPageState extends State<RelatoriosFinanceirosPage> {
   final DreRepository _dreRepository = DreRepository();
   final CustosRepository _custosRepository = CustosRepository();
 
@@ -73,21 +72,20 @@ class _RelatoriosFinanceirosPageState
         59,
       );
 
-      final ordens = List<Map<String, dynamic>>.from(
-        resultados[2] as List<dynamic>,
-      ).where((item) {
-        final data = DateTime.tryParse(
-          (item['data_finalizacao'] ?? '').toString(),
-        );
+      final ordens =
+          List<Map<String, dynamic>>.from(resultados[2] as List<dynamic>).where(
+            (item) {
+              final data = DateTime.tryParse(
+                (item['data_finalizacao'] ?? '').toString(),
+              );
 
-        if (data == null) return false;
+              if (data == null) return false;
 
-        return !data.isBefore(inicio) && !data.isAfter(fim);
-      }).toList();
+              return !data.isBefore(inicio) && !data.isAfter(fim);
+            },
+          ).toList();
 
-      ordens.sort(
-        (a, b) => _resultadoOrdem(b).compareTo(_resultadoOrdem(a)),
-      );
+      ordens.sort((a, b) => _resultadoOrdem(b).compareTo(_resultadoOrdem(a)));
 
       if (!mounted) return;
 
@@ -132,10 +130,7 @@ class _RelatoriosFinanceirosPageState
   }
 
   double get _vendasOs {
-    return _ordens.fold<double>(
-      0,
-      (total, item) => total + _vendaOrdem(item),
-    );
+    return _ordens.fold<double>(0, (total, item) => total + _vendaOrdem(item));
   }
 
   double get _resultadoOs {
@@ -169,9 +164,7 @@ class _RelatoriosFinanceirosPageState
 
   List<Map<String, dynamic>> get _pioresOrdens {
     final lista = List<Map<String, dynamic>>.from(_ordens)
-      ..sort(
-        (a, b) => _resultadoOrdem(a).compareTo(_resultadoOrdem(b)),
-      );
+      ..sort((a, b) => _resultadoOrdem(a).compareTo(_resultadoOrdem(b)));
     return lista.take(5).toList();
   }
 
@@ -323,7 +316,9 @@ class _RelatoriosFinanceirosPageState
                       texto: 'Nenhuma OS finalizada no período.',
                     )
                   else
-                    ..._ordens.take(5).map(
+                    ..._ordens
+                        .take(5)
+                        .map(
                           (item) => _OrdemRankingCard(
                             item: item,
                             moeda: _moeda,
@@ -336,8 +331,7 @@ class _RelatoriosFinanceirosPageState
                   const SizedBox(height: 22),
                   const _TituloSecao(
                     titulo: 'OS que precisam de atenção',
-                    subtitulo:
-                        'As menores rentabilidades aparecem primeiro.',
+                    subtitulo: 'As menores rentabilidades aparecem primeiro.',
                   ),
                   const SizedBox(height: 9),
                   if (_ordens.isEmpty)
@@ -383,17 +377,15 @@ class _RelatoriosFinanceirosPageState
                   ),
                   const SizedBox(height: 9),
                   if (detalhes.isEmpty)
-                    const _EstadoVazio(
-                      texto: 'Sem categorias no período.',
-                    )
+                    const _EstadoVazio(texto: 'Sem categorias no período.')
                   else
-                    ...detalhes.take(12).map(
+                    ...detalhes
+                        .take(12)
+                        .map(
                           (item) => Card(
                             margin: const EdgeInsets.only(bottom: 7),
                             child: ListTile(
-                              leading: const Icon(
-                                Icons.account_tree_outlined,
-                              ),
+                              leading: const Icon(Icons.account_tree_outlined),
                               title: Text(item.nome),
                               subtitle: Text(
                                 '${item.grupo}'
@@ -437,9 +429,7 @@ class _RelatoriosFinanceirosPageState
     if (negociado.abs() > 0.000001) return negociado;
 
     return _double(
-      item['valor_total_liquido'] ??
-          item['valor_total'] ??
-          item['receita_os'],
+      item['valor_total_liquido'] ?? item['valor_total'] ?? item['receita_os'],
     );
   }
 
@@ -483,10 +473,7 @@ class _AvisoRelatorio extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.lightbulb_outline_rounded,
-              color: Color(0xFFD6A84B),
-            ),
+            Icon(Icons.lightbulb_outline_rounded, color: Color(0xFFD6A84B)),
             SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -503,10 +490,7 @@ class _AvisoRelatorio extends StatelessWidget {
 }
 
 class _TituloSecao extends StatelessWidget {
-  const _TituloSecao({
-    required this.titulo,
-    required this.subtitulo,
-  });
+  const _TituloSecao({required this.titulo, required this.subtitulo});
 
   final String titulo;
   final String subtitulo;
@@ -518,10 +502,7 @@ class _TituloSecao extends StatelessWidget {
       children: [
         Text(
           titulo,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 3),
         Text(
@@ -551,9 +532,7 @@ class _IndicadorDados {
 }
 
 class _GradeIndicadores extends StatelessWidget {
-  const _GradeIndicadores({
-    required this.itens,
-  });
+  const _GradeIndicadores({required this.itens});
 
   final List<_IndicadorDados> itens;
 
@@ -564,8 +543,8 @@ class _GradeIndicadores extends StatelessWidget {
         final colunas = constraints.maxWidth >= 700
             ? 4
             : constraints.maxWidth >= 480
-                ? 3
-                : 2;
+            ? 3
+            : 2;
 
         const espaco = 9.0;
         final largura =
@@ -597,9 +576,7 @@ class _GradeIndicadores extends StatelessWidget {
                           item.valor,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 3),
                         Text(
@@ -607,8 +584,9 @@ class _GradeIndicadores extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                             fontSize: 11,
                           ),
                         ),
@@ -682,12 +660,12 @@ class _ComparativoCard extends StatelessWidget {
                 diferencaResultado.abs() <= 0.01
                     ? 'Resultado de competência e caixa estão alinhados neste período.'
                     : diferencaResultado > 0
-                        ? 'O resultado de caixa está '
-                            '${moeda.format(diferencaResultado.abs())} acima '
-                            'da competência no período.'
-                        : 'O resultado de caixa está '
-                            '${moeda.format(diferencaResultado.abs())} abaixo '
-                            'da competência no período.',
+                    ? 'O resultado de caixa está '
+                          '${moeda.format(diferencaResultado.abs())} acima '
+                          'da competência no período.'
+                    : 'O resultado de caixa está '
+                          '${moeda.format(diferencaResultado.abs())} abaixo '
+                          'da competência no período.',
                 style: TextStyle(
                   fontSize: 11.5,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -725,23 +703,14 @@ class _LinhaComparativo extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Expanded(
-            flex: 4,
-            child: Text(titulo, style: estilo),
-          ),
+          Expanded(flex: 4, child: Text(titulo, style: estilo)),
           Expanded(
             flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  competencia,
-                  style: estilo,
-                ),
-                const Text(
-                  'competência',
-                  style: TextStyle(fontSize: 9.5),
-                ),
+                Text(competencia, style: estilo),
+                const Text('competência', style: TextStyle(fontSize: 9.5)),
               ],
             ),
           ),
@@ -751,14 +720,8 @@ class _LinhaComparativo extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  caixa,
-                  style: estilo,
-                ),
-                const Text(
-                  'caixa',
-                  style: TextStyle(fontSize: 9.5),
-                ),
+                Text(caixa, style: estilo),
+                const Text('caixa', style: TextStyle(fontSize: 9.5)),
               ],
             ),
           ),
@@ -791,8 +754,7 @@ class _OrdemRankingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final numero = (item['numero'] ?? 'OS').toString();
     final cliente = (item['cliente_nome'] ?? '').toString().trim();
-    final executor =
-        (item['funcionario_responsavel'] ?? '').toString().trim();
+    final executor = (item['funcionario_responsavel'] ?? '').toString().trim();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 7),
@@ -805,9 +767,7 @@ class _OrdemRankingCard extends StatelessWidget {
         ),
         title: Text(
           numero,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
           [
@@ -842,9 +802,7 @@ class _OrdemRankingCard extends StatelessWidget {
 }
 
 class _ResumoExecutor {
-  _ResumoExecutor({
-    required this.nome,
-  });
+  _ResumoExecutor({required this.nome});
 
   final String nome;
   int quantidade = 0;
@@ -881,16 +839,12 @@ class _ExecutorCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const CircleAvatar(
-                  child: Icon(Icons.engineering_outlined),
-                ),
+                const CircleAvatar(child: Icon(Icons.engineering_outlined)),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     executor.nome,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 Text(
@@ -918,9 +872,7 @@ class _ExecutorCard extends StatelessWidget {
 }
 
 class _EstadoVazio extends StatelessWidget {
-  const _EstadoVazio({
-    required this.texto,
-  });
+  const _EstadoVazio({required this.texto});
 
   final String texto;
 

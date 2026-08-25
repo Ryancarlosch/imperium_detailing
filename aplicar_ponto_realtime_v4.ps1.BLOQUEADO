@@ -1,0 +1,311 @@
+﻿$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 2.0
+
+$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $Root
+
+function Secao([string]$t) {
+  Write-Host ''
+  Write-Host ('=' * 72) -ForegroundColor DarkGray
+  Write-Host $t -ForegroundColor Cyan
+  Write-Host ('=' * 72) -ForegroundColor DarkGray
+}
+
+function Ok([string]$t) { Write-Host "[OK] $t" -ForegroundColor Green }
+
+function Ler([string]$p) {
+  if (-not (Test-Path $p)) { throw "Arquivo nao encontrado: $p" }
+  return [IO.File]::ReadAllText($p)
+}
+
+function Gravar([string]$p,[string]$c) {
+  $dir = Split-Path $p -Parent
+  if ($dir -and -not (Test-Path $dir)) {
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+  }
+  [IO.File]::WriteAllText($p,$c,[Text.UTF8Encoding]::new($false))
+}
+
+function GravarB64([string]$p,[string]$b64) {
+  $dir = Split-Path $p -Parent
+  if ($dir -and -not (Test-Path $dir)) {
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+  }
+  [IO.File]::WriteAllBytes($p,[Convert]::FromBase64String($b64))
+}
+
+function Trocar([string]$p,[string]$old,[string]$new,[string]$marker) {
+  $c = (Ler $p).Replace("`r`n","`n")
+  $oldN = $old.Replace("`r`n","`n")
+  $newN = $new.Replace("`r`n","`n")
+
+  if ($c.Contains($marker)) {
+    Ok "$marker ja aplicado"
+    return
+  }
+
+  if (-not $c.Contains($oldN)) {
+    throw "Trecho nao encontrado para $marker em $p"
+  }
+
+  $c = $c.Replace($oldN,$newN)
+  Gravar $p $c
+  Ok $marker
+}
+
+if (-not (Test-Path '.\pubspec.yaml')) {
+  throw 'Execute na raiz do projeto Flutter.'
+}
+
+$service = Join-Path $Root 'lib\services\ponto_realtime_service.dart'
+$meu = Join-Path $Root 'lib\screens\meu_ponto_page.dart'
+$teste = Join-Path $Root 'test\ponto_realtime_service_test.dart'
+$roadmap = Join-Path $Root 'ROADMAP-IMPERIUM-MESTRE.md'
+
+Secao 'PONTO/FUNCIONARIOS - REALTIME ENTRE APARELHOS V4'
+
+Secao '1/4 - SERVICO REALTIME'
+
+$serviceB64 = @'
+aW1wb3J0ICdwYWNrYWdlOnN1cGFiYXNlX2ZsdXR0ZXIvc3VwYWJhc2VfZmx1dHRlci5kYXJ0JzsKCmltcG9ydCAncG9udG9fbnV2ZW1fc2VydmljZS5kYXJ0JzsKaW1wb3J0ICdzdXBhYmFzZV9ib290c3RyYXAuZGFydCc7CgpjbGFzcyBQb250b1JlYWx0aW1lU3Vic2NyaXB0aW9uIHsKICBQb250b1JlYWx0aW1lU3Vic2NyaXB0aW9uKHsKICAgIHJlcXVpcmVkIFN1cGFiYXNlQ2xpZW50IGNsaWVudCwKICAgIHJlcXVpcmVkIFJlYWx0aW1lQ2hhbm5lbCBjaGFubmVsLAogIH0pIDogX2NsaWVudCA9IGNsaWVudCwKICAgICAgIF9jaGFubmVsID0gY2hhbm5lbDsKCiAgZmluYWwgU3VwYWJhc2VDbGllbnQgX2NsaWVudDsKICBmaW5hbCBSZWFsdGltZUNoYW5uZWwgX2NoYW5uZWw7CgogIGJvb2wgX2NhbmNlbGFkYSA9IGZhbHNlOwoKICBGdXR1cmU8dm9pZD4gY2FuY2VsYXIoKSBhc3luYyB7CiAgICBpZiAoX2NhbmNlbGFkYSkgcmV0dXJuOwogICAgX2NhbmNlbGFkYSA9IHRydWU7CiAgICBhd2FpdCBfY2xpZW50LnJlbW92ZUNoYW5uZWwoX2NoYW5uZWwpOwogIH0KfQoKY2xhc3MgUG9udG9SZWFsdGltZVNlcnZpY2UgewogIFBvbnRvUmVhbHRpbWVTZXJ2aWNlLl8oKTsKCiAgc3RhdGljIGZpbmFsIFBvbnRvUmVhbHRpbWVTZXJ2aWNlIGluc3RhbmNlID0gUG9udG9SZWFsdGltZVNlcnZpY2UuXygpOwoKICBmaW5hbCBQb250b051dmVtU2VydmljZSBfbnV2ZW0gPSBQb250b051dmVtU2VydmljZS5pbnN0YW5jZTsKCiAgU3VwYWJhc2VDbGllbnQ/IGdldCBfY2xpZW50ID0+IFN1cGFiYXNlQm9vdHN0cmFwLmNsaWVudDsKCiAgRnV0dXJlPFBvbnRvUmVhbHRpbWVTdWJzY3JpcHRpb24/PiBvdXZpckNvbGFib3JhZG9yKHsKICAgIHJlcXVpcmVkIGludCBjb2xhYm9yYWRvckxvY2FsSWQsCiAgICByZXF1aXJlZCB2b2lkIEZ1bmN0aW9uKCkgYW9NdWRhciwKICB9KSBhc3luYyB7CiAgICBpZiAoY29sYWJvcmFkb3JMb2NhbElkIDw9IDApIHJldHVybiBudWxsOwoKICAgIGZpbmFsIGNsaWVudCA9IF9jbGllbnQ7CiAgICBpZiAoY2xpZW50ID09IG51bGwgfHwgY2xpZW50LmF1dGguY3VycmVudFVzZXIgPT0gbnVsbCkgewogICAgICByZXR1cm4gbnVsbDsKICAgIH0KCiAgICBmaW5hbCBlbXByZXNhSWQgPSBhd2FpdCBfbnV2ZW0uZW1wcmVzYUF0dWFsSWQoKTsKICAgIGlmIChlbXByZXNhSWQgPT0gbnVsbCB8fCBlbXByZXNhSWQuaXNFbXB0eSkgewogICAgICByZXR1cm4gbnVsbDsKICAgIH0KCiAgICBmaW5hbCByZW1vdG9JZCA9IGF3YWl0IF9udXZlbS5yZW1vdG9JZFBvckxvY2FsKAogICAgICBjb2xhYm9yYWRvckxvY2FsSWQsCiAgICAgIGVtcHJlc2FJZDogZW1wcmVzYUlkLAogICAgKTsKCiAgICBpZiAocmVtb3RvSWQgPT0gbnVsbCB8fCByZW1vdG9JZC5pc0VtcHR5KSB7CiAgICAgIHJldHVybiBudWxsOwogICAgfQoKICAgIGZpbmFsIG5vbWVDYW5hbCA9CiAgICAgICAgJ2ltcGVyaXVtLXBvbnRvLSRyZW1vdG9JZC0ke0RhdGVUaW1lLm5vdygpLm1pY3Jvc2Vjb25kc1NpbmNlRXBvY2h9JzsKCiAgICBmaW5hbCBjaGFubmVsID0gY2xpZW50LmNoYW5uZWwobm9tZUNhbmFsKTsKCiAgICBjaGFubmVsCiAgICAgICAgLm9uUG9zdGdyZXNDaGFuZ2VzKAogICAgICAgICAgZXZlbnQ6IFBvc3RncmVzQ2hhbmdlRXZlbnQuYWxsLAogICAgICAgICAgc2NoZW1hOiAncHVibGljJywKICAgICAgICAgIHRhYmxlOiAncG9udG9fcmVnaXN0cm9zJywKICAgICAgICAgIGZpbHRlcjogUG9zdGdyZXNDaGFuZ2VGaWx0ZXIoCiAgICAgICAgICAgIHR5cGU6IFBvc3RncmVzQ2hhbmdlRmlsdGVyVHlwZS5lcSwKICAgICAgICAgICAgY29sdW1uOiAnY29sYWJvcmFkb3JfaWQnLAogICAgICAgICAgICB2YWx1ZTogcmVtb3RvSWQsCiAgICAgICAgICApLAogICAgICAgICAgY2FsbGJhY2s6IChQb3N0Z3Jlc0NoYW5nZVBheWxvYWQgcGF5bG9hZCkgewogICAgICAgICAgICBmaW5hbCByZWdpc3RybyA9IHBheWxvYWQubmV3UmVjb3JkLmlzTm90RW1wdHkKICAgICAgICAgICAgICAgID8gcGF5bG9hZC5uZXdSZWNvcmQKICAgICAgICAgICAgICAgIDogcGF5bG9hZC5vbGRSZWNvcmQ7CgogICAgICAgICAgICBpZiAoIWV2ZW50b1BlcnRlbmNlQW9WaW5jdWxvKAogICAgICAgICAgICAgIHJlZ2lzdHJvOiByZWdpc3RybywKICAgICAgICAgICAgICBlbXByZXNhSWQ6IGVtcHJlc2FJZCwKICAgICAgICAgICAgICBjb2xhYm9yYWRvclJlbW90b0lkOiByZW1vdG9JZCwKICAgICAgICAgICAgKSkgewogICAgICAgICAgICAgIHJldHVybjsKICAgICAgICAgICAgfQoKICAgICAgICAgICAgYW9NdWRhcigpOwogICAgICAgICAgfSwKICAgICAgICApCiAgICAgICAgLnN1YnNjcmliZSgpOwoKICAgIHJldHVybiBQb250b1JlYWx0aW1lU3Vic2NyaXB0aW9uKGNsaWVudDogY2xpZW50LCBjaGFubmVsOiBjaGFubmVsKTsKICB9CgogIHN0YXRpYyBib29sIGV2ZW50b1BlcnRlbmNlQW9WaW5jdWxvKHsKICAgIHJlcXVpcmVkIE1hcDxTdHJpbmcsIGR5bmFtaWM+IHJlZ2lzdHJvLAogICAgcmVxdWlyZWQgU3RyaW5nIGVtcHJlc2FJZCwKICAgIHJlcXVpcmVkIFN0cmluZyBjb2xhYm9yYWRvclJlbW90b0lkLAogIH0pIHsKICAgIGZpbmFsIGVtcHJlc2FFdmVudG8gPSAocmVnaXN0cm9bJ2VtcHJlc2FfaWQnXSA/PyAnJykudG9TdHJpbmcoKS50cmltKCk7CiAgICBmaW5hbCBjb2xhYm9yYWRvckV2ZW50byA9IChyZWdpc3Ryb1snY29sYWJvcmFkb3JfaWQnXSA/PyAnJykKICAgICAgICAudG9TdHJpbmcoKQogICAgICAgIC50cmltKCk7CgogICAgaWYgKGVtcHJlc2FFdmVudG8uaXNFbXB0eSB8fCBjb2xhYm9yYWRvckV2ZW50by5pc0VtcHR5KSB7CiAgICAgIHJldHVybiBmYWxzZTsKICAgIH0KCiAgICByZXR1cm4gZW1wcmVzYUV2ZW50byA9PSBlbXByZXNhSWQgJiYKICAgICAgICBjb2xhYm9yYWRvckV2ZW50byA9PSBjb2xhYm9yYWRvclJlbW90b0lkOwogIH0KfQo=
+'@
+
+if (-not (Test-Path $service) -or -not (Ler $service).Contains('class PontoRealtimeService')) {
+  GravarB64 $service $serviceB64
+  Ok 'ponto_realtime_service.dart criado.'
+} else {
+  Ok 'Servico Realtime ja existe.'
+}
+
+Secao '2/4 - MEU PONTO ATUALIZA AUTOMATICAMENTE'
+
+Trocar $meu @'
+import 'package:flutter/material.dart';
+'@ @'
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+'@ 'meu-ponto-realtime-dart-async-v4'
+
+Trocar $meu @'
+import '../services/ponto_offline_sync_service.dart';
+'@ @'
+import '../services/ponto_offline_sync_service.dart';
+import '../services/ponto_realtime_service.dart';
+'@ 'meu-ponto-realtime-import-v4'
+
+Trocar $meu @'
+  final PontoOfflineSyncService _offlineSync =
+      PontoOfflineSyncService.instance;
+
+  bool _carregando = true;
+'@ @'
+  final PontoOfflineSyncService _offlineSync =
+      PontoOfflineSyncService.instance;
+  final PontoRealtimeService _realtimeService =
+      PontoRealtimeService.instance;
+
+  PontoRealtimeSubscription? _realtimeSubscription;
+  Timer? _realtimeDebounce;
+
+  bool _carregando = true;
+'@ 'meu-ponto-realtime-campos-v4'
+
+Trocar $meu @'
+  @override
+  void initState() {
+    super.initState();
+    _carregar();
+  }
+
+  Future<void> _carregar() async {
+'@ @'
+  @override
+  void initState() {
+    super.initState();
+    _carregar();
+    _iniciarRealtime();
+  }
+
+  Future<void> _iniciarRealtime() async {
+    // meu-ponto-realtime-v4
+    try {
+      final assinatura = await _realtimeService.ouvirColaborador(
+        colaboradorLocalId: widget.colaboradorId,
+        aoMudar: _agendarAtualizacaoRealtime,
+      );
+
+      if (!mounted) {
+        await assinatura?.cancelar();
+        return;
+      }
+
+      _realtimeSubscription = assinatura;
+    } catch (_) {
+      // Realtime é uma melhoria. Pull-to-refresh e sincronização local
+      // continuam funcionando se o canal estiver indisponível.
+    }
+  }
+
+  void _agendarAtualizacaoRealtime() {
+    if (!mounted) return;
+
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted || _carregando || _batendo) return;
+      _carregar();
+    });
+  }
+
+  @override
+  void dispose() {
+    _realtimeDebounce?.cancel();
+
+    final assinatura = _realtimeSubscription;
+    if (assinatura != null) {
+      unawaited(assinatura.cancelar());
+    }
+
+    super.dispose();
+  }
+
+  Future<void> _carregar() async {
+'@ 'meu-ponto-realtime-v4'
+
+Trocar $meu @'
+                          const SizedBox(height: 16),
+                          SizedBox(
+'@ @'
+                          const SizedBox(height: 12),
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.sync_rounded,
+                                size: 15,
+                                color: Colors.greenAccent,
+                              ),
+                              SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Atualização entre aparelhos ativa quando '
+                                  'houver conexão com a nuvem.',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+'@ 'meu-ponto-realtime-indicador-v4'
+
+Secao '3/4 - TESTE DE ISOLAMENTO MULTIEMPRESA'
+
+$testB64 = @'
+aW1wb3J0ICdwYWNrYWdlOmZsdXR0ZXJfdGVzdC9mbHV0dGVyX3Rlc3QuZGFydCc7CmltcG9ydCAncGFja2FnZTppbXBlcml1bV9kZXRhaWxpbmcvc2VydmljZXMvcG9udG9fcmVhbHRpbWVfc2VydmljZS5kYXJ0JzsKCnZvaWQgbWFpbigpIHsKICBncm91cCgnUG9udG9SZWFsdGltZVNlcnZpY2UuZXZlbnRvUGVydGVuY2VBb1ZpbmN1bG8nLCAoKSB7CiAgICB0ZXN0KCdhY2VpdGEgc29tZW50ZSBldmVudG8gZGEgbWVzbWEgZW1wcmVzYSBlIGNvbGFib3JhZG9yJywgKCkgewogICAgICBmaW5hbCByZXN1bHRhZG8gPSBQb250b1JlYWx0aW1lU2VydmljZS5ldmVudG9QZXJ0ZW5jZUFvVmluY3VsbygKICAgICAgICByZWdpc3RybzogY29uc3QgewogICAgICAgICAgJ2VtcHJlc2FfaWQnOiAnZW1wcmVzYS1hJywKICAgICAgICAgICdjb2xhYm9yYWRvcl9pZCc6ICdmdW5jaW9uYXJpby0xJywKICAgICAgICB9LAogICAgICAgIGVtcHJlc2FJZDogJ2VtcHJlc2EtYScsCiAgICAgICAgY29sYWJvcmFkb3JSZW1vdG9JZDogJ2Z1bmNpb25hcmlvLTEnLAogICAgICApOwoKICAgICAgZXhwZWN0KHJlc3VsdGFkbywgaXNUcnVlKTsKICAgIH0pOwoKICAgIHRlc3QoJ2Jsb3F1ZWlhIGV2ZW50byBkZSBvdXRyYSBlbXByZXNhJywgKCkgewogICAgICBmaW5hbCByZXN1bHRhZG8gPSBQb250b1JlYWx0aW1lU2VydmljZS5ldmVudG9QZXJ0ZW5jZUFvVmluY3VsbygKICAgICAgICByZWdpc3RybzogY29uc3QgewogICAgICAgICAgJ2VtcHJlc2FfaWQnOiAnZW1wcmVzYS1iJywKICAgICAgICAgICdjb2xhYm9yYWRvcl9pZCc6ICdmdW5jaW9uYXJpby0xJywKICAgICAgICB9LAogICAgICAgIGVtcHJlc2FJZDogJ2VtcHJlc2EtYScsCiAgICAgICAgY29sYWJvcmFkb3JSZW1vdG9JZDogJ2Z1bmNpb25hcmlvLTEnLAogICAgICApOwoKICAgICAgZXhwZWN0KHJlc3VsdGFkbywgaXNGYWxzZSk7CiAgICB9KTsKCiAgICB0ZXN0KCdibG9xdWVpYSBldmVudG8gZGUgb3V0cm8gY29sYWJvcmFkb3InLCAoKSB7CiAgICAgIGZpbmFsIHJlc3VsdGFkbyA9IFBvbnRvUmVhbHRpbWVTZXJ2aWNlLmV2ZW50b1BlcnRlbmNlQW9WaW5jdWxvKAogICAgICAgIHJlZ2lzdHJvOiBjb25zdCB7CiAgICAgICAgICAnZW1wcmVzYV9pZCc6ICdlbXByZXNhLWEnLAogICAgICAgICAgJ2NvbGFib3JhZG9yX2lkJzogJ2Z1bmNpb25hcmlvLTInLAogICAgICAgIH0sCiAgICAgICAgZW1wcmVzYUlkOiAnZW1wcmVzYS1hJywKICAgICAgICBjb2xhYm9yYWRvclJlbW90b0lkOiAnZnVuY2lvbmFyaW8tMScsCiAgICAgICk7CgogICAgICBleHBlY3QocmVzdWx0YWRvLCBpc0ZhbHNlKTsKICAgIH0pOwogIH0pOwp9Cg==
+'@
+
+if (-not (Test-Path $teste)) {
+  GravarB64 $teste $testB64
+  Ok 'ponto_realtime_service_test.dart criado.'
+} else {
+  Ok 'Teste Realtime ja existe.'
+}
+
+Secao '4/4 - ROADMAP MESTRE'
+
+if (-not (Test-Path $roadmap)) {
+  throw 'ROADMAP-IMPERIUM-MESTRE.md nao encontrado.'
+}
+
+$r = Ler $roadmap
+
+if (-not $r.Contains('Realtime do Ponto entre aparelhos v4')) {
+  $r = $r.Replace(
+    '⬜ **Realtime do ponto**' + "`r`n" + '- Confirmar atualização automática sem reabrir a tela.',
+    '🟡 **Realtime do ponto**' + "`r`n" +
+    '- Canal Realtime implementado para ponto_registros.' + "`r`n" +
+    '- Eventos são filtrados pelo colaborador remoto e validados novamente por empresa_id.' + "`r`n" +
+    '- Falta validação final em dois aparelhos reais.'
+  )
+
+  $r = $r.Replace(
+    '⬜ **Realtime do ponto**' + "`n" + '- Confirmar atualização automática sem reabrir a tela.',
+    '🟡 **Realtime do ponto**' + "`n" +
+    '- Canal Realtime implementado para ponto_registros.' + "`n" +
+    '- Eventos são filtrados pelo colaborador remoto e validados novamente por empresa_id.' + "`n" +
+    '- Falta validação final em dois aparelhos reais.'
+  )
+
+  $hist = @'
+
+## 2026-08-13 — Realtime do Ponto entre aparelhos v4
+
+Módulo: Ponto/Funcionários
+Status anterior: 🟡 Em desenvolvimento / validação
+Status novo: 🟡 Em desenvolvimento / validação
+
+Alterações:
+- criado PontoRealtimeService separado do fluxo de gravação;
+- Meu Ponto assina mudanças de ponto_registros via Supabase Realtime;
+- INSERT/UPDATE/DELETE do mesmo colaborador disparam atualização automática da tela;
+- evento é filtrado pelo colaborador remoto e validado novamente por empresa_id;
+- assinatura é removida ao fechar a tela;
+- Realtime é complementar: offline, pull-to-refresh e fila local continuam funcionando.
+
+Arquivos principais alterados:
+- lib/services/ponto_realtime_service.dart
+- lib/screens/meu_ponto_page.dart
+- test/ponto_realtime_service_test.dart
+- ROADMAP-IMPERIUM-MESTRE.md
+
+Banco/migração:
+- nenhuma alteração SQLite;
+- nenhuma alteração em RLS/RPC;
+- usa a publicação Realtime já preparada para ponto_registros.
+
+Impacto na sincronização:
+- outro aparelho passa a refletir alterações do mesmo ponto sem depender apenas do timer;
+- não cria batidas e não grava diretamente no banco remoto.
+
+Impacto multiempresa:
+- filtro usa colaborador remoto;
+- callback rejeita evento cujo empresa_id não corresponda ao tenant atual;
+- testes cobrem evento de outra empresa e outro colaborador.
+
+Testes:
+- flutter analyze: executar pelo imperium.ps1;
+- flutter test: executar pelo imperium.ps1;
+- teste manual: abrir Meu Ponto em dois aparelhos, bater em um e confirmar atualização automática no outro.
+
+Próximo passo:
+- validar Realtime em dois aparelhos reais;
+- confirmar ausência de duplicidade em batidas simultâneas;
+- revisar a RPC offline idempotente implantada no Supabase;
+- então marcar Ponto/Funcionários como concluído e avançar para Clientes/Veículos.
+
+---
+'@
+
+  $marker = '## Modelo obrigatório para próximas entradas'
+  if ($r.Contains($marker)) {
+    $r = $r.Replace($marker,$hist + "`r`n" + $marker)
+  } else {
+    $r += $hist
+  }
+
+  Gravar $roadmap $r
+  Ok 'Roadmap atualizado sem apagar historico.'
+} else {
+  Ok 'Roadmap ja registra esta atualizacao.'
+}
+
+Secao 'CONCLUIDO'
+Write-Host 'Novo: Realtime do Ponto entre aparelhos.' -ForegroundColor White
+Write-Host 'Protecao: evento precisa pertencer ao mesmo colaborador E empresa.' -ForegroundColor White
+Write-Host 'Nao altera LicencaService, RLS, RPCs ou dados financeiros.' -ForegroundColor White
+Write-Host ''
+Write-Host 'O imperium.ps1 agora deve formatar, analisar, testar e gerar o APK.' -ForegroundColor Cyan
+Write-Host ''

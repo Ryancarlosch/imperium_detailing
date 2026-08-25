@@ -430,13 +430,7 @@ class OrdemServicoRepository {
 
       final servicoResultado = await transaction.query(
         'servicos_catalogo',
-        columns: [
-          'id',
-          'nome',
-          'descricao',
-          'preco_padrao',
-          'ativo',
-        ],
+        columns: ['id', 'nome', 'descricao', 'preco_padrao', 'ativo'],
         where: 'id = ?',
         whereArgs: [servicoCatalogoId],
         limit: 1,
@@ -468,8 +462,7 @@ class OrdemServicoRepository {
         throw ArgumentError('O valor do serviço não pode ser negativo.');
       }
 
-      final descricaoCatalogo =
-          (servico['descricao'] ?? '').toString().trim();
+      final descricaoCatalogo = (servico['descricao'] ?? '').toString().trim();
       final descricaoUsada = descricao == null
           ? descricaoCatalogo
           : descricao.trim();
@@ -522,8 +515,9 @@ class OrdemServicoRepository {
         }
 
         final produtoAtivo = _converterInt(produto['produto_ativo']) ?? 0;
-        final produtoNome =
-            (produto['produto_nome'] ?? 'Produto').toString().trim();
+        final produtoNome = (produto['produto_nome'] ?? 'Produto')
+            .toString()
+            .trim();
 
         if (produtoAtivo != 1) {
           throw StateError(
@@ -567,8 +561,7 @@ class OrdemServicoRepository {
             ? custoCalculado
             : custoCadastrado;
 
-        final unidade =
-            (produto['unidade_estoque'] ?? '').toString().trim();
+        final unidade = (produto['unidade_estoque'] ?? '').toString().trim();
 
         produtosPreparados.add({
           'produto_id': produtoId,
@@ -602,22 +595,18 @@ class OrdemServicoRepository {
         final quantidadeProduto =
             (produto['quantidade'] as num?)?.toDouble() ?? 0.0;
 
-        await transaction.insert(
-          'ordem_servico_produtos',
-          {
-            'ordem_servico_id': ordemServicoId,
-            'produto_id': produto['produto_id'],
-            'produto_nome': produto['produto_nome'],
-            'quantidade': quantidadeProduto,
-            'unidade': produto['unidade'],
-            'custo_unitario': custoUnitario,
-            'custo_unitario_no_momento': custoUnitario,
-            'custo_total_no_momento': quantidadeProduto * custoUnitario,
-            'composicao_lotes_json': '',
-            'baixado_estoque': 0,
-          },
-          conflictAlgorithm: ConflictAlgorithm.abort,
-        );
+        await transaction.insert('ordem_servico_produtos', {
+          'ordem_servico_id': ordemServicoId,
+          'produto_id': produto['produto_id'],
+          'produto_nome': produto['produto_nome'],
+          'quantidade': quantidadeProduto,
+          'unidade': produto['unidade'],
+          'custo_unitario': custoUnitario,
+          'custo_unitario_no_momento': custoUnitario,
+          'custo_total_no_momento': quantidadeProduto * custoUnitario,
+          'composicao_lotes_json': '',
+          'baixado_estoque': 0,
+        }, conflictAlgorithm: ConflictAlgorithm.abort);
       }
 
       final subtotalResultado = await transaction.rawQuery(
@@ -2048,15 +2037,13 @@ class OrdemServicoRepository {
       // O perfil de preço da OS fica em uma tabela gerencial auxiliar sem
       // FK para não exigir mudança de schemaVersion. Remove o snapshot
       // explicitamente quando a OS é excluída, evitando metadado órfão.
-      final tabelaPerfil = await transaction.rawQuery(
-        '''
+      final tabelaPerfil = await transaction.rawQuery('''
         SELECT name
         FROM sqlite_master
         WHERE type = 'table'
           AND name = 'financeiro_preco_documentos'
         LIMIT 1
-        ''',
-      );
+        ''');
 
       if (tabelaPerfil.isNotEmpty) {
         await transaction.delete(
@@ -2066,15 +2053,13 @@ class OrdemServicoRepository {
         );
       }
 
-      final tabelaDesconto = await transaction.rawQuery(
-        '''
+      final tabelaDesconto = await transaction.rawQuery('''
         SELECT name
         FROM sqlite_master
         WHERE type = 'table'
           AND name = 'financeiro_desconto_documentos'
         LIMIT 1
-        ''',
-      );
+        ''');
 
       if (tabelaDesconto.isNotEmpty) {
         await transaction.delete(
@@ -2116,12 +2101,7 @@ class OrdemServicoRepository {
   ) async {
     final movimentos = await transaction.query(
       'movimentacoes_estoque',
-      columns: [
-        'item_estoque_id',
-        'lote_id',
-        'tipo',
-        'quantidade',
-      ],
+      columns: ['item_estoque_id', 'lote_id', 'tipo', 'quantidade'],
       where: 'ordem_servico_id = ?',
       whereArgs: [ordemServicoId],
       orderBy: 'id ASC',
@@ -2133,8 +2113,7 @@ class OrdemServicoRepository {
     for (final movimento in movimentos) {
       final itemId = _converterInt(movimento['item_estoque_id']);
       final loteId = _converterInt(movimento['lote_id']);
-      final quantidade =
-          (movimento['quantidade'] as num?)?.toDouble() ?? 0.0;
+      final quantidade = (movimento['quantidade'] as num?)?.toDouble() ?? 0.0;
       final tipo = (movimento['tipo'] ?? '').toString().trim().toLowerCase();
 
       if (itemId == null || quantidade <= 0) {
@@ -2221,10 +2200,7 @@ class OrdemServicoRepository {
 
       await transaction.update(
         'estoque_lotes',
-        {
-          'quantidade_disponivel': novo,
-          if (entry.value > 0) 'ativo': 1,
-        },
+        {'quantidade_disponivel': novo, if (entry.value > 0) 'ativo': 1},
         where: 'id = ?',
         whereArgs: [entry.key],
       );
@@ -2248,10 +2224,7 @@ class OrdemServicoRepository {
 
       await transaction.update(
         'itens_estoque',
-        {
-          'quantidade': novo,
-          'atualizado_em': agora,
-        },
+        {'quantidade': novo, 'atualizado_em': agora},
         where: 'id = ?',
         whereArgs: [entry.key],
       );

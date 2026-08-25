@@ -9,12 +9,10 @@ class FuncionariosResumoPage extends StatefulWidget {
   const FuncionariosResumoPage({super.key});
 
   @override
-  State<FuncionariosResumoPage> createState() =>
-      _FuncionariosResumoPageState();
+  State<FuncionariosResumoPage> createState() => _FuncionariosResumoPageState();
 }
 
-class _FuncionariosResumoPageState
-    extends State<FuncionariosResumoPage> {
+class _FuncionariosResumoPageState extends State<FuncionariosResumoPage> {
   final CustosRepository _custosRepository = CustosRepository();
   final PontoRepository _pontoRepository = PontoRepository();
 
@@ -23,10 +21,7 @@ class _FuncionariosResumoPageState
     symbol: 'R\$',
   );
 
-  DateTime _mes = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-  );
+  DateTime _mes = DateTime(DateTime.now().year, DateTime.now().month);
 
   bool _carregando = true;
   List<ColaboradorCusto> _colaboradores = const [];
@@ -35,8 +30,7 @@ class _FuncionariosResumoPageState
 
   DateTime get _inicioMes => DateTime(_mes.year, _mes.month, 1);
 
-  DateTime get _fimMes =>
-      DateTime(_mes.year, _mes.month + 1, 0, 23, 59, 59);
+  DateTime get _fimMes => DateTime(_mes.year, _mes.month + 1, 0, 23, 59, 59);
 
   @override
   void initState() {
@@ -50,11 +44,9 @@ class _FuncionariosResumoPageState
     }
 
     try {
-      final colaboradores =
-          await _custosRepository.listarColaboradores();
+      final colaboradores = await _custosRepository.listarColaboradores();
 
-      final pagamentos =
-          await _custosRepository.listarPagamentosColaboradores(
+      final pagamentos = await _custosRepository.listarPagamentosColaboradores(
         inicio: _inicioMes,
         fim: _fimMes,
       );
@@ -65,8 +57,7 @@ class _FuncionariosResumoPageState
         final id = colaborador.id;
         if (id == null) continue;
 
-        fechamentos[id] =
-            await _pontoRepository.obterFechamentoMes(
+        fechamentos[id] = await _pontoRepository.obterFechamentoMes(
           colaboradorId: id,
           inicio: _inicioMes,
           fim: _fimMes,
@@ -77,8 +68,7 @@ class _FuncionariosResumoPageState
 
       setState(() {
         _colaboradores = colaboradores;
-        _pagamentos =
-            List<Map<String, dynamic>>.from(pagamentos);
+        _pagamentos = List<Map<String, dynamic>>.from(pagamentos);
         _fechamentos = fechamentos;
         _carregando = false;
       });
@@ -111,8 +101,7 @@ class _FuncionariosResumoPageState
 
   String _tituloMes() {
     final texto = DateFormat('MMMM yyyy', 'pt_BR').format(_mes);
-    return texto.substring(0, 1).toUpperCase() +
-        texto.substring(1);
+    return texto.substring(0, 1).toUpperCase() + texto.substring(1);
   }
 
   int _int(dynamic valor) {
@@ -123,10 +112,7 @@ class _FuncionariosResumoPageState
 
   double _double(dynamic valor) {
     if (valor is num) return valor.toDouble();
-    return double.tryParse(
-          valor?.toString().replaceAll(',', '.') ?? '',
-        ) ??
-        0.0;
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0.0;
   }
 
   String _horas(dynamic minutos) {
@@ -153,38 +139,27 @@ class _FuncionariosResumoPageState
       restante += _double(item['restante_estimado']);
     }
 
-    return {
-      'estimado': estimado,
-      'pago': pago,
-      'restante': restante,
-    };
+    return {'estimado': estimado, 'pago': pago, 'restante': restante};
   }
 
-  List<Map<String, dynamic>> _semanas(
-    Map<String, dynamic> fechamento,
-  ) {
+  List<Map<String, dynamic>> _semanas(Map<String, dynamic> fechamento) {
     final diasBrutos = fechamento['dias'];
     if (diasBrutos is! List) {
       return const [];
     }
 
-    final dias = List<Map<String, dynamic>>.from(
-      diasBrutos,
-    );
+    final dias = List<Map<String, dynamic>>.from(diasBrutos);
 
     final agrupado = <String, Map<String, dynamic>>{};
 
     for (final dia in dias) {
-      final data =
-          DateTime.tryParse(dia['data']?.toString() ?? '');
+      final data = DateTime.tryParse(dia['data']?.toString() ?? '');
       if (data == null) continue;
 
       final inicioSemana = data.subtract(
         Duration(days: data.weekday - DateTime.monday),
       );
-      final fimSemana = inicioSemana.add(
-        const Duration(days: 6),
-      );
+      final fimSemana = inicioSemana.add(const Duration(days: 6));
 
       final chave =
           '${inicioSemana.year}-${inicioSemana.month}-${inicioSemana.day}';
@@ -204,32 +179,25 @@ class _FuncionariosResumoPageState
       );
 
       item['trabalhados'] =
-          _int(item['trabalhados']) +
-              _int(dia['minutos_trabalhados']);
+          _int(item['trabalhados']) + _int(dia['minutos_trabalhados']);
 
-      item['extras'] =
-          _int(item['extras']) +
-              _int(dia['minutos_extras']);
+      item['extras'] = _int(item['extras']) + _int(dia['minutos_extras']);
 
       item['faltantes'] =
-          _int(item['faltantes']) +
-              _int(dia['minutos_faltantes']);
+          _int(item['faltantes']) + _int(dia['minutos_faltantes']);
 
-      final status =
-          (dia['status_exibido'] ?? '').toString();
+      final status = (dia['status_exibido'] ?? '').toString();
 
       if (status == 'Falta') {
         item['faltas'] = _int(item['faltas']) + 1;
       }
 
       if (status == 'Pendente') {
-        item['pendencias'] =
-            _int(item['pendencias']) + 1;
+        item['pendencias'] = _int(item['pendencias']) + 1;
       }
 
       if (status == 'Incompleto') {
-        item['incompletos'] =
-            _int(item['incompletos']) + 1;
+        item['incompletos'] = _int(item['incompletos']) + 1;
       }
     }
 
@@ -244,9 +212,7 @@ class _FuncionariosResumoPageState
     return lista;
   }
 
-  Future<void> _abrirFuncionario(
-    ColaboradorCusto colaborador,
-  ) async {
+  Future<void> _abrirFuncionario(ColaboradorCusto colaborador) async {
     final id = colaborador.id;
     if (id == null) return;
 
@@ -285,18 +251,10 @@ class _FuncionariosResumoPageState
       body: RefreshIndicator(
         onRefresh: _carregar,
         child: _carregando
-            ? const Center(
-                child: CircularProgressIndicator(),
-              )
+            ? const Center(child: CircularProgressIndicator())
             : ListView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  14,
-                  14,
-                  14,
-                  30,
-                ),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 30),
                 children: [
                   Card(
                     margin: EdgeInsets.zero,
@@ -307,9 +265,7 @@ class _FuncionariosResumoPageState
                           IconButton(
                             tooltip: 'Mês anterior',
                             onPressed: _mesAnterior,
-                            icon: const Icon(
-                              Icons.chevron_left_rounded,
-                            ),
+                            icon: const Icon(Icons.chevron_left_rounded),
                           ),
                           Expanded(
                             child: Text(
@@ -324,9 +280,7 @@ class _FuncionariosResumoPageState
                           IconButton(
                             tooltip: 'Próximo mês',
                             onPressed: _mesSeguinte,
-                            icon: const Icon(
-                              Icons.chevron_right_rounded,
-                            ),
+                            icon: const Icon(Icons.chevron_right_rounded),
                           ),
                         ],
                       ),
@@ -341,22 +295,16 @@ class _FuncionariosResumoPageState
                         children: [
                           _ResumoFinanceiroLinha(
                             titulo: 'Estimado a pagar',
-                            valor: _moeda.format(
-                              totais['estimado'] ?? 0,
-                            ),
+                            valor: _moeda.format(totais['estimado'] ?? 0),
                           ),
                           _ResumoFinanceiroLinha(
                             titulo: 'Já pago',
-                            valor: _moeda.format(
-                              totais['pago'] ?? 0,
-                            ),
+                            valor: _moeda.format(totais['pago'] ?? 0),
                           ),
                           const Divider(),
                           _ResumoFinanceiroLinha(
                             titulo: 'Restante estimado',
-                            valor: _moeda.format(
-                              totais['restante'] ?? 0,
-                            ),
+                            valor: _moeda.format(totais['restante'] ?? 0),
                             destaque: true,
                           ),
                         ],
@@ -377,42 +325,29 @@ class _FuncionariosResumoPageState
                   else
                     ..._colaboradores.map((colaborador) {
                       final id = colaborador.id;
-                      final fechamento =
-                          id == null
-                              ? null
-                              : _fechamentos[id];
+                      final fechamento = id == null ? null : _fechamentos[id];
 
-                      if (id == null ||
-                          fechamento == null) {
+                      if (id == null || fechamento == null) {
                         return const SizedBox.shrink();
                       }
 
-                      final pendencias =
-                          _int(fechamento['pendencias']);
-                      final incompletos =
-                          _int(fechamento['incompletos']);
+                      final pendencias = _int(fechamento['pendencias']);
+                      final incompletos = _int(fechamento['incompletos']);
 
                       return Card(
-                        margin:
-                            const EdgeInsets.only(bottom: 10),
+                        margin: const EdgeInsets.only(bottom: 10),
                         child: InkWell(
-                          borderRadius:
-                              BorderRadius.circular(12),
-                          onTap: () =>
-                              _abrirFuncionario(colaborador),
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _abrirFuncionario(colaborador),
                           child: Padding(
-                            padding:
-                                const EdgeInsets.all(14),
+                            padding: const EdgeInsets.all(14),
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
                                     const CircleAvatar(
-                                      child: Icon(
-                                        Icons.person_outline_rounded,
-                                      ),
+                                      child: Icon(Icons.person_outline_rounded),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
@@ -422,37 +357,32 @@ class _FuncionariosResumoPageState
                                         children: [
                                           Text(
                                             colaborador.nome,
-                                            style:
-                                                const TextStyle(
+                                            style: const TextStyle(
                                               fontSize: 17,
-                                              fontWeight:
-                                                  FontWeight.bold,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            fechamento[
-                                                        'fechamento_status'] ==
+                                            fechamento['fechamento_status'] ==
                                                     'Fechado'
                                                 ? 'Ponto fechado'
                                                 : pendencias > 0 ||
-                                                        incompletos > 0
-                                                    ? '$pendencias pendente(s) • '
-                                                        '$incompletos incompleto(s)'
-                                                    : 'Ponto conferido',
+                                                      incompletos > 0
+                                                ? '$pendencias pendente(s) • '
+                                                      '$incompletos incompleto(s)'
+                                                : 'Ponto conferido',
                                             style: TextStyle(
                                               fontSize: 11.5,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                    const Icon(
-                                      Icons.chevron_right_rounded,
-                                    ),
+                                    const Icon(Icons.chevron_right_rounded),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
@@ -463,21 +393,18 @@ class _FuncionariosResumoPageState
                                     _ResumoMini(
                                       titulo: 'Trabalhadas',
                                       valor: _horas(
-                                        fechamento[
-                                            'minutos_trabalhados'],
+                                        fechamento['minutos_trabalhados'],
                                       ),
                                     ),
                                     _ResumoMini(
                                       titulo: 'Extras',
                                       valor: _horas(
-                                        fechamento[
-                                            'minutos_extras'],
+                                        fechamento['minutos_extras'],
                                       ),
                                     ),
                                     _ResumoMini(
                                       titulo: 'Faltas',
-                                      valor:
-                                          '${fechamento['faltas'] ?? 0}',
+                                      valor: '${fechamento['faltas'] ?? 0}',
                                     ),
                                   ],
                                 ),
@@ -490,8 +417,7 @@ class _FuncionariosResumoPageState
                                       child: _ResumoValor(
                                         titulo: 'Estimado',
                                         valor: _moeda.format(
-                                          fechamento[
-                                                  'valor_estimado_pagar'] ??
+                                          fechamento['valor_estimado_pagar'] ??
                                               0,
                                         ),
                                       ),
@@ -500,9 +426,7 @@ class _FuncionariosResumoPageState
                                       child: _ResumoValor(
                                         titulo: 'Pago',
                                         valor: _moeda.format(
-                                          fechamento[
-                                                  'ja_pago_mes'] ??
-                                              0,
+                                          fechamento['ja_pago_mes'] ?? 0,
                                         ),
                                       ),
                                     ),
@@ -510,9 +434,7 @@ class _FuncionariosResumoPageState
                                       child: _ResumoValor(
                                         titulo: 'Restante',
                                         valor: _moeda.format(
-                                          fechamento[
-                                                  'restante_estimado'] ??
-                                              0,
+                                          fechamento['restante_estimado'] ?? 0,
                                         ),
                                         destaque: true,
                                       ),
@@ -532,8 +454,7 @@ class _FuncionariosResumoPageState
   }
 }
 
-class _FuncionarioResumoDetalhesPage
-    extends StatelessWidget {
+class _FuncionarioResumoDetalhesPage extends StatelessWidget {
   const _FuncionarioResumoDetalhesPage({
     required this.colaborador,
     required this.fechamento,
@@ -546,8 +467,7 @@ class _FuncionarioResumoDetalhesPage
   final List<Map<String, dynamic>> pagamentos;
   final List<Map<String, dynamic>> semanas;
 
-  static final NumberFormat _moeda =
-      NumberFormat.currency(
+  static final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
@@ -560,10 +480,7 @@ class _FuncionarioResumoDetalhesPage
 
   double _double(dynamic valor) {
     if (valor is num) return valor.toDouble();
-    return double.tryParse(
-          valor?.toString().replaceAll(',', '.') ?? '',
-        ) ??
-        0.0;
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0.0;
   }
 
   String _horas(dynamic minutos) {
@@ -574,8 +491,7 @@ class _FuncionarioResumoDetalhesPage
   }
 
   String _dataPagamento(dynamic valor) {
-    final data =
-        DateTime.tryParse(valor?.toString() ?? '');
+    final data = DateTime.tryParse(valor?.toString() ?? '');
     if (data == null) return '';
     return DateFormat('dd/MM/yyyy').format(data);
   }
@@ -583,9 +499,7 @@ class _FuncionarioResumoDetalhesPage
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(colaborador.nome),
-      ),
+      appBar: AppBar(title: Text(colaborador.nome)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 30),
         children: [
@@ -597,15 +511,11 @@ class _FuncionarioResumoDetalhesPage
                 children: [
                   _ResumoFinanceiroLinha(
                     titulo: 'Salário base',
-                    valor: _moeda.format(
-                      _double(fechamento['salario_base']),
-                    ),
+                    valor: _moeda.format(_double(fechamento['salario_base'])),
                   ),
                   _ResumoFinanceiroLinha(
                     titulo: 'Valor da hora',
-                    valor: _moeda.format(
-                      _double(fechamento['valor_hora']),
-                    ),
+                    valor: _moeda.format(_double(fechamento['valor_hora'])),
                   ),
                   _ResumoFinanceiroLinha(
                     titulo: 'Horas extras',
@@ -621,24 +531,18 @@ class _FuncionarioResumoDetalhesPage
                   _ResumoFinanceiroLinha(
                     titulo: 'Estimado a pagar',
                     valor: _moeda.format(
-                      _double(
-                        fechamento['valor_estimado_pagar'],
-                      ),
+                      _double(fechamento['valor_estimado_pagar']),
                     ),
                     destaque: true,
                   ),
                   _ResumoFinanceiroLinha(
                     titulo: 'Já pago',
-                    valor: _moeda.format(
-                      _double(fechamento['ja_pago_mes']),
-                    ),
+                    valor: _moeda.format(_double(fechamento['ja_pago_mes'])),
                   ),
                   _ResumoFinanceiroLinha(
                     titulo: 'Restante',
                     valor: _moeda.format(
-                      _double(
-                        fechamento['restante_estimado'],
-                      ),
+                      _double(fechamento['restante_estimado']),
                     ),
                     destaque: true,
                   ),
@@ -649,19 +553,16 @@ class _FuncionarioResumoDetalhesPage
           const SizedBox(height: 14),
           Text(
             'Resumo semanal',
-            style: Theme.of(context).textTheme.titleMedium
-                ?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           if (semanas.isEmpty)
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(14),
-                child: Text(
-                  'Sem dados de ponto neste mês.',
-                ),
+                child: Text('Sem dados de ponto neste mês.'),
               ),
             )
           else
@@ -674,15 +575,12 @@ class _FuncionarioResumoDetalhesPage
                 child: Padding(
                   padding: const EdgeInsets.all(13),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         '${DateFormat('dd/MM').format(inicio)} a '
                         '${DateFormat('dd/MM').format(fim)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -725,19 +623,16 @@ class _FuncionarioResumoDetalhesPage
           const SizedBox(height: 14),
           Text(
             'Pagamentos do mês',
-            style: Theme.of(context).textTheme.titleMedium
-                ?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           if (pagamentos.isEmpty)
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(14),
-                child: Text(
-                  'Nenhum pagamento lançado neste mês.',
-                ),
+                child: Text('Nenhum pagamento lançado neste mês.'),
               ),
             )
           else
@@ -745,32 +640,17 @@ class _FuncionarioResumoDetalhesPage
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: const Icon(
-                    Icons.payments_outlined,
-                  ),
+                  leading: const Icon(Icons.payments_outlined),
                   title: Text(
-                    _moeda.format(
-                      _double(pagamento['valor']),
-                    ),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    _moeda.format(_double(pagamento['valor'])),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
                     [
-                      _dataPagamento(
-                        pagamento['data_pagamento'],
-                      ),
-                      (pagamento['conta_nome'] ?? '')
-                          .toString(),
-                      (pagamento['forma_pagamento'] ?? '')
-                          .toString(),
-                    ]
-                        .where(
-                          (item) =>
-                              item.trim().isNotEmpty,
-                        )
-                        .join(' • '),
+                      _dataPagamento(pagamento['data_pagamento']),
+                      (pagamento['conta_nome'] ?? '').toString(),
+                      (pagamento['forma_pagamento'] ?? '').toString(),
+                    ].where((item) => item.trim().isNotEmpty).join(' • '),
                   ),
                 ),
               );
@@ -802,8 +682,7 @@ class _ResumoFinanceiroLinha extends StatelessWidget {
           Text(
             valor,
             style: TextStyle(
-              fontWeight:
-                  destaque ? FontWeight.bold : FontWeight.w500,
+              fontWeight: destaque ? FontWeight.bold : FontWeight.w500,
               fontSize: destaque ? 16 : null,
             ),
           ),
@@ -814,10 +693,7 @@ class _ResumoFinanceiroLinha extends StatelessWidget {
 }
 
 class _ResumoMini extends StatelessWidget {
-  const _ResumoMini({
-    required this.titulo,
-    required this.valor,
-  });
+  const _ResumoMini({required this.titulo, required this.valor});
 
   final String titulo;
   final String valor;
@@ -825,14 +701,9 @@ class _ResumoMini extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-        ),
+        border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text('$titulo: $valor'),
@@ -862,17 +733,14 @@ class _ResumoValor extends StatelessWidget {
             titulo,
             style: TextStyle(
               fontSize: 10.5,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurfaceVariant,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             valor,
             style: TextStyle(
-              fontWeight:
-                  destaque ? FontWeight.bold : FontWeight.w600,
+              fontWeight: destaque ? FontWeight.bold : FontWeight.w600,
             ),
           ),
         ],

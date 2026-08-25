@@ -163,11 +163,11 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
         }
 
         try {
-          snapshotDescontoOrcamento =
-              await _fidelidadeRepository.buscarDescontoDocumento(
-            documentoTipo: 'ORCAMENTO',
-            documentoId: widget.orcamentoId!,
-          );
+          snapshotDescontoOrcamento = await _fidelidadeRepository
+              .buscarDescontoDocumento(
+                documentoTipo: 'ORCAMENTO',
+                documentoId: widget.orcamentoId!,
+              );
         } catch (_) {
           snapshotDescontoOrcamento = null;
         }
@@ -280,9 +280,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
 
         final descontoImportado = _converterNumero(orcamento['desconto']);
 
-        _descontoController.text = _formatarNumeroCampo(
-          descontoImportado,
-        );
+        _descontoController.text = _formatarNumeroCampo(descontoImportado);
         _descontoImportadoOrcamento = descontoImportado;
 
         _observacoesController.text = (orcamento['observacoes'] ?? '')
@@ -302,8 +300,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
 
       if (clienteSelecionado?.id != null) {
         try {
-          beneficioFidelidade =
-              await _fidelidadeRepository.avaliarCliente(
+          beneficioFidelidade = await _fidelidadeRepository.avaliarCliente(
             clienteSelecionado!.id!,
           );
         } catch (_) {
@@ -318,8 +315,9 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
       }
 
       if (orcamento != null) {
-        final perfilOrcamento =
-            (orcamento['perfil_preco'] ?? 'informado').toString().trim();
+        final perfilOrcamento = (orcamento['perfil_preco'] ?? 'informado')
+            .toString()
+            .trim();
 
         const perfisValidos = <String>{
           'informado',
@@ -348,7 +346,8 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
         _snapshotDescontoOrcamento = snapshotDescontoOrcamento;
         _fidelidadeConfig = fidelidadeConfig;
         _beneficioFidelidade = beneficioFidelidade;
-        _origemDesconto = snapshotDescontoOrcamento?.origem ??
+        _origemDesconto =
+            snapshotDescontoOrcamento?.origem ??
             (_desconto > 0 ? 'manual' : 'nenhum');
         _percentualFidelidadeAplicado =
             snapshotDescontoOrcamento?.percentual ?? 0;
@@ -638,19 +637,16 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
 
     for (final formulario in _servicos) {
       final servicoId = formulario.servicoCatalogoId;
-      final precificacao =
-          servicoId == null ? null : _precificacaoPorId[servicoId];
+      final precificacao = servicoId == null
+          ? null
+          : _precificacaoPorId[servicoId];
 
       if (precificacao == null) {
         continue;
       }
 
-      final quantidade = _converterValor(
-        formulario.quantidadeController.text,
-      );
-      final valorUnitario = _converterValor(
-        formulario.valorController.text,
-      );
+      final quantidade = _converterValor(formulario.quantidadeController.text);
+      final valorUnitario = _converterValor(formulario.valorController.text);
 
       if (quantidade <= 0 || valorUnitario <= 0) {
         continue;
@@ -659,11 +655,8 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
       final subtotalItem = quantidade * valorUnitario;
       subtotalElegivel += subtotalItem;
 
-      final folgaUnitaria =
-          valorUnitario - precificacao.precoMinimoSeguro;
-      final folgaItem = folgaUnitaria > 0
-          ? folgaUnitaria * quantidade
-          : 0.0;
+      final folgaUnitaria = valorUnitario - precificacao.precoMinimoSeguro;
+      final folgaItem = folgaUnitaria > 0 ? folgaUnitaria * quantidade : 0.0;
 
       final limiteDoItem = folgaItem <= 0
           ? 0.0
@@ -672,8 +665,8 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
       limiteGlobalSeguro = limiteGlobalSeguro == null
           ? limiteDoItem
           : (limiteDoItem < limiteGlobalSeguro
-              ? limiteDoItem
-              : limiteGlobalSeguro);
+                ? limiteDoItem
+                : limiteGlobalSeguro);
     }
 
     if (subtotalElegivel <= 0 ||
@@ -701,8 +694,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
       _descontoFidelidadeSugerido = sugerido;
     });
 
-    final fidelidadeJaAplicada =
-        _origemDesconto.startsWith('fidelidade');
+    final fidelidadeJaAplicada = _origemDesconto.startsWith('fidelidade');
 
     if (reaplicarExistente && fidelidadeJaAplicada) {
       _definirDescontoOs(
@@ -713,14 +705,11 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
       return;
     }
 
-    if (!aplicarAutomatico ||
-        !_fidelidadeConfig.automatica ||
-        sugerido <= 0) {
+    if (!aplicarAutomatico || !_fidelidadeConfig.automatica || sugerido <= 0) {
       return;
     }
 
-    final descontoManualAtivo =
-        _desconto > 0 && !fidelidadeJaAplicada;
+    final descontoManualAtivo = _desconto > 0 && !fidelidadeJaAplicada;
 
     if (descontoManualAtivo) {
       return;
@@ -749,16 +738,13 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
     }
 
     try {
-      final beneficio = await _fidelidadeRepository.avaliarCliente(
-        clienteId,
-      );
+      final beneficio = await _fidelidadeRepository.avaliarCliente(clienteId);
 
       if (!mounted) {
         return;
       }
 
-      final tinhaFidelidade =
-          _origemDesconto.startsWith('fidelidade');
+      final tinhaFidelidade = _origemDesconto.startsWith('fidelidade');
 
       setState(() {
         _beneficioFidelidade = beneficio;
@@ -768,9 +754,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
         _definirDescontoOs(0, origem: 'nenhum');
       }
 
-      _recalcularSugestaoFidelidadeOs(
-        aplicarAutomatico: aplicarAutomatico,
-      );
+      _recalcularSugestaoFidelidadeOs(aplicarAutomatico: aplicarAutomatico);
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -793,8 +777,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
     if (mounted) {
       setState(() {
         _origemDesconto = valor <= 0 ? 'nenhum' : origem;
-        _percentualFidelidadeAplicado =
-            valor <= 0 ? 0 : percentual;
+        _percentualFidelidadeAplicado = valor <= 0 ? 0 : percentual;
       });
     }
   }
@@ -818,8 +801,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
       return;
     }
 
-    if (_desconto > 0 &&
-        !_origemDesconto.startsWith('fidelidade')) {
+    if (_desconto > 0 && !_origemDesconto.startsWith('fidelidade')) {
       final confirmar = await showDialog<bool>(
         context: context,
         builder: (dialogContext) {
@@ -887,19 +869,14 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
     }
 
     try {
-      await _fidelidadeRepository.salvarClienteDesde(
-        clienteId,
-        escolhida,
-      );
+      await _fidelidadeRepository.salvarClienteDesde(clienteId, escolhida);
 
       await _atualizarFidelidadeClienteOs(
         aplicarAutomatico: _fidelidadeConfig.automatica,
       );
 
       if (mounted) {
-        _mostrarMensagem(
-          'Data "Cliente desde" atualizada.',
-        );
+        _mostrarMensagem('Data "Cliente desde" atualizada.');
       }
     } catch (erro) {
       if (mounted) {
@@ -1495,17 +1472,16 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
             widget.orcamentoId != null &&
             (_desconto - _descontoImportadoOrcamento).abs() <= 0.01;
 
-        final origem = preservouDescontoOrcamento &&
-                snapshotOrcamento != null
+        final origem = preservouDescontoOrcamento && snapshotOrcamento != null
             ? snapshotOrcamento.origem
             : (_desconto > 0 ? _origemDesconto : 'nenhum');
 
-        final double percentual = preservouDescontoOrcamento &&
-                snapshotOrcamento != null
+        final double percentual =
+            preservouDescontoOrcamento && snapshotOrcamento != null
             ? snapshotOrcamento.percentual
             : (_origemDesconto.startsWith('fidelidade')
-                ? _percentualFidelidadeAplicado
-                : (_subtotal > 0 ? (_desconto / _subtotal) * 100 : 0.0));
+                  ? _percentualFidelidadeAplicado
+                  : (_subtotal > 0 ? (_desconto / _subtotal) * 100 : 0.0));
 
         await _fidelidadeRepository.registrarDescontoDocumento(
           DescontoDocumentoSnapshot(
@@ -2122,10 +2098,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                 Expanded(
                   child: Text(
                     'Perfil de preço',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -2209,9 +2182,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                       ? Icons.handshake_outlined
                       : Icons.info_outline_rounded,
                   size: 17,
-                  color: _perfilEhParceiro
-                      ? const Color(0xFFD6A84B)
-                      : null,
+                  color: _perfilEhParceiro ? const Color(0xFFD6A84B) : null,
                 ),
                 const SizedBox(width: 7),
                 Expanded(
@@ -2219,9 +2190,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                     _descricaoPerfilPreco(_perfilPreco),
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -2270,8 +2239,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
     final config = _fidelidadeConfig;
     final beneficio = _beneficioFidelidade;
     final clienteDesde = beneficio?.clienteDesde;
-    final parceiroBloqueado =
-        _perfilEhParceiro && !config.permitirParceiro;
+    final parceiroBloqueado = _perfilEhParceiro && !config.permitirParceiro;
 
     String modoTexto() {
       switch (config.modo) {
@@ -2298,19 +2266,13 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                 Expanded(
                   child: Text(
                     'Fidelidade do cliente',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            _LinhaValor(
-              titulo: 'Funcionamento',
-              valor: modoTexto(),
-            ),
+            _LinhaValor(titulo: 'Funcionamento', valor: modoTexto()),
             if (!config.ativa) ...[
               const SizedBox(height: 8),
               Text(
@@ -2336,9 +2298,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                 const SizedBox(height: 6),
                 _LinhaValor(
                   titulo: 'Tempo',
-                  valor: _tempoRelacionamentoOs(
-                    beneficio.mesesRelacionamento,
-                  ),
+                  valor: _tempoRelacionamentoOs(beneficio.mesesRelacionamento),
                 ),
                 const SizedBox(height: 6),
                 _LinhaValor(
@@ -2384,13 +2344,10 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-                if (config.sugerir &&
-                    _descontoFidelidadeSugerido > 0) ...[
+                if (config.sugerir && _descontoFidelidadeSugerido > 0) ...[
                   const SizedBox(height: 10),
                   FilledButton.icon(
-                    onPressed: _salvando
-                        ? null
-                        : _aplicarFidelidadeSugeridaOs,
+                    onPressed: _salvando ? null : _aplicarFidelidadeSugeridaOs,
                     icon: const Icon(Icons.redeem_outlined),
                     label: const Text('Aplicar benefício de fidelidade'),
                   ),
@@ -2401,7 +2358,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
                     _origemDesconto == 'fidelidade_automatica'
                         ? 'Benefício aplicado automaticamente.'
                         : _desconto > 0 &&
-                                !_origemDesconto.startsWith('fidelidade')
+                              !_origemDesconto.startsWith('fidelidade')
                         ? 'Existe um desconto manual; ele não foi '
                               'sobrescrito automaticamente.'
                         : 'Será aplicado automaticamente quando houver '
@@ -2658,10 +2615,7 @@ class _NovaOrdemServicoPageState extends State<NovaOrdemServicoPage> {
             const SizedBox(height: 8),
             _LinhaValor(titulo: 'Desconto', valor: _moeda.format(_desconto)),
             const SizedBox(height: 6),
-            _LinhaValor(
-              titulo: 'Origem',
-              valor: _origemDescontoTextoOs(),
-            ),
+            _LinhaValor(titulo: 'Origem', valor: _origemDescontoTextoOs()),
             const Divider(height: 24),
             _LinhaValor(
               titulo: 'Total final',

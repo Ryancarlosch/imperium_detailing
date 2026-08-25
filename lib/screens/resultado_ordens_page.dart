@@ -141,10 +141,11 @@ class _ResultadoOrdensPageState extends State<ResultadoOrdensPage> {
                 ),
                 const SizedBox(height: 7),
                 ...maoObra.map((item) {
-                  final nome = (item['colaborador_nome'] ??
-                          item['descricao'] ??
-                          'Mão de obra')
-                      .toString();
+                  final nome =
+                      (item['colaborador_nome'] ??
+                              item['descricao'] ??
+                              'Mão de obra')
+                          .toString();
                   final horas = _double(item['horas']);
                   final custoHora = _double(item['custo_hora_snapshot']);
                   final total = _double(item['custo_total']);
@@ -236,16 +237,17 @@ class _ResultadoOrdensPageState extends State<ResultadoOrdensPage> {
                       itemBuilder: (_, index) {
                         final ordem = _ordens[index];
                         final numero = (ordem['numero'] ?? 'OS').toString();
-                        final cliente =
-                            (ordem['cliente_nome'] ?? '').toString();
+                        final cliente = (ordem['cliente_nome'] ?? '')
+                            .toString();
                         final responsavel =
                             (ordem['funcionario_responsavel'] ?? '').toString();
-                        final comercial =
-                            _double(ordem['resultado_comercial']);
-                        final gerencial =
-                            _double(ordem['resultado_gerencial_estimado']);
-                        final margem =
-                            _double(ordem['margem_gerencial_estimada']);
+                        final comercial = _double(ordem['resultado_comercial']);
+                        final gerencial = _double(
+                          ordem['resultado_gerencial_estimado'],
+                        );
+                        final margem = _double(
+                          ordem['margem_gerencial_estimada'],
+                        );
                         final data = _dataTexto(ordem['data_finalizacao']);
 
                         return Card(
@@ -257,8 +259,9 @@ class _ResultadoOrdensPageState extends State<ResultadoOrdensPage> {
                             ),
                             title: Text(
                               numero,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             subtitle: Text(
                               [

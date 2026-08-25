@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../repositories/ponto_repository.dart';
 import '../repositories/ponto_sincronizado_repository.dart';
+import '../services/ponto_realtime_service.dart';
 
 class MeuPontoPage extends StatefulWidget {
   const MeuPontoPage({
@@ -20,9 +23,11 @@ class MeuPontoPage extends StatefulWidget {
 
 class _MeuPontoPageState extends State<MeuPontoPage> {
   final PontoRepository _repository = PontoSincronizadoRepository();
+  final PontoRealtimeService _realtime = PontoRealtimeService.instance;
 
   bool _carregando = true;
   bool _batendo = false;
+  bool _realtimeAtivo = false;
   Map<String, dynamic>? _estado;
   Map<String, dynamic>? _mes;
 
@@ -41,6 +46,32 @@ class _MeuPontoPageState extends State<MeuPontoPage> {
   void initState() {
     super.initState();
     _carregar();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _iniciarRealtime();
+    });
+  }
+
+  // meu-ponto-iniciar-realtime-v4b
+  Future<void> _iniciarRealtime() async {
+    final ativo = await _realtime.assinarColaborador(
+      colaboradorLocalId: widget.colaboradorId,
+      onAtualizar: () async {
+        if (!mounted || _batendo) return;
+        await _carregar();
+      },
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _realtimeAtivo = ativo;
+    });
+  }
+
+  @override
+  void dispose() {
+    unawaited(_realtime.cancelar());
+    super.dispose();
   }
 
   Future<void> _carregar() async {
@@ -178,6 +209,15 @@ class _MeuPontoPageState extends State<MeuPontoPage> {
       appBar: AppBar(
         title: const Text('Meu ponto'),
         actions: [
+          if (_realtimeAtivo)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Icon(
+                Icons.sync_rounded,
+                size: 18,
+                color: Colors.greenAccent,
+              ),
+            ), // meu-ponto-indicador-realtime-v4b
           IconButton(
             tooltip: 'Atualizar',
             onPressed: _carregando ? null : _carregar,

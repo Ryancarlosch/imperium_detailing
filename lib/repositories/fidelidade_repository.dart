@@ -2,6 +2,10 @@ import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
 
+/// fidelidade-tempo-desativada-v1
+/// Regra temporariamente desligada sem apagar estrutura/historico.
+const bool kFidelidadeTempoTemporariamenteDesativada = true;
+
 class FidelidadeFaixa {
   const FidelidadeFaixa({
     required this.mesesMinimos,
@@ -33,9 +37,12 @@ class FidelidadeConfig {
   final bool permitirParceiro;
   final List<FidelidadeFaixa> faixas;
 
-  bool get ativa => modo != 'desativado';
-  bool get sugerir => modo == 'sugerir';
-  bool get automatica => modo == 'automatico';
+  bool get ativa =>
+      !kFidelidadeTempoTemporariamenteDesativada && modo != 'desativado';
+  bool get sugerir =>
+      !kFidelidadeTempoTemporariamenteDesativada && modo == 'sugerir';
+  bool get automatica =>
+      !kFidelidadeTempoTemporariamenteDesativada && modo == 'automatico';
 }
 
 class FidelidadeBeneficio {
@@ -137,19 +144,16 @@ class FidelidadeRepository {
 
     final agora = DateTime.now().toIso8601String();
 
-    await executor.insert(
-      'financeiro_fidelidade_config',
-      {
-        'id': 1,
-        'modo': 'desativado',
-        'desconto_maximo_percentual': 10,
-        'permitir_parceiro': 0,
-        'atualizado_em': agora,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await executor.insert('financeiro_fidelidade_config', {
+      'id': 1,
+      'modo': 'desativado',
+      'desconto_maximo_percentual': 10,
+      'permitir_parceiro': 0,
+      'atualizado_em': agora,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
-    final quantidade = Sqflite.firstIntValue(
+    final quantidade =
+        Sqflite.firstIntValue(
           await executor.rawQuery(
             'SELECT COUNT(*) FROM financeiro_fidelidade_faixas',
           ),
@@ -164,16 +168,13 @@ class FidelidadeRepository {
       ];
 
       for (final item in padroes) {
-        await executor.insert(
-          'financeiro_fidelidade_faixas',
-          {
-            'meses_minimos': item['meses'],
-            'percentual': item['percentual'],
-            'ativo': 1,
-            'ordem': item['ordem'],
-            'atualizado_em': agora,
-          },
-        );
+        await executor.insert('financeiro_fidelidade_faixas', {
+          'meses_minimos': item['meses'],
+          'percentual': item['percentual'],
+          'ativo': 1,
+          'ordem': item['ordem'],
+          'atualizado_em': agora,
+        });
       }
     }
   }
@@ -211,7 +212,9 @@ class FidelidadeRepository {
         .toList();
 
     return FidelidadeConfig(
-      modo: _modo(config['modo']?.toString()),
+      modo: kFidelidadeTempoTemporariamenteDesativada
+          ? 'desativado'
+          : _modo(config['modo']?.toString()),
       descontoMaximoPercentual: _double(
         config['desconto_maximo_percentual'],
         padrao: 10,
@@ -284,16 +287,13 @@ class FidelidadeRepository {
       for (var i = 0; i < ordenadas.length; i++) {
         final faixa = ordenadas[i];
 
-        await transaction.insert(
-          'financeiro_fidelidade_faixas',
-          {
-            'meses_minimos': faixa.mesesMinimos,
-            'percentual': faixa.percentual,
-            'ativo': faixa.ativo ? 1 : 0,
-            'ordem': i,
-            'atualizado_em': agora,
-          },
-        );
+        await transaction.insert('financeiro_fidelidade_faixas', {
+          'meses_minimos': faixa.mesesMinimos,
+          'percentual': faixa.percentual,
+          'ativo': faixa.ativo ? 1 : 0,
+          'ordem': i,
+          'atualizado_em': agora,
+        });
       }
     });
   }
@@ -317,10 +317,7 @@ class FidelidadeRepository {
     return DateTime.tryParse((rows.first['cliente_desde'] ?? '').toString());
   }
 
-  Future<void> salvarClienteDesde(
-    int clienteId,
-    DateTime? clienteDesde,
-  ) async {
+  Future<void> salvarClienteDesde(int clienteId, DateTime? clienteDesde) async {
     if (clienteId <= 0) {
       throw ArgumentError('Cliente inválido.');
     }
@@ -368,6 +365,19 @@ class FidelidadeRepository {
     final clienteDesde = await buscarClienteDesde(clienteId);
     final referencia = dataReferencia ?? DateTime.now();
 
+    // fidelidade-tempo-avaliacao-bloqueada-v1
+    if (kFidelidadeTempoTemporariamenteDesativada) {
+      return FidelidadeBeneficio(
+        clienteId: clienteId,
+        clienteDesde: clienteDesde,
+        mesesRelacionamento: clienteDesde == null
+            ? 0
+            : _mesesCompletos(clienteDesde, referencia),
+        percentual: 0,
+        faixaMeses: null,
+      );
+    }
+
     if (clienteDesde == null) {
       return FidelidadeBeneficio(
         clienteId: clienteId,
@@ -387,18 +397,16 @@ class FidelidadeRepository {
         continue;
       }
 
-      if (escolhida == null ||
-          faixa.mesesMinimos > escolhida.mesesMinimos) {
+      if (escolhida == null || faixa.mesesMinimos > escolhida.mesesMinimos) {
         escolhida = faixa;
       }
     }
 
     final percentual = escolhida == null
         ? 0.0
-        : escolhida.percentual.clamp(
-            0,
-            config.descontoMaximoPercentual,
-          ).toDouble();
+        : escolhida.percentual
+              .clamp(0, config.descontoMaximoPercentual)
+              .toDouble();
 
     return FidelidadeBeneficio(
       clienteId: clienteId,
@@ -466,9 +474,7 @@ class FidelidadeRepository {
       valorDesconto: _double(item['valor_desconto']),
       percentual: _double(item['percentual']),
       valorSugerido: _double(item['valor_sugerido']),
-      clienteDesde: DateTime.tryParse(
-        (item['cliente_desde'] ?? '').toString(),
-      ),
+      clienteDesde: DateTime.tryParse((item['cliente_desde'] ?? '').toString()),
       faixaMeses: item['faixa_meses'] == null
           ? null
           : _int(item['faixa_meses']),
@@ -526,9 +532,7 @@ class FidelidadeRepository {
       return valor.toDouble();
     }
 
-    return double.tryParse(
-          valor?.toString().replaceAll(',', '.') ?? '',
-        ) ??
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ??
         padrao;
   }
 

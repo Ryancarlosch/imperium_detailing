@@ -22,9 +22,7 @@ class UsuarioRepository {
     await _garantirEstrutura(database);
   }
 
-  Future<void> _garantirEstrutura(
-    DatabaseExecutor database,
-  ) async {
+  Future<void> _garantirEstrutura(DatabaseExecutor database) async {
     await database.execute('''
       CREATE TABLE IF NOT EXISTS financeiro_usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -130,7 +128,8 @@ class UsuarioRepository {
       )
     ''');
 
-    final admins = Sqflite.firstIntValue(
+    final admins =
+        Sqflite.firstIntValue(
           await database.rawQuery(
             '''
             SELECT COUNT(*)
@@ -145,23 +144,19 @@ class UsuarioRepository {
     if (admins == 0) {
       final agora = DateTime.now().toIso8601String();
 
-      await database.insert(
-        'financeiro_usuarios',
-        {
-          'nome': 'Administrador',
-          'login': 'admin',
-          'perfil': perfilAdministrador,
-          'colaborador_id': null,
-          'ativo': 1,
-          'pin_salt': null,
-          'pin_hash': null,
-          'pin_iteracoes': 120000,
-          'pin_atualizado_em': null,
-          'criado_em': agora,
-          'atualizado_em': agora,
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      await database.insert('financeiro_usuarios', {
+        'nome': 'Administrador',
+        'login': 'admin',
+        'perfil': perfilAdministrador,
+        'colaborador_id': null,
+        'ativo': 1,
+        'pin_salt': null,
+        'pin_hash': null,
+        'pin_iteracoes': 120000,
+        'pin_atualizado_em': null,
+        'criado_em': agora,
+        'atualizado_em': agora,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 
@@ -169,9 +164,7 @@ class UsuarioRepository {
 
   Map<String, dynamic>? get sessaoAtual {
     final sessao = _sessaoAtual;
-    return sessao == null
-        ? null
-        : Map<String, dynamic>.from(sessao);
+    return sessao == null ? null : Map<String, dynamic>.from(sessao);
   }
 
   bool get possuiSessao => _sessaoAtual != null;
@@ -219,10 +212,7 @@ class UsuarioRepository {
     return hash.isNotEmpty && salt.isNotEmpty;
   }
 
-  Future<void> definirPin({
-    required int usuarioId,
-    required String pin,
-  }) async {
+  Future<void> definirPin({required int usuarioId, required String pin}) async {
     _validarPin(pin);
 
     final database = await _appDatabase.database;
@@ -241,18 +231,12 @@ class UsuarioRepository {
     }
 
     if (_int(usuario.first['ativo']) != 1) {
-      throw StateError(
-        'Ative o usuário antes de configurar o PIN.',
-      );
+      throw StateError('Ative o usuário antes de configurar o PIN.');
     }
 
     const iteracoes = 120000;
     final salt = _gerarSalt();
-    final hash = _derivarPin(
-      pin: pin,
-      salt: salt,
-      iteracoes: iteracoes,
-    );
+    final hash = _derivarPin(pin: pin, salt: salt, iteracoes: iteracoes);
     final agora = DateTime.now().toIso8601String();
 
     await database.update(
@@ -288,7 +272,8 @@ class UsuarioRepository {
     final perfil = (usuario.first['perfil'] ?? '').toString();
 
     if (perfil == perfilAdministrador) {
-      final outrosAdminsComPin = Sqflite.firstIntValue(
+      final outrosAdminsComPin =
+          Sqflite.firstIntValue(
             await database.rawQuery(
               '''
               SELECT COUNT(*)
@@ -386,8 +371,7 @@ class UsuarioRepository {
     }
 
     final salt = (usuario['pin_salt'] ?? '').toString().trim();
-    final hashEsperado =
-        (usuario['pin_hash'] ?? '').toString().trim();
+    final hashEsperado = (usuario['pin_hash'] ?? '').toString().trim();
     final iteracoes = _int(usuario['pin_iteracoes']) > 0
         ? _int(usuario['pin_iteracoes'])
         : 120000;
@@ -400,9 +384,7 @@ class UsuarioRepository {
         sucesso: false,
         motivo: 'PIN não configurado',
       );
-      throw StateError(
-        'Este usuário ainda não possui PIN configurado.',
-      );
+      throw StateError('Este usuário ainda não possui PIN configurado.');
     }
 
     final hashInformado = _derivarPin(
@@ -411,10 +393,7 @@ class UsuarioRepository {
       iteracoes: iteracoes,
     );
 
-    if (!_comparacaoTempoConstante(
-      hashEsperado,
-      hashInformado,
-    )) {
+    if (!_comparacaoTempoConstante(hashEsperado, hashInformado)) {
       await _registrarTentativa(
         database,
         usuarioId: usuarioId,
@@ -433,8 +412,7 @@ class UsuarioRepository {
       'login': (usuario['login'] ?? '').toString(),
       'perfil': (usuario['perfil'] ?? '').toString(),
       'colaborador_id': usuario['colaborador_id'],
-      'colaborador_nome':
-          (usuario['colaborador_nome'] ?? '').toString(),
+      'colaborador_nome': (usuario['colaborador_nome'] ?? '').toString(),
       'permissoes': permissoes,
       'autenticado_em': DateTime.now().toIso8601String(),
     };
@@ -464,16 +442,12 @@ class UsuarioRepository {
 
     final agora = DateTime.now().toIso8601String();
 
-    await database.insert(
-      'financeiro_usuario_sessao',
-      {
-        'id': 1,
-        'usuario_id': usuarioId,
-        'criado_em': agora,
-        'atualizado_em': agora,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert('financeiro_usuario_sessao', {
+      'id': 1,
+      'usuario_id': usuarioId,
+      'criado_em': agora,
+      'atualizado_em': agora,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Map<String, dynamic>?> restaurarSessaoPersistida() async {
@@ -536,8 +510,7 @@ class UsuarioRepository {
       'login': (usuario['login'] ?? '').toString(),
       'perfil': (usuario['perfil'] ?? '').toString(),
       'colaborador_id': usuario['colaborador_id'],
-      'colaborador_nome':
-          (usuario['colaborador_nome'] ?? '').toString(),
+      'colaborador_nome': (usuario['colaborador_nome'] ?? '').toString(),
       'permissoes': permissoes,
       'autenticado_em': DateTime.now().toIso8601String(),
       'sessao_restaurada': true,
@@ -552,10 +525,7 @@ class UsuarioRepository {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
 
-    await database.delete(
-      'financeiro_usuario_sessao',
-      where: 'id = 1',
-    );
+    await database.delete('financeiro_usuario_sessao', where: 'id = 1');
   }
 
   Future<void> sair() async {
@@ -573,8 +543,7 @@ class UsuarioRepository {
       return false;
     }
 
-    if ((sessao['perfil'] ?? '').toString() ==
-        perfilAdministrador) {
+    if ((sessao['perfil'] ?? '').toString() == perfilAdministrador) {
       return true;
     }
 
@@ -589,9 +558,7 @@ class UsuarioRepository {
     return false;
   }
 
-  Future<List<Map<String, dynamic>>> listarAcessos({
-    int limite = 100,
-  }) async {
+  Future<List<Map<String, dynamic>>> listarAcessos({int limite = 100}) async {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
 
@@ -617,35 +584,26 @@ class UsuarioRepository {
     required bool sucesso,
     required String motivo,
   }) async {
-    await database.insert(
-      'financeiro_usuario_acessos',
-      {
-        'usuario_id': usuarioId,
-        'login': login,
-        'sucesso': sucesso ? 1 : 0,
-        'motivo': motivo,
-        'criado_em': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.abort,
-    );
+    await database.insert('financeiro_usuario_acessos', {
+      'usuario_id': usuarioId,
+      'login': login,
+      'sucesso': sucesso ? 1 : 0,
+      'motivo': motivo,
+      'criado_em': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
   static void _validarPin(String pin) {
     final limpo = pin.trim();
 
     if (!RegExp(r'^\d{4,8}$').hasMatch(limpo)) {
-      throw ArgumentError(
-        'O PIN deve ter entre 4 e 8 números.',
-      );
+      throw ArgumentError('O PIN deve ter entre 4 e 8 números.');
     }
   }
 
   static String _gerarSalt() {
     final random = Random.secure();
-    final bytes = List<int>.generate(
-      32,
-      (_) => random.nextInt(256),
-    );
+    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
     return base64UrlEncode(bytes);
   }
 
@@ -663,10 +621,7 @@ class UsuarioRepository {
     return base64UrlEncode(bytes);
   }
 
-  static bool _comparacaoTempoConstante(
-    String esperado,
-    String informado,
-  ) {
+  static bool _comparacaoTempoConstante(String esperado, String informado) {
     final a = utf8.encode(esperado);
     final b = utf8.encode(informado);
 
@@ -690,8 +645,7 @@ class UsuarioRepository {
 
     final where = incluirInativos ? '' : 'WHERE u.ativo = 1';
 
-    final resultado = await database.rawQuery(
-      '''
+    final resultado = await database.rawQuery('''
       SELECT
         u.*,
         c.nome AS colaborador_nome,
@@ -706,17 +660,12 @@ class UsuarioRepository {
           ELSE 2
         END,
         u.nome COLLATE NOCASE ASC
-      ''',
-    );
+      ''');
 
-    return resultado
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
+    return resultado.map((item) => Map<String, dynamic>.from(item)).toList();
   }
 
-  Future<Map<String, dynamic>?> buscarUsuarioPorId(
-    int id,
-  ) async {
+  Future<Map<String, dynamic>?> buscarUsuarioPorId(int id) async {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
 
@@ -758,9 +707,7 @@ class UsuarioRepository {
     }
 
     if (loginLimpo.length < 3) {
-      throw ArgumentError(
-        'O login precisa ter pelo menos 3 caracteres.',
-      );
+      throw ArgumentError('O login precisa ter pelo menos 3 caracteres.');
     }
 
     if (!RegExp(r'^[a-z0-9._-]+$').hasMatch(loginLimpo)) {
@@ -803,10 +750,7 @@ class UsuarioRepository {
           'financeiro_usuarios',
           columns: ['id'],
           where: 'colaborador_id = ? AND id != ?',
-          whereArgs: [
-            colaboradorId,
-            id ?? -1,
-          ],
+          whereArgs: [colaboradorId, id ?? -1],
           limit: 1,
         );
 
@@ -821,10 +765,7 @@ class UsuarioRepository {
         'financeiro_usuarios',
         columns: ['id'],
         where: 'LOWER(login) = LOWER(?) AND id != ?',
-        whereArgs: [
-          loginLimpo,
-          id ?? -1,
-        ],
+        whereArgs: [loginLimpo, id ?? -1],
         limit: 1,
       );
 
@@ -838,8 +779,7 @@ class UsuarioRepository {
         'nome': nomeLimpo,
         'login': loginLimpo,
         'perfil': perfil,
-        'colaborador_id':
-            perfil == perfilFuncionario ? colaboradorId : null,
+        'colaborador_id': perfil == perfilFuncionario ? colaboradorId : null,
         'ativo': ativo ? 1 : 0,
         'atualizado_em': agora,
       };
@@ -868,17 +808,15 @@ class UsuarioRepository {
         }
 
         final eraAdmin =
-            (atual.first['perfil'] ?? '').toString() ==
-                perfilAdministrador;
+            (atual.first['perfil'] ?? '').toString() == perfilAdministrador;
         final eraAtivo = _int(atual.first['ativo']) == 1;
 
         final deixaraDeSerAdminAtivo =
-            eraAdmin &&
-            eraAtivo &&
-            (perfil != perfilAdministrador || !ativo);
+            eraAdmin && eraAtivo && (perfil != perfilAdministrador || !ativo);
 
         if (deixaraDeSerAdminAtivo) {
-          final outrosAdmins = Sqflite.firstIntValue(
+          final outrosAdmins =
+              Sqflite.firstIntValue(
                 await transaction.rawQuery(
                   '''
                   SELECT COUNT(*)
@@ -932,8 +870,7 @@ class UsuarioRepository {
         {
           'usuario_id': usuarioId,
           'modulo': modulo,
-          'permitido':
-              permissaoPadrao(perfil, modulo) ? 1 : 0,
+          'permitido': permissaoPadrao(perfil, modulo) ? 1 : 0,
           'atualizado_em': agora,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -968,9 +905,7 @@ class UsuarioRepository {
     final perfil = (usuario.first['perfil'] ?? '').toString();
 
     if (perfil == perfilAdministrador && !permitido) {
-      throw StateError(
-        'O perfil Administrador possui acesso completo.',
-      );
+      throw StateError('O perfil Administrador possui acesso completo.');
     }
 
     await database.insert(
@@ -985,9 +920,7 @@ class UsuarioRepository {
     );
   }
 
-  Future<Map<String, bool>> obterPermissoes(
-    int usuarioId,
-  ) async {
+  Future<Map<String, bool>> obterPermissoes(int usuarioId) async {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
 
@@ -1006,9 +939,7 @@ class UsuarioRepository {
     final perfil = (usuario.first['perfil'] ?? '').toString();
 
     if (perfil == perfilAdministrador) {
-      return {
-        for (final modulo in modulos) modulo: true,
-      };
+      return {for (final modulo in modulos) modulo: true};
     }
 
     final resultado = await database.query(
@@ -1018,8 +949,7 @@ class UsuarioRepository {
     );
 
     final mapa = <String, bool>{
-      for (final modulo in modulos)
-        modulo: permissaoPadrao(perfil, modulo),
+      for (final modulo in modulos) modulo: permissaoPadrao(perfil, modulo),
     };
 
     for (final item in resultado) {
@@ -1055,8 +985,7 @@ class UsuarioRepository {
     'configuracoes',
   ];
 
-  static const Map<String, String> nomesModulos =
-      <String, String>{
+  static const Map<String, String> nomesModulos = <String, String>{
     'dashboard': 'Dashboard',
     'clientes': 'Clientes',
     'agenda': 'Agenda',
@@ -1071,18 +1000,13 @@ class UsuarioRepository {
     'configuracoes': 'Configurações',
   };
 
-  static bool permissaoPadrao(
-    String perfil,
-    String modulo,
-  ) {
+  static bool permissaoPadrao(String perfil, String modulo) {
     if (perfil == perfilAdministrador) {
       return true;
     }
 
     if (perfil == perfilFuncionario) {
-      return <String>{
-        'ponto',
-      }.contains(modulo);
+      return <String>{'ponto'}.contains(modulo);
     }
 
     return false;

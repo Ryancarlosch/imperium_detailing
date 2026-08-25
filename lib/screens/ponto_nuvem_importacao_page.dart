@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../services/ponto_nuvem_diagnostico_service.dart';
 import '../services/ponto_nuvem_importacao_service.dart';
 import '../services/ponto_nuvem_service.dart';
 import 'funcionarios_acesso_nuvem_page.dart';
+import 'ponto_etapa1_validacao_page.dart';
 
 class PontoNuvemImportacaoPage extends StatefulWidget {
   const PontoNuvemImportacaoPage({super.key, required this.empresaId});
@@ -18,6 +20,8 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
   final PontoNuvemImportacaoService _importacao =
       PontoNuvemImportacaoService.instance;
   final PontoNuvemService _nuvem = PontoNuvemService.instance;
+  final PontoNuvemDiagnosticoService _diagnosticoService =
+      PontoNuvemDiagnosticoService.instance;
 
   bool _carregando = true;
   bool _importando = false;
@@ -26,6 +30,7 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
   List<Map<String, dynamic>> _remotos = const [];
   List<String> _ultimasFalhas = const [];
   Map<String, dynamic> _estadoMigracao = const {};
+  Map<String, dynamic> _diagnostico = const {};
   bool _migrandoHistorico = false;
 
   @override
@@ -44,6 +49,7 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
         _importacao.obterResumo(empresaId: widget.empresaId),
         _nuvem.listarColaboradoresRemotos(),
         _nuvem.obterEstadoMigracao(),
+        _diagnosticoService.diagnosticar(empresaEsperadaId: widget.empresaId),
       ]);
 
       if (!mounted) return;
@@ -56,6 +62,7 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
             )
             .toList();
         _estadoMigracao = Map<String, dynamic>.from(resultados[2] as Map);
+        _diagnostico = Map<String, dynamic>.from(resultados[3] as Map);
         _carregando = false;
       });
     } catch (erro) {
@@ -104,6 +111,17 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
         setState(() => _importando = false);
       }
     }
+  }
+
+  Future<void> _abrirHomologacaoEtapa1() async {
+    // ponto-etapa1-homologacao-v7
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => PontoEtapa1ValidacaoPage(empresaId: widget.empresaId),
+      ),
+    );
+
+    await _carregar();
   }
 
   Future<void> _abrirAcessosFuncionarios() async {
@@ -308,6 +326,8 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
                 ),
               )
             else ...[
+              _SaudeNuvemCard(diagnostico: _diagnostico),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -357,6 +377,13 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
                     : _abrirAcessosFuncionarios,
                 icon: const Icon(Icons.phonelink_outlined),
                 label: const Text('Acessos em outros celulares'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _importando || _migrandoHistorico
+                    ? null
+                    : _abrirHomologacaoEtapa1,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('Homologar Etapa 1'),
               ),
               const SizedBox(height: 14),
               const SizedBox(height: 14),
@@ -484,6 +511,111 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SaudeNuvemCard extends StatelessWidget {
+  const _SaudeNuvemCard({required this.diagnostico});
+
+  final Map<String, dynamic> diagnostico;
+
+  bool _ok(String chave) => diagnostico[chave] == true;
+
+  @override
+  Widget build(BuildContext context) {
+    final saudavel = _ok('saudavel');
+    final disponivel = _ok('diagnostico_disponivel');
+    final versao = diagnostico['backend_version'] ?? 0;
+    final mensagem = (diagnostico['mensagem'] ?? 'Diagnóstico não executado.')
+        .toString();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  saudavel
+                      ? Icons.health_and_safety
+                      : Icons.warning_amber_rounded,
+                  color: saudavel ? Colors.greenAccent : Colors.orangeAccent,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    saudavel
+                        ? 'Saúde da nuvem: pronta'
+                        : 'Saúde da nuvem: atenção',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Text(
+                  disponivel ? 'Backend V$versao' : 'Não verificado',
+                  style: const TextStyle(color: Colors.white60, fontSize: 11),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(mensagem, style: const TextStyle(color: Colors.white70)),
+            const SizedBox(height: 12),
+            _SaudeLinha(titulo: 'Empresa correta', ok: _ok('empresa_confere')),
+            _SaudeLinha(titulo: 'Backend V6', ok: _ok('backend_atualizado')),
+            _SaudeLinha(titulo: 'Batida online', ok: _ok('rpc_batida_online')),
+            _SaudeLinha(
+              titulo: 'Batida offline idempotente',
+              ok: _ok('rpc_batida_offline'),
+            ),
+            _SaudeLinha(
+              titulo: 'Tabela de idempotência',
+              ok: _ok('tabela_idempotencia'),
+            ),
+            _SaudeLinha(
+              titulo: 'Realtime do Ponto',
+              ok: _ok('realtime_ponto_registros'),
+            ),
+            _SaudeLinha(
+              titulo: 'Estado de sincronização',
+              ok: _ok('sync_estado_disponivel'),
+            ),
+            _SaudeLinha(
+              titulo: 'Migração concluída',
+              ok: _ok('migracao_concluida'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SaudeLinha extends StatelessWidget {
+  const _SaudeLinha({required this.titulo, required this.ok});
+
+  final String titulo;
+  final bool ok;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 5),
+      child: Row(
+        children: [
+          Icon(
+            ok ? Icons.check_circle : Icons.cancel_outlined,
+            size: 17,
+            color: ok ? Colors.greenAccent : Colors.orangeAccent,
+          ),
+          const SizedBox(width: 7),
+          Expanded(child: Text(titulo)),
+        ],
       ),
     );
   }

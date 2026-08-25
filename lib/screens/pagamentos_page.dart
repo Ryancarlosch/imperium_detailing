@@ -563,9 +563,7 @@ class _PagamentoOrdemDetalhesPageState
     _mensagem('Vencimento removido.');
   }
 
-  Future<void> _ajustarPagamento(
-    PagamentoOrdemServico pagamento,
-  ) async {
+  Future<void> _ajustarPagamento(PagamentoOrdemServico pagamento) async {
     final tipo = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1437,28 +1435,28 @@ class _PagamentoFormSheetState extends State<_PagamentoFormSheet> {
                   )
                 else
                   DropdownButtonFormField<int?>(
-                  initialValue: _contaFinanceiraId,
-                  decoration: const InputDecoration(
-                    labelText: 'Conta de recebimento',
-                    prefixIcon: Icon(Icons.account_balance_wallet_outlined),
-                    helperText: 'Onde este dinheiro entrou',
+                    initialValue: _contaFinanceiraId,
+                    decoration: const InputDecoration(
+                      labelText: 'Conta de recebimento',
+                      prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                      helperText: 'Onde este dinheiro entrou',
+                    ),
+                    items: _contas
+                        .map(
+                          (conta) => DropdownMenuItem<int?>(
+                            value: conta.id,
+                            child: Text(conta.nome),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _salvando || _carregandoContas
+                        ? null
+                        : (valor) {
+                            setState(() {
+                              _contaFinanceiraId = valor;
+                            });
+                          },
                   ),
-                  items: _contas
-                      .map(
-                        (conta) => DropdownMenuItem<int?>(
-                          value: conta.id,
-                          child: Text(conta.nome),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _salvando || _carregandoContas
-                      ? null
-                      : (valor) {
-                          setState(() {
-                            _contaFinanceiraId = valor;
-                          });
-                        },
-                ),
               ],
               if (_formaComTaxa) ...[
                 if (_formaPagamento == 'Cartão de crédito') ...[

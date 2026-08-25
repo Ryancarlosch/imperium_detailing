@@ -62,8 +62,7 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
 
       DescontoDocumentoSnapshot? snapshotDesconto;
       try {
-        snapshotDesconto =
-            await _fidelidadeRepository.buscarDescontoDocumento(
+        snapshotDesconto = await _fidelidadeRepository.buscarDescontoDocumento(
           documentoTipo: 'ORCAMENTO',
           documentoId: widget.orcamentoId,
         );
@@ -621,9 +620,7 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
       case 'manual':
         return 'Desconto manual';
       default:
-        return _numero('desconto') > 0
-            ? 'Desconto manual'
-            : 'Sem desconto';
+        return _numero('desconto') > 0 ? 'Desconto manual' : 'Sem desconto';
     }
   }
 
@@ -836,8 +833,9 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
                             icone: Icons.discount_outlined,
                           ),
                           if (_snapshotDesconto != null &&
-                              _snapshotDesconto!.origem
-                                  .startsWith('fidelidade')) ...[
+                              _snapshotDesconto!.origem.startsWith(
+                                'fidelidade',
+                              )) ...[
                             const SizedBox(height: 10),
                             _LinhaInformacao(
                               titulo: 'Percentual de fidelidade',

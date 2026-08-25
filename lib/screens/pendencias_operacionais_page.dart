@@ -371,9 +371,7 @@ class _StatusGeralCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    semPendencias
-                        ? 'Operação em dia'
-                        : 'Atenção necessária',
+                    semPendencias ? 'Operação em dia' : 'Atenção necessária',
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,

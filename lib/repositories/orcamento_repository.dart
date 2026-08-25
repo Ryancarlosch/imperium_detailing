@@ -37,17 +37,13 @@ class OrcamentoRepository {
   }) async {
     final agora = DateTime.now().toIso8601String();
 
-    await executor.insert(
-      'financeiro_preco_documentos',
-      {
-        'documento_tipo': 'ORCAMENTO',
-        'documento_id': orcamentoId,
-        'perfil': perfil.trim().isEmpty ? 'informado' : perfil.trim(),
-        'criado_em': agora,
-        'atualizado_em': agora,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await executor.insert('financeiro_preco_documentos', {
+      'documento_tipo': 'ORCAMENTO',
+      'documento_id': orcamentoId,
+      'perfil': perfil.trim().isEmpty ? 'informado' : perfil.trim(),
+      'criado_em': agora,
+      'atualizado_em': agora,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> _salvarMapeamentoCatalogo(
@@ -379,9 +375,7 @@ class OrcamentoRepository {
     });
   }
 
-  Future<Map<int, int>> buscarMapeamentoCatalogo(
-    int orcamentoId,
-  ) async {
+  Future<Map<int, int>> buscarMapeamentoCatalogo(int orcamentoId) async {
     final database = await _appDatabase.database;
     await _garantirEstruturaPerfil(database);
 
@@ -407,10 +401,7 @@ class OrcamentoRepository {
     return resultado;
   }
 
-  Future<void> registrarPerfilPreco(
-    int orcamentoId,
-    String perfil,
-  ) async {
+  Future<void> registrarPerfilPreco(int orcamentoId, String perfil) async {
     if (orcamentoId <= 0) {
       throw ArgumentError('Orçamento inválido.');
     }
@@ -479,15 +470,13 @@ class OrcamentoRepository {
         whereArgs: [id],
       );
 
-      final tabelaDesconto = await transaction.rawQuery(
-        '''
+      final tabelaDesconto = await transaction.rawQuery('''
         SELECT name
         FROM sqlite_master
         WHERE type = 'table'
           AND name = 'financeiro_desconto_documentos'
         LIMIT 1
-        ''',
-      );
+        ''');
 
       if (tabelaDesconto.isNotEmpty) {
         await transaction.delete(

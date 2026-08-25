@@ -15,10 +15,7 @@ enum PendenciaOperacionalTipo {
   backup,
 }
 
-enum PendenciaOperacionalNivel {
-  critica,
-  atencao,
-}
+enum PendenciaOperacionalNivel { critica, atencao }
 
 class PendenciaOperacional {
   const PendenciaOperacional({
@@ -163,8 +160,8 @@ class PendenciasOperacionaisRepository {
       final vencimento = _parseData(item['vencimento']);
       final sufixoParcela = parcela > 0
           ? totalParcelas > 0
-              ? ' • parcela $parcela/$totalParcelas'
-              : ' • parcela $parcela'
+                ? ' • parcela $parcela/$totalParcelas'
+                : ' • parcela $parcela'
           : '';
 
       itens.add(
@@ -174,8 +171,7 @@ class PendenciasOperacionaisRepository {
           titulo: '$numero$sufixoParcela',
           descricao: [
             if (cliente.isNotEmpty) cliente,
-            if (vencimento != null)
-              'Venceu em ${_formatarData(vencimento)}',
+            if (vencimento != null) 'Venceu em ${_formatarData(vencimento)}',
           ].join(' • '),
           modulo: 'financeiro',
           valor: _double(item['valor']),
@@ -238,8 +234,7 @@ class PendenciasOperacionaisRepository {
           titulo: '$numero • recebimento vencido',
           descricao: [
             if (cliente.isNotEmpty) cliente,
-            if (vencimento != null)
-              'Venceu em ${_formatarData(vencimento)}',
+            if (vencimento != null) 'Venceu em ${_formatarData(vencimento)}',
           ].join(' • '),
           modulo: 'financeiro',
           valor: valor,
@@ -252,9 +247,7 @@ class PendenciasOperacionaisRepository {
     return itens;
   }
 
-  Future<List<PendenciaOperacional>> _carregarContasPagar(
-    DateTime hoje,
-  ) async {
+  Future<List<PendenciaOperacional>> _carregarContasPagar(DateTime hoje) async {
     final database = await _appDatabase.database;
     final hojeBanco = _dataBanco(hoje);
     final limiteBanco = _dataBanco(hoje.add(const Duration(days: 7)));
@@ -282,7 +275,9 @@ class PendenciasOperacionaisRepository {
     );
 
     for (final item in vencidas) {
-      final descricao = (item['descricao'] ?? 'Conta a pagar').toString().trim();
+      final descricao = (item['descricao'] ?? 'Conta a pagar')
+          .toString()
+          .trim();
       final fornecedor = (item['fornecedor_nome'] ?? '').toString().trim();
       final vencimento = _parseData(item['data_vencimento']);
 
@@ -293,8 +288,7 @@ class PendenciasOperacionaisRepository {
           titulo: descricao.isEmpty ? 'Conta a pagar vencida' : descricao,
           descricao: [
             if (fornecedor.isNotEmpty) fornecedor,
-            if (vencimento != null)
-              'Venceu em ${_formatarData(vencimento)}',
+            if (vencimento != null) 'Venceu em ${_formatarData(vencimento)}',
           ].join(' • '),
           modulo: 'financeiro',
           valor: _double(item['valor']),
@@ -327,7 +321,9 @@ class PendenciasOperacionaisRepository {
     );
 
     for (final item in proximas) {
-      final descricao = (item['descricao'] ?? 'Conta a pagar').toString().trim();
+      final descricao = (item['descricao'] ?? 'Conta a pagar')
+          .toString()
+          .trim();
       final fornecedor = (item['fornecedor_nome'] ?? '').toString().trim();
       final vencimento = _parseData(item['data_vencimento']);
       final venceHoje = vencimento != null && _mesmoDia(vencimento, hoje);
@@ -402,7 +398,9 @@ class PendenciasOperacionaisRepository {
             ? item['data_inicio'] ?? item['data_abertura']
             : item['data_abertura'],
       );
-      final dias = dataBase == null ? 0 : hoje.difference(_somenteDia(dataBase)).inDays;
+      final dias = dataBase == null
+          ? 0
+          : hoje.difference(_somenteDia(dataBase)).inDays;
       final numero = (item['numero'] ?? 'OS').toString().trim();
       final cliente = (item['cliente_nome'] ?? '').toString().trim();
       final marca = (item['veiculo_marca'] ?? '').toString().trim();
@@ -439,8 +437,7 @@ class PendenciasOperacionaisRepository {
   Future<List<PendenciaOperacional>> _carregarEstoque() async {
     final database = await _appDatabase.database;
 
-    final resultado = await database.rawQuery(
-      '''
+    final resultado = await database.rawQuery('''
       SELECT
         id,
         nome,
@@ -460,30 +457,31 @@ class PendenciasOperacionaisRepository {
       ORDER BY
         CASE WHEN COALESCE(quantidade, 0) <= 0 THEN 1 ELSE 2 END,
         nome COLLATE NOCASE ASC
-      ''',
-    );
+      ''');
 
-    return resultado.map((item) {
-      final quantidade = _double(item['quantidade']);
-      final minima = _double(item['quantidade_minima']);
-      final unidade = (item['unidade'] ?? 'unidade').toString().trim();
-      final nome = (item['nome'] ?? 'Produto').toString().trim();
-      final zerado = quantidade <= 0.000001;
+    return resultado
+        .map((item) {
+          final quantidade = _double(item['quantidade']);
+          final minima = _double(item['quantidade_minima']);
+          final unidade = (item['unidade'] ?? 'unidade').toString().trim();
+          final nome = (item['nome'] ?? 'Produto').toString().trim();
+          final zerado = quantidade <= 0.000001;
 
-      return PendenciaOperacional(
-        tipo: PendenciaOperacionalTipo.estoque,
-        nivel: zerado
-            ? PendenciaOperacionalNivel.critica
-            : PendenciaOperacionalNivel.atencao,
-        titulo: zerado ? 'Estoque zerado: $nome' : 'Estoque baixo: $nome',
-        descricao: zerado
-            ? 'Saldo atual: 0 $unidade'
-            : 'Saldo ${_formatarQuantidade(quantidade)} $unidade • '
-                'mínimo ${_formatarQuantidade(minima)} $unidade',
-        modulo: 'estoque',
-        referenciaId: _intNulo(item['id']),
-      );
-    }).toList(growable: false);
+          return PendenciaOperacional(
+            tipo: PendenciaOperacionalTipo.estoque,
+            nivel: zerado
+                ? PendenciaOperacionalNivel.critica
+                : PendenciaOperacionalNivel.atencao,
+            titulo: zerado ? 'Estoque zerado: $nome' : 'Estoque baixo: $nome',
+            descricao: zerado
+                ? 'Saldo atual: 0 $unidade'
+                : 'Saldo ${_formatarQuantidade(quantidade)} $unidade • '
+                      'mínimo ${_formatarQuantidade(minima)} $unidade',
+            modulo: 'estoque',
+            referenciaId: _intNulo(item['id']),
+          );
+        })
+        .toList(growable: false);
   }
 
   Future<List<PendenciaOperacional>> _carregarPonto(DateTime hoje) async {
@@ -550,7 +548,8 @@ class PendenciasOperacionaisRepository {
           tipo: PendenciaOperacionalTipo.backup,
           nivel: PendenciaOperacionalNivel.critica,
           titulo: 'Backup ainda não realizado',
-          descricao: 'Crie a primeira cópia de segurança dos dados do Imperium.',
+          descricao:
+              'Crie a primeira cópia de segurança dos dados do Imperium.',
           modulo: 'configuracoes',
         ),
       ];
@@ -597,8 +596,7 @@ class PendenciasOperacionaisRepository {
             ? PendenciaOperacionalNivel.critica
             : PendenciaOperacionalNivel.atencao,
         titulo: 'Backup desatualizado',
-        descricao:
-            'Última cópia há $dias dias (${_formatarData(dataBackup)}).',
+        descricao: 'Última cópia há $dias dias (${_formatarData(dataBackup)}).',
         modulo: 'configuracoes',
         data: dataBackup,
       ),

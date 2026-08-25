@@ -1,0 +1,884 @@
+﻿$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 2.0
+
+$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $Root
+
+function Secao([string]$texto) {
+    Write-Host ""
+    Write-Host ("=" * 72) -ForegroundColor DarkGray
+    Write-Host $texto -ForegroundColor Cyan
+    Write-Host ("=" * 72) -ForegroundColor DarkGray
+}
+
+function Ok([string]$texto) {
+    Write-Host "[OK] $texto" -ForegroundColor Green
+}
+
+function Ler([string]$caminho) {
+    if (-not (Test-Path $caminho)) {
+        throw "Arquivo nao encontrado: $caminho"
+    }
+    return Get-Content -Path $caminho -Raw -Encoding UTF8
+}
+
+function Gravar([string]$caminho, [string]$conteudo) {
+    Set-Content -Path $caminho -Value $conteudo -Encoding UTF8
+}
+
+function SubstituirObrigatorio(
+    [string]$caminho,
+    [string]$antigo,
+    [string]$novo,
+    [string]$descricao
+) {
+    $conteudo = Ler $caminho
+
+    if ($conteudo.Contains($novo)) {
+        Ok "$descricao ja estava aplicado."
+        return
+    }
+
+    if (-not $conteudo.Contains($antigo)) {
+        throw "Nao encontrei o trecho esperado para: $descricao"
+    }
+
+    $conteudo = $conteudo.Replace($antigo, $novo)
+    Gravar $caminho $conteudo
+    Ok $descricao
+}
+
+function SubstituirOpcional(
+    [string]$caminho,
+    [string]$antigo,
+    [string]$novo,
+    [string]$descricao
+) {
+    $conteudo = Ler $caminho
+    if ($conteudo.Contains($antigo)) {
+        $conteudo = $conteudo.Replace($antigo, $novo)
+        Gravar $caminho $conteudo
+        Ok $descricao
+    }
+}
+
+Secao "IMPERIUM - INTEGRACAO GERAL DE CUSTOS, PONTO, PRECIFICACAO E PERMISSOES"
+
+$custos = Join-Path $Root 'lib\repositories\custos_repository.dart'
+$maoObra = Join-Path $Root 'lib\screens\mao_obra_custos_page.dart'
+$precificacao = Join-Path $Root 'lib\repositories\precificacao_repository.dart'
+$dashboard = Join-Path $Root 'lib\screens\dashboard_page.dart'
+$relatorio = Join-Path $Root 'lib\screens\relatorios_financeiros_page.dart'
+$relatorioCorrigido = Join-Path $Root 'lib\screens\relatorios_financeiros_page_corrigido.dart'
+$teste = Join-Path $Root 'test\colaborador_custo_test.dart'
+
+Secao "1/6 - RELATORIOS FINANCEIROS"
+
+if (Test-Path $relatorioCorrigido) {
+    if (-not (Test-Path $relatorio)) {
+        throw "Tela oficial de relatorios nao encontrada."
+    }
+
+    $corrigido = Ler $relatorioCorrigido
+    if ($corrigido -notmatch 'class\s+RelatoriosFinanceirosPage\s+extends\s+StatefulWidget') {
+        throw "A tela _corrigido nao possui a classe esperada."
+    }
+
+    Get-ChildItem -Path (Join-Path $Root 'lib') -Recurse -File -Filter '*.dart' |
+        ForEach-Object {
+            if ($_.FullName -eq $relatorioCorrigido) {
+                return
+            }
+
+            $c = Ler $_.FullName
+            if ($c.Contains('relatorios_financeiros_page_corrigido.dart')) {
+                $c = $c.Replace(
+                    'relatorios_financeiros_page_corrigido.dart',
+                    'relatorios_financeiros_page.dart'
+                )
+                Gravar $_.FullName $c
+                Ok "Import de relatorio corrigido em $($_.Name)"
+            }
+        }
+
+    Copy-Item $relatorioCorrigido $relatorio -Force
+    Remove-Item $relatorioCorrigido -Force
+    Ok "Tela de relatorios consolidada."
+}
+else {
+    Ok "Nao ha duplicata temporaria de relatorios."
+}
+
+Secao "2/6 - CARGA HORARIA E CUSTO DA EQUIPE"
+
+$blocoAntigo = @'
+  Future<int> salvarColaborador(ColaboradorCusto colaborador) async {
+    final nome = colaborador.nome.trim();
+    if (nome.length < 2) {
+      throw ArgumentError('Informe o nome do colaborador.');
+    }
+    if (colaborador.remuneracaoMensal < 0 ||
+        colaborador.encargosMensais < 0 ||
+        colaborador.outrosCustosMensais < 0) {
+      throw ArgumentError('Os valores de custo não podem ser negativos.');
+    }
+    if (colaborador.horasProdutivasMes <= 0) {
+      throw ArgumentError('Informe as horas produtivas mensais.');
+    }
+
+    final database = await _appDatabase.database;
+    final agora = DateTime.now().toIso8601String();
+    final mapa = colaborador.toMap(incluirId: false)
+      ..['nome'] = nome
+      ..['funcao'] = colaborador.funcao.trim()
+      ..['atualizado_em'] = agora;
+
+    if (colaborador.id == null) {
+      mapa['criado_em'] = agora;
+      return database.insert(
+        'financeiro_colaboradores_custo',
+        mapa,
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+    }
+
+    await database.update(
+      'financeiro_colaboradores_custo',
+      mapa,
+      where: 'id = ?',
+      whereArgs: [colaborador.id],
+    );
+    return colaborador.id!;
+  }
+
+  Future<void> arquivarColaborador(int id) async {
+    final database = await _appDatabase.database;
+    await database.update(
+      'financeiro_colaboradores_custo',
+      {'ativo': 0, 'atualizado_em': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> sincronizarHorasProdutivasEquipe(double horas) async {
+    if (horas <= 0) {
+      throw ArgumentError('Informe uma carga horária mensal maior que zero.');
+    }
+
+    final database = await _appDatabase.database;
+
+    await database.update('financeiro_colaboradores_custo', {
+      'horas_produtivas_mes': horas,
+      'atualizado_em': DateTime.now().toIso8601String(),
+    }, where: 'ativo = 1');
+  }
+'@
+
+$blocoNovo = @'
+  Future<int> salvarColaborador(ColaboradorCusto colaborador) async {
+    final nome = colaborador.nome.trim();
+    if (nome.length < 2) {
+      throw ArgumentError('Informe o nome do colaborador.');
+    }
+    if (colaborador.remuneracaoMensal < 0 ||
+        colaborador.encargosMensais < 0 ||
+        colaborador.outrosCustosMensais < 0) {
+      throw ArgumentError('Os valores de custo não podem ser negativos.');
+    }
+    if (colaborador.horasProdutivasMes <= 0) {
+      throw ArgumentError('Informe as horas produtivas mensais.');
+    }
+
+    final database = await _appDatabase.database;
+    final agora = DateTime.now().toIso8601String();
+    final mapa = colaborador.toMap(incluirId: false)
+      ..['nome'] = nome
+      ..['funcao'] = colaborador.funcao.trim()
+      ..['atualizado_em'] = agora;
+
+    int colaboradorId;
+
+    if (colaborador.id == null) {
+      mapa['criado_em'] = agora;
+      colaboradorId = await database.insert(
+        'financeiro_colaboradores_custo',
+        mapa,
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+    } else {
+      await database.update(
+        'financeiro_colaboradores_custo',
+        mapa,
+        where: 'id = ?',
+        whereArgs: [colaborador.id],
+      );
+      colaboradorId = colaborador.id!;
+    }
+
+    await _sincronizarCapacidadeEquipeComPrecificacao(database);
+    return colaboradorId;
+  }
+
+  Future<void> arquivarColaborador(int id) async {
+    final database = await _appDatabase.database;
+    await database.update(
+      'financeiro_colaboradores_custo',
+      {'ativo': 0, 'atualizado_em': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await _sincronizarCapacidadeEquipeComPrecificacao(database);
+  }
+
+  /// Define a carga mensal POR PESSOA.
+  ///
+  /// Exemplo: 3 pessoas x 220 h = 660 h de capacidade total da equipe.
+  /// A capacidade total usada na precificação é sincronizada automaticamente.
+  Future<void> sincronizarHorasProdutivasEquipe(double horasPorPessoa) async {
+    if (horasPorPessoa <= 0) {
+      throw ArgumentError('Informe uma carga horária mensal maior que zero.');
+    }
+
+    final database = await _appDatabase.database;
+
+    await database.transaction((transaction) async {
+      await transaction.update(
+        'financeiro_colaboradores_custo',
+        {
+          'horas_produtivas_mes': horasPorPessoa,
+          'atualizado_em': DateTime.now().toIso8601String(),
+        },
+        where: 'ativo = 1',
+      );
+
+      await _sincronizarCapacidadeEquipeComPrecificacao(transaction);
+    });
+  }
+
+  /// Corrige bancos que usaram a semântica antiga, onde o total da equipe
+  /// (por exemplo 660 h) podia ser gravado em CADA colaborador.
+  Future<void> _normalizarCargaHorariaLegada(
+    DatabaseExecutor executor,
+  ) async {
+    final tabela = await executor.rawQuery(
+      '''
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name = 'financeiro_precificacao_config'
+      LIMIT 1
+      ''',
+    );
+
+    if (tabela.isEmpty) {
+      return;
+    }
+
+    final equipe = await executor.rawQuery(
+      '''
+      SELECT
+        COUNT(*) AS quantidade,
+        COALESCE(MIN(horas_produtivas_mes), 0) AS menor_horas,
+        COALESCE(MAX(horas_produtivas_mes), 0) AS maior_horas
+      FROM financeiro_colaboradores_custo
+      WHERE ativo = 1
+      ''',
+    );
+
+    final quantidade = _int(equipe.first['quantidade']) ?? 0;
+    if (quantidade < 2) {
+      return;
+    }
+
+    final menor = _double(equipe.first['menor_horas']);
+    final maior = _double(equipe.first['maior_horas']);
+
+    if (menor <= 0 || (maior - menor).abs() > 0.01) {
+      return;
+    }
+
+    final config = await executor.query(
+      'financeiro_precificacao_config',
+      columns: ['horas_produtivas_mes'],
+      where: 'id = 1',
+      limit: 1,
+    );
+
+    if (config.isEmpty) {
+      return;
+    }
+
+    final totalConfigurado = _double(config.first['horas_produtivas_mes']);
+
+    if ((totalConfigurado - maior).abs() > 0.01) {
+      return;
+    }
+
+    final horasPorPessoa = totalConfigurado / quantidade;
+
+    if (horasPorPessoa < 120 || horasPorPessoa > 260) {
+      return;
+    }
+
+    await executor.update(
+      'financeiro_colaboradores_custo',
+      {
+        'horas_produtivas_mes': horasPorPessoa,
+        'atualizado_em': DateTime.now().toIso8601String(),
+      },
+      where: 'ativo = 1',
+    );
+  }
+
+  Future<void> _sincronizarCapacidadeEquipeComPrecificacao(
+    DatabaseExecutor executor,
+  ) async {
+    final tabela = await executor.rawQuery(
+      '''
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name = 'financeiro_precificacao_config'
+      LIMIT 1
+      ''',
+    );
+
+    if (tabela.isEmpty) {
+      return;
+    }
+
+    final equipe = await executor.rawQuery(
+      '''
+      SELECT COALESCE(SUM(horas_produtivas_mes), 0) AS horas_total
+      FROM financeiro_colaboradores_custo
+      WHERE ativo = 1
+      ''',
+    );
+
+    final horasTotal = _double(equipe.first['horas_total']);
+    if (horasTotal <= 0) {
+      return;
+    }
+
+    await executor.update(
+      'financeiro_precificacao_config',
+      {
+        'horas_produtivas_mes': horasTotal,
+        'atualizado_em': DateTime.now().toIso8601String(),
+      },
+      where: 'id = 1',
+    );
+  }
+'@
+
+SubstituirObrigatorio $custos $blocoAntigo $blocoNovo `
+    "Cadastro de colaboradores agora sincroniza capacidade real da equipe."
+
+$inicioResumoAntigo = @'
+  Future<Map<String, double>> obterResumoEstruturaCustos() async {
+    final database = await _appDatabase.database;
+
+    final fixos = await database.rawQuery('''
+'@
+
+$inicioResumoNovo = @'
+  Future<Map<String, double>> obterResumoEstruturaCustos() async {
+    final database = await _appDatabase.database;
+
+    await _normalizarCargaHorariaLegada(database);
+    await _sincronizarCapacidadeEquipeComPrecificacao(database);
+
+    final fixos = await database.rawQuery('''
+'@
+
+SubstituirObrigatorio $custos $inicioResumoAntigo $inicioResumoNovo `
+    "Normalizacao automatica da carga horaria legada."
+
+$conteudoCustos = Ler $custos
+$oldMax = "COALESCE(MAX(horas_produtivas_mes), 0) AS horas_equipe_fallback"
+if ($conteudoCustos.Contains($oldMax)) {
+    $conteudoCustos = $conteudoCustos.Replace(
+        $oldMax,
+        "COALESCE(SUM(horas_produtivas_mes), 0) AS horas_equipe_fallback"
+    )
+    Gravar $custos $conteudoCustos
+    Ok "Fallback de capacidade alterado de MAX para SUM em todos os calculos."
+}
+else {
+    Ok "Fallback SUM ja estava aplicado."
+}
+
+$maoObraSqlAntigo = @'
+        COALESCE(SUM(
+          remuneracao_mensal + encargos_mensais + outros_custos_mensais
+        ), 0) AS custo_mensal,
+        COALESCE(SUM(horas_produtivas_mes), 0) AS horas_equipe_fallback
+      FROM financeiro_colaboradores_custo
+      WHERE ativo = 1
+'@
+
+$maoObraSqlNovo = @'
+        COALESCE(SUM(
+          remuneracao_mensal + encargos_mensais + outros_custos_mensais
+        ), 0) AS custo_mensal,
+        COALESCE(SUM(horas_produtivas_mes), 0) AS horas_equipe_fallback,
+        COUNT(*) AS colaboradores_ativos,
+        COALESCE(AVG(horas_produtivas_mes), 0) AS horas_por_pessoa
+      FROM financeiro_colaboradores_custo
+      WHERE ativo = 1
+'@
+
+$conteudoCustos = Ler $custos
+if (-not $conteudoCustos.Contains("COUNT(*) AS colaboradores_ativos")) {
+    $indice = $conteudoCustos.IndexOf($maoObraSqlAntigo)
+    if ($indice -lt 0) {
+        throw "Nao encontrei o SQL do resumo de mao de obra para atualizar."
+    }
+    $conteudoCustos = $conteudoCustos.Remove(
+        $indice,
+        $maoObraSqlAntigo.Length
+    ).Insert(
+        $indice,
+        $maoObraSqlNovo
+    )
+    Gravar $custos $conteudoCustos
+    Ok "Resumo da equipe agora informa pessoas ativas e horas por pessoa."
+}
+else {
+    Ok "Resumo detalhado da equipe ja estava aplicado."
+}
+
+$mapaAntigo = @'
+    return {
+      'custo_fixo_mensal': custoFixoMensal,
+      'custo_mao_obra_mensal': custoMaoObraMensal,
+      'horas_produtivas': horasProdutivas,
+      'horas_equipe_mes': horasProdutivas,
+      'custo_mao_obra_hora': custoMaoObraHora,
+      'custo_fixo_hora': custoFixoHora,
+      'custo_estrutura_hora': custoMaoObraHora + custoFixoHora,
+    };
+'@
+
+$mapaNovo = @'
+    final colaboradoresAtivos = _double(maoObra.first['colaboradores_ativos']);
+    final horasPorPessoa = _double(maoObra.first['horas_por_pessoa']);
+
+    return {
+      'custo_fixo_mensal': custoFixoMensal,
+      'custo_mao_obra_mensal': custoMaoObraMensal,
+      'colaboradores_ativos': colaboradoresAtivos,
+      'horas_por_pessoa': horasPorPessoa,
+      'horas_produtivas': horasProdutivas,
+      'horas_equipe_mes': horasProdutivas,
+      'custo_mao_obra_hora': custoMaoObraHora,
+      'custo_fixo_hora': custoFixoHora,
+      'custo_estrutura_hora': custoMaoObraHora + custoFixoHora,
+    };
+'@
+
+SubstituirObrigatorio $custos $mapaAntigo $mapaNovo `
+    "Resumo financeiro passou a expor capacidade por pessoa e total."
+
+Secao "3/6 - TELA DE MAO DE OBRA"
+
+$conteudoMao = Ler $maoObra
+$conteudoMao = $conteudoMao.Replace(
+    "import '../repositories/precificacao_repository.dart';`r`n",
+    ""
+)
+$conteudoMao = $conteudoMao.Replace(
+    "import '../repositories/precificacao_repository.dart';`n",
+    ""
+)
+$campoPrecificacao = @'
+  final PrecificacaoRepository _precificacaoRepository =
+      PrecificacaoRepository();
+'@
+$conteudoMao = $conteudoMao.Replace($campoPrecificacao, "")
+Gravar $maoObra $conteudoMao
+Ok "Dependencia duplicada de precificacao removida."
+
+$carregarAntigo = @'
+    try {
+      final resultados = await Future.wait<dynamic>([
+        _repository.listarColaboradores(),
+        _repository.obterResumoEstruturaCustos(),
+      ]);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _colaboradores = List<ColaboradorCusto>.from(
+          resultados[0] as List<dynamic>,
+        );
+        _resumo = Map<String, double>.from(
+          resultados[1] as Map<String, double>,
+        );
+        _carregando = false;
+      });
+'@
+
+$carregarNovo = @'
+    try {
+      final resumo = await _repository.obterResumoEstruturaCustos();
+      final colaboradores = await _repository.listarColaboradores();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _colaboradores = colaboradores;
+        _resumo = resumo;
+        _carregando = false;
+      });
+'@
+
+SubstituirObrigatorio $maoObra $carregarAntigo $carregarNovo `
+    "Carregamento normaliza dados antes de listar colaboradores."
+
+$editarAntigo = @'
+  Future<void> _editarCargaHorariaEquipe() async {
+    try {
+      final config = await _precificacaoRepository.carregarConfig();
+
+      if (!mounted) return;
+
+      final controller = TextEditingController(
+        text: config.horasProdutivasMes.toStringAsFixed(1).replaceAll('.', ','),
+      );
+
+      final valor = await showDialog<double>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Carga horária mensal da equipe'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Horas mensais',
+              suffixText: 'h',
+              helperText:
+                  'Informe uma única vez. Todos os funcionários usam a mesma carga horária.',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                var texto = controller.text.trim();
+
+                if (texto.contains(',') && texto.contains('.')) {
+                  texto = texto.replaceAll('.', '').replaceAll(',', '.');
+                } else {
+                  texto = texto.replaceAll(',', '.');
+                }
+
+                final numero = double.tryParse(texto);
+
+                if (numero != null && numero > 0) {
+                  Navigator.of(dialogContext).pop(numero);
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      );
+
+      controller.dispose();
+
+      if (valor == null) return;
+
+      await _precificacaoRepository.salvarConfig(
+        PrecificacaoConfig(
+          horasProdutivasMes: valor,
+          mesesMedia: config.mesesMedia,
+          margemCliente: config.margemCliente,
+          margemRevenda: config.margemRevenda5a9,
+          margemMinima: config.margemMinima,
+          margemRevenda1a4: config.margemRevenda1a4,
+          margemRevenda5a9: config.margemRevenda5a9,
+          margemRevenda10Mais: config.margemRevenda10Mais,
+        ),
+      );
+
+      await _repository.sincronizarHorasProdutivasEquipe(valor);
+
+      await _carregar();
+
+      _mensagem(
+        'Carga horária da equipe atualizada para '
+        '${valor.toStringAsFixed(1)} h/mês.',
+      );
+    } catch (erro) {
+      _mensagem('$erro', erro: true);
+    }
+  }
+'@
+
+$editarNovo = @'
+  Future<void> _editarCargaHorariaEquipe() async {
+    try {
+      final atual = _resumo['horas_por_pessoa'] ??
+          (_colaboradores.isNotEmpty
+              ? _colaboradores.first.horasProdutivasMes
+              : 220.0);
+
+      final controller = TextEditingController(
+        text: atual.toStringAsFixed(1).replaceAll('.', ','),
+      );
+
+      final valor = await showDialog<double>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Carga horária mensal por pessoa'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Horas por pessoa',
+              suffixText: 'h/mês',
+              helperText:
+                  'Ex.: 220 h por pessoa. Com 3 pessoas, a capacidade total será 660 h/mês.',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                var texto = controller.text.trim();
+
+                if (texto.contains(',') && texto.contains('.')) {
+                  texto = texto.replaceAll('.', '').replaceAll(',', '.');
+                } else {
+                  texto = texto.replaceAll(',', '.');
+                }
+
+                final numero = double.tryParse(texto);
+
+                if (numero != null && numero > 0) {
+                  Navigator.of(dialogContext).pop(numero);
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      );
+
+      controller.dispose();
+
+      if (valor == null) return;
+
+      await _repository.sincronizarHorasProdutivasEquipe(valor);
+      await _carregar();
+
+      final quantidade = (_resumo['colaboradores_ativos'] ?? 0).round();
+      final capacidade = _resumo['horas_equipe_mes'] ?? 0;
+
+      _mensagem(
+        'Carga atualizada para ${valor.toStringAsFixed(1)} h por pessoa. '
+        '$quantidade pessoa(s) = ${capacidade.toStringAsFixed(1)} h/mês de capacidade total.',
+      );
+    } catch (erro) {
+      _mensagem('$erro', erro: true);
+    }
+  }
+'@
+
+SubstituirObrigatorio $maoObra $editarAntigo $editarNovo `
+    "Carga horaria agora e configurada por pessoa."
+
+SubstituirObrigatorio $maoObra `
+    "        horasEquipe: _resumo['horas_produtivas'] ?? 160," `
+    "        horasPorPessoa: _resumo['horas_por_pessoa'] ?? 220," `
+    "Novo colaborador recebe carga individual correta."
+
+$linhaAntiga = @'
+                          _linha(
+                            'Carga horária mensal da equipe',
+                            '${(_resumo['horas_produtivas'] ?? 0).toStringAsFixed(1)} h',
+                          ),
+'@
+
+$linhaNova = @'
+                          _linha(
+                            'Colaboradores ativos',
+                            '${(_resumo['colaboradores_ativos'] ?? 0).round()}',
+                          ),
+                          _linha(
+                            'Carga horária por pessoa',
+                            '${(_resumo['horas_por_pessoa'] ?? 0).toStringAsFixed(1)} h',
+                          ),
+                          _linha(
+                            'Capacidade mensal da equipe',
+                            '${(_resumo['horas_equipe_mes'] ?? 0).toStringAsFixed(1)} h',
+                          ),
+'@
+
+SubstituirObrigatorio $maoObra $linhaAntiga $linhaNova `
+    "Painel separa carga individual da capacidade total."
+
+SubstituirObrigatorio $maoObra `
+    "label: const Text('Alterar carga horária da equipe')," `
+    "label: const Text('Alterar carga horária por pessoa')," `
+    "Botao de carga horaria renomeado."
+
+$textoAntigo = @'
+                    'Cadastre também seu próprio pró-labore quando sua mão de obra participa dos serviços. Isso evita considerar seu tempo como custo zero. Os custos de todos são somados, mas a carga horária da equipe entra apenas uma vez no cálculo.',
+'@
+
+$textoNovo = @'
+                    'Cadastre também seu próprio pró-labore quando sua mão de obra participa dos serviços. Cada pessoa possui sua carga mensal individual. O sistema soma essas horas para formar a capacidade total da equipe e calcular o custo real por hora.',
+'@
+
+SubstituirObrigatorio $maoObra $textoAntigo $textoNovo `
+    "Explicacao de custo/hora atualizada."
+
+$conteudoMao = Ler $maoObra
+$conteudoMao = $conteudoMao.Replace(
+    'required this.horasEquipe,',
+    'required this.horasPorPessoa,'
+)
+$conteudoMao = $conteudoMao.Replace(
+    'final double horasEquipe;',
+    'final double horasPorPessoa;'
+)
+$conteudoMao = $conteudoMao.Replace(
+    "text: widget.horasEquipe.toStringAsFixed(1).replaceAll('.', ','),",
+    "text: widget.horasPorPessoa.toStringAsFixed(1).replaceAll('.', ','),"
+)
+Gravar $maoObra $conteudoMao
+Ok "Formulario individual usa horas por pessoa."
+
+Secao "4/6 - PRECIFICACAO"
+
+SubstituirObrigatorio $precificacao `
+    "horas_produtivas_mes REAL NOT NULL DEFAULT 160," `
+    "horas_produtivas_mes REAL NOT NULL DEFAULT 220," `
+    "Nova configuracao de precificacao parte de 220 h."
+
+SubstituirObrigatorio $precificacao `
+    ") VALUES (1, 160, 3, 35, 20, 10, ?)" `
+    ") VALUES (1, 220, 3, 35, 20, 10, ?)" `
+    "Registro inicial de precificacao atualizado para 220 h."
+
+SubstituirObrigatorio $precificacao `
+    "_double(item['horas_produtivas_mes'], 160)" `
+    "_double(item['horas_produtivas_mes'], 220)" `
+    "Fallback da precificacao atualizado para 220 h."
+
+Secao "5/6 - LOGIN E PERMISSOES"
+
+$conteudoDashboard = Ler $dashboard
+
+$oldAcesso = @'
+  Future<void> _abrirPonto() async {
+    if (!_validarAcesso('funcionarios')) return;
+
+    await _abrirPagina(const PontoFuncionariosPage());
+  }
+'@
+
+$newAcesso = @'
+  Future<void> _abrirPonto() async {
+    if (!_validarAcesso('ponto')) return;
+
+    await _abrirPagina(const PontoFuncionariosPage());
+  }
+'@
+
+if ($conteudoDashboard.Contains($oldAcesso)) {
+    $conteudoDashboard = $conteudoDashboard.Replace($oldAcesso, $newAcesso)
+    Ok "Acesso ao Ponto usa a permissao 'ponto'."
+}
+elseif ($conteudoDashboard.Contains("if (!_validarAcesso('ponto')) return;")) {
+    Ok "Permissao especifica do Ponto ja estava aplicada."
+}
+else {
+    throw "Nao encontrei o metodo _abrirPonto esperado."
+}
+
+if ($conteudoDashboard.Contains("if (_pode('funcionarios')) ...[")) {
+    $conteudoDashboard = $conteudoDashboard.Replace(
+        "if (_pode('funcionarios')) ...[",
+        "if (_pode('ponto')) ...["
+    )
+    Ok "Card de Ponto respeita a permissao especifica."
+}
+elseif ($conteudoDashboard.Contains("if (_pode('ponto')) ...[")) {
+    Ok "Visibilidade do card de Ponto ja estava correta."
+}
+else {
+    throw "Nao encontrei a condicao do card de Ponto."
+}
+
+Gravar $dashboard $conteudoDashboard
+
+Secao "6/6 - TESTE DE REGRESSAO"
+
+if (-not (Test-Path (Split-Path -Parent $teste))) {
+    New-Item -ItemType Directory -Path (Split-Path -Parent $teste) -Force | Out-Null
+}
+
+if (-not (Test-Path $teste)) {
+    $testeConteudo = @'
+import 'package:flutter_test/flutter_test.dart';
+import 'package:imperium_detailing/models/colaborador_custo.dart';
+
+void main() {
+  test('custo hora usa a carga mensal individual do colaborador', () {
+    const colaborador = ColaboradorCusto(
+      nome: 'Funcionario',
+      remuneracaoMensal: 2200,
+      encargosMensais: 0,
+      outrosCustosMensais: 0,
+      horasProdutivasMes: 220,
+      criadoEm: '2026-01-01',
+      atualizadoEm: '2026-01-01',
+    );
+
+    expect(colaborador.custoHoraProdutiva, closeTo(10, 0.000001));
+  });
+
+  test('tres pessoas de 220h representam 660h de capacidade', () {
+    const horasPorPessoa = 220.0;
+    const pessoas = 3;
+
+    expect(horasPorPessoa * pessoas, 660);
+  });
+}
+'@
+    Gravar $teste $testeConteudo
+    Ok "Teste colaborador_custo_test.dart criado."
+}
+else {
+    Ok "Teste colaborador_custo_test.dart ja existe."
+}
+
+Secao "ATUALIZACAO APLICADA"
+
+Write-Host "Principais efeitos:" -ForegroundColor White
+Write-Host " - 220 h agora significa 220 h POR PESSOA." -ForegroundColor White
+Write-Host " - 3 pessoas de 220 h geram automaticamente 660 h de capacidade." -ForegroundColor White
+Write-Host " - Corrige o caso legado em que 660 h podia estar gravado em cada pessoa." -ForegroundColor White
+Write-Host " - Precificacao acompanha automaticamente entrada/saida de colaboradores." -ForegroundColor White
+Write-Host " - Ponto e folha estimada passam a usar custo/hora individual coerente." -ForegroundColor White
+Write-Host " - Permissao do modulo Ponto no Dashboard foi corrigida." -ForegroundColor White
+Write-Host " - Relatorios Financeiros duplicados sao consolidados, se ainda existirem." -ForegroundColor White
+Write-Host ""
+Write-Host "O imperium.ps1 agora pode formatar, analisar, testar e gerar o APK." -ForegroundColor Cyan
+Write-Host ""

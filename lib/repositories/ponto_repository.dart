@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:sqflite/sqflite.dart';
 
+import '../config/imperium_regras_negocio.dart';
 import '../database/app_database.dart';
 
 class PontoRepository {
@@ -1317,7 +1318,8 @@ class PontoRepository {
     );
 
     final salarioBase = _double(colaborador.first['remuneracao_mensal']);
-    final horasBaseMensal = _double(colaborador.first['horas_produtivas_mes']);
+    // ponto-base-mensal-220-v2
+    const horasBaseMensal = ImperiumRegrasNegocio.horasMensaisPadrao;
 
     final valorHora = horasBaseMensal > 0 ? salarioBase / horasBaseMensal : 0.0;
 

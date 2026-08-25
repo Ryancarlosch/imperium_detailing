@@ -60,8 +60,7 @@ class FinanceiroDashboardData {
   double get recebidoLiquido => recebido - taxas;
   double get resultadoCaixa => dreCaixa.resultadoGerencial;
 
-  double get progressoReceita =>
-      metaReceita <= 0 ? 0 : recebido / metaReceita;
+  double get progressoReceita => metaReceita <= 0 ? 0 : recebido / metaReceita;
 
   double get progressoDespesa {
     final referencia = despesaPrevista > despesaRealizada
@@ -78,15 +77,11 @@ class FinanceiroDashboardData {
 class FinanceiroDashboardRepository {
   final DreRepository _dreRepository = DreRepository();
   final CustosRepository _custosRepository = CustosRepository();
-  final MetaFinanceiraRepository _metaRepository =
-      MetaFinanceiraRepository();
-  final FinanceiroRepository _financeiroRepository =
-      FinanceiroRepository();
+  final MetaFinanceiraRepository _metaRepository = MetaFinanceiraRepository();
+  final FinanceiroRepository _financeiroRepository = FinanceiroRepository();
   final AppDatabase _appDatabase = AppDatabase.instance;
 
-  Future<FinanceiroDashboardData> carregar({
-    required DateTime mes,
-  }) async {
+  Future<FinanceiroDashboardData> carregar({required DateTime mes}) async {
     final inicio = DateTime(mes.year, mes.month, 1);
     final fim = DateTime(mes.year, mes.month + 1, 0, 23, 59, 59);
 
@@ -107,10 +102,7 @@ class FinanceiroDashboardRepository {
       _metaRepository.obterResumoMes(mes.year, mes.month),
       _custosRepository.listarResultadoOrdens(),
       _carregarEvolucao(mes),
-      _financeiroRepository.obterPrevistoRealizado(
-        inicio: inicio,
-        fim: fim,
-      ),
+      _financeiroRepository.obterPrevistoRealizado(inicio: inicio, fim: fim),
     ]);
 
     final contasReceber = Map<String, double>.from(
@@ -132,19 +124,18 @@ class FinanceiroDashboardRepository {
       resultados[8] as Map<String, double>,
     );
 
-    final filtradas = ordens.where((item) {
-      final data = DateTime.tryParse(
-        (item['data_finalizacao'] ?? '').toString(),
-      );
-      return data != null &&
-          data.year == mes.year &&
-          data.month == mes.month;
-    }).toList()
-      ..sort(
-        (a, b) => _double(b['resultado_os']).compareTo(
-          _double(a['resultado_os']),
-        ),
-      );
+    final filtradas =
+        ordens.where((item) {
+          final data = DateTime.tryParse(
+            (item['data_finalizacao'] ?? '').toString(),
+          );
+          return data != null &&
+              data.year == mes.year &&
+              data.month == mes.month;
+        }).toList()..sort(
+          (a, b) =>
+              _double(b['resultado_os']).compareTo(_double(a['resultado_os'])),
+        );
 
     return FinanceiroDashboardData(
       inicio: inicio,
@@ -160,26 +151,19 @@ class FinanceiroDashboardRepository {
       metaReceita: metas['Receita'] ?? 0,
       metaDespesa: metas['Despesa'] ?? 0,
       metaResultado: metas['Resultado'] ?? 0,
-      receitaPrevista:
-          previstoRealizado['entrada_prevista'] ?? 0,
-      receitaRealizada:
-          previstoRealizado['entrada_realizada'] ?? 0,
-      despesaPrevista:
-          previstoRealizado['saida_prevista'] ?? 0,
-      despesaRealizada:
-          previstoRealizado['saida_realizada'] ?? 0,
+      receitaPrevista: previstoRealizado['entrada_prevista'] ?? 0,
+      receitaRealizada: previstoRealizado['entrada_realizada'] ?? 0,
+      despesaPrevista: previstoRealizado['saida_prevista'] ?? 0,
+      despesaRealizada: previstoRealizado['saida_realizada'] ?? 0,
       topResultadosOs: filtradas.take(5).toList(),
-      evolucao: List<Map<String, dynamic>>.from(
-        resultados[7] as List<dynamic>,
-      ),
+      evolucao: List<Map<String, dynamic>>.from(resultados[7] as List<dynamic>),
     );
   }
 
   Future<Map<String, double>> _resumoContasReceber() async {
     final database = await _appDatabase.database;
 
-    final resultado = await database.rawQuery(
-      '''
+    final resultado = await database.rawQuery('''
       WITH resumo AS (
         SELECT
           os.id,
@@ -239,8 +223,7 @@ class FinanceiroDashboardRepository {
           END
         ), 0) AS vencido
       FROM calculado
-      ''',
-    );
+      ''');
 
     return {
       'a_receber': _double(resultado.first['a_receber']),
@@ -309,19 +292,8 @@ class FinanceiroDashboardRepository {
     final itens = <Map<String, dynamic>>[];
 
     for (var deslocamento = 5; deslocamento >= 0; deslocamento--) {
-      final mes = DateTime(
-        mesFinal.year,
-        mesFinal.month - deslocamento,
-        1,
-      );
-      final fim = DateTime(
-        mes.year,
-        mes.month + 1,
-        0,
-        23,
-        59,
-        59,
-      );
+      final mes = DateTime(mesFinal.year, mesFinal.month - deslocamento, 1);
+      final fim = DateTime(mes.year, mes.month + 1, 0, 23, 59, 59);
 
       final resultados = await Future.wait<dynamic>([
         _dreRepository.calcular(
@@ -329,11 +301,7 @@ class FinanceiroDashboardRepository {
           fim: fim,
           regime: DreRegime.competencia,
         ),
-        _dreRepository.calcular(
-          inicio: mes,
-          fim: fim,
-          regime: DreRegime.caixa,
-        ),
+        _dreRepository.calcular(inicio: mes, fim: fim, regime: DreRegime.caixa),
         _resumoPagamentosPeriodo(mes, fim),
       ]);
 
@@ -369,8 +337,7 @@ class FinanceiroDashboardRepository {
   Future<Map<String, double>> saldosContas() async {
     final database = await _appDatabase.database;
 
-    final resultado = await database.rawQuery(
-      '''
+    final resultado = await database.rawQuery('''
       SELECT
         c.id,
         c.nome,
@@ -390,13 +357,11 @@ class FinanceiroDashboardRepository {
       WHERE c.ativo = 1
       GROUP BY c.id, c.nome, c.saldo_inicial
       ORDER BY c.nome COLLATE NOCASE ASC
-      ''',
-    );
+      ''');
 
     return {
       for (final item in resultado)
-        (item['nome'] ?? '').toString():
-            _double(item['saldo']),
+        (item['nome'] ?? '').toString(): _double(item['saldo']),
     };
   }
 

@@ -199,6 +199,81 @@ class _ExtratoContaPageState extends State<ExtratoContaPage> {
     }
   }
 
+  // conciliacao-remover-ui-v1
+  Future<void> _removerConciliacao(Map<String, dynamic> item) async {
+    final contaId = widget.conta.id;
+    final conciliacaoId = int.tryParse((item['id'] ?? '').toString());
+    if (contaId == null || conciliacaoId == null) return;
+
+    final movimentoAjusteId = int.tryParse(
+      (item['movimento_ajuste_id'] ?? '').toString(),
+    );
+    final temAjuste = movimentoAjusteId != null;
+
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remover conciliação?'),
+        content: Text(
+          temAjuste
+              ? 'Esta conciliação criou um ajuste de saldo. Ao remover, '
+                    'o Imperium também removerá esse ajuste financeiro e '
+                    'recalculará o saldo da conta automaticamente.\n\n'
+                    'Deseja realmente continuar?'
+              : 'Esta conciliação será removida do histórico. '
+                    'Nenhum lançamento bancário comum será apagado.\n\n'
+                    'Deseja realmente continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            icon: const Icon(Icons.delete_outline_rounded),
+            label: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmou != true || !mounted) return;
+
+    try {
+      await _repository.removerConciliacaoConta(
+        conciliacaoId: conciliacaoId,
+        contaId: contaId,
+      );
+
+      if (!mounted) return;
+      await _carregar();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              temAjuste
+                  ? 'Conciliação e ajuste removidos. Saldo recalculado.'
+                  : 'Conciliação removida com sucesso.',
+            ),
+          ),
+        );
+    } catch (erro) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('$erro'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+    }
+  }
+
   Widget _historicoConciliacoes() {
     return Card(
       margin: EdgeInsets.zero,
@@ -243,6 +318,11 @@ class _ExtratoContaPageState extends State<ExtratoContaPage> {
                   ? 'Saldo real ${_moeda.format(saldoInformado)} • '
                         'Diferença ${_moeda.format(diferenca)}'
                   : 'Saldo conferido ${_moeda.format(saldoInformado)}',
+            ),
+            trailing: IconButton(
+              tooltip: 'Remover conciliação',
+              onPressed: () => _removerConciliacao(item),
+              icon: const Icon(Icons.delete_outline_rounded),
             ),
           );
         }).toList(),
@@ -616,6 +696,42 @@ class _ConciliacaoContaSheetState extends State<_ConciliacaoContaSheet> {
     final id = widget.conta.id;
     final informado = _saldoInformado;
     if (id == null || informado == null) return;
+
+    // conciliacao-confirmacao-final-v1
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          criarAjuste
+              ? 'Criar ajuste e concluir conciliação?'
+              : 'Confirmar conciliação bancária?',
+        ),
+        content: Text(
+          criarAjuste
+              ? 'Você deseja realmente criar o ajuste e concluir esta '
+                    'conciliação?\n\nAntes de continuar, verifique '
+                    'completamente o extrato bancário, os lançamentos e '
+                    'o saldo da conta. O ajuste alterará o saldo financeiro.'
+              : 'Você deseja realmente registrar esta conciliação?\n\n'
+                    'Antes de continuar, verifique completamente a '
+                    'conciliação bancária, os lançamentos e o saldo da conta.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Voltar e revisar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              criarAjuste ? 'Sim, criar e conciliar' : 'Sim, confirmar',
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmou != true || !mounted) return;
 
     setState(() => _salvando = true);
 

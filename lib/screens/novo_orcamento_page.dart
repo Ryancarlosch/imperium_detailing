@@ -165,16 +165,13 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
         }
 
         try {
-          mapeamento = await _repository.buscarMapeamentoCatalogo(
-            orcamentoId,
-          );
+          mapeamento = await _repository.buscarMapeamentoCatalogo(orcamentoId);
         } catch (_) {
           mapeamento = const <int, int>{};
         }
 
         try {
-          final snapshot =
-              await _fidelidadeRepository.buscarDescontoDocumento(
+          final snapshot = await _fidelidadeRepository.buscarDescontoDocumento(
             documentoTipo: 'ORCAMENTO',
             documentoId: orcamentoId,
           );
@@ -223,9 +220,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
             .where((item) => item.nome.trim().toLowerCase() == nome)
             .toList();
 
-        idsCatalogo.add(
-          candidatos.length == 1 ? candidatos.first.id : null,
-        );
+        idsCatalogo.add(candidatos.length == 1 ? candidatos.first.id : null);
       }
 
       FidelidadeBeneficio? beneficio;
@@ -597,8 +592,9 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
                                   const Divider(height: 1),
                               itemBuilder: (context, indice) {
                                 final servico = filtrados[indice];
-                                final precificacao =
-                                    _precificacaoDoServico(servico);
+                                final precificacao = _precificacaoDoServico(
+                                  servico,
+                                );
                                 final parceiroNaoElegivel =
                                     _perfilEhParceiro &&
                                     (precificacao == null ||
@@ -606,9 +602,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
 
                                 return ListTile(
                                   leading: const CircleAvatar(
-                                    child: Icon(
-                                      Icons.design_services_outlined,
-                                    ),
+                                    child: Icon(Icons.design_services_outlined),
                                   ),
                                   title: Text(servico.nome),
                                   subtitle: Text(
@@ -694,10 +688,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Adicionar serviço',
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -712,13 +703,9 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
                 onTap: () => Navigator.pop(bottomContext, 'catalogo'),
               ),
               ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.edit_outlined),
-                ),
+                leading: const CircleAvatar(child: Icon(Icons.edit_outlined)),
                 title: const Text('Digitar serviço manualmente'),
-                subtitle: const Text(
-                  'Nome e valor ficam totalmente livres.',
-                ),
+                subtitle: const Text('Nome e valor ficam totalmente livres.'),
                 onTap: () => Navigator.pop(bottomContext, 'manual'),
               ),
             ],
@@ -766,14 +753,11 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
 
       // Ao trocar/corrigir o cliente, um benefício aplicado anteriormente
       // não pode permanecer ligado ao cliente anterior.
-      if (!aplicarAutomatico &&
-          _origemDesconto.startsWith('fidelidade')) {
+      if (!aplicarAutomatico && _origemDesconto.startsWith('fidelidade')) {
         _definirDesconto(0, origem: 'nenhum');
       }
 
-      await _atualizarSugestaoFidelidade(
-        aplicarAutomatico: aplicarAutomatico,
-      );
+      await _atualizarSugestaoFidelidade(aplicarAutomatico: aplicarAutomatico);
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -813,8 +797,9 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
       }
 
       final servicoId = _servicoCatalogoIds[indice];
-      final precificacao =
-          servicoId == null ? null : _precificacaoPorId[servicoId];
+      final precificacao = servicoId == null
+          ? null
+          : _precificacaoPorId[servicoId];
 
       if (precificacao == null) {
         continue;
@@ -829,8 +814,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
 
       subtotalElegivel += subtotalItem;
 
-      final folgaUnitaria =
-          item.valorUnitario - precificacao.precoMinimoSeguro;
+      final folgaUnitaria = item.valorUnitario - precificacao.precoMinimoSeguro;
       final folgaItem = folgaUnitaria > 0
           ? folgaUnitaria * item.quantidade
           : 0.0;
@@ -847,8 +831,8 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
       limiteGlobalSeguro = limiteGlobalSeguro == null
           ? limiteDoItem
           : (limiteDoItem < limiteGlobalSeguro
-              ? limiteDoItem
-              : limiteGlobalSeguro);
+                ? limiteDoItem
+                : limiteGlobalSeguro);
     }
 
     if (subtotalElegivel <= 0 ||
@@ -873,9 +857,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
       _descontoFidelidadeSugerido = sugerido;
     });
 
-    if (!aplicarAutomatico ||
-        !_fidelidadeConfig.automatica ||
-        sugerido <= 0) {
+    if (!aplicarAutomatico || !_fidelidadeConfig.automatica || sugerido <= 0) {
       return;
     }
 
@@ -905,8 +887,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
     if (mounted) {
       setState(() {
         _origemDesconto = valor <= 0 ? 'nenhum' : origem;
-        _percentualFidelidadeAplicado =
-            valor <= 0 ? 0 : percentual;
+        _percentualFidelidadeAplicado = valor <= 0 ? 0 : percentual;
       });
     }
   }
@@ -930,9 +911,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
       return;
     }
 
-    if (_desconto > 0 &&
-        !_origemDesconto.startsWith('fidelidade') &&
-        mounted) {
+    if (_desconto > 0 && !_origemDesconto.startsWith('fidelidade') && mounted) {
       final confirmar = await showDialog<bool>(
         context: context,
         builder: (dialogContext) {
@@ -998,10 +977,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
     }
 
     try {
-      await _fidelidadeRepository.salvarClienteDesde(
-        clienteId,
-        escolhida,
-      );
+      await _fidelidadeRepository.salvarClienteDesde(clienteId, escolhida);
 
       await _atualizarFidelidadeCliente(
         aplicarAutomatico: _fidelidadeConfig.automatica,
@@ -1237,9 +1213,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
       );
 
       final mapeamentoCatalogo = <int, int?>{
-        for (var indice = 0;
-            indice < _servicoCatalogoIds.length;
-            indice++)
+        for (var indice = 0; indice < _servicoCatalogoIds.length; indice++)
           if (_servicoCatalogoIds[indice] != null)
             indice: _servicoCatalogoIds[indice],
       };
@@ -1429,8 +1403,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
     final config = _fidelidadeConfig;
     final beneficio = _beneficioFidelidade;
     final clienteDesde = beneficio?.clienteDesde;
-    final parceiroBloqueado =
-        _perfilEhParceiro && !config.permitirParceiro;
+    final parceiroBloqueado = _perfilEhParceiro && !config.permitirParceiro;
 
     String modoTexto() {
       switch (config.modo) {
@@ -1449,10 +1422,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _LinhaResumoComercial(
-            titulo: 'Funcionamento',
-            valor: modoTexto(),
-          ),
+          _LinhaResumoComercial(titulo: 'Funcionamento', valor: modoTexto()),
           const SizedBox(height: 8),
           if (!config.ativa)
             Text(
@@ -1463,9 +1433,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
               ),
             )
           else if (_clienteId == null)
-            const Text(
-              'Selecione um cliente para verificar a fidelidade.',
-            )
+            const Text('Selecione um cliente para verificar a fidelidade.')
           else ...[
             _LinhaResumoComercial(
               titulo: 'Cliente desde',
@@ -1477,9 +1445,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
               const SizedBox(height: 5),
               _LinhaResumoComercial(
                 titulo: 'Tempo de relacionamento',
-                valor: _formatarTempoCliente(
-                  beneficio.mesesRelacionamento,
-                ),
+                valor: _formatarTempoCliente(beneficio.mesesRelacionamento),
               ),
               const SizedBox(height: 5),
               _LinhaResumoComercial(
@@ -1505,9 +1471,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
                 child: const Text(
                   'A fidelidade está configurada para não acumular com '
@@ -1518,9 +1482,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
               const SizedBox(height: 10),
               _LinhaResumoComercial(
                 titulo: 'Desconto seguro calculado',
-                valor: _formatoMoeda.format(
-                  _descontoFidelidadeSugerido,
-                ),
+                valor: _formatoMoeda.format(_descontoFidelidadeSugerido),
                 destaque: true,
               ),
               const SizedBox(height: 4),
@@ -1538,8 +1500,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
               if (config.sugerir && _descontoFidelidadeSugerido > 0) ...[
                 const SizedBox(height: 10),
                 FilledButton.icon(
-                  onPressed:
-                      _salvando ? null : _aplicarFidelidadeSugerida,
+                  onPressed: _salvando ? null : _aplicarFidelidadeSugerida,
                   icon: const Icon(Icons.redeem_outlined),
                   label: const Text('Aplicar benefício de fidelidade'),
                 ),
@@ -1550,7 +1511,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
                   _origemDesconto == 'fidelidade_automatica'
                       ? 'Benefício aplicado automaticamente.'
                       : _desconto > 0 &&
-                              !_origemDesconto.startsWith('fidelidade')
+                            !_origemDesconto.startsWith('fidelidade')
                       ? 'Há um desconto manual neste orçamento; o Imperium '
                             'não o sobrescreveu automaticamente.'
                       : 'O benefício automático será aplicado quando houver '
@@ -1630,9 +1591,7 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
                             items: _clientes.map((cliente) {
                               return DropdownMenuItem<int>(
                                 value: _converterInt(cliente['id']),
-                                child: Text(
-                                  (cliente['nome'] ?? '').toString(),
-                                ),
+                                child: Text((cliente['nome'] ?? '').toString()),
                               );
                             }).toList(),
                             onChanged: _salvando
@@ -1712,15 +1671,12 @@ class _NovoOrcamentoPageState extends State<NovoOrcamentoPage> {
                       titulo: 'Serviços',
                       icone: Icons.design_services_outlined,
                       acao: TextButton.icon(
-                        onPressed:
-                            _salvando ? null : _abrirAdicionarServico,
+                        onPressed: _salvando ? null : _abrirAdicionarServico,
                         icon: const Icon(Icons.add),
                         label: const Text('Adicionar'),
                       ),
                       child: _itens.isEmpty
-                          ? _EstadoSemItens(
-                              aoAdicionar: _abrirAdicionarServico,
-                            )
+                          ? _EstadoSemItens(aoAdicionar: _abrirAdicionarServico)
                           : Column(
                               children: List.generate(_itens.length, (indice) {
                                 final item = _itens[indice];

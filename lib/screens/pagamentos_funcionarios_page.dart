@@ -65,8 +65,9 @@ class _PagamentosFuncionariosPageState
 
       setState(() {
         _colaboradores = resultados[0] as List<ColaboradorCusto>;
-        _pagamentos =
-            List<Map<String, dynamic>>.from(resultados[1] as List<dynamic>);
+        _pagamentos = List<Map<String, dynamic>>.from(
+          resultados[1] as List<dynamic>,
+        );
         _carregando = false;
       });
     } catch (erro) {
@@ -95,9 +96,9 @@ class _PagamentosFuncionariosPageState
   }
 
   double get _totalMes => _pagamentos.fold<double>(
-        0,
-        (total, item) => total + _double(item['valor']),
-      );
+    0,
+    (total, item) => total + _double(item['valor']),
+  );
 
   Map<int, List<Map<String, dynamic>>> get _porColaborador {
     final resultado = <int, List<Map<String, dynamic>>>{};
@@ -357,14 +358,16 @@ class _PagamentosFuncionariosPageState
                                   ),
                                   subtitle: Text(
                                     [
-                                      _dataTexto(
-                                        item['data_pagamento'] ?? item['data'],
-                                      ),
-                                      (item['conta_nome'] ?? '').toString(),
-                                      (item['forma_pagamento'] ?? '').toString(),
-                                    ].where((e) => e.trim().isNotEmpty).join(
-                                      ' • ',
-                                    ),
+                                          _dataTexto(
+                                            item['data_pagamento'] ??
+                                                item['data'],
+                                          ),
+                                          (item['conta_nome'] ?? '').toString(),
+                                          (item['forma_pagamento'] ?? '')
+                                              .toString(),
+                                        ]
+                                        .where((e) => e.trim().isNotEmpty)
+                                        .join(' • '),
                                   ),
                                   trailing: PopupMenuButton<String>(
                                     onSelected: (valor) {
@@ -432,7 +435,8 @@ class _PagamentoFuncionarioSheetState
   @override
   void initState() {
     super.initState();
-    _colaborador = widget.colaboradorInicial ??
+    _colaborador =
+        widget.colaboradorInicial ??
         (widget.colaboradores.length == 1 ? widget.colaboradores.first : null);
     _carregarContas();
   }
@@ -462,10 +466,7 @@ class _PagamentoFuncionarioSheetState
   }
 
   double? _valorNumerico() {
-    var texto = _valor.text
-        .trim()
-        .replaceAll('R\$', '')
-        .replaceAll(' ', '');
+    var texto = _valor.text.trim().replaceAll('R\$', '').replaceAll(' ', '');
 
     if (texto.contains(',') && texto.contains('.')) {
       texto = texto.replaceAll('.', '').replaceAll(',', '.');
@@ -515,10 +516,7 @@ class _PagamentoFuncionarioSheetState
       if (!mounted) return;
       setState(() => _salvando = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$erro'),
-          backgroundColor: Colors.red.shade700,
-        ),
+        SnackBar(content: Text('$erro'), backgroundColor: Colors.red.shade700),
       );
     }
   }
@@ -557,10 +555,7 @@ class _PagamentoFuncionarioSheetState
                     .map(
                       (item) => DropdownMenuItem(
                         value: item,
-                        child: Text(
-                          item.nome,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text(item.nome, overflow: TextOverflow.ellipsis),
                       ),
                     )
                     .toList(),
@@ -600,9 +595,7 @@ class _PagamentoFuncionarioSheetState
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: 'Conta de saída *',
-                  prefixIcon: const Icon(
-                    Icons.account_balance_wallet_outlined,
-                  ),
+                  prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
                   border: const OutlineInputBorder(),
                   helperText: _carregandoContas
                       ? 'Carregando contas...'
@@ -656,9 +649,7 @@ class _PagamentoFuncionarioSheetState
               OutlinedButton.icon(
                 onPressed: _salvando ? null : _selecionarData,
                 icon: const Icon(Icons.calendar_today_outlined),
-                label: Text(
-                  'Data: ${DateFormat('dd/MM/yyyy').format(_data)}',
-                ),
+                label: Text('Data: ${DateFormat('dd/MM/yyyy').format(_data)}'),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -682,9 +673,7 @@ class _PagamentoFuncionarioSheetState
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check_rounded),
-                label: Text(
-                  _salvando ? 'Salvando...' : 'Confirmar pagamento',
-                ),
+                label: Text(_salvando ? 'Salvando...' : 'Confirmar pagamento'),
               ),
             ],
           ),

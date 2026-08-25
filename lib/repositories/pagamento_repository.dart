@@ -591,8 +591,7 @@ class PagamentoRepository {
       taxaPercentual: cobranca.taxaPercentual,
     );
 
-    final contaRecebimentoId =
-        cobranca.contaFinanceiraId ?? contaFinanceiraId;
+    final contaRecebimentoId = cobranca.contaFinanceiraId ?? contaFinanceiraId;
 
     var ordem = await _buscarOrdemComTransacao(transaction, ordemServicoId);
     final statusOrdem = (ordem['status'] ?? '').toString().trim();
@@ -1058,30 +1057,26 @@ class PagamentoRepository {
             .clamp(0, double.infinity)
             .toDouble();
 
-        await transaction.insert(
-          'ordem_servico_pagamentos',
-          {
-            'ordem_servico_id': ordemServicoId,
-            'status': 'Pendente',
-            'valor': valorBaseParcela,
-            'forma_pagamento': '',
-            'data_pagamento': null,
-            'parcela_numero': parcelaNumero,
-            'total_parcelas': totalParcelas,
-            'vencimento': vencimento,
-            'comprovante_caminho': null,
-            'observacoes':
-                'Parcela reaberta após correção do pagamento #$pagamentoId.',
-            'taxa_percentual': null,
-            'taxa_operacao': 0,
-            'valor_liquido': 0,
-            'estornado_em': null,
-            'motivo_estorno': '',
-            'criado_em': agora,
-            'atualizado_em': agora,
-          },
-          conflictAlgorithm: ConflictAlgorithm.abort,
-        );
+        await transaction.insert('ordem_servico_pagamentos', {
+          'ordem_servico_id': ordemServicoId,
+          'status': 'Pendente',
+          'valor': valorBaseParcela,
+          'forma_pagamento': '',
+          'data_pagamento': null,
+          'parcela_numero': parcelaNumero,
+          'total_parcelas': totalParcelas,
+          'vencimento': vencimento,
+          'comprovante_caminho': null,
+          'observacoes':
+              'Parcela reaberta após correção do pagamento #$pagamentoId.',
+          'taxa_percentual': null,
+          'taxa_operacao': 0,
+          'valor_liquido': 0,
+          'estornado_em': null,
+          'motivo_estorno': '',
+          'criado_em': agora,
+          'atualizado_em': agora,
+        }, conflictAlgorithm: ConflictAlgorithm.abort);
       }
 
       await _recalcularOrdem(transaction, ordemServicoId);
@@ -1094,10 +1089,7 @@ class PagamentoRepository {
   }) {
     // Mantém o comportamento histórico de estornarPagamento:
     // entrada real + saída real da devolução.
-    return estornarPagamento(
-      pagamentoId: pagamentoId,
-      motivo: motivo,
-    );
+    return estornarPagamento(pagamentoId: pagamentoId, motivo: motivo);
   }
 
   Future<void> estornarPagamento({

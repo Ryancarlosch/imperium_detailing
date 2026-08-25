@@ -185,7 +185,10 @@ class _ResumoCustos extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _linha('Custos fixos', moeda.format(custoFixo)),
-            _linha('Mão de obra mensal de referência', moeda.format(custoMaoObra)),
+            _linha(
+              'Mão de obra mensal de referência',
+              moeda.format(custoMaoObra),
+            ),
             _linha(
               'Horas produtivas',
               '${horasProdutivas.toStringAsFixed(1)} h',

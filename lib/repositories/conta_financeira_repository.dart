@@ -301,6 +301,77 @@ class ContaFinanceiraRepository {
     return resultado.map((item) => Map<String, dynamic>.from(item)).toList();
   }
 
+  // conciliacao-remocao-segura-v1
+  Future<void> removerConciliacaoConta({
+    required int conciliacaoId,
+    required int contaId,
+  }) async {
+    final database = await AppDatabase.instance.database;
+
+    await database.transaction<void>((transaction) async {
+      await _garantirTabelaConciliacoes(transaction);
+
+      final conciliacoes = await transaction.query(
+        'financeiro_conciliacoes_conta',
+        columns: ['id', 'conta_id', 'status', 'movimento_ajuste_id'],
+        where: 'id = ? AND conta_id = ?',
+        whereArgs: [conciliacaoId, contaId],
+        limit: 1,
+      );
+
+      if (conciliacoes.isEmpty) {
+        throw StateError('Conciliação bancária não encontrada.');
+      }
+
+      final movimentoAjusteId = _int(conciliacoes.first['movimento_ajuste_id']);
+
+      if (movimentoAjusteId != null) {
+        final movimentos = await transaction.query(
+          'movimentos_financeiros',
+          columns: ['id', 'conta_id', 'origem', 'descricao'],
+          where: 'id = ?',
+          whereArgs: [movimentoAjusteId],
+          limit: 1,
+        );
+
+        if (movimentos.isNotEmpty) {
+          final movimento = movimentos.first;
+          final movimentoContaId = _int(movimento['conta_id']);
+          final origem = (movimento['origem'] ?? '').toString().trim();
+
+          if (movimentoContaId != contaId || origem != 'Conciliação de conta') {
+            throw StateError(
+              'O ajuste vinculado não foi removido por segurança, pois '
+              'não corresponde à conciliação desta conta.',
+            );
+          }
+
+          final removidosMovimento = await transaction.delete(
+            'movimentos_financeiros',
+            where: 'id = ? AND conta_id = ?',
+            whereArgs: [movimentoAjusteId, contaId],
+          );
+
+          if (removidosMovimento != 1) {
+            throw StateError(
+              'Não foi possível remover o ajuste financeiro da conciliação.',
+            );
+          }
+        }
+      }
+
+      final removidosConciliacao = await transaction.delete(
+        'financeiro_conciliacoes_conta',
+        where: 'id = ? AND conta_id = ?',
+        whereArgs: [conciliacaoId, contaId],
+      );
+
+      if (removidosConciliacao != 1) {
+        throw StateError('Não foi possível remover a conciliação bancária.');
+      }
+    });
+  }
+
   Future<int> registrarConciliacaoConta({
     required int contaId,
     required DateTime data,

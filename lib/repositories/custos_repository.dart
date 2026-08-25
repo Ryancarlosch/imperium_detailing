@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../config/imperium_regras_negocio.dart';
 import '../database/app_database.dart';
 import '../models/colaborador_custo.dart';
 import '../models/custo_fixo.dart';
@@ -165,38 +166,13 @@ class CustosRepository {
       WHERE ativo = 1
     ''');
 
-    double horasEquipeConfiguradas = 0.0;
-
-    final tabelaPrecificacao = await database.rawQuery('''
-      SELECT name
-      FROM sqlite_master
-      WHERE type = 'table'
-        AND name = 'financeiro_precificacao_config'
-      LIMIT 1
-      ''');
-
-    if (tabelaPrecificacao.isNotEmpty) {
-      final configHoras = await database.rawQuery('''
-        SELECT COALESCE(horas_produtivas_mes, 0) AS horas_produtivas_mes
-        FROM financeiro_precificacao_config
-        WHERE id = 1
-        LIMIT 1
-        ''');
-
-      if (configHoras.isNotEmpty) {
-        horasEquipeConfiguradas = _double(
-          configHoras.first['horas_produtivas_mes'],
-        );
-      }
-    }
-
     final custoFixoMensal = _double(fixos.first['total']);
     final custoMaoObraMensal = _double(maoObra.first['custo_mensal']);
-    final horasFallback = _double(maoObra.first['horas_equipe_fallback']);
 
-    final horasProdutivas = horasEquipeConfiguradas > 0
-        ? horasEquipeConfiguradas
-        : horasFallback;
+    // custos-base-220-v2
+    // 220h representam a capacidade mensal atual da empresa.
+    // Nao multiplicar 220 pela quantidade de colaboradores.
+    const horasProdutivas = ImperiumRegrasNegocio.horasMensaisPadrao;
 
     final custoMaoObraHora = horasProdutivas > 0
         ? custoMaoObraMensal / horasProdutivas

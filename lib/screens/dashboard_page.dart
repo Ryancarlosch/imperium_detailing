@@ -13,6 +13,10 @@ import 'cliente_detalhes_page.dart';
 import 'clientes_page.dart';
 import 'configuracoes_page.dart';
 import 'estoque_page.dart';
+import 'dre_page.dart';
+import 'financeiro_dashboard_page.dart';
+import 'fluxo_caixa_page.dart';
+import 'movimentacoes_financeiras_page.dart';
 import 'financeiro_page.dart';
 import 'fotos_page.dart';
 import 'orcamentos_page.dart';
@@ -49,7 +53,7 @@ class _DashboardPageState extends State<DashboardPage> {
   String? _mensagemErro;
   String _nomeEmpresa = 'Sua empresa';
   bool _assistenteExibido = false;
-  bool _saldosVisiveis = true;
+  bool _saldosVisiveis = false; // dashboard-privacidade-v2
 
   DashboardPeriodo _periodoSelecionado = DashboardPeriodo.mesAtual;
   DateTimeRange? _periodoPersonalizado;
@@ -245,6 +249,24 @@ class _DashboardPageState extends State<DashboardPage> {
     await _abrirPagina(const FinanceiroPage());
   }
 
+  // dashboard-menu-metodos-v2
+  Future<void> _abrirFinanceiroDireto(Widget pagina) async {
+    if (!_validarAcesso('financeiro')) return;
+    await _abrirPagina(pagina);
+  }
+
+  Future<void> _abrirConfiguracoesMenu() async {
+    if (!_validarAcesso('configuracoes')) return;
+    await _abrirPagina(const ConfiguracoesPage());
+  }
+
+  Future<void> _menuAbrir(Future<void> Function() acao) async {
+    Navigator.of(context).pop();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
+    await acao();
+  }
+
   Future<void> _abrirClientes() async {
     if (!_validarAcesso('clientes')) return;
     await _abrirPagina(const ClientesPage());
@@ -403,11 +425,65 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0E0E0E),
+      drawer: _DashboardMenuV2(
+        empresa: _nomeEmpresa,
+        podeFinanceiro: _pode('financeiro'),
+        podeClientes: _pode('clientes'),
+        podeAgenda: _pode('agenda'),
+        podeOrdens: _pode('ordens_servico'),
+        podeEstoque: _pode('estoque'),
+        podePrecificacao: _pode('precificacao'),
+        podeOrcamentos: _pode('orcamentos'),
+        podePonto: _pode('funcionarios'),
+        podeConfiguracoes: _pode('configuracoes'),
+        onInicio: () => Navigator.of(context).pop(),
+        onAgenda: () => _menuAbrir(_abrirAgenda),
+        onClientes: () => _menuAbrir(_abrirClientes),
+        onVeiculos: () => _menuAbrir(_abrirVeiculos),
+        onOrdens: () => _menuAbrir(() => _abrirOrdens('Todos')),
+        onOrcamentos: () => _menuAbrir(_abrirOrcamentos),
+        onEstoque: () => _menuAbrir(_abrirEstoque),
+        onServicos: () => _menuAbrir(_abrirServicos),
+        onFotos: () => _menuAbrir(_abrirFotos),
+        onPonto: () => _menuAbrir(_abrirPonto),
+        onReceita: () => _menuAbrir(
+          () => _abrirFinanceiroDireto(const FinanceiroDashboardPage()),
+        ),
+        onFluxoCaixa: () =>
+            _menuAbrir(() => _abrirFinanceiroDireto(const FluxoCaixaPage())),
+        onMovimentacoes: () => _menuAbrir(
+          () => _abrirFinanceiroDireto(const MovimentacoesFinanceirasPage()),
+        ),
+        onDre: () => _menuAbrir(() => _abrirFinanceiroDireto(const DrePage())),
+        onFinanceiro: () => _menuAbrir(_abrirFinanceiro),
+        onConfiguracoes: () => _menuAbrir(_abrirConfiguracoesMenu),
+        onLogout: widget.onLogout,
+      ),
       appBar: AppBar(
         backgroundColor: const Color(0xFF141414),
         elevation: 0,
-        title: const Text('Dashboard'),
+        leading: Builder(
+          builder: (menuContext) => IconButton(
+            tooltip: 'Abrir menu',
+            onPressed: () => Scaffold.of(menuContext).openDrawer(),
+            icon: const Icon(Icons.menu_rounded),
+          ),
+        ), // dashboard-hamburguer-explicito-v2
+        title: const Text('Início'),
         actions: [
+          IconButton(
+            tooltip: _saldosVisiveis
+                ? 'Ocultar informações financeiras'
+                : 'Mostrar informações financeiras',
+            onPressed: () {
+              setState(() => _saldosVisiveis = !_saldosVisiveis);
+            },
+            icon: Icon(
+              _saldosVisiveis
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+            ),
+          ), // dashboard-olho-topo-v2
           IconButton(
             tooltip: 'Pendências operacionais',
             onPressed: () => _abrirPagina(const PendenciasOperacionaisPage()),
@@ -461,19 +537,20 @@ class _DashboardPageState extends State<DashboardPage> {
                 onAbrirOrdensEmAndamento: () => _abrirOrdens('Em andamento'),
               ),
               const SizedBox(height: 14),
-              _SaldosContasCard(
-                contas: dados.saldosContas,
-                saldoTotal: dados.saldoTotalContas,
-                formatoMoeda: _formatoMoeda,
-                valoresVisiveis: _saldosVisiveis,
-                onAlternarVisibilidade: () {
-                  setState(() {
-                    _saldosVisiveis = !_saldosVisiveis;
-                  });
-                },
-                onAbrirFinanceiro: _abrirFinanceiro,
-              ),
-              if (_financeiroMes != null) ...[
+              if (_saldosVisiveis) // dashboard-graficos-ocultos-v2
+                _SaldosContasCard(
+                  contas: dados.saldosContas,
+                  saldoTotal: dados.saldoTotalContas,
+                  formatoMoeda: _formatoMoeda,
+                  valoresVisiveis: _saldosVisiveis,
+                  onAlternarVisibilidade: () {
+                    setState(() {
+                      _saldosVisiveis = !_saldosVisiveis;
+                    });
+                  },
+                  onAbrirFinanceiro: _abrirFinanceiro,
+                ),
+              if (_saldosVisiveis && _financeiroMes != null) ...[
                 const SizedBox(height: 14),
                 _VisaoFinanceiraMesCard(
                   dados: _financeiroMes!,
@@ -483,19 +560,21 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ],
               const SizedBox(height: 14),
-              _GraficoEvolucaoCard(
-                pontos: _montarPontosGrafico(dados),
-                formatoMoeda: _formatoMoeda,
-                periodoSelecionado: _periodoSelecionado,
-                valoresVisiveis: _saldosVisiveis,
-              ),
+              if (_saldosVisiveis)
+                _GraficoEvolucaoCard(
+                  pontos: _montarPontosGrafico(dados),
+                  formatoMoeda: _formatoMoeda,
+                  periodoSelecionado: _periodoSelecionado,
+                  valoresVisiveis: _saldosVisiveis,
+                ),
               const SizedBox(height: 14),
-              _GraficoFinanceiroCard(
-                dados: dados,
-                formatoMoeda: _formatoMoeda,
-                periodoSelecionado: _periodoSelecionado,
-                valoresVisiveis: _saldosVisiveis,
-              ),
+              if (_saldosVisiveis)
+                _GraficoFinanceiroCard(
+                  dados: dados,
+                  formatoMoeda: _formatoMoeda,
+                  periodoSelecionado: _periodoSelecionado,
+                  valoresVisiveis: _saldosVisiveis,
+                ),
               const SizedBox(height: 14),
               _RankingsSection(
                 topServicos: dados.topServicos,
@@ -536,6 +615,153 @@ class _DashboardPageState extends State<DashboardPage> {
                   _abrirPagina(const ConfiguracoesPage());
                 },
               ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardMenuV2 extends StatelessWidget {
+  const _DashboardMenuV2({
+    required this.empresa,
+    required this.podeFinanceiro,
+    required this.podeClientes,
+    required this.podeAgenda,
+    required this.podeOrdens,
+    required this.podeEstoque,
+    required this.podePrecificacao,
+    required this.podeOrcamentos,
+    required this.podePonto,
+    required this.podeConfiguracoes,
+    required this.onInicio,
+    required this.onAgenda,
+    required this.onClientes,
+    required this.onVeiculos,
+    required this.onOrdens,
+    required this.onOrcamentos,
+    required this.onEstoque,
+    required this.onServicos,
+    required this.onFotos,
+    required this.onPonto,
+    required this.onReceita,
+    required this.onFluxoCaixa,
+    required this.onMovimentacoes,
+    required this.onDre,
+    required this.onFinanceiro,
+    required this.onConfiguracoes,
+    this.onLogout,
+  });
+
+  final String empresa;
+  final bool podeFinanceiro, podeClientes, podeAgenda, podeOrdens;
+  final bool podeEstoque, podePrecificacao, podeOrcamentos;
+  final bool podePonto, podeConfiguracoes;
+
+  final VoidCallback onInicio, onAgenda, onClientes, onVeiculos;
+  final VoidCallback onOrdens, onOrcamentos, onEstoque, onServicos;
+  final VoidCallback onFotos, onPonto, onReceita, onFluxoCaixa;
+  final VoidCallback onMovimentacoes, onDre, onFinanceiro;
+  final VoidCallback onConfiguracoes;
+  final VoidCallback? onLogout;
+
+  Widget _secao(String texto) => Padding(
+    padding: const EdgeInsets.fromLTRB(18, 18, 18, 5),
+    child: Text(
+      texto.toUpperCase(),
+      style: const TextStyle(
+        color: Colors.white38,
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.1,
+      ),
+    ),
+  );
+
+  Widget _item(IconData icone, String titulo, VoidCallback onTap) => ListTile(
+    dense: true,
+    leading: Icon(icone, color: const Color(0xFFD6A84B)),
+    title: Text(titulo),
+    onTap: onTap,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: const Color(0xFF141414),
+      child: SafeArea(
+        child: ListView(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Imperium Manager',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(empresa, style: const TextStyle(color: Colors.white60)),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            _item(Icons.home_outlined, 'Início', onInicio),
+            _secao('Operação'),
+            if (podeAgenda)
+              _item(Icons.calendar_month_outlined, 'Agenda', onAgenda),
+            if (podeClientes) ...[
+              _item(Icons.people_outline, 'Clientes', onClientes),
+              _item(Icons.directions_car_outlined, 'Veículos', onVeiculos),
+            ],
+            if (podeOrdens) ...[
+              _item(Icons.car_repair_outlined, 'Ordens de serviço', onOrdens),
+              _item(Icons.photo_library_outlined, 'Fotos', onFotos),
+            ],
+            if (podeOrcamentos)
+              _item(Icons.request_quote_outlined, 'Orçamentos', onOrcamentos),
+            if (podeEstoque)
+              _item(Icons.inventory_2_outlined, 'Estoque', onEstoque),
+            if (podePrecificacao)
+              _item(
+                Icons.design_services_outlined,
+                'Serviços e precificação',
+                onServicos,
+              ),
+            if (podePonto)
+              _item(Icons.fingerprint_rounded, 'Ponto / Funcionários', onPonto),
+            if (podeFinanceiro) ...[
+              _secao('Financeiro'),
+              _item(
+                Icons.trending_up_rounded,
+                'Receita / visão financeira',
+                onReceita,
+              ),
+              _item(
+                Icons.waterfall_chart_rounded,
+                'Fluxo de caixa',
+                onFluxoCaixa,
+              ),
+              _item(
+                Icons.swap_vert_circle_outlined,
+                'Movimentações',
+                onMovimentacoes,
+              ),
+              _item(Icons.assessment_outlined, 'DRE', onDre),
+              _item(
+                Icons.account_balance_wallet_outlined,
+                'Financeiro completo',
+                onFinanceiro,
+              ),
+            ],
+            if (podeConfiguracoes) ...[
+              _secao('Sistema'),
+              _item(Icons.settings_outlined, 'Configurações', onConfiguracoes),
+            ],
+            if (onLogout != null) ...[
+              const Divider(),
+              _item(Icons.logout_rounded, 'Sair', onLogout!),
             ],
           ],
         ),

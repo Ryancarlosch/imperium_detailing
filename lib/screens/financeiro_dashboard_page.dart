@@ -11,8 +11,7 @@ class FinanceiroDashboardPage extends StatefulWidget {
       _FinanceiroDashboardPageState();
 }
 
-class _FinanceiroDashboardPageState
-    extends State<FinanceiroDashboardPage> {
+class _FinanceiroDashboardPageState extends State<FinanceiroDashboardPage> {
   final FinanceiroDashboardRepository _repository =
       FinanceiroDashboardRepository();
 
@@ -21,11 +20,7 @@ class _FinanceiroDashboardPageState
     symbol: 'R\$',
   );
 
-  DateTime _mes = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-    1,
-  );
+  DateTime _mes = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
   bool _carregando = true;
   bool _saldosVisiveis = true;
@@ -82,13 +77,8 @@ class _FinanceiroDashboardPageState
     _carregar();
   }
 
-  double _necessarioPorDia({
-    required double meta,
-    required double faturado,
-  }) {
-    final falta = (meta - faturado)
-        .clamp(0, double.infinity)
-        .toDouble();
+  double _necessarioPorDia({required double meta, required double faturado}) {
+    final falta = (meta - faturado).clamp(0, double.infinity).toDouble();
 
     if (falta <= 0) return 0;
 
@@ -99,12 +89,12 @@ class _FinanceiroDashboardPageState
     if (selecionado.isBefore(mesAtual)) return 0;
 
     final dias = selecionado == mesAtual
-        ? DateTime(_mes.year, _mes.month + 1, 0)
-                .difference(
-                  DateTime(hoje.year, hoje.month, hoje.day),
-                )
-                .inDays +
-            1
+        ? DateTime(
+                _mes.year,
+                _mes.month + 1,
+                0,
+              ).difference(DateTime(hoje.year, hoje.month, hoje.day)).inDays +
+              1
         : DateTime(_mes.year, _mes.month + 1, 0).day;
 
     return dias <= 0 ? 0 : falta / dias;
@@ -117,10 +107,7 @@ class _FinanceiroDashboardPageState
   @override
   Widget build(BuildContext context) {
     final dados = _dados;
-    final titulo = DateFormat(
-      'MMMM yyyy',
-      'pt_BR',
-    ).format(_mes);
+    final titulo = DateFormat('MMMM yyyy', 'pt_BR').format(_mes);
     final tituloMes = titulo.isEmpty
         ? ''
         : titulo[0].toUpperCase() + titulo.substring(1);
@@ -139,236 +126,193 @@ class _FinanceiroDashboardPageState
       body: _carregando
           ? const Center(child: CircularProgressIndicator())
           : dados == null
-              ? const Center(child: Text('Sem dados para exibir.'))
-              : RefreshIndicator(
-                  onRefresh: _carregar,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      16,
-                      16,
-                      16,
-                      32,
-                    ),
-                    children: [
-                      _SeletorMes(
-                        titulo: tituloMes,
-                        onAnterior: () => _alterarMes(-1),
-                        onProximo: () => _alterarMes(1),
+          ? const Center(child: Text('Sem dados para exibir.'))
+          : RefreshIndicator(
+              onRefresh: _carregar,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
+                  _SeletorMes(
+                    titulo: tituloMes,
+                    onAnterior: () => _alterarMes(-1),
+                    onProximo: () => _alterarMes(1),
+                  ),
+                  const SizedBox(height: 12),
+                  _SaldosCard(
+                    saldos: _saldosContas,
+                    valor: _valorOcultavel,
+                    visiveis: _saldosVisiveis,
+                    onAlternar: () {
+                      setState(() => _saldosVisiveis = !_saldosVisiveis);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _ExplicacaoFaturamento(
+                    recebido: dados.recebido,
+                    vendas: dados.vendasFinalizadas,
+                    moeda: _moeda,
+                  ),
+                  const SizedBox(height: 12),
+                  _ResultadoPrincipal(
+                    resultado: dados.dreCompetencia.resultadoGerencial,
+                    margem: dados.dreCompetencia.margemPercentual,
+                    moeda: _moeda,
+                  ),
+                  const SizedBox(height: 12),
+                  _GradeKpis(
+                    itens: [
+                      _KpiDados(
+                        'Faturamento recebido',
+                        _moeda.format(dados.recebido),
+                        Icons.payments_outlined,
                       ),
-                      const SizedBox(height: 12),
-                      _SaldosCard(
-                        saldos: _saldosContas,
-                        valor: _valorOcultavel,
-                        visiveis: _saldosVisiveis,
-                        onAlternar: () {
-                          setState(
-                            () => _saldosVisiveis =
-                                !_saldosVisiveis,
-                          );
-                        },
+                      _KpiDados(
+                        'Vendas finalizadas',
+                        _moeda.format(dados.vendasFinalizadas),
+                        Icons.receipt_long_outlined,
                       ),
-                      const SizedBox(height: 12),
-                      _ExplicacaoFaturamento(
-                        recebido: dados.recebido,
-                        vendas: dados.vendasFinalizadas,
-                        moeda: _moeda,
+                      _KpiDados(
+                        'Recebido líquido',
+                        _moeda.format(dados.recebidoLiquido),
+                        Icons.savings_outlined,
                       ),
-                      const SizedBox(height: 12),
-                      _ResultadoPrincipal(
-                        resultado:
-                            dados.dreCompetencia.resultadoGerencial,
-                        margem:
-                            dados.dreCompetencia.margemPercentual,
-                        moeda: _moeda,
+                      _KpiDados(
+                        'A receber total',
+                        _moeda.format(dados.aReceber),
+                        Icons.schedule_rounded,
                       ),
-                      const SizedBox(height: 12),
-                      _GradeKpis(
-                        itens: [
-                          _KpiDados(
-                            'Faturamento recebido',
-                            _moeda.format(dados.recebido),
-                            Icons.payments_outlined,
-                          ),
-                          _KpiDados(
-                            'Vendas finalizadas',
-                            _moeda.format(
-                              dados.vendasFinalizadas,
-                            ),
-                            Icons.receipt_long_outlined,
-                          ),
-                          _KpiDados(
-                            'Recebido líquido',
-                            _moeda.format(
-                              dados.recebidoLiquido,
-                            ),
-                            Icons.savings_outlined,
-                          ),
-                          _KpiDados(
-                            'A receber total',
-                            _moeda.format(dados.aReceber),
-                            Icons.schedule_rounded,
-                          ),
-                          _KpiDados(
-                            'Vencido agora',
-                            _moeda.format(dados.vencido),
-                            Icons.warning_amber_rounded,
-                            alerta: dados.vencido > 0,
-                          ),
-                          _KpiDados(
-                            'Taxas de cartão',
-                            _moeda.format(dados.taxas),
-                            Icons.credit_card_off_outlined,
-                          ),
-                          _KpiDados(
-                            'Resultado de caixa',
-                            _moeda.format(dados.resultadoCaixa),
-                            Icons.account_balance_wallet_outlined,
-                          ),
-                          _KpiDados(
-                            'Receitas realizadas',
-                            _moeda.format(dados.receitaRealizada),
-                            Icons.south_west_rounded,
-                          ),
-                        ],
+                      _KpiDados(
+                        'Vencido agora',
+                        _moeda.format(dados.vencido),
+                        Icons.warning_amber_rounded,
+                        alerta: dados.vencido > 0,
                       ),
-                      const SizedBox(height: 22),
-                      const _TituloSecao(
-                        'Metas do mês',
-                        'Faturamento usa o dinheiro efetivamente recebido.',
+                      _KpiDados(
+                        'Taxas de cartão',
+                        _moeda.format(dados.taxas),
+                        Icons.credit_card_off_outlined,
                       ),
-                      const SizedBox(height: 10),
-                      _MetaCard(
-                        titulo: 'Meta de faturamento',
-                        atual: dados.recebido,
-                        meta: dados.metaReceita,
-                        moeda: _moeda,
-                        extras: [
-                          _LinhaMeta(
-                            'Vendas finalizadas',
-                            dados.vendasFinalizadas,
-                          ),
-                          _LinhaMeta(
-                            'Falta receber para meta',
-                            (dados.metaReceita - dados.recebido)
-                                .clamp(0, double.infinity)
-                                .toDouble(),
-                          ),
-                          if (dados.metaReceita > dados.recebido)
-                            _LinhaMeta(
-                              'Necessário por dia',
-                              _necessarioPorDia(
-                                meta: dados.metaReceita,
-                                faturado: dados.recebido,
-                              ),
-                            ),
-                        ],
+                      _KpiDados(
+                        'Resultado de caixa',
+                        _moeda.format(dados.resultadoCaixa),
+                        Icons.account_balance_wallet_outlined,
                       ),
-                      _MetaCard(
-                        titulo: 'Limite de despesas',
-                        atual: dados.despesaPrevista >
-                                dados.despesaRealizada
-                            ? dados.despesaPrevista
-                            : dados.despesaRealizada,
-                        meta: dados.metaDespesa,
-                        moeda: _moeda,
-                        extras: [
-                          _LinhaMeta(
-                            'Previsto',
-                            dados.despesaPrevista,
-                          ),
-                          _LinhaMeta(
-                            'Pago',
-                            dados.despesaRealizada,
-                          ),
-                        ],
+                      _KpiDados(
+                        'Receitas realizadas',
+                        _moeda.format(dados.receitaRealizada),
+                        Icons.south_west_rounded,
                       ),
-                      _MetaCard(
-                        titulo: 'Meta de resultado',
-                        atual: dados
-                            .dreCompetencia.resultadoGerencial,
-                        meta: dados.metaResultado,
-                        moeda: _moeda,
-                        extras: [
-                          _LinhaMeta(
-                            'Resultado de caixa',
-                            dados.resultadoCaixa,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 22),
-                      const _TituloSecao(
-                        'Estrutura de custos',
-                        'Valores de referência usados na gestão e precificação.',
-                      ),
-                      const SizedBox(height: 10),
-                      _GradeKpis(
-                        itens: [
-                          _KpiDados(
-                            'Custos fixos',
-                            _moeda.format(
-                              dados.custoFixoMensal,
-                            ),
-                            Icons.home_work_outlined,
-                          ),
-                          _KpiDados(
-                            'Mão de obra',
-                            _moeda.format(
-                              dados.custoMaoObraMensal,
-                            ),
-                            Icons.engineering_outlined,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 22),
-                      const _TituloSecao(
-                        'Últimos 6 meses',
-                        'Recebimentos e vendas são mostrados separadamente.',
-                      ),
-                      const SizedBox(height: 10),
-                      ...dados.evolucao.map(
-                        (item) => _EvolucaoCard(
-                          item: item,
-                          moeda: _moeda,
-                        ),
-                      ),
-                      if (dados.topResultadosOs.isNotEmpty) ...[
-                        const SizedBox(height: 22),
-                        const _TituloSecao(
-                          'OS com maior resultado',
-                          'Ranking comercial das OS finalizadas no mês.',
-                        ),
-                        const SizedBox(height: 10),
-                        ...dados.topResultadosOs.map(
-                          (item) => Card(
-                            margin:
-                                const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.car_repair_outlined,
-                                color: Color(0xFFD6A84B),
-                              ),
-                              title: Text(
-                                (item['numero'] ?? 'OS').toString(),
-                              ),
-                              subtitle: Text(
-                                (item['cliente_nome'] ?? '')
-                                    .toString(),
-                              ),
-                              trailing: Text(
-                                _moeda.format(
-                                  _double(item['resultado_os']),
-                                ),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
-                ),
+                  const SizedBox(height: 22),
+                  const _TituloSecao(
+                    'Metas do mês',
+                    'Faturamento usa o dinheiro efetivamente recebido.',
+                  ),
+                  const SizedBox(height: 10),
+                  _MetaCard(
+                    titulo: 'Meta de faturamento',
+                    atual: dados.recebido,
+                    meta: dados.metaReceita,
+                    moeda: _moeda,
+                    extras: [
+                      _LinhaMeta('Vendas finalizadas', dados.vendasFinalizadas),
+                      _LinhaMeta(
+                        'Falta receber para meta',
+                        (dados.metaReceita - dados.recebido)
+                            .clamp(0, double.infinity)
+                            .toDouble(),
+                      ),
+                      if (dados.metaReceita > dados.recebido)
+                        _LinhaMeta(
+                          'Necessário por dia',
+                          _necessarioPorDia(
+                            meta: dados.metaReceita,
+                            faturado: dados.recebido,
+                          ),
+                        ),
+                    ],
+                  ),
+                  _MetaCard(
+                    titulo: 'Limite de despesas',
+                    atual: dados.despesaPrevista > dados.despesaRealizada
+                        ? dados.despesaPrevista
+                        : dados.despesaRealizada,
+                    meta: dados.metaDespesa,
+                    moeda: _moeda,
+                    extras: [
+                      _LinhaMeta('Previsto', dados.despesaPrevista),
+                      _LinhaMeta('Pago', dados.despesaRealizada),
+                    ],
+                  ),
+                  _MetaCard(
+                    titulo: 'Meta de resultado',
+                    atual: dados.dreCompetencia.resultadoGerencial,
+                    meta: dados.metaResultado,
+                    moeda: _moeda,
+                    extras: [
+                      _LinhaMeta('Resultado de caixa', dados.resultadoCaixa),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  const _TituloSecao(
+                    'Estrutura de custos',
+                    'Valores de referência usados na gestão e precificação.',
+                  ),
+                  const SizedBox(height: 10),
+                  _GradeKpis(
+                    itens: [
+                      _KpiDados(
+                        'Custos fixos',
+                        _moeda.format(dados.custoFixoMensal),
+                        Icons.home_work_outlined,
+                      ),
+                      _KpiDados(
+                        'Mão de obra',
+                        _moeda.format(dados.custoMaoObraMensal),
+                        Icons.engineering_outlined,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  const _TituloSecao(
+                    'Últimos 6 meses',
+                    'Recebimentos e vendas são mostrados separadamente.',
+                  ),
+                  const SizedBox(height: 10),
+                  ...dados.evolucao.map(
+                    (item) => _EvolucaoCard(item: item, moeda: _moeda),
+                  ),
+                  if (dados.topResultadosOs.isNotEmpty) ...[
+                    const SizedBox(height: 22),
+                    const _TituloSecao(
+                      'OS com maior resultado',
+                      'Ranking comercial das OS finalizadas no mês.',
+                    ),
+                    const SizedBox(height: 10),
+                    ...dados.topResultadosOs.map(
+                      (item) => Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.car_repair_outlined,
+                            color: Color(0xFFD6A84B),
+                          ),
+                          title: Text((item['numero'] ?? 'OS').toString()),
+                          subtitle: Text(
+                            (item['cliente_nome'] ?? '').toString(),
+                          ),
+                          trailing: Text(
+                            _moeda.format(_double(item['resultado_os'])),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 }
@@ -397,10 +341,7 @@ class _SeletorMes extends StatelessWidget {
           child: Text(
             titulo,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
         IconButton(
@@ -428,10 +369,7 @@ class _SaldosCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = saldos.values.fold<double>(
-      0,
-      (soma, item) => soma + item,
-    );
+    final total = saldos.values.fold<double>(0, (soma, item) => soma + item);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -450,16 +388,11 @@ class _SaldosCard extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'Saldo disponível agora',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                 ),
                 IconButton(
-                  tooltip: visiveis
-                      ? 'Ocultar valores'
-                      : 'Mostrar valores',
+                  tooltip: visiveis ? 'Ocultar valores' : 'Mostrar valores',
                   onPressed: onAlternar,
                   icon: Icon(
                     visiveis
@@ -471,10 +404,7 @@ class _SaldosCard extends StatelessWidget {
             ),
             Text(
               valor(total),
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-              ),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             if (saldos.isEmpty)
@@ -503,9 +433,7 @@ class _SaldosCard extends StatelessWidget {
                       ),
                       Text(
                         valor(item.value),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ],
                   ),
@@ -514,10 +442,7 @@ class _SaldosCard extends StatelessWidget {
             const SizedBox(height: 7),
             const Text(
               'Saldo inicial + entradas realizadas − saídas realizadas.',
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 11.5,
-              ),
+              style: TextStyle(color: Colors.white54, fontSize: 11.5),
             ),
           ],
         ),
@@ -546,10 +471,7 @@ class _ExplicacaoFaturamento extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.info_outline_rounded,
-              color: Color(0xFFD6A84B),
-            ),
+            const Icon(Icons.info_outline_rounded, color: Color(0xFFD6A84B)),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -557,10 +479,7 @@ class _ExplicacaoFaturamento extends StatelessWidget {
                 'Vendas finalizadas: ${moeda.format(vendas)}. '
                 'Em vendas parceladas, cada parcela entra no faturamento '
                 'do mês em que for efetivamente paga.',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ),
           ],
@@ -593,9 +512,7 @@ class _ResultadoPrincipal extends StatelessWidget {
               resultado >= 0
                   ? Icons.trending_up_rounded
                   : Icons.trending_down_rounded,
-              color: resultado >= 0
-                  ? Colors.greenAccent
-                  : Colors.orangeAccent,
+              color: resultado >= 0 ? Colors.greenAccent : Colors.orangeAccent,
               size: 30,
             ),
             const SizedBox(width: 12),
@@ -633,12 +550,7 @@ class _ResultadoPrincipal extends StatelessWidget {
 }
 
 class _KpiDados {
-  const _KpiDados(
-    this.titulo,
-    this.valor,
-    this.icone, {
-    this.alerta = false,
-  });
+  const _KpiDados(this.titulo, this.valor, this.icone, {this.alerta = false});
 
   final String titulo;
   final String valor;
@@ -658,8 +570,7 @@ class _GradeKpis extends StatelessWidget {
         final colunas = constraints.maxWidth < 520 ? 2 : 3;
         final espaco = 10.0;
         final largura =
-            (constraints.maxWidth - espaco * (colunas - 1)) /
-                colunas;
+            (constraints.maxWidth - espaco * (colunas - 1)) / colunas;
 
         return Wrap(
           spacing: espaco,
@@ -684,8 +595,7 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cor =
-        item.alerta ? Colors.orangeAccent : const Color(0xFFD6A84B);
+    final cor = item.alerta ? Colors.orangeAccent : const Color(0xFFD6A84B);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -708,10 +618,7 @@ class _KpiCard extends StatelessWidget {
               item.titulo,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 11,
-              ),
+              style: const TextStyle(color: Colors.white60, fontSize: 11),
             ),
           ],
         ),
@@ -733,16 +640,10 @@ class _TituloSecao extends StatelessWidget {
       children: [
         Text(
           titulo,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 3),
-        Text(
-          subtitulo,
-          style: const TextStyle(color: Colors.white60),
-        ),
+        Text(subtitulo, style: const TextStyle(color: Colors.white60)),
       ],
     );
   }
@@ -783,10 +684,7 @@ class _MetaCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              titulo,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -800,9 +698,7 @@ class _MetaCard extends StatelessWidget {
                 if (meta > 0)
                   Text(
                     '${(progresso * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
               ],
             ),
@@ -824,16 +720,12 @@ class _MetaCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           linha.titulo,
-                          style: const TextStyle(
-                            color: Colors.white60,
-                          ),
+                          style: const TextStyle(color: Colors.white60),
                         ),
                       ),
                       Text(
                         moeda.format(linha.valor),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
@@ -844,10 +736,7 @@ class _MetaCard extends StatelessWidget {
               const SizedBox(height: 8),
               const Text(
                 'Nenhuma meta cadastrada para este mês.',
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 11.5,
-                ),
+                style: TextStyle(color: Colors.white54, fontSize: 11.5),
               ),
             ],
           ],
@@ -858,10 +747,7 @@ class _MetaCard extends StatelessWidget {
 }
 
 class _EvolucaoCard extends StatelessWidget {
-  const _EvolucaoCard({
-    required this.item,
-    required this.moeda,
-  });
+  const _EvolucaoCard({required this.item, required this.moeda});
 
   final Map<String, dynamic> item;
   final NumberFormat moeda;
@@ -871,9 +757,7 @@ class _EvolucaoCard extends StatelessWidget {
     final ano = _int(item['ano']) ?? DateTime.now().year;
     final mes = _int(item['mes']) ?? DateTime.now().month;
     final data = DateTime(ano, mes, 1);
-    final label = DateFormat('MMM/yy', 'pt_BR')
-        .format(data)
-        .toUpperCase();
+    final label = DateFormat('MMM/yy', 'pt_BR').format(data).toUpperCase();
 
     final recebido = _double(item['recebido'] ?? item['receita']);
     final vendas = _double(item['vendas']);
@@ -888,10 +772,7 @@ class _EvolucaoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 16,
@@ -906,10 +787,7 @@ class _EvolucaoCard extends StatelessWidget {
             Text(
               'Resultado de caixa ${moeda.format(caixa)} • '
               'Gerencial ${moeda.format(gerencial)}',
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 11.5,
-              ),
+              style: const TextStyle(color: Colors.white60, fontSize: 11.5),
             ),
           ],
         ),
@@ -926,8 +804,6 @@ int? _int(dynamic valor) {
 
 double _double(dynamic valor) {
   if (valor is num) return valor.toDouble();
-  return double.tryParse(
-        valor?.toString().trim().replaceAll(',', '.') ?? '',
-      ) ??
+  return double.tryParse(valor?.toString().trim().replaceAll(',', '.') ?? '') ??
       0;
 }

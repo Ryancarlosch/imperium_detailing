@@ -49,8 +49,7 @@ class FluxoCaixaRepository {
       0,
       (total, item) => total + _double(item['total']),
     );
-    final entradasPrevistas =
-        entradasPrevistasMovimentos + entradasPrevistasOs;
+    final entradasPrevistas = entradasPrevistasMovimentos + entradasPrevistasOs;
     final saidasPrevistas = _double(mapa['saidas_previstas']);
     final saldoFinal = saldoInicial + entradasRealizadas - saidasRealizadas;
     final saldoProjetado = saldoFinal + entradasPrevistas - saidasPrevistas;
@@ -140,14 +139,15 @@ class FluxoCaixaRepository {
       item['entradas_previstas'] =
           _double(item['entradas_previstas']) + _double(recebimento['total']);
       item['entradas_previstas_os'] =
-          _double(item['entradas_previstas_os']) + _double(recebimento['total']);
+          _double(item['entradas_previstas_os']) +
+          _double(recebimento['total']);
     }
 
     final itens = porData.values.toList()
       ..sort(
-        (a, b) => (a['data_ref'] ?? '')
-            .toString()
-            .compareTo((b['data_ref'] ?? '').toString()),
+        (a, b) => (a['data_ref'] ?? '').toString().compareTo(
+          (b['data_ref'] ?? '').toString(),
+        ),
       );
 
     var saldoRealizado = saldoInicial;
@@ -238,9 +238,7 @@ class FluxoCaixaRepository {
     );
 
     for (final recebimento in recebimentosOs) {
-      final data = DateTime.tryParse(
-        recebimento['data_ref']?.toString() ?? '',
-      );
+      final data = DateTime.tryParse(recebimento['data_ref']?.toString() ?? '');
       if (data == null) {
         continue;
       }
@@ -260,7 +258,8 @@ class FluxoCaixaRepository {
       item['entradas_previstas'] =
           _double(item['entradas_previstas']) + _double(recebimento['total']);
       item['entradas_previstas_os'] =
-          _double(item['entradas_previstas_os']) + _double(recebimento['total']);
+          _double(item['entradas_previstas_os']) +
+          _double(recebimento['total']);
     }
 
     final meses = <Map<String, dynamic>>[];

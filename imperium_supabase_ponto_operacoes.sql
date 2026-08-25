@@ -236,6 +236,35 @@ begin
     and data = v_data
   for update;
 
+  -- Proteção multiaparelho V5:
+  -- duas batidas online no mesmo minuto representam a mesma ação.
+  if found then
+    if v_registro.saida is not null
+       and v_registro.saida = v_hora then
+      v_acao := 'Saída';
+    elsif v_registro.intervalo_fim is not null
+       and v_registro.intervalo_fim = v_hora then
+      v_acao := 'Fim do intervalo';
+    elsif v_registro.intervalo_inicio is not null
+       and v_registro.intervalo_inicio = v_hora then
+      v_acao := 'Início do intervalo';
+    elsif v_registro.entrada is not null
+       and v_registro.entrada = v_hora then
+      v_acao := 'Entrada';
+    end if;
+
+    if v_acao is not null then
+      return jsonb_build_object(
+        'acao', v_acao,
+        'hora', to_char(v_hora, 'HH24:MI'),
+        'data', v_data,
+        'registro', to_jsonb(v_registro),
+        'repetida', true
+      );
+    end if;
+  end if;
+
+
   if not found then
     insert into public.ponto_registros (
       empresa_id,
@@ -336,6 +365,330 @@ revoke all on function public.ponto_registrar_batida(
 
 grant execute on function public.ponto_registrar_batida(
   uuid, uuid
+) to authenticated;
+
+-- ============================================================
+-- PONTO OFFLINE IDEMPOTENTE V5
+-- Fonte oficial da RPC usada pelo aplicativo quando uma batida
+-- é registrada sem conexão e enviada posteriormente.
+-- ============================================================
+
+create table if not exists public.ponto_batidas_idempotencia (
+  empresa_id uuid not null
+    references public.empresas(id) on delete cascade,
+  chave text not null,
+  colaborador_id uuid not null,
+  ocorrido_em timestamptz not null,
+  resultado_json jsonb not null,
+  criado_em timestamptz not null default now(),
+  primary key (empresa_id, chave)
+);
+
+alter table public.ponto_batidas_idempotencia enable row level security;
+
+revoke all on public.ponto_batidas_idempotencia
+  from public, anon, authenticated;
+
+create index if not exists idx_ponto_batidas_idempotencia_colaborador
+  on public.ponto_batidas_idempotencia (
+    empresa_id,
+    colaborador_id,
+    criado_em desc
+  );
+
+create or replace function public.ponto_registrar_batida_offline(
+  p_empresa_id uuid,
+  p_colaborador_id uuid,
+  p_ocorrido_em timestamptz,
+  p_chave text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_auth_user uuid := (select auth.uid());
+  v_timezone text := 'America/Sao_Paulo';
+  v_chave text := trim(coalesce(p_chave, ''));
+  v_local timestamp;
+  v_data date;
+  v_hora time(0);
+  v_competencia date;
+
+  v_admin boolean := false;
+  v_repetida boolean := false;
+  v_acao text;
+  v_resultado jsonb;
+
+  v_colaborador public.ponto_colaboradores%rowtype;
+  v_jornada public.ponto_jornada%rowtype;
+  v_registro public.ponto_registros%rowtype;
+  v_existente public.ponto_batidas_idempotencia%rowtype;
+
+  v_tem_intervalo boolean := false;
+begin
+  if v_auth_user is null then
+    raise exception 'Usuário não autenticado.';
+  end if;
+
+  if not private.usuario_tem_acesso_empresa(p_empresa_id) then
+    raise exception 'Sem acesso à empresa informada.';
+  end if;
+
+  if p_ocorrido_em is null then
+    raise exception 'Horário da batida offline não informado.';
+  end if;
+
+  if p_ocorrido_em > now() + interval '5 minutes' then
+    raise exception 'A batida offline está no futuro.';
+  end if;
+
+  if char_length(v_chave) < 12 or char_length(v_chave) > 200 then
+    raise exception 'Chave de idempotência inválida.';
+  end if;
+
+  -- Serializa tentativas com a mesma chave antes de tocar no ponto.
+  perform pg_advisory_xact_lock(
+    hashtext(p_empresa_id::text),
+    hashtext(v_chave)
+  );
+
+  select *
+    into v_existente
+  from public.ponto_batidas_idempotencia
+  where empresa_id = p_empresa_id
+    and chave = v_chave
+  limit 1;
+
+  if found then
+    if v_existente.colaborador_id is distinct from p_colaborador_id
+       or v_existente.ocorrido_em is distinct from p_ocorrido_em then
+      raise exception
+        'A chave de idempotência já foi usada com outro conteúdo.';
+    end if;
+
+    return v_existente.resultado_json
+      || jsonb_build_object('idempotente_replay', true);
+  end if;
+
+  select *
+    into v_colaborador
+  from public.ponto_colaboradores
+  where id = p_colaborador_id
+    and empresa_id = p_empresa_id
+  limit 1;
+
+  if not found then
+    raise exception 'Funcionário não encontrado na nuvem.';
+  end if;
+
+  if not v_colaborador.ativo then
+    raise exception 'O funcionário está inativo.';
+  end if;
+
+  v_admin := private.usuario_admin_empresa(p_empresa_id);
+
+  if not v_admin
+     and v_colaborador.auth_user_id is distinct from v_auth_user then
+    raise exception 'Você só pode registrar o próprio ponto.';
+  end if;
+
+  select coalesce(pc.timezone, 'America/Sao_Paulo')
+    into v_timezone
+  from public.ponto_config pc
+  where pc.empresa_id = p_empresa_id;
+
+  v_timezone := coalesce(v_timezone, 'America/Sao_Paulo');
+  v_local := p_ocorrido_em at time zone v_timezone;
+  v_data := v_local::date;
+  v_hora := date_trunc('minute', v_local)::time;
+  v_competencia := date_trunc('month', v_data)::date;
+
+  if exists (
+    select 1
+    from public.ponto_fechamentos pf
+    where pf.empresa_id = p_empresa_id
+      and pf.colaborador_id = p_colaborador_id
+      and pf.competencia = v_competencia
+      and pf.status = 'Fechado'
+  ) then
+    raise exception 'O ponto desta competência está fechado.';
+  end if;
+
+  select *
+    into v_jornada
+  from public.ponto_jornada
+  where empresa_id = p_empresa_id
+    and dia_semana = extract(isodow from v_data)::int
+  limit 1;
+
+  if not found or not v_jornada.ativo then
+    raise exception 'Não existe jornada ativa para a data desta batida.';
+  end if;
+
+  v_tem_intervalo :=
+    v_jornada.intervalo_inicio is not null
+    and v_jornada.intervalo_fim is not null;
+
+  -- Serializa qualquer origem (online/offline) no mesmo funcionário/dia.
+  perform pg_advisory_xact_lock(
+    hashtext(p_colaborador_id::text),
+    (v_data - date '2000-01-01')::int
+  );
+
+  select *
+    into v_registro
+  from public.ponto_registros
+  where empresa_id = p_empresa_id
+    and colaborador_id = p_colaborador_id
+    and data = v_data
+  for update;
+
+  -- Dois aparelhos podem ter registrado a mesma ação no mesmo minuto.
+  -- Nesse caso a segunda chave é aceita como repetição, sem avançar
+  -- Entrada -> Intervalo -> Saída por engano.
+  if found then
+    if v_registro.saida is not null
+       and v_registro.saida = v_hora then
+      v_acao := 'Saída';
+      v_repetida := true;
+    elsif v_registro.intervalo_fim is not null
+       and v_registro.intervalo_fim = v_hora then
+      v_acao := 'Fim do intervalo';
+      v_repetida := true;
+    elsif v_registro.intervalo_inicio is not null
+       and v_registro.intervalo_inicio = v_hora then
+      v_acao := 'Início do intervalo';
+      v_repetida := true;
+    elsif v_registro.entrada is not null
+       and v_registro.entrada = v_hora then
+      v_acao := 'Entrada';
+      v_repetida := true;
+    end if;
+  end if;
+
+  if not v_repetida then
+    if not found then
+      insert into public.ponto_registros (
+        empresa_id,
+        colaborador_id,
+        data,
+        situacao,
+        entrada,
+        origem,
+        criado_em,
+        atualizado_em
+      )
+      values (
+        p_empresa_id,
+        p_colaborador_id,
+        v_data,
+        'Trabalhado',
+        v_hora,
+        'batida_offline',
+        now(),
+        now()
+      )
+      returning * into v_registro;
+
+      v_acao := 'Entrada';
+    else
+      if v_registro.situacao <> 'Trabalhado' then
+        raise exception 'O dia está marcado como %.', v_registro.situacao;
+      end if;
+
+      if v_registro.saida is not null then
+        raise exception 'O ponto deste dia já foi concluído.';
+      end if;
+
+      if v_registro.entrada is null then
+        update public.ponto_registros
+        set
+          entrada = v_hora,
+          atualizado_em = now()
+        where id = v_registro.id
+        returning * into v_registro;
+
+        v_acao := 'Entrada';
+
+      elsif not v_tem_intervalo then
+        update public.ponto_registros
+        set
+          saida = v_hora,
+          atualizado_em = now()
+        where id = v_registro.id
+        returning * into v_registro;
+
+        v_acao := 'Saída';
+
+      elsif v_registro.intervalo_inicio is null then
+        update public.ponto_registros
+        set
+          intervalo_inicio = v_hora,
+          atualizado_em = now()
+        where id = v_registro.id
+        returning * into v_registro;
+
+        v_acao := 'Início do intervalo';
+
+      elsif v_registro.intervalo_fim is null then
+        update public.ponto_registros
+        set
+          intervalo_fim = v_hora,
+          atualizado_em = now()
+        where id = v_registro.id
+        returning * into v_registro;
+
+        v_acao := 'Fim do intervalo';
+
+      else
+        update public.ponto_registros
+        set
+          saida = v_hora,
+          atualizado_em = now()
+        where id = v_registro.id
+        returning * into v_registro;
+
+        v_acao := 'Saída';
+      end if;
+    end if;
+  end if;
+
+  v_resultado := jsonb_build_object(
+    'acao', v_acao,
+    'hora', to_char(v_hora, 'HH24:MI'),
+    'data', v_data,
+    'registro', to_jsonb(v_registro),
+    'offline', true,
+    'repetida', v_repetida
+  );
+
+  insert into public.ponto_batidas_idempotencia (
+    empresa_id,
+    chave,
+    colaborador_id,
+    ocorrido_em,
+    resultado_json
+  )
+  values (
+    p_empresa_id,
+    v_chave,
+    p_colaborador_id,
+    p_ocorrido_em,
+    v_resultado
+  );
+
+  return v_resultado;
+end;
+$$;
+
+revoke all on function public.ponto_registrar_batida_offline(
+  uuid, uuid, timestamptz, text
+) from public, anon;
+
+grant execute on function public.ponto_registrar_batida_offline(
+  uuid, uuid, timestamptz, text
 ) to authenticated;
 
 -- ============================================================
@@ -1108,6 +1461,102 @@ grant execute on function public.ponto_importar_ajuste_historico(
   uuid, uuid, date, text, text, jsonb, jsonb, timestamptz
 ) to authenticated;
 
+
+-- ============================================================
+-- DIAGNÓSTICO DE SAÚDE DO PONTO V6
+-- Somente leitura. Permite ao aplicativo confirmar que o tenant
+-- e os recursos críticos do backend estão realmente disponíveis.
+-- ============================================================
+
+create or replace function public.ponto_diagnostico(
+  p_empresa_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_auth_user uuid := (select auth.uid());
+  v_migracao boolean := false;
+  v_rpc_online boolean := false;
+  v_rpc_offline boolean := false;
+  v_idempotencia boolean := false;
+  v_sync_estado boolean := false;
+  v_realtime boolean := false;
+begin
+  if v_auth_user is null then
+    raise exception 'Usuário não autenticado.';
+  end if;
+
+  if not private.usuario_tem_acesso_empresa(p_empresa_id) then
+    raise exception 'Sem acesso à empresa informada.';
+  end if;
+
+  select exists (
+    select 1
+    from pg_catalog.pg_proc p
+    join pg_catalog.pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'ponto_registrar_batida'
+  )
+  into v_rpc_online;
+
+  select exists (
+    select 1
+    from pg_catalog.pg_proc p
+    join pg_catalog.pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'ponto_registrar_batida_offline'
+  )
+  into v_rpc_offline;
+
+  v_idempotencia :=
+    to_regclass('public.ponto_batidas_idempotencia') is not null;
+
+  v_sync_estado :=
+    to_regclass('public.ponto_sync_estado') is not null;
+
+  if v_sync_estado then
+    select coalesce(pse.migracao_concluida, false)
+      into v_migracao
+    from public.ponto_sync_estado pse
+    where pse.empresa_id = p_empresa_id
+    limit 1;
+
+    v_migracao := coalesce(v_migracao, false);
+  end if;
+
+  select exists (
+    select 1
+    from pg_catalog.pg_publication_tables ppt
+    where ppt.pubname = 'supabase_realtime'
+      and ppt.schemaname = 'public'
+      and ppt.tablename = 'ponto_registros'
+  )
+  into v_realtime;
+
+  return jsonb_build_object(
+    'backend_version', 6,
+    'empresa_id', p_empresa_id,
+    'usuario_id', v_auth_user,
+    'rpc_batida_online', v_rpc_online,
+    'rpc_batida_offline', v_rpc_offline,
+    'tabela_idempotencia', v_idempotencia,
+    'sync_estado_disponivel', v_sync_estado,
+    'migracao_concluida', v_migracao,
+    'realtime_ponto_registros', v_realtime,
+    'verificado_em', now()
+  );
+end;
+$$;
+
+revoke all on function public.ponto_diagnostico(uuid)
+  from public, anon;
+
+grant execute on function public.ponto_diagnostico(uuid)
+  to authenticated;
+
 -- ============================================================
 -- REALTIME
 -- ============================================================
@@ -1167,6 +1616,7 @@ where n.nspname = 'public'
   and p.proname in (
     'ponto_vincular_usuario_colaborador',
     'ponto_registrar_batida',
+    'ponto_registrar_batida_offline',
     'ponto_salvar_registro_admin',
     'ponto_remover_registro_admin',
     'ponto_salvar_jornada_admin',
@@ -1174,6 +1624,7 @@ where n.nspname = 'public'
     'ponto_fechar_competencia_admin',
     'ponto_reabrir_competencia_admin',
     'ponto_concluir_migracao',
-    'ponto_importar_ajuste_historico'
+    'ponto_importar_ajuste_historico',
+    'ponto_diagnostico'
   )
 order by p.proname;
