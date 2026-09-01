@@ -1323,3 +1323,89 @@ Próximo passo:
 - O objetivo deste marco é preservar o estado funcional atual antes de revisar ajustes e iniciar novas alterações.
 - Etapas 1/2/3 permanecem com seus estados de homologação registrados anteriormente; este checkpoint não altera automaticamente módulos para ✅.
 
+
+## 2026-08-24 23:45:32 - Auditoria Financeiro Completo V3
+
+- Status: EM REVISAO.
+- Revisao integral do Financeiro iniciada antes da migracao cloud.
+- Escopo: despesas, receitas/servicos, pagamentos, contas, fluxo de caixa, conciliacao bancaria, DRE, integracao com OS e capacidade de PDF.
+- Relatorio tecnico criado: RELATORIO-AUDITORIA-FINANCEIRO-20260824-234422.md.
+- flutter analyze: aprovado.
+- flutter test: aprovado.
+- Nenhuma regra financeira foi alterada nesta auditoria.
+- Proximo passo: revisar o relatorio e corrigir o Financeiro por blocos, comecando pelas regras de competencia, caixa e origem unica dos movimentos.
+- Requisito confirmado: DRE deve permitir geracao de PDF organizado e detalhado para conferencia.
+## 2026-08-25 — Financeiro: DRE PDF e travas de regras V1
+
+- 🟢 DRE PDF detalhado implementado localmente, com resumo executivo, contas/categorias e origens dos lançamentos.
+- 🟢 Tela DRE recebeu ações para visualizar/imprimir e compartilhar o PDF do período e regime selecionados.
+- 🛡️ Regra preservada: DRE por competência usa `data_competencia`.
+- 🛡️ Regra preservada: DRE/fluxo por caixa usa `data_pagamento`.
+- 🛡️ Regra preservada: previsão usa `data_vencimento`.
+- 🛡️ Transferências permanecem fora do resultado do fluxo e da DRE.
+- 🛡️ Conciliação permanece com `impacta_dre = 0`.
+- 🛡️ A lógica atual de OS/recebimentos da DRE não foi reescrita; o PDF consome o `DreRepository` existente.
+- 🟡 Validação pendente desta alteração: `flutter analyze`, teste específico e suíte completa.
+- ⬜ Financeiro cloud permanece para a etapa oficial posterior da migração.
+
+---
+
+## 🟡 Financeiro — otimização completa local V1
+
+Marcador: `financeiro-otimizacao-completa-v1`
+
+- 🟢 Tela principal reorganizada em Faturamento, Recebido, A receber e Resultado do mês.
+- 🟢 Valores financeiros ficam ocultos inicialmente e podem ser revelados pelo botão de olho.
+- 🟢 Ações rápidas: Despesa, Receita, Receber OS e Transferir.
+- 🟢 Quatro áreas principais: Movimentações, Contas, Fluxo de caixa e DRE.
+- 🟢 Ferramentas secundárias agrupadas em Gestão e configurações financeiras.
+- 🟢 Formulário manual unificado para receita/despesa com Realizado/Previsto e seção Mais detalhes.
+- 🟢 Movimentações em lista compacta, mantendo movimentos automáticos protegidos pelo módulo de origem.
+- 🟢 Fluxo de caixa reorganizado com saldo atual, saldo projetado, realizado e previsto.
+- 🟢 `data_saldo_inicial` passa a funcionar como snapshot histórico da conta.
+- 🟢 Snapshot ocorrido dentro do período passa a compor o saldo acumulado sem virar receita da DRE.
+- 🟢 Desativar uma conta não reescreve o histórico global do fluxo de caixa.
+- 🟢 Tabela `financeiro_conciliacoes_conta` formalizada no schema atual sem alterar `schemaVersion = 27`.
+- 🛡️ Remoção segura da conciliação bancária preservada.
+- 🛡️ DRE detalhada e PDF preservados.
+- 🛡️ Pagamentos, parcelas, taxas, estornos, transferências e motor financeiro da OS não foram substituídos.
+- 🟡 Migração do Financeiro para Supabase continua pendente; esta revisão é da camada local, regras e experiência de uso.
+- ⬜ Homologar no APK: lançamento realizado, lançamento previsto, baixa, transferência, extrato, conciliação, fluxo, DRE e PDF.
+
+## 2026-08-25 10:36:55 — Financeiro otimização V4 - teste robusto
+
+- 🟢 inanceiro_regras_e_dre_pdf_source_test.dart reescrito de forma completa após a V3 ter feito uma alteração parcial.
+- 🛡️ Nenhuma regra de negócio, saldo, banco, DRE, fluxo de caixa, pagamento ou OS foi alterada.
+- 🛡️ O teste agora valida semanticamente: realizado = data de pagamento; previsto = vencimento/competência; transferências fora do fluxo operacional.
+- 🛡️ Proteção da conciliação (impacta_dre = 0) e DRE PDF continuam verificadas.
+- 🟡 Validação pendente: dart format, lutter analyze, teste específico e suíte completa.
+
+---
+
+## 2026-08-26 - Etapa 4: auditoria OS Cloud V2
+
+Marcador: `os-cloud-auditoria-v2`
+
+- 🟡 Auditoria local da Ordem de Servico iniciada antes da migracao cloud.
+- 🛡️ Nenhuma regra, tabela SQLite ou tela foi alterada por esta auditoria.
+- 🛡️ Financeiro permanece em homologacao de uso real e nao sera reescrito nesta etapa.
+- 🟡 Supabase: schema da OS ainda nao criado; arquitetura sera definida apos revisao dos fontes ativos.
+- ⬜ Proximo passo: desenhar schema cloud + RLS + mapeamento/sync idempotente da OS.
+
+
+
+---
+
+## 2026-08-27 - Etapa 4: OS Cloud upload-only V1
+
+Marcador: os-cloud-upload-only-v1
+
+- 🟢 Backend do nucleo da OS Cloud criado no Supabase com empresa_id e RLS.
+- 🟢 Upload idempotente de ordens_servico e ordem_servico_itens integrado ao sync operacional.
+- 🛡️ Nenhum download de OS para o SQLite nesta subetapa.
+- 🛡️ Pagamentos e movimentos financeiros continuam locais.
+- 🛡️ Produtos, lotes e movimentos de estoque continuam locais.
+- 🛡️ Fotos e assinatura local nao sao enviadas como caminho de arquivo.
+- 🛡️ Acesso remoto de funcionario a ordens_servico continua bloqueado.
+- 🟡 Homologacao pendente: upload real, contagem e isolamento por empresa.
+- ⬜ Proximo passo: checklist/revisoes e depois download controlado da OS.

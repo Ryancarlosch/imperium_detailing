@@ -8,6 +8,7 @@ import '../models/ordem_servico_item.dart';
 import '../repositories/agendamento_repository.dart';
 import '../repositories/custos_repository.dart';
 import '../repositories/pagamento_repository.dart';
+import '../services/operacional_sync_service.dart';
 
 class OrdemServicoRepository {
   final AppDatabase _appDatabase = AppDatabase.instance;
@@ -15,6 +16,7 @@ class OrdemServicoRepository {
   final AgendamentoRepository _agendamentoRepository = AgendamentoRepository();
   final PagamentoRepository _pagamentoRepository = PagamentoRepository();
   final CustosRepository _custosRepository = CustosRepository();
+  final OperacionalSyncService _sync = OperacionalSyncService.instance;
 
   int? _converterInt(dynamic valor) {
     if (valor == null) {
@@ -160,6 +162,7 @@ class OrdemServicoRepository {
     String? status,
     String? pesquisa,
   }) async {
+    await _sync.tentarSincronizarTudo(); // os-cloud-upload-trigger-v1
     final database = await _appDatabase.database;
 
     final filtros = <String>[];
@@ -221,6 +224,7 @@ class OrdemServicoRepository {
     String? status,
     String? pesquisa,
   }) async {
+    await _sync.tentarSincronizarTudo(); // os-cloud-upload-trigger-v1
     final database = await _appDatabase.database;
 
     final filtros = <String>[];

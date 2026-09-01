@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
+import 'os_cloud_upload_service.dart';
 import 'ponto_nuvem_service.dart';
 import 'supabase_bootstrap.dart';
 
@@ -220,6 +221,11 @@ class OperacionalSyncService {
       await _publicarClientesLocais(empresaId);
       await _publicarVeiculosLocais(empresaId);
       await _publicarAgendamentosLocais(empresaId);
+
+      // os-cloud-upload-call-v1
+      // Etapa 4 inicia upload-only para nao contaminar Financeiro/Estoque
+      // nem baixar OS antes da homologacao do nucleo.
+      await OsCloudUploadService.instance.sincronizarUpload(empresaId);
 
       // Depois baixa o estado compartilhado.
       await _baixarClientes(empresaId);

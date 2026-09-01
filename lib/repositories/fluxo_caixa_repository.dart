@@ -1,35 +1,65 @@
 import '../database/app_database.dart';
 
 class FluxoCaixaRepository {
+  // fluxo-snapshot-resumo-v1
   Future<Map<String, double>> obterResumo({
     required DateTime inicio,
     required DateTime fim,
   }) async {
     final database = await AppDatabase.instance.database;
     final saldoInicial = await _saldoAntesDe(inicio);
+    final saldosIniciaisPeriodo = await _saldosIniciaisEntre(
+      inicio: inicio,
+      fim: fim,
+    );
+
     final resultado = await database.rawQuery(
       '''
       SELECT
         COALESCE(SUM(CASE
-          WHEN status = 'Realizado' AND LOWER(tipo) = 'entrada'
-            THEN valor ELSE 0 END), 0) AS entradas_realizadas,
+          WHEN m.status = 'Realizado' AND LOWER(m.tipo) = 'entrada'
+            THEN m.valor ELSE 0 END), 0) AS entradas_realizadas,
         COALESCE(SUM(CASE
-          WHEN status = 'Realizado' AND LOWER(tipo) IN ('saída', 'saida')
-            THEN valor ELSE 0 END), 0) AS saidas_realizadas,
+          WHEN m.status = 'Realizado'
+            AND LOWER(m.tipo) IN ('saída', 'saida')
+            THEN m.valor ELSE 0 END), 0) AS saidas_realizadas,
         COALESCE(SUM(CASE
-          WHEN status = 'Previsto' AND LOWER(tipo) = 'entrada'
-            THEN valor ELSE 0 END), 0) AS entradas_previstas,
+          WHEN m.status = 'Previsto' AND LOWER(m.tipo) = 'entrada'
+            THEN m.valor ELSE 0 END), 0) AS entradas_previstas,
         COALESCE(SUM(CASE
-          WHEN status = 'Previsto' AND LOWER(tipo) IN ('saída', 'saida')
-            THEN valor ELSE 0 END), 0) AS saidas_previstas
-      FROM movimentos_financeiros
-      WHERE status IN ('Realizado', 'Previsto')
-        AND transferencia_id IS NULL
+          WHEN m.status = 'Previsto'
+            AND LOWER(m.tipo) IN ('saída', 'saida')
+            THEN m.valor ELSE 0 END), 0) AS saidas_previstas
+      FROM movimentos_financeiros m
+      LEFT JOIN financeiro_contas c ON c.id = m.conta_id
+      WHERE m.status IN ('Realizado', 'Previsto')
+        AND m.transferencia_id IS NULL
+        AND (
+          m.conta_id IS NULL
+          OR c.id IS NULL
+          OR c.data_saldo_inicial IS NULL
+          OR TRIM(c.data_saldo_inicial) = ''
+          OR date(
+            CASE
+              WHEN m.status = 'Realizado'
+                THEN COALESCE(m.data_pagamento, m.data)
+              ELSE COALESCE(
+                m.data_vencimento,
+                m.data_competencia,
+                m.data
+              )
+            END
+          ) >= date(c.data_saldo_inicial)
+        )
         AND date(
           CASE
-            WHEN status = 'Realizado'
-              THEN COALESCE(data_pagamento, data)
-            ELSE COALESCE(data_vencimento, data_competencia, data)
+            WHEN m.status = 'Realizado'
+              THEN COALESCE(m.data_pagamento, m.data)
+            ELSE COALESCE(
+              m.data_vencimento,
+              m.data_competencia,
+              m.data
+            )
           END
         ) BETWEEN date(?) AND date(?)
       ''',
@@ -51,11 +81,17 @@ class FluxoCaixaRepository {
     );
     final entradasPrevistas = entradasPrevistasMovimentos + entradasPrevistasOs;
     final saidasPrevistas = _double(mapa['saidas_previstas']);
-    final saldoFinal = saldoInicial + entradasRealizadas - saidasRealizadas;
+
+    final saldoFinal =
+        saldoInicial +
+        saldosIniciaisPeriodo +
+        entradasRealizadas -
+        saidasRealizadas;
     final saldoProjetado = saldoFinal + entradasPrevistas - saidasPrevistas;
 
     return {
       'saldo_inicial': saldoInicial,
+      'saldos_iniciais_periodo': saldosIniciaisPeriodo,
       'entradas_realizadas': entradasRealizadas,
       'saidas_realizadas': saidasRealizadas,
       'saldo_final': saldoFinal,
@@ -66,12 +102,14 @@ class FluxoCaixaRepository {
     };
   }
 
+  // fluxo-snapshot-diario-v1
   Future<List<Map<String, dynamic>>> listarFluxoDiario({
     required DateTime inicio,
     required DateTime fim,
   }) async {
     final database = await AppDatabase.instance.database;
     final saldoInicial = await _saldoAntesDe(inicio);
+
     final resultado = await database.rawQuery(
       '''
       SELECT
@@ -90,19 +128,41 @@ class FluxoCaixaRepository {
             THEN valor ELSE 0 END), 0) AS saidas_previstas
       FROM (
         SELECT
-          status,
-          tipo,
-          valor,
+          m.status,
+          m.tipo,
+          m.valor,
           date(
             CASE
-              WHEN status = 'Realizado'
-                THEN COALESCE(data_pagamento, data)
-              ELSE COALESCE(data_vencimento, data_competencia, data)
+              WHEN m.status = 'Realizado'
+                THEN COALESCE(m.data_pagamento, m.data)
+              ELSE COALESCE(
+                m.data_vencimento,
+                m.data_competencia,
+                m.data
+              )
             END
           ) AS data_ref
-        FROM movimentos_financeiros
-        WHERE status IN ('Realizado', 'Previsto')
-          AND transferencia_id IS NULL
+        FROM movimentos_financeiros m
+        LEFT JOIN financeiro_contas c ON c.id = m.conta_id
+        WHERE m.status IN ('Realizado', 'Previsto')
+          AND m.transferencia_id IS NULL
+          AND (
+            m.conta_id IS NULL
+            OR c.id IS NULL
+            OR c.data_saldo_inicial IS NULL
+            OR TRIM(c.data_saldo_inicial) = ''
+            OR date(
+              CASE
+                WHEN m.status = 'Realizado'
+                  THEN COALESCE(m.data_pagamento, m.data)
+                ELSE COALESCE(
+                  m.data_vencimento,
+                  m.data_competencia,
+                  m.data
+                )
+              END
+            ) >= date(c.data_saldo_inicial)
+          )
       ) fluxo
       WHERE data_ref BETWEEN date(?) AND date(?)
       GROUP BY data_ref
@@ -111,75 +171,77 @@ class FluxoCaixaRepository {
       [_dataDia(inicio), _dataDia(fim)],
     );
 
-    final porData = <String, Map<String, dynamic>>{
-      for (final item in resultado)
-        item['data_ref'].toString(): Map<String, dynamic>.from(item),
-    };
-
     final recebimentosOs = await _recebimentosOsPrevistos(
       inicio: inicio,
       fim: fim,
     );
+    final snapshots = await _saldosIniciaisPorDia(inicio: inicio, fim: fim);
 
-    for (final recebimento in recebimentosOs) {
-      final dataRef = recebimento['data_ref']?.toString() ?? '';
-      if (dataRef.isEmpty) {
-        continue;
-      }
-      final item = porData.putIfAbsent(
-        dataRef,
-        () => <String, dynamic>{
-          'data_ref': dataRef,
-          'entradas_realizadas': 0.0,
-          'saidas_realizadas': 0.0,
-          'entradas_previstas': 0.0,
-          'saidas_previstas': 0.0,
-        },
-      );
-      item['entradas_previstas'] =
-          _double(item['entradas_previstas']) + _double(recebimento['total']);
-      item['entradas_previstas_os'] =
-          _double(item['entradas_previstas_os']) +
-          _double(recebimento['total']);
+    final porDia = <String, Map<String, dynamic>>{
+      for (final item in resultado)
+        (item['data_ref'] ?? '').toString(): Map<String, dynamic>.from(item),
+    };
+    final osPorDia = <String, double>{};
+    for (final item in recebimentosOs) {
+      final chave = (item['data_ref'] ?? '').toString();
+      osPorDia[chave] = (osPorDia[chave] ?? 0) + _double(item['total']);
+    }
+    final snapshotPorDia = <String, double>{};
+    for (final item in snapshots) {
+      final chave = (item['data_ref'] ?? '').toString();
+      snapshotPorDia[chave] =
+          (snapshotPorDia[chave] ?? 0) + _double(item['total']);
     }
 
-    final itens = porData.values.toList()
-      ..sort(
-        (a, b) => (a['data_ref'] ?? '').toString().compareTo(
-          (b['data_ref'] ?? '').toString(),
-        ),
-      );
+    final chaves = <String>{
+      ...porDia.keys.where((item) => item.isNotEmpty),
+      ...osPorDia.keys.where((item) => item.isNotEmpty),
+      ...snapshotPorDia.keys.where((item) => item.isNotEmpty),
+    }.toList()..sort();
 
     var saldoRealizado = saldoInicial;
     var saldoProjetado = saldoInicial;
+    final linhas = <Map<String, dynamic>>[];
 
-    return itens.map((item) {
+    for (final chave in chaves) {
+      final item = porDia[chave] ?? const <String, dynamic>{};
       final entradasRealizadas = _double(item['entradas_realizadas']);
       final saidasRealizadas = _double(item['saidas_realizadas']);
-      final entradasPrevistas = _double(item['entradas_previstas']);
+      final entradasPrevistas =
+          _double(item['entradas_previstas']) + (osPorDia[chave] ?? 0);
       final saidasPrevistas = _double(item['saidas_previstas']);
+      final saldoAdicionado = snapshotPorDia[chave] ?? 0;
       final realizadoDia = entradasRealizadas - saidasRealizadas;
       final previstoDia = entradasPrevistas - saidasPrevistas;
 
-      saldoRealizado += realizadoDia;
-      saldoProjetado += realizadoDia + previstoDia;
+      saldoRealizado += saldoAdicionado + realizadoDia;
+      saldoProjetado += saldoAdicionado + realizadoDia + previstoDia;
 
-      return <String, dynamic>{
-        ...item,
+      linhas.add({
+        'data_ref': chave,
+        'saldo_inicial_adicionado': saldoAdicionado,
+        'entradas_realizadas': entradasRealizadas,
+        'saidas_realizadas': saidasRealizadas,
+        'entradas_previstas': entradasPrevistas,
+        'saidas_previstas': saidasPrevistas,
         'resultado_realizado': realizadoDia,
         'resultado_previsto': previstoDia,
         'saldo_realizado_acumulado': saldoRealizado,
         'saldo_projetado_acumulado': saldoProjetado,
-      };
-    }).toList();
+      });
+    }
+
+    return linhas;
   }
 
+  // fluxo-snapshot-mensal-v1
   Future<List<Map<String, dynamic>>> listarFluxoMensal({
     required DateTime inicio,
     required DateTime fim,
   }) async {
     final database = await AppDatabase.instance.database;
     final saldoInicial = await _saldoAntesDe(inicio);
+
     final resultado = await database.rawQuery(
       '''
       SELECT
@@ -198,68 +260,85 @@ class FluxoCaixaRepository {
             THEN valor ELSE 0 END), 0) AS saidas_previstas
       FROM (
         SELECT
-          status,
-          tipo,
-          valor,
-          strftime(
-            '%Y-%m',
-            CASE
-              WHEN status = 'Realizado'
-                THEN COALESCE(data_pagamento, data)
-              ELSE COALESCE(data_vencimento, data_competencia, data)
-            END
-          ) AS mes_ref,
-          date(
-            CASE
-              WHEN status = 'Realizado'
-                THEN COALESCE(data_pagamento, data)
-              ELSE COALESCE(data_vencimento, data_competencia, data)
-            END
-          ) AS data_ref
-        FROM movimentos_financeiros
-        WHERE status IN ('Realizado', 'Previsto')
-          AND transferencia_id IS NULL
+          m.status,
+          m.tipo,
+          m.valor,
+          substr(
+            date(
+              CASE
+                WHEN m.status = 'Realizado'
+                  THEN COALESCE(m.data_pagamento, m.data)
+                ELSE COALESCE(
+                  m.data_vencimento,
+                  m.data_competencia,
+                  m.data
+                )
+              END
+            ),
+            1,
+            7
+          ) AS mes_ref
+        FROM movimentos_financeiros m
+        LEFT JOIN financeiro_contas c ON c.id = m.conta_id
+        WHERE m.status IN ('Realizado', 'Previsto')
+          AND m.transferencia_id IS NULL
+          AND (
+            m.conta_id IS NULL
+            OR c.id IS NULL
+            OR c.data_saldo_inicial IS NULL
+            OR TRIM(c.data_saldo_inicial) = ''
+            OR date(
+              CASE
+                WHEN m.status = 'Realizado'
+                  THEN COALESCE(m.data_pagamento, m.data)
+                ELSE COALESCE(
+                  m.data_vencimento,
+                  m.data_competencia,
+                  m.data
+                )
+              END
+            ) >= date(c.data_saldo_inicial)
+          )
       ) fluxo
-      WHERE data_ref BETWEEN date(?) AND date(?)
+      WHERE date(mes_ref || '-01')
+        BETWEEN date(?) AND date(?)
       GROUP BY mes_ref
       ORDER BY mes_ref ASC
       ''',
-      [_dataDia(inicio), _dataDia(fim)],
+      [
+        _dataDia(DateTime(inicio.year, inicio.month, 1)),
+        _dataDia(DateTime(fim.year, fim.month, 1)),
+      ],
     );
-
-    final porMes = <String, Map<String, dynamic>>{
-      for (final item in resultado)
-        item['mes_ref'].toString(): Map<String, dynamic>.from(item),
-    };
 
     final recebimentosOs = await _recebimentosOsPrevistos(
       inicio: inicio,
       fim: fim,
     );
+    final snapshots = await _saldosIniciaisPorDia(inicio: inicio, fim: fim);
 
-    for (final recebimento in recebimentosOs) {
-      final data = DateTime.tryParse(recebimento['data_ref']?.toString() ?? '');
-      if (data == null) {
-        continue;
+    final porMes = <String, Map<String, dynamic>>{
+      for (final item in resultado)
+        (item['mes_ref'] ?? '').toString(): Map<String, dynamic>.from(item),
+    };
+
+    final osPorMes = <String, double>{};
+    for (final item in recebimentosOs) {
+      final dataRef = (item['data_ref'] ?? '').toString();
+      final chave = dataRef.length >= 7 ? dataRef.substring(0, 7) : '';
+      if (chave.isNotEmpty) {
+        osPorMes[chave] = (osPorMes[chave] ?? 0) + _double(item['total']);
       }
-      final chave =
-          '${data.year.toString().padLeft(4, '0')}-'
-          '${data.month.toString().padLeft(2, '0')}';
-      final item = porMes.putIfAbsent(
-        chave,
-        () => <String, dynamic>{
-          'mes_ref': chave,
-          'entradas_realizadas': 0.0,
-          'saidas_realizadas': 0.0,
-          'entradas_previstas': 0.0,
-          'saidas_previstas': 0.0,
-        },
-      );
-      item['entradas_previstas'] =
-          _double(item['entradas_previstas']) + _double(recebimento['total']);
-      item['entradas_previstas_os'] =
-          _double(item['entradas_previstas_os']) +
-          _double(recebimento['total']);
+    }
+
+    final snapshotPorMes = <String, double>{};
+    for (final item in snapshots) {
+      final dataRef = (item['data_ref'] ?? '').toString();
+      final chave = dataRef.length >= 7 ? dataRef.substring(0, 7) : '';
+      if (chave.isNotEmpty) {
+        snapshotPorMes[chave] =
+            (snapshotPorMes[chave] ?? 0) + _double(item['total']);
+      }
     }
 
     final meses = <Map<String, dynamic>>[];
@@ -275,20 +354,22 @@ class FluxoCaixaRepository {
       final item = porMes[chave] ?? const <String, dynamic>{};
       final entradasRealizadas = _double(item['entradas_realizadas']);
       final saidasRealizadas = _double(item['saidas_realizadas']);
-      final entradasPrevistas = _double(item['entradas_previstas']);
+      final entradasPrevistas =
+          _double(item['entradas_previstas']) + (osPorMes[chave] ?? 0);
       final saidasPrevistas = _double(item['saidas_previstas']);
+      final saldoAdicionado = snapshotPorMes[chave] ?? 0;
       final realizadoMes = entradasRealizadas - saidasRealizadas;
       final previstoMes = entradasPrevistas - saidasPrevistas;
 
-      saldoRealizado += realizadoMes;
-      saldoProjetado += realizadoMes + previstoMes;
+      saldoRealizado += saldoAdicionado + realizadoMes;
+      saldoProjetado += saldoAdicionado + realizadoMes + previstoMes;
 
       meses.add({
         'mes_ref': chave,
+        'saldo_inicial_adicionado': saldoAdicionado,
         'entradas_realizadas': entradasRealizadas,
         'saidas_realizadas': saidasRealizadas,
         'entradas_previstas': entradasPrevistas,
-        'entradas_previstas_os': _double(item['entradas_previstas_os']),
         'saidas_previstas': saidasPrevistas,
         'resultado_realizado': realizadoMes,
         'resultado_previsto': previstoMes,
@@ -444,30 +525,82 @@ class FluxoCaixaRepository {
     );
   }
 
+  // fluxo-saldo-snapshot-v1
+  Future<List<Map<String, dynamic>>> _saldosIniciaisPorDia({
+    required DateTime inicio,
+    required DateTime fim,
+  }) async {
+    final database = await AppDatabase.instance.database;
+    return database.rawQuery(
+      '''
+      SELECT
+        date(data_saldo_inicial) AS data_ref,
+        COALESCE(SUM(saldo_inicial), 0) AS total
+      FROM financeiro_contas
+      WHERE data_saldo_inicial IS NOT NULL
+        AND TRIM(data_saldo_inicial) != ''
+        AND date(data_saldo_inicial) BETWEEN date(?) AND date(?)
+      GROUP BY date(data_saldo_inicial)
+      ORDER BY date(data_saldo_inicial) ASC
+      ''',
+      [_dataDia(inicio), _dataDia(fim)],
+    );
+  }
+
+  Future<double> _saldosIniciaisEntre({
+    required DateTime inicio,
+    required DateTime fim,
+  }) async {
+    final itens = await _saldosIniciaisPorDia(inicio: inicio, fim: fim);
+    return itens.fold<double>(
+      0,
+      (total, item) => total + _double(item['total']),
+    );
+  }
+
   Future<double> _saldoAntesDe(DateTime data) async {
     final database = await AppDatabase.instance.database;
+    final dataRef = _dataDia(data);
+
     final resultado = await database.rawQuery(
       '''
       SELECT
         COALESCE((
-          SELECT SUM(saldo_inicial)
+          SELECT SUM(
+            CASE
+              WHEN data_saldo_inicial IS NULL
+                OR TRIM(data_saldo_inicial) = ''
+                OR date(data_saldo_inicial) < date(?)
+              THEN saldo_inicial
+              ELSE 0
+            END
+          )
           FROM financeiro_contas
-          WHERE ativo = 1
         ), 0)
         + COALESCE((
           SELECT SUM(
             CASE
-              WHEN LOWER(tipo) = 'entrada' THEN valor
-              WHEN LOWER(tipo) IN ('saída', 'saida') THEN -valor
+              WHEN LOWER(m.tipo) = 'entrada' THEN m.valor
+              WHEN LOWER(m.tipo) IN ('saída', 'saida') THEN -m.valor
               ELSE 0
             END
           )
-          FROM movimentos_financeiros
-          WHERE status = 'Realizado'
-            AND date(COALESCE(data_pagamento, data)) < date(?)
+          FROM movimentos_financeiros m
+          LEFT JOIN financeiro_contas c ON c.id = m.conta_id
+          WHERE m.status = 'Realizado'
+            AND m.transferencia_id IS NULL
+            AND date(COALESCE(m.data_pagamento, m.data)) < date(?)
+            AND (
+              m.conta_id IS NULL
+              OR c.id IS NULL
+              OR c.data_saldo_inicial IS NULL
+              OR TRIM(c.data_saldo_inicial) = ''
+              OR date(COALESCE(m.data_pagamento, m.data))
+                   >= date(c.data_saldo_inicial)
+            )
         ), 0) AS saldo
       ''',
-      [_dataDia(data)],
+      [dataRef, dataRef],
     );
 
     return _double(resultado.first['saldo']);

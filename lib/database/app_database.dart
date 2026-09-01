@@ -33,6 +33,8 @@ class AppDatabase {
         await _criarTabelas(database);
       },
       onOpen: (database) async {
+        // financeiro-conciliacao-schema-v1
+        await _criarTabelaConciliacoesFinanceiras(database);
         await _aplicarPlanoContasSimplificado(database);
       },
       onUpgrade: (database, versaoAntiga, versaoNova) async {
@@ -178,6 +180,7 @@ class AppDatabase {
     await _criarTabelaMetasFinanceiras(database);
     await _criarTabelaPagamentosOrdemServico(database);
     await _criarTabelaMovimentosFinanceiros(database);
+    await _criarTabelaConciliacoesFinanceiras(database);
     await _criarTabelaItensOrdemServico(database);
     await _criarTabelaChecklistOrdemServico(database);
     await _criarTabelaFotosOrdemServico(database);
@@ -194,6 +197,36 @@ class AppDatabase {
     await _criarTabelaServicosRelacionados(database);
     await _criarTabelaCategoriasServico(database);
     await _criarTabelaOrdemServicoProdutoLotes(database);
+  }
+
+  // financeiro-conciliacao-schema-v1
+  Future<void> _criarTabelaConciliacoesFinanceiras(Database database) async {
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS financeiro_conciliacoes_conta (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conta_id INTEGER NOT NULL,
+        data_conciliacao TEXT NOT NULL,
+        saldo_calculado REAL NOT NULL DEFAULT 0,
+        saldo_informado REAL NOT NULL DEFAULT 0,
+        diferenca REAL NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'Conciliado',
+        movimento_ajuste_id INTEGER,
+        observacoes TEXT NOT NULL DEFAULT '',
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (conta_id)
+          REFERENCES financeiro_contas (id)
+          ON DELETE RESTRICT,
+        FOREIGN KEY (movimento_ajuste_id)
+          REFERENCES movimentos_financeiros (id)
+          ON DELETE SET NULL,
+        CHECK (status IN ('Conciliado', 'Divergente', 'Ajustado'))
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_fin_conciliacoes_conta_data
+      ON financeiro_conciliacoes_conta (conta_id, data_conciliacao)
+    ''');
   }
 
   Future<void> _criarTabelaClientes(Database database) async {

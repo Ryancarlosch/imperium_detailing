@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../repositories/dre_repository.dart';
 import '../repositories/meta_financeira_repository.dart';
 import '../repositories/precificacao_repository.dart';
+import '../services/dre_pdf_service.dart';
 
 enum _DreVisualizacao { resumo, detalhado }
 
@@ -16,6 +17,7 @@ class DrePage extends StatefulWidget {
 
 class _DrePageState extends State<DrePage> {
   final DreRepository _repository = DreRepository();
+  final DrePdfService _pdfService = DrePdfService(); // dre-pdf-ui-v1
   final MetaFinanceiraRepository _metaRepository = MetaFinanceiraRepository();
   final PrecificacaoRepository _precificacaoRepository =
       PrecificacaoRepository();
@@ -32,6 +34,7 @@ class _DrePageState extends State<DrePage> {
     end: DateTime(DateTime.now().year, DateTime.now().month + 1, 0),
   );
   bool _carregando = true;
+  bool _gerandoPdf = false;
   DreResultado? _resultado;
   List<DreServicoResultado> _servicos = const [];
   Map<String, PrecificacaoServico> _precificacaoPorServico = const {};
@@ -42,6 +45,48 @@ class _DrePageState extends State<DrePage> {
   void initState() {
     super.initState();
     _carregar();
+  }
+
+  // dre-pdf-acao-v1
+  Future<void> _executarPdf({required bool compartilhar}) async {
+    if (_gerandoPdf) {
+      return;
+    }
+
+    setState(() => _gerandoPdf = true);
+
+    try {
+      if (compartilhar) {
+        await _pdfService.compartilhar(
+          inicio: _periodo.start,
+          fim: _periodo.end,
+          regime: _regime,
+        );
+      } else {
+        await _pdfService.visualizar(
+          inicio: _periodo.start,
+          fim: _periodo.end,
+          regime: _regime,
+        );
+      }
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Não foi possível gerar o PDF da DRE.\n$erro'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _gerandoPdf = false);
+      }
+    }
   }
 
   Future<void> _carregar() async {
@@ -619,6 +664,21 @@ class _DrePageState extends State<DrePage> {
           _regime == DreRegime.competencia ? 'DRE gerencial' : 'Visão de caixa',
         ),
         actions: [
+          // dre-pdf-appbar-v1
+          IconButton(
+            tooltip: 'Visualizar DRE em PDF',
+            onPressed: _carregando || _gerandoPdf
+                ? null
+                : () => _executarPdf(compartilhar: false),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+          ),
+          IconButton(
+            tooltip: 'Compartilhar DRE em PDF',
+            onPressed: _carregando || _gerandoPdf
+                ? null
+                : () => _executarPdf(compartilhar: true),
+            icon: const Icon(Icons.ios_share_rounded),
+          ),
           IconButton(
             tooltip: 'Atualizar',
             onPressed: _carregando ? null : _carregar,

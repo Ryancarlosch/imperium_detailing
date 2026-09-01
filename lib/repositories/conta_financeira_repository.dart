@@ -4,6 +4,7 @@ import '../database/app_database.dart';
 import '../models/conta_financeira.dart';
 
 class ContaFinanceiraRepository {
+  // financeiro-saldo-snapshot-v1
   Future<List<ContaFinanceira>> listar({bool incluirInativas = false}) async {
     final database = await AppDatabase.instance.database;
     final resultado = await database.rawQuery('''
@@ -20,6 +21,12 @@ class ContaFinanceiraRepository {
           FROM movimentos_financeiros m
           WHERE m.conta_id = c.id
             AND m.status = 'Realizado'
+            AND (
+              c.data_saldo_inicial IS NULL
+              OR TRIM(c.data_saldo_inicial) = ''
+              OR date(COALESCE(m.data_pagamento, m.data))
+                   >= date(c.data_saldo_inicial)
+            )
         ), 0) AS saldo_atual
       FROM financeiro_contas c
       ${incluirInativas ? '' : 'WHERE c.ativo = 1'}
@@ -103,6 +110,7 @@ class ContaFinanceiraRepository {
     );
   }
 
+  // financeiro-extrato-snapshot-v1
   Future<Map<String, dynamic>> obterExtratoMensal({
     required int contaId,
     required DateTime mes,
@@ -131,26 +139,59 @@ class ContaFinanceiraRepository {
       throw StateError('Conta financeira não encontrada.');
     }
 
-    final anteriores = await database.rawQuery(
-      '''
-      SELECT COALESCE(SUM(
-        CASE
-          WHEN LOWER(tipo) = 'entrada' THEN valor
-          WHEN LOWER(tipo) IN ('saída', 'saida') THEN -valor
-          ELSE 0
-        END
-      ), 0) AS total
-      FROM movimentos_financeiros
-      WHERE conta_id = ?
-        AND status = 'Realizado'
-        AND date(COALESCE(data_pagamento, data)) < date(?)
-      ''',
-      [contaId, inicio.toIso8601String()],
-    );
+    final dataSaldoTexto = (conta.first['data_saldo_inicial'] ?? '')
+        .toString()
+        .trim();
+    final dataSaldo = DateTime.tryParse(dataSaldoTexto);
+    final snapshotDepoisDoPeriodo =
+        dataSaldo != null && !dataSaldo.isBefore(fimExclusivo);
+
+    if (snapshotDepoisDoPeriodo) {
+      return {
+        'conta': Map<String, dynamic>.from(conta.first),
+        'saldo_inicial_mes': 0.0,
+        'entradas': 0.0,
+        'saidas': 0.0,
+        'saldo_final_mes': 0.0,
+        'movimentos': <Map<String, dynamic>>[],
+      };
+    }
+
+    var movimentoAnterior = 0.0;
+    if (dataSaldo == null || !dataSaldo.isAfter(inicio)) {
+      final filtroSnapshot = dataSaldo == null
+          ? ''
+          : 'AND date(COALESCE(data_pagamento, data)) >= date(?)';
+
+      final anteriores = await database.rawQuery(
+        '''
+        SELECT COALESCE(SUM(
+          CASE
+            WHEN LOWER(tipo) = 'entrada' THEN valor
+            WHEN LOWER(tipo) IN ('saída', 'saida') THEN -valor
+            ELSE 0
+          END
+        ), 0) AS total
+        FROM movimentos_financeiros
+        WHERE conta_id = ?
+          AND status = 'Realizado'
+          AND date(COALESCE(data_pagamento, data)) < date(?)
+          $filtroSnapshot
+        ''',
+        <Object?>[
+          contaId,
+          inicio.toIso8601String(),
+          if (dataSaldo != null) dataSaldoTexto,
+        ],
+      );
+      movimentoAnterior = _double(anteriores.first['total']);
+    }
 
     final saldoBase = _double(conta.first['saldo_inicial']);
-    final movimentoAnterior = _double(anteriores.first['total']);
     final saldoInicialMes = saldoBase + movimentoAnterior;
+    final inicioMovimentos = dataSaldo != null && dataSaldo.isAfter(inicio)
+        ? dataSaldo
+        : inicio;
 
     final movimentos = await database.rawQuery(
       '''
@@ -170,7 +211,11 @@ class ContaFinanceiraRepository {
         datetime(COALESCE(m.data_pagamento, m.data)) ASC,
         m.id ASC
       ''',
-      [contaId, inicio.toIso8601String(), fimExclusivo.toIso8601String()],
+      [
+        contaId,
+        inicioMovimentos.toIso8601String(),
+        fimExclusivo.toIso8601String(),
+      ],
     );
 
     var entradas = 0.0;
@@ -226,6 +271,7 @@ class ContaFinanceiraRepository {
     ''');
   }
 
+  // financeiro-conciliacao-snapshot-v1
   Future<double> _saldoCalculadoAte(
     DatabaseExecutor executor, {
     required int contaId,
@@ -233,7 +279,7 @@ class ContaFinanceiraRepository {
   }) async {
     final conta = await executor.query(
       'financeiro_contas',
-      columns: ['id', 'saldo_inicial'],
+      columns: ['id', 'saldo_inicial', 'data_saldo_inicial'],
       where: 'id = ?',
       whereArgs: [contaId],
       limit: 1,
@@ -242,6 +288,23 @@ class ContaFinanceiraRepository {
     if (conta.isEmpty) {
       throw StateError('Conta financeira não encontrada.');
     }
+
+    final dataSaldoTexto = (conta.first['data_saldo_inicial'] ?? '')
+        .toString()
+        .trim();
+    final dataSaldo = DateTime.tryParse(dataSaldoTexto);
+
+    if (dataSaldo != null) {
+      final alvo = DateTime(data.year, data.month, data.day);
+      final snapshot = DateTime(dataSaldo.year, dataSaldo.month, dataSaldo.day);
+      if (alvo.isBefore(snapshot)) {
+        return 0;
+      }
+    }
+
+    final filtroSnapshot = dataSaldo == null
+        ? ''
+        : 'AND date(COALESCE(data_pagamento, data)) >= date(?)';
 
     final movimentos = await executor.rawQuery(
       '''
@@ -256,8 +319,13 @@ class ContaFinanceiraRepository {
       WHERE conta_id = ?
         AND status = 'Realizado'
         AND date(COALESCE(data_pagamento, data)) <= date(?)
+        $filtroSnapshot
       ''',
-      [contaId, data.toIso8601String()],
+      <Object?>[
+        contaId,
+        data.toIso8601String(),
+        if (dataSaldo != null) dataSaldoTexto,
+      ],
     );
 
     return _double(conta.first['saldo_inicial']) +

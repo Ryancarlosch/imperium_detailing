@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../repositories/fluxo_caixa_repository.dart';
 
+// fluxo-caixa-ui-limpa-v1
 class FluxoCaixaPage extends StatefulWidget {
   const FluxoCaixaPage({super.key});
 
@@ -17,27 +18,16 @@ class _FluxoCaixaPageState extends State<FluxoCaixaPage> {
     symbol: 'R\$',
   );
   final DateFormat _dia = DateFormat('dd/MM');
-  final DateFormat _mes = DateFormat('MMM/yyyy', 'pt_BR');
+  final DateFormat _mesTexto = DateFormat('MMM/yyyy', 'pt_BR');
 
+  DateTime _mes = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  bool _mensal = false;
   bool _carregando = true;
-  String _modo = 'Diário';
-  DateTime _referencia = DateTime.now();
   Map<String, double> _resumo = const {};
-  List<Map<String, dynamic>> _linhas = [];
+  List<Map<String, dynamic>> _linhas = const [];
 
-  DateTime get _inicio {
-    if (_modo == 'Diário') {
-      return DateTime(_referencia.year, _referencia.month, 1);
-    }
-    return DateTime(_referencia.year, 1, 1);
-  }
-
-  DateTime get _fim {
-    if (_modo == 'Diário') {
-      return DateTime(_referencia.year, _referencia.month + 1, 0, 23, 59, 59);
-    }
-    return DateTime(_referencia.year, 12, 31, 23, 59, 59);
-  }
+  DateTime get _inicioMes => DateTime(_mes.year, _mes.month, 1);
+  DateTime get _fimMes => DateTime(_mes.year, _mes.month + 1, 0, 23, 59, 59);
 
   @override
   void initState() {
@@ -46,22 +36,22 @@ class _FluxoCaixaPageState extends State<FluxoCaixaPage> {
   }
 
   Future<void> _carregar() async {
-    if (mounted) {
-      setState(() => _carregando = true);
-    }
+    if (mounted) setState(() => _carregando = true);
 
     try {
+      final inicioLista = _mensal
+          ? DateTime(_mes.year, _mes.month - 5, 1)
+          : _inicioMes;
+
       final resultados = await Future.wait<dynamic>([
-        _repository.obterResumo(inicio: _inicio, fim: _fim),
-        if (_modo == 'Diário')
-          _repository.listarFluxoDiario(inicio: _inicio, fim: _fim)
-        else
-          _repository.listarFluxoMensal(inicio: _inicio, fim: _fim),
+        _repository.obterResumo(inicio: _inicioMes, fim: _fimMes),
+        _mensal
+            ? _repository.listarFluxoMensal(inicio: inicioLista, fim: _fimMes)
+            : _repository.listarFluxoDiario(inicio: inicioLista, fim: _fimMes),
       ]);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       setState(() {
         _resumo = Map<String, double>.from(
           resultados[0] as Map<String, double>,
@@ -72,9 +62,8 @@ class _FluxoCaixaPageState extends State<FluxoCaixaPage> {
         _carregando = false;
       });
     } catch (erro) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       setState(() => _carregando = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -85,34 +74,17 @@ class _FluxoCaixaPageState extends State<FluxoCaixaPage> {
     }
   }
 
-  void _anterior() {
-    setState(() {
-      _referencia = _modo == 'Diário'
-          ? DateTime(_referencia.year, _referencia.month - 1, 1)
-          : DateTime(_referencia.year - 1, 1, 1);
-    });
+  void _mudarMes(int delta) {
+    setState(() => _mes = DateTime(_mes.year, _mes.month + delta, 1));
     _carregar();
-  }
-
-  void _proximo() {
-    setState(() {
-      _referencia = _modo == 'Diário'
-          ? DateTime(_referencia.year, _referencia.month + 1, 1)
-          : DateTime(_referencia.year + 1, 1, 1);
-    });
-    _carregar();
-  }
-
-  String get _tituloPeriodo {
-    if (_modo == 'Diário') {
-      final texto = DateFormat('MMMM yyyy', 'pt_BR').format(_referencia);
-      return texto[0].toUpperCase() + texto.substring(1);
-    }
-    return _referencia.year.toString();
   }
 
   @override
   Widget build(BuildContext context) {
+    final titulo = DateFormat('MMMM yyyy', 'pt_BR').format(_mes);
+    final tituloFormatado =
+        titulo.substring(0, 1).toUpperCase() + titulo.substring(1);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fluxo de caixa'),
@@ -129,93 +101,80 @@ class _FluxoCaixaPageState extends State<FluxoCaixaPage> {
         child: _carregando
             ? const Center(child: CircularProgressIndicator())
             : ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                 children: [
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
-                        value: 'Diário',
-                        label: Text('Diário'),
-                        icon: Icon(Icons.calendar_view_day_outlined),
-                      ),
-                      ButtonSegment(
-                        value: 'Mensal',
-                        label: Text('Mensal'),
-                        icon: Icon(Icons.calendar_month_outlined),
-                      ),
-                    ],
-                    selected: {_modo},
-                    onSelectionChanged: (selecionados) {
-                      setState(() {
-                        _modo = selecionados.first;
-                      });
-                      _carregar();
-                    },
-                  ),
-                  const SizedBox(height: 12),
                   Row(
                     children: [
                       IconButton(
-                        tooltip: 'Período anterior',
-                        onPressed: _anterior,
+                        onPressed: () => _mudarMes(-1),
                         icon: const Icon(Icons.chevron_left_rounded),
                       ),
                       Expanded(
                         child: Text(
-                          _tituloPeriodo,
+                          tituloFormatado,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            fontSize: 17,
                           ),
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Próximo período',
-                        onPressed: _proximo,
+                        onPressed: () => _mudarMes(1),
                         icon: const Icon(Icons.chevron_right_rounded),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  _ResumoFluxo(resumo: _resumo, moeda: _moeda),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Evolução do caixa',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 8),
+                  _ResumoFluxoLimpo(resumo: _resumo, moeda: _moeda),
+                  const SizedBox(height: 14),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(
+                        value: false,
+                        label: Text('Dia a dia'),
+                        icon: Icon(Icons.calendar_view_day_outlined),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        label: Text('Últimos 6 meses'),
+                        icon: Icon(Icons.calendar_view_month_outlined),
+                      ),
+                    ],
+                    selected: {_mensal},
+                    onSelectionChanged: (selecionados) {
+                      setState(() => _mensal = selecionados.first);
+                      _carregar();
+                    },
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Realizado mostra o dinheiro que efetivamente entrou ou saiu. '
-                    'Projetado soma lançamentos previstos e parcelas pendentes das OS '
-                    'nas respectivas datas de vencimento.',
-                    style: TextStyle(color: Colors.white60),
-                  ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                   if (_linhas.isEmpty)
-                    const Card(
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: EdgeInsets.all(22),
-                        child: Text(
-                          'Nenhuma movimentação encontrada neste período.',
-                          textAlign: TextAlign.center,
-                        ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 50),
+                      child: Center(
+                        child: Text('Sem movimentações neste período.'),
                       ),
                     )
                   else
                     ..._linhas.map(
-                      (linha) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _LinhaFluxo(
-                          linha: linha,
-                          modo: _modo,
-                          moeda: _moeda,
-                          dia: _dia,
-                          mes: _mes,
-                        ),
+                      (linha) => _LinhaFluxoCompacta(
+                        linha: linha,
+                        mensal: _mensal,
+                        moeda: _moeda,
+                        dia: _dia,
+                        mes: _mesTexto,
                       ),
                     ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Realizado usa a data em que o dinheiro entrou ou saiu. '
+                    'Previsto usa o vencimento. O saldo projetado soma os dois.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 11.5,
+                    ),
+                  ),
                 ],
               ),
       ),
@@ -223,58 +182,53 @@ class _FluxoCaixaPageState extends State<FluxoCaixaPage> {
   }
 }
 
-class _ResumoFluxo extends StatelessWidget {
-  const _ResumoFluxo({required this.resumo, required this.moeda});
+class _ResumoFluxoLimpo extends StatelessWidget {
+  const _ResumoFluxoLimpo({required this.resumo, required this.moeda});
 
   final Map<String, double> resumo;
   final NumberFormat moeda;
 
   @override
   Widget build(BuildContext context) {
-    final saldoInicial = resumo['saldo_inicial'] ?? 0;
-    final saldoFinal = resumo['saldo_final'] ?? 0;
-    final saldoProjetado = resumo['saldo_projetado'] ?? 0;
+    final saldo = resumo['saldo_final'] ?? 0;
+    final projetado = resumo['saldo_projetado'] ?? 0;
 
     return Column(
       children: [
-        Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _ValorResumo(
-                  titulo: 'Saldo no início do período',
-                  valor: moeda.format(saldoInicial),
-                ),
-                const Divider(),
-                _ValorResumo(
-                  titulo: 'Saldo realizado',
-                  valor: moeda.format(saldoFinal),
-                  destaque: true,
-                ),
-                _ValorResumo(
-                  titulo: 'Saldo projetado',
-                  valor: moeda.format(saldoProjetado),
-                  destaque: true,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
-              child: _MiniResumo(
+              child: _ValorFluxo(
+                titulo: 'Saldo atual',
+                valor: moeda.format(saldo),
+                icone: Icons.account_balance_wallet_outlined,
+                destaque: true,
+              ),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: _ValorFluxo(
+                titulo: 'Saldo projetado',
+                valor: moeda.format(projetado),
+                icone: Icons.timeline_rounded,
+                destaque: true,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 9),
+        Row(
+          children: [
+            Expanded(
+              child: _ValorFluxo(
                 titulo: 'Entrou',
                 valor: moeda.format(resumo['entradas_realizadas'] ?? 0),
                 icone: Icons.south_west_rounded,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 9),
             Expanded(
-              child: _MiniResumo(
+              child: _ValorFluxo(
                 titulo: 'Saiu',
                 valor: moeda.format(resumo['saidas_realizadas'] ?? 0),
                 icone: Icons.north_east_rounded,
@@ -282,20 +236,20 @@ class _ResumoFluxo extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 9),
         Row(
           children: [
             Expanded(
-              child: _MiniResumo(
-                titulo: 'Entradas previstas',
+              child: _ValorFluxo(
+                titulo: 'A entrar',
                 valor: moeda.format(resumo['entradas_previstas'] ?? 0),
                 icone: Icons.schedule_rounded,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 9),
             Expanded(
-              child: _MiniResumo(
-                titulo: 'Saídas previstas',
+              child: _ValorFluxo(
+                titulo: 'A sair',
                 valor: moeda.format(resumo['saidas_previstas'] ?? 0),
                 icone: Icons.event_note_outlined,
               ),
@@ -307,66 +261,46 @@ class _ResumoFluxo extends StatelessWidget {
   }
 }
 
-class _ValorResumo extends StatelessWidget {
-  const _ValorResumo({
+class _ValorFluxo extends StatelessWidget {
+  const _ValorFluxo({
     required this.titulo,
     required this.valor,
+    required this.icone,
     this.destaque = false,
   });
 
   final String titulo;
   final String valor;
-  final bool destaque;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(child: Text(titulo)),
-          Text(
-            valor,
-            style: TextStyle(
-              fontSize: destaque ? 18 : 14,
-              fontWeight: destaque ? FontWeight.bold : FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniResumo extends StatelessWidget {
-  const _MiniResumo({
-    required this.titulo,
-    required this.valor,
-    required this.icone,
-  });
-
-  final String titulo;
-  final String valor;
   final IconData icone;
+  final bool destaque;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(13),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icone, color: const Color(0xFFD6A84B)),
-            const SizedBox(height: 7),
-            Text(titulo, style: const TextStyle(color: Colors.white60)),
-            const SizedBox(height: 2),
+            Icon(icone, size: 21),
+            const SizedBox(height: 10),
             Text(
               valor,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: destaque ? 15 : 13,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              titulo,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 10.5,
+              ),
             ),
           ],
         ),
@@ -375,97 +309,70 @@ class _MiniResumo extends StatelessWidget {
   }
 }
 
-class _LinhaFluxo extends StatelessWidget {
-  const _LinhaFluxo({
+class _LinhaFluxoCompacta extends StatelessWidget {
+  const _LinhaFluxoCompacta({
     required this.linha,
-    required this.modo,
+    required this.mensal,
     required this.moeda,
     required this.dia,
     required this.mes,
   });
 
   final Map<String, dynamic> linha;
-  final String modo;
+  final bool mensal;
   final NumberFormat moeda;
   final DateFormat dia;
   final DateFormat mes;
 
   @override
   Widget build(BuildContext context) {
-    final referencia = modo == 'Diário'
-        ? linha['data_ref']?.toString()
-        : '${linha['mes_ref']}-01';
-    final data = DateTime.tryParse(referencia ?? '');
-    final titulo = data == null
+    final referencia = mensal
+        ? '${linha['mes_ref']}-01'
+        : linha['data_ref']?.toString();
+    final dataRef = DateTime.tryParse(referencia ?? '');
+    final titulo = dataRef == null
         ? referencia ?? '-'
-        : modo == 'Diário'
-        ? dia.format(data)
-        : _capitalizar(mes.format(data));
+        : mensal
+        ? mes.format(dataRef)
+        : dia.format(dataRef);
     final realizado = _double(linha['resultado_realizado']);
     final previsto = _double(linha['resultado_previsto']);
-    final saldoRealizado = _double(linha['saldo_realizado_acumulado']);
     final saldoProjetado = _double(linha['saldo_projetado_acumulado']);
 
     return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        title: Text(
+          titulo,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          'Realizado ${moeda.format(realizado)} • '
+          'Previsto ${moeda.format(previsto)}',
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    titulo,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Text(
-                  moeda.format(realizado),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
+            Text(
+              moeda.format(saldoProjetado),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 14,
-              runSpacing: 5,
-              children: [
-                Text(
-                  'Previsto no período: ${moeda.format(previsto)}',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
-                ),
-                Text(
-                  'Saldo: ${moeda.format(saldoRealizado)}',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
-                ),
-                Text(
-                  'Projetado: ${moeda.format(saldoProjetado)}',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
-                ),
-              ],
+            Text(
+              'projetado',
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-String _capitalizar(String texto) {
-  if (texto.isEmpty) {
-    return texto;
+  static double _double(dynamic valor) {
+    if (valor is num) return valor.toDouble();
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0;
   }
-  return texto[0].toUpperCase() + texto.substring(1);
-}
-
-double _double(dynamic valor) {
-  if (valor is num) {
-    return valor.toDouble();
-  }
-  return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0;
 }
