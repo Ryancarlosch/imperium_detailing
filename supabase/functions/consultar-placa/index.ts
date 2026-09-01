@@ -34,24 +34,18 @@ Deno.serve(async (req) => {
 
   // consulta-placa-edge-auth-v1
   const authorization = req.headers.get("Authorization") ?? "";
-
   if (!authorization.startsWith("Bearer ")) {
     return json({ error: "Usuário não autenticado." }, 401);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-
   if (!supabaseUrl || !supabaseAnonKey) {
     return json({ error: "Configuração do Supabase indisponível." }, 503);
   }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: authorization,
-      },
-    },
+    global: { headers: { Authorization: authorization } },
   });
 
   const {
@@ -64,7 +58,6 @@ Deno.serve(async (req) => {
   }
 
   let body: Record<string, unknown>;
-
   try {
     body = await req.json();
   } catch (_) {
@@ -72,7 +65,6 @@ Deno.serve(async (req) => {
   }
 
   const placa = normalizarPlaca(body.placa);
-
   if (!/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(placa)) {
     return json(
       { error: "Informe uma placa válida no padrão antigo ou Mercosul." },
@@ -80,10 +72,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  // A chave do provedor fica somente como secret no Supabase.
-  // Nunca colocar esse token no Flutter/APK.
-  const token = Deno.env.get("FALCON_DATAHUB_TOKEN");
-
+  const token = (Deno.env.get("FALCON_DATAHUB_TOKEN") ?? "").trim();
   if (!token) {
     return json(
       { error: "Consulta por placa ainda não foi configurada no servidor." },
@@ -94,10 +83,11 @@ Deno.serve(async (req) => {
   const endpoint =
     `https://datahub.falcon-server.com.br/private/v1/placas/${placa}/search`;
 
-  let providerResponse: Response;
+  let response: Response;
+  let providerBody: Record<string, unknown> | null = null;
 
   try {
-    providerResponse = await fetch(endpoint, {
+    response = await fetch(endpoint, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -106,28 +96,57 @@ Deno.serve(async (req) => {
     });
   } catch (_) {
     return json(
-      { error: "Serviço de consulta de placa temporariamente indisponível." },
+      { error: "Não foi possível conectar ao provedor de placas." },
       502,
     );
   }
-
-  if (providerResponse.status === 404) {
-    return json({ error: "Placa não encontrada." }, 404);
-  }
-
-  if (!providerResponse.ok) {
-    return json(
-      { error: "O provedor de consulta de placa recusou a consulta." },
-      502,
-    );
-  }
-
-  let providerBody: Record<string, unknown>;
 
   try {
-    providerBody = await providerResponse.json();
+    const parsed = await response.json();
+    if (parsed && typeof parsed === "object") {
+      providerBody = parsed as Record<string, unknown>;
+    }
   } catch (_) {
-    return json({ error: "Resposta inválida do provedor de placa." }, 502);
+    providerBody = null;
+  }
+
+  console.log(
+    JSON.stringify({
+      evento: "falcon_placa_status",
+      status: response.status,
+      placa,
+      body_keys: providerBody ? Object.keys(providerBody) : [],
+    }),
+  );
+
+  if (!response.ok) {
+    let mensagem = "Falha ao consultar placa no Falcon.";
+    if (providerBody) {
+      const candidato =
+        providerBody.error ?? providerBody.message ?? providerBody.mensagem;
+      if (typeof candidato === "string" && candidato.trim()) {
+        mensagem = candidato.trim();
+      }
+    }
+
+    if (response.status === 401) {
+      mensagem = "API Key do Falcon inválida ou expirada.";
+    } else if (response.status === 403) {
+      mensagem = "API Key do Falcon sem permissão para consulta de placas.";
+    } else if (response.status === 404) {
+      mensagem = "Placa não encontrada na base do Falcon.";
+    } else if (response.status === 429) {
+      mensagem = "Limite de consultas do plano Falcon atingido.";
+    }
+
+    return json(
+      { error: mensagem, provider_status: response.status },
+      response.status,
+    );
+  }
+
+  if (!providerBody) {
+    return json({ error: "O Falcon respondeu sem JSON válido." }, 502);
   }
 
   const raw =
@@ -135,15 +154,31 @@ Deno.serve(async (req) => {
       ? (providerBody.data as Record<string, unknown>)
       : providerBody;
 
-  // Retorna ao aplicativo somente os campos necessários ao cadastro.
+  const marca = String(raw.marca ?? raw.brand ?? "").trim();
+  const modelo = String(raw.modelo ?? raw.model ?? "").trim();
+  const cor = String(raw.cor ?? raw.color ?? "").trim();
+  const anoFabricacao = Number(
+    raw.ano ?? raw.ano_fabricacao ?? raw.year ?? raw.year_manufacture ?? 0,
+  );
+  const anoModelo = Number(
+    raw.ano_modelo ?? raw.model_year ?? raw.ano ?? raw.year ?? 0,
+  );
+
+  if (!marca && !modelo) {
+    return json(
+      { error: "O Falcon respondeu, mas não retornou marca/modelo do veículo." },
+      502,
+    );
+  }
+
   return json({
     data: {
       placa,
-      marca: String(raw.marca ?? "").trim(),
-      modelo: String(raw.modelo ?? "").trim(),
-      ano_fabricacao: Number(raw.ano ?? raw.ano_fabricacao ?? 0),
-      ano_modelo: Number(raw.ano_modelo ?? raw.ano ?? 0),
-      cor: String(raw.cor ?? "").trim(),
+      marca,
+      modelo,
+      ano_fabricacao: anoFabricacao,
+      ano_modelo: anoModelo,
+      cor,
     },
   });
 });

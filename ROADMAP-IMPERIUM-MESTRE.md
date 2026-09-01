@@ -5,7 +5,16 @@
 > **Regra principal:** nenhum item antigo deve ser apagado. Quando algo for concluído,
 > o item permanece no roadmap e muda de status, recebendo data/notas quando necessário.
 
-Última atualização: **2026-08-13**
+Última atualização: **2026-09-01**
+## BASELINE OFICIAL — 2026-09-01
+
+- Branch oficial: `desenvolvimento`.
+- Baseline anterior à Sprint 0: `1c35d4d` — Financeiro otimizado + OS Cloud Upload-Only V1.
+- Financeiro local está avançado e permanece local até homologação completa no APK.
+- OS Cloud possui núcleo Upload-Only V1 para OS e itens; download continua bloqueado nesta fase.
+- Consulta por placa existe no app; Edge Function `consultar-placa` está ativa com JWT e requer homologação real APK → Supabase → Falcon.
+- Ponto possui dados reais na nuvem; homologação física multiaparelho ainda pendente.
+- Ordem imediata: estabilizar CI → homologar placa → homologar OS Upload-Only → homologar Financeiro → fechar Ponto multiaparelho.
 
 ---
 
@@ -350,15 +359,12 @@
 🟢 **Pagamento/finalização**
 - Fluxos locais implementados.
 
-⬜ **Sincronização de OS**
-- OS.
-- itens.
-- serviços/produtos.
-- responsáveis.
-- checklist.
-- estados.
-- histórico.
-
+🟡 **Sincronização de OS — Upload-Only V1**
+- 🟢 OS e itens possuem upload idempotente para o Supabase.
+- 🟡 Homologar upload real, contagem e isolamento por empresa.
+- ⬜ Checklist/revisões na nuvem.
+- ⬜ Serviços/produtos/responsáveis/histórico conforme arquitetura cloud.
+- ⬜ Download controlado somente após homologação do Upload-Only V1.
 ⬜ **Fotos/assinaturas no Supabase Storage**
 - Preservar cache local.
 
@@ -767,7 +773,7 @@ Esta ordem não deve ser pulada sem registrar explicitamente o motivo neste road
 1. 🟢 **Ponto/Funcionários — implementação concluída; homologação de campo pendente**
 2. 🟡 **Clientes e Veículos**
 3. 🟡 **Agenda**
-4. ⬜ **Ordem de Serviço na nuvem**
+4. 🟡 **Ordem de Serviço na nuvem — Upload-Only V1 implementado; homologação pendente**
 5. ⬜ **Estoque na nuvem**
 6. ⬜ **Financeiro na nuvem**
 7. ⬜ **Precificação na nuvem**
@@ -1139,7 +1145,7 @@ Validação pendente:
 
 ## 2026-08-14 — Conciliação bancária segura V1
 
-Módulo: Financeiro • Contas / Extrato bancário  
+Módulo: Financeiro • Contas / Extrato bancário
 Status: 🟢 Implementado localmente
 
 Alterações:
@@ -1409,3 +1415,34 @@ Marcador: os-cloud-upload-only-v1
 - 🛡️ Acesso remoto de funcionario a ordens_servico continua bloqueado.
 - 🟡 Homologacao pendente: upload real, contagem e isolamento por empresa.
 - ⬜ Proximo passo: checklist/revisoes e depois download controlado da OS.
+
+---
+
+## 2026-09-01 — Sprint 0 de estabilização do baseline
+
+Módulo: Fundação / Qualidade / Git / Copilot / Consulta de placa
+Status anterior: 🟡 baseline funcional com CI vermelho
+Status novo: 🟢 validação local limpa; CI remoto aguardando confirmação
+
+Alterações:
+- warning `_data` removido;
+- backups históricos removidos da árvore rastreada sem apagar histórico;
+- instruções do Copilot criadas;
+- fonte da Edge Function `consultar-placa` alinhada à V5 ativa, com contrato de teste preservado;
+- roadmap e pendências atualizados.
+
+Banco/migração:
+- nenhuma alteração SQLite;
+- nenhuma alteração de schema PostgreSQL;
+- nenhum dado operacional apagado.
+
+Testes:
+- dart format: aprovado;
+- flutter analyze: aprovado sem issues;
+- teste de consulta de placa: aprovado;
+- flutter test: aprovado;
+- git diff --check: aprovado.
+
+Próximo passo:
+- homologar consulta de placa;
+- homologar OS Cloud Upload-Only V1 com OS real.

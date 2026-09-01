@@ -40,8 +40,6 @@ class _LancamentoFinanceiroPageState extends State<LancamentoFinanceiroPage> {
   late final TextEditingController _documento;
   late final TextEditingController _observacoes;
 
-  final DateFormat _data = DateFormat('dd/MM/yyyy');
-
   List<PlanoContaFinanceiro> _plano = const [];
   List<ContaFinanceira> _contas = const [];
   List<Fornecedor> _fornecedores = const [];

@@ -47,3 +47,8 @@ app.*.map.json
 *.bak_*
 *.ps1
 novos_arquivos/
+# Imperium - artefatos temporarios fora do contexto ativo
+.imperium_backup_*/
+flutter_analyze*.txt
+flutter_test*.txt
+*.BLOQUEADO
