@@ -43,6 +43,15 @@ class ConsultaPlacaResultado {
   }
 }
 
+class ConsultaPlacaNaoEncontradaException implements Exception {
+  const ConsultaPlacaNaoEncontradaException(this.mensagem);
+
+  final String mensagem;
+
+  @override
+  String toString() => mensagem;
+}
+
 class ConsultaPlacaService {
   final Map<String, ConsultaPlacaResultado> _cache =
       <String, ConsultaPlacaResultado>{};
@@ -110,6 +119,15 @@ class ConsultaPlacaService {
     }
 
     final map = Map<String, dynamic>.from(raw);
+
+    if (response.status == 404) {
+      final mensagem =
+          (map['error'] ??
+                  map['mensagem'] ??
+                  'Veículo não encontrado na base gratuita. Preencha manualmente.')
+              .toString();
+      throw ConsultaPlacaNaoEncontradaException(mensagem);
+    }
 
     if (response.status < 200 || response.status >= 300) {
       final mensagem =

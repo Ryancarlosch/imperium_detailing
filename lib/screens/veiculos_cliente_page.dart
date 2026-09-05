@@ -111,6 +111,17 @@ class _VeiculosClientePageState extends State<VeiculosClientePage> {
               content: Text('Dados do veículo preenchidos pela placa.'),
             ),
           );
+      } on ConsultaPlacaNaoEncontradaException catch (erro) {
+        if (!mounted || !dialogContext.mounted) return;
+
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(erro.mensagem),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
       } catch (erro) {
         if (!mounted || !dialogContext.mounted) return;
 

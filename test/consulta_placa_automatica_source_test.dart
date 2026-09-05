@@ -15,6 +15,9 @@ void main() {
     ).readAsStringSync();
 
     expect(service, contains('consulta-placa-automatica-v1'));
+    expect(service, contains('ConsultaPlacaNaoEncontradaException'));
+    expect(service, contains('if (response.status == 404)'));
+    expect(tela, contains('on ConsultaPlacaNaoEncontradaException catch'));
     expect(service, contains("client.functions.invoke("));
     expect(service, contains("'consultar-placa'"));
 
