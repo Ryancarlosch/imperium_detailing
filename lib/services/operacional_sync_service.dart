@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
+import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'ponto_nuvem_service.dart';
 import 'supabase_bootstrap.dart';
@@ -231,6 +232,7 @@ class OperacionalSyncService {
       await _baixarClientes(empresaId);
       await _baixarVeiculos(empresaId);
       await _baixarAgendamentos(empresaId);
+      await OsCloudDownloadService.instance.sincronizarDownloadNovos(empresaId);
 
       // O Ponto já possui sua própria estrutura de nuvem.
       await _sincronizarPontoFuncionario();

@@ -18,8 +18,8 @@
 - roadmap atualizado para o baseline de 2026-09-01.
 
 ## Pendências reais
-1. homologar consulta de placa no APK e logs do Falcon;
-2. homologar OS Cloud Upload-Only V1 com OS real, retry/idempotência e isolamento;
+1. consulta de placa homologada no fluxo disponível, com fallback manual quando a base gratuita não possui o veículo; acompanhar logs do Falcon;
+2. homologar em produção controlada o download OS Cloud V2.1, incluindo dependências pendentes e isolamento;
 3. homologar Financeiro local completo no APK;
 4. fechar Ponto em dois aparelhos;
 5. validar Clientes/Veículos/Agenda multiaparelho e conflitos;

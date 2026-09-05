@@ -11,10 +11,10 @@
 - Branch oficial: `desenvolvimento`.
 - Baseline anterior à Sprint 0: `1c35d4d` — Financeiro otimizado + OS Cloud Upload-Only V1.
 - Financeiro local está avançado e permanece local até homologação completa no APK.
-- OS Cloud possui núcleo Upload-Only V1 para OS e itens; download continua bloqueado nesta fase.
+- OS Cloud possui Upload-Only V1 homologado e V2.1 de download controlado apenas de OS/itens novos.
 - Consulta por placa existe no app; Edge Function `consultar-placa` está ativa com JWT e requer homologação real APK → Supabase → Falcon.
 - Ponto possui dados reais na nuvem; homologação física multiaparelho ainda pendente.
-- Ordem imediata: estabilizar CI → homologar placa → homologar OS Upload-Only → homologar Financeiro → fechar Ponto multiaparelho.
+- Ordem imediata: homologar placa com fallback manual → acompanhar OS Cloud V2.1 → homologar Financeiro → fechar Ponto multiaparelho.
 
 ---
 
@@ -359,12 +359,14 @@
 🟢 **Pagamento/finalização**
 - Fluxos locais implementados.
 
-🟡 **Sincronização de OS — Upload-Only V1**
+- ✅ **Sincronização de OS — Upload-Only V1**
 - 🟢 OS e itens possuem upload idempotente para o Supabase.
-- 🟡 Homologar upload real, contagem e isolamento por empresa.
+- ✅ Homologado conforme validação atual; manter homologação real de retry/idempotência e isolamento por empresa.
 - ⬜ Checklist/revisões na nuvem.
 - ⬜ Serviços/produtos/responsáveis/histórico conforme arquitetura cloud.
-- ⬜ Download controlado somente após homologação do Upload-Only V1.
+- 🟡 **OS Cloud V2.1 — download controlado de registros novos**
+- 🛡️ Importa somente OS/itens remotos sem mapa, após clientes, veículos e agenda.
+- 🛡️ Não sobrescreve OS mapeada e não baixa pagamentos, estoque, produtos, fotos, assinatura, checklist ou revisões.
 ⬜ **Fotos/assinaturas no Supabase Storage**
 - Preservar cache local.
 
