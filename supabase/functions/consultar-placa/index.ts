@@ -23,6 +23,43 @@ function normalizarPlaca(valor: unknown): string {
     .replace(/[^A-Z0-9]/g, "");
 }
 
+type ProviderResult = {
+  response: Response;
+  body: Record<string, unknown> | null;
+  endpoint: string;
+};
+
+async function consultarFalcon(
+  endpoint: string,
+  token: string,
+): Promise<ProviderResult> {
+  let response: Response;
+
+  try {
+    response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    });
+  } catch (_) {
+    throw new Error("falcon_indisponivel");
+  }
+
+  let body: Record<string, unknown> | null = null;
+  try {
+    const parsed = await response.json();
+    if (parsed && typeof parsed === "object") {
+      body = parsed as Record<string, unknown>;
+    }
+  } catch (_) {
+    body = null;
+  }
+
+  return { response, body, endpoint };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -80,20 +117,27 @@ Deno.serve(async (req) => {
     );
   }
 
-  const endpoint =
-    `https://datahub.falcon-server.com.br/private/v1/placas/${placa}/search`;
+  // consulta-placa-falcon-free-v4
+  const endpoints = [
+    `https://beta.falcon-server.com.br/data-hub/private/v1/vehicles/${placa}/search`,
+    `https://datahub.falcon-server.com.br/private/v1/placas/${placa}/search`,
+  ];
 
-  let response: Response;
-  let providerBody: Record<string, unknown> | null = null;
+  let provider: ProviderResult;
+  let primaryStatus = 0;
+  let fallbackStatus: number | null = null;
 
   try {
-    response = await fetch(endpoint, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    });
+    provider = await consultarFalcon(endpoints[0], token);
+    primaryStatus = provider.response.status;
+
+    if ([400, 404, 422].includes(provider.response.status)) {
+      const fallback = await consultarFalcon(endpoints[1], token);
+      fallbackStatus = fallback.response.status;
+      if (fallback.response.ok || fallback.response.status !== 404) {
+        provider = fallback;
+      }
+    }
   } catch (_) {
     return json(
       { error: "Não foi possível conectar ao provedor de placas." },
@@ -101,20 +145,17 @@ Deno.serve(async (req) => {
     );
   }
 
-  try {
-    const parsed = await response.json();
-    if (parsed && typeof parsed === "object") {
-      providerBody = parsed as Record<string, unknown>;
-    }
-  } catch (_) {
-    providerBody = null;
-  }
+  const response = provider.response;
+  const providerBody = provider.body;
 
   console.log(
     JSON.stringify({
       evento: "falcon_placa_status",
       status: response.status,
+      primary_status: primaryStatus,
+      fallback_status: fallbackStatus,
       placa,
+      endpoint: provider.endpoint,
       body_keys: providerBody ? Object.keys(providerBody) : [],
     }),
   );
@@ -129,19 +170,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (response.status === 401) {
+    if ([400, 404, 422].includes(response.status)) {
+      mensagem =
+        "Veículo ainda não disponível na base gratuita. Continue o cadastro manualmente.";
+    } else if (response.status === 401) {
       mensagem = "API Key do Falcon inválida ou expirada.";
     } else if (response.status === 403) {
       mensagem = "API Key do Falcon sem permissão para consulta de placas.";
-    } else if (response.status === 404) {
-      mensagem = "Placa não encontrada na base do Falcon.";
     } else if (response.status === 429) {
-      mensagem = "Limite de consultas do plano Falcon atingido.";
+      mensagem =
+        "Limite gratuito de consultas do Falcon atingido. Tente novamente mais tarde.";
     }
 
+    const statusRetorno = [400, 404, 422].includes(response.status)
+      ? 404
+      : response.status;
+
     return json(
-      { error: mensagem, provider_status: response.status },
-      response.status,
+      {
+        error: mensagem,
+        provider_status: response.status,
+        primary_status: primaryStatus,
+        fallback_status: fallbackStatus,
+      },
+      statusRetorno,
     );
   }
 
