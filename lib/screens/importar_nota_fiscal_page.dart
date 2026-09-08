@@ -10,6 +10,7 @@ import '../repositories/nota_fiscal_entrada_repository.dart';
 import '../services/nota_fiscal_entrada_xml_service.dart';
 import 'chave_fiscal_manual_page.dart';
 import 'chave_fiscal_scanner_page.dart';
+import 'integrar_nota_fiscal_page.dart';
 
 class ImportarNotaFiscalPage extends StatefulWidget {
   const ImportarNotaFiscalPage({super.key});
@@ -228,6 +229,18 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
                 _selecionarXml();
               }
             : null,
+        onIntegrar: nota.statusImportacao == 'processada'
+            ? () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        IntegrarNotaFiscalPage(nota: nota, itens: itens),
+                  ),
+                ).then((_) => _carregar());
+              }
+            : null,
       ),
     );
   }
@@ -336,10 +349,12 @@ class _NotaDetalhes extends StatelessWidget {
     required this.nota,
     required this.itens,
     this.onAdicionarXml,
+    this.onIntegrar,
   });
   final NotaFiscalEntrada nota;
   final List<NotaFiscalEntradaItem> itens;
   final VoidCallback? onAdicionarXml;
+  final VoidCallback? onIntegrar;
 
   @override
   Widget build(BuildContext context) => DraggableScrollableSheet(
@@ -364,6 +379,14 @@ class _NotaDetalhes extends StatelessWidget {
             onPressed: onAdicionarXml,
             icon: const Icon(Icons.upload_file_outlined),
             label: const Text('Adicionar XML'),
+          ),
+        ],
+        if (onIntegrar != null) ...[
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: onIntegrar,
+            icon: const Icon(Icons.link),
+            label: const Text('Integrar fornecedor e estoque'),
           ),
         ],
         const SizedBox(height: 16),

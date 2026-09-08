@@ -123,7 +123,7 @@ void main() {
     await legado.close();
 
     final database = await AppDatabase.instance.database;
-    expect(await database.getVersion(), 28);
+    expect(await database.getVersion(), 29);
 
     final regra = (await database.query(
       'financeiro_regras_taxa',

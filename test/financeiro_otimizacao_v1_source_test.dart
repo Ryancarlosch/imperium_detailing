@@ -47,7 +47,7 @@ void main() {
     expect(fluxoRepo, contains('fluxo-snapshot-mensal-v1'));
 
     expect(banco, contains('financeiro-conciliacao-schema-v1'));
-    expect(banco, contains('static const int schemaVersion = 28;'));
+    expect(banco, contains('static const int schemaVersion = 29;'));
 
     final drePage = File('lib/screens/dre_page.dart').readAsStringSync();
     final dreServiceFile = File('lib/services/dre_pdf_service.dart');

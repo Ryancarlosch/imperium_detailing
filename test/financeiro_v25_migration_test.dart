@@ -111,7 +111,7 @@ void main() {
       final database = await AppDatabase.instance.database;
 
       expect(await database.getVersion(), AppDatabase.schemaVersion);
-      expect(AppDatabase.schemaVersion, 28);
+      expect(AppDatabase.schemaVersion, 29);
 
       final cliente = await database.query(
         'clientes',

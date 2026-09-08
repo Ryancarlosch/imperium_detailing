@@ -79,6 +79,26 @@ class NotaFiscalEntradaRepository {
         .toList();
   }
 
+  Future<void> vincularFornecedor(int notaFiscalId, int fornecedorId) async {
+    final database = await _databaseProvider();
+    await database.update(
+      'notas_fiscais_entrada',
+      {'fornecedor_id': fornecedorId},
+      where: 'id = ?',
+      whereArgs: [notaFiscalId],
+    );
+  }
+
+  Future<void> vincularItemEstoque(int itemFiscalId, int estoqueItemId) async {
+    final database = await _databaseProvider();
+    await database.update(
+      'notas_fiscais_entrada_itens',
+      {'estoque_item_id': estoqueItemId},
+      where: 'id = ?',
+      whereArgs: [itemFiscalId],
+    );
+  }
+
   Future<NotaFiscalEntrada> registrarPreliminar({
     required String chaveAcesso,
     required String origemImportacao,

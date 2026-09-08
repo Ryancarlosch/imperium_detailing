@@ -5,7 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 28;
+  static const int schemaVersion = 29;
 
   static Database? _database;
 
@@ -156,6 +156,10 @@ class AppDatabase {
 
         if (versaoAntiga < 28) {
           await _atualizarParaVersao28(database);
+        }
+
+        if (versaoAntiga < 29) {
+          await _atualizarParaVersao29(database);
         }
       },
     );
@@ -2097,6 +2101,7 @@ class AppDatabase {
           unidade TEXT NOT NULL DEFAULT 'un',
           valor_total_pago REAL NOT NULL DEFAULT 0,
           quantidade_total REAL NOT NULL DEFAULT 0,
+          ean TEXT NOT NULL DEFAULT '',
           custo_unitario REAL NOT NULL DEFAULT 0,
           custo_unitario_calculado REAL NOT NULL DEFAULT 0,
           fornecedor TEXT NOT NULL DEFAULT '',
@@ -2113,6 +2118,12 @@ class AppDatabase {
       tabela: 'itens_estoque',
       coluna: 'ativo',
       definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'itens_estoque',
+      coluna: 'ean',
+      definicao: "TEXT NOT NULL DEFAULT ''",
     );
 
     await database.execute('''
@@ -2132,6 +2143,12 @@ class AppDatabase {
         idx_itens_estoque_ativo
         ON itens_estoque (ativo)
       ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_itens_estoque_ean
+        ON itens_estoque (ean)
+      ''');
   }
 
   Future<void> _criarTabelaMovimentacoesEstoque(Database database) async {
@@ -2149,6 +2166,8 @@ class AppDatabase {
           origem TEXT NOT NULL DEFAULT 'Manual',
           ordem_servico_id INTEGER,
           lote_id INTEGER,
+          nota_fiscal_id INTEGER,
+          nota_fiscal_item_id INTEGER,
           data TEXT NOT NULL,
           FOREIGN KEY (item_estoque_id)
             REFERENCES itens_estoque (id)
@@ -2158,9 +2177,30 @@ class AppDatabase {
             ON DELETE SET NULL,
           FOREIGN KEY (lote_id)
             REFERENCES estoque_lotes (id)
+            ON DELETE SET NULL,
+          FOREIGN KEY (nota_fiscal_id)
+            REFERENCES notas_fiscais_entrada (id)
+            ON DELETE SET NULL,
+          FOREIGN KEY (nota_fiscal_item_id)
+            REFERENCES notas_fiscais_entrada_itens (id)
             ON DELETE SET NULL
         )
       ''');
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentacoes_estoque',
+      coluna: 'nota_fiscal_id',
+      definicao:
+          'INTEGER REFERENCES notas_fiscais_entrada (id) ON DELETE SET NULL',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentacoes_estoque',
+      coluna: 'nota_fiscal_item_id',
+      definicao:
+          'INTEGER REFERENCES notas_fiscais_entrada_itens (id) ON DELETE SET NULL',
+    );
 
     await database.execute('''
         CREATE INDEX IF NOT EXISTS
@@ -2190,6 +2230,22 @@ class AppDatabase {
         CREATE INDEX IF NOT EXISTS
         idx_movimentacoes_estoque_lote_id
         ON movimentacoes_estoque (lote_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentacoes_estoque_nota_fiscal
+        ON movimentacoes_estoque (nota_fiscal_id, nota_fiscal_item_id)
+      ''');
+
+    await database.execute('''
+        CREATE UNIQUE INDEX IF NOT EXISTS
+        idx_mov_estoque_nf_item_entrada_unica
+        ON movimentacoes_estoque (nota_fiscal_id, nota_fiscal_item_id)
+        WHERE nota_fiscal_id IS NOT NULL
+          AND nota_fiscal_item_id IS NOT NULL
+          AND tipo = 'ENTRADA'
+          AND origem = 'Nota fiscal de entrada'
       ''');
   }
 
@@ -3432,6 +3488,66 @@ class AppDatabase {
   Future<void> _atualizarParaVersao28(Database database) async {
     await _criarTabelaNotasFiscaisEntrada(database);
     await _criarTabelaNotasFiscaisEntradaItens(database);
+  }
+
+  Future<void> _atualizarParaVersao29(Database database) async {
+    // Alguns testes/bancos legados podem não possuir o módulo de estoque
+    // completo. A v29 garante primeiro a estrutura atual antes de criar
+    // colunas e índices da integração fiscal.
+    if (!await _tabelaExiste(database, 'itens_estoque')) {
+      await _criarTabelaItensEstoque(database);
+    }
+    if (!await _tabelaExiste(database, 'estoque_lotes')) {
+      await _criarTabelaEstoqueLotes(database);
+    }
+    if (!await _tabelaExiste(database, 'movimentacoes_estoque')) {
+      await _criarTabelaMovimentacoesEstoque(database);
+    }
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'itens_estoque',
+      coluna: 'ean',
+      definicao: "TEXT NOT NULL DEFAULT ''",
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentacoes_estoque',
+      coluna: 'nota_fiscal_id',
+      definicao:
+          'INTEGER REFERENCES notas_fiscais_entrada (id) ON DELETE SET NULL',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentacoes_estoque',
+      coluna: 'nota_fiscal_item_id',
+      definicao:
+          'INTEGER REFERENCES notas_fiscais_entrada_itens (id) ON DELETE SET NULL',
+    );
+
+    if (await _tabelaExiste(database, 'itens_estoque')) {
+      await database.execute('''
+        CREATE INDEX IF NOT EXISTS idx_itens_estoque_ean
+        ON itens_estoque (ean)
+      ''');
+    }
+
+    if (await _tabelaExiste(database, 'movimentacoes_estoque')) {
+      await database.execute('''
+        CREATE INDEX IF NOT EXISTS idx_movimentacoes_estoque_nota_fiscal
+        ON movimentacoes_estoque (nota_fiscal_id, nota_fiscal_item_id)
+      ''');
+
+      await database.execute('''
+        CREATE UNIQUE INDEX IF NOT EXISTS
+        idx_mov_estoque_nf_item_entrada_unica
+        ON movimentacoes_estoque (nota_fiscal_id, nota_fiscal_item_id)
+        WHERE nota_fiscal_id IS NOT NULL
+          AND nota_fiscal_item_id IS NOT NULL
+          AND tipo = 'ENTRADA'
+          AND origem = 'Nota fiscal de entrada'
+      ''');
+    }
   }
 
   String _normalizarUnidadeBase(String unidade) {

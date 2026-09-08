@@ -144,7 +144,7 @@ void main() {
       await legado.close();
 
       final database = await AppDatabase.instance.database;
-      expect(await database.getVersion(), 28);
+      expect(await database.getVersion(), 29);
 
       final tabelas = await database.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'table'",

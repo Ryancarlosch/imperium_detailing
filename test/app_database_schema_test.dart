@@ -15,7 +15,7 @@ void main() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     pastaTemporaria = await Directory.systemTemp.createTemp(
-      'imperium_database_schema_v27_test_',
+      'imperium_database_schema_v29_test_',
     );
     await databaseFactory.setDatabasesPath(pastaTemporaria.path);
     caminhoBanco = path.join(pastaTemporaria.path, 'imperium_detailing.db');
@@ -35,12 +35,12 @@ void main() {
     }
   });
 
-  group('AppDatabase - criação do banco versão 28', () {
+  group('AppDatabase - criação do banco versão 29', () {
     test('cria banco atual com integridade e foreign keys válidas', () async {
       final database = await AppDatabase.instance.database;
 
       expect(await database.getVersion(), AppDatabase.schemaVersion);
-      expect(AppDatabase.schemaVersion, 28);
+      expect(AppDatabase.schemaVersion, 29);
 
       final foreignKeys = await database.rawQuery('PRAGMA foreign_keys');
       expect(foreignKeys.single.values.single, 1);
@@ -90,6 +90,37 @@ void main() {
           'financeiro_os_mao_obra',
           'financeiro_regras_taxa',
           'financeiro_metas',
+        }),
+      );
+    });
+
+    test('cria integração fiscal do estoque da v29', () async {
+      final database = await AppDatabase.instance.database;
+
+      final itens = await _obterColunas(database, 'itens_estoque');
+      expect(itens, contains('ean'));
+
+      final movimentacoes = await _obterColunas(
+        database,
+        'movimentacoes_estoque',
+      );
+      expect(
+        movimentacoes,
+        containsAll(<String>{'nota_fiscal_id', 'nota_fiscal_item_id'}),
+      );
+
+      final indicesItens = await _obterIndices(database, 'itens_estoque');
+      expect(indicesItens, contains('idx_itens_estoque_ean'));
+
+      final indicesMovimentacoes = await _obterIndices(
+        database,
+        'movimentacoes_estoque',
+      );
+      expect(
+        indicesMovimentacoes,
+        containsAll(<String>{
+          'idx_movimentacoes_estoque_nota_fiscal',
+          'idx_mov_estoque_nf_item_entrada_unica',
         }),
       );
     });

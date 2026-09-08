@@ -5,6 +5,7 @@ class ItemEstoque {
   final double quantidade;
   final double quantidadeMinima;
   final String unidade;
+  final String ean;
   final double valorTotalPago;
   final double quantidadeTotal;
   final double custoUnitario;
@@ -21,6 +22,7 @@ class ItemEstoque {
     required this.quantidade,
     required this.quantidadeMinima,
     required this.unidade,
+    this.ean = '',
     this.valorTotalPago = 0,
     this.quantidadeTotal = 0,
     required this.custoUnitario,
@@ -145,6 +147,7 @@ class ItemEstoque {
       'quantidade': quantidade,
       'quantidade_minima': quantidadeMinima,
       'unidade': unidade,
+      'ean': ean,
       'valor_total_pago': valorTotalPago,
       'quantidade_total': quantidadeTotal,
       'custo_unitario': custoUnitarioEfetivo,
@@ -168,6 +171,7 @@ class ItemEstoque {
       quantidade: (map['quantidade'] as num?)?.toDouble() ?? 0,
       quantidadeMinima: (map['quantidade_minima'] as num?)?.toDouble() ?? 0,
       unidade: map['unidade'] as String? ?? 'unidade',
+      ean: map['ean'] as String? ?? '',
       valorTotalPago: (map['valor_total_pago'] as num?)?.toDouble() ?? 0,
       quantidadeTotal: (map['quantidade_total'] as num?)?.toDouble() ?? 0,
       custoUnitarioCalculado: custoCalculado > 0 ? custoCalculado : custoLegado,
