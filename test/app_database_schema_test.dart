@@ -35,12 +35,12 @@ void main() {
     }
   });
 
-  group('AppDatabase - criação do banco versão 27', () {
+  group('AppDatabase - criação do banco versão 28', () {
     test('cria banco atual com integridade e foreign keys válidas', () async {
       final database = await AppDatabase.instance.database;
 
       expect(await database.getVersion(), AppDatabase.schemaVersion);
-      expect(AppDatabase.schemaVersion, 27);
+      expect(AppDatabase.schemaVersion, 28);
 
       final foreignKeys = await database.rawQuery('PRAGMA foreign_keys');
       expect(foreignKeys.single.values.single, 1);
@@ -83,6 +83,8 @@ void main() {
           'financeiro_contas',
           'financeiro_transferencias',
           'fornecedores',
+          'notas_fiscais_entrada',
+          'notas_fiscais_entrada_itens',
           'financeiro_custos_fixos',
           'financeiro_colaboradores_custo',
           'financeiro_os_mao_obra',

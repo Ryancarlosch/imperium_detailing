@@ -40,7 +40,7 @@ void main() {
 
   group('AppDatabase - migrações com preservação de dados', () {
     test(
-      'migra da versão 19 para 27 preservando cliente, OS e financeiro legado',
+      'migra da versão 19 para 28 preservando cliente, OS e financeiro legado',
       () async {
         await _criarBancoLegado(
           caminhoBanco: caminhoBanco,
@@ -75,7 +75,7 @@ void main() {
         final database = await AppDatabase.instance.database;
 
         expect(await database.getVersion(), AppDatabase.schemaVersion);
-        expect(AppDatabase.schemaVersion, 27);
+        expect(AppDatabase.schemaVersion, 28);
 
         final cliente = await database.query(
           'clientes',
@@ -147,7 +147,7 @@ void main() {
     );
 
     test(
-      'migra da versão 20 para 27 preservando cliente arquivado, OS e pagamento',
+      'migra da versão 20 para 28 preservando cliente arquivado, OS e pagamento',
       () async {
         const arquivadoEm = '2026-02-15T14:20:00.000';
 
@@ -185,7 +185,7 @@ void main() {
 
         final database = await AppDatabase.instance.database;
 
-        expect(await database.getVersion(), 27);
+        expect(await database.getVersion(), 28);
 
         final cliente = await database.query(
           'clientes',
@@ -267,7 +267,7 @@ void main() {
 
         final database = await AppDatabase.instance.database;
 
-        expect(await database.getVersion(), 27);
+        expect(await database.getVersion(), 28);
 
         final ordem = await database.query(
           'ordens_servico',
@@ -302,13 +302,13 @@ void main() {
     );
 
     test(
-      'migra da versão 22 para 27 preservando pagamentos e inicializando taxas',
+      'migra da versão 22 para 28 preservando pagamentos e inicializando taxas',
       () async {
         await _criarBancoVersao22ComPagamento(caminhoBanco);
 
         final database = await AppDatabase.instance.database;
 
-        expect(await database.getVersion(), 27);
+        expect(await database.getVersion(), 28);
 
         final ordem = await database.query(
           'ordens_servico',

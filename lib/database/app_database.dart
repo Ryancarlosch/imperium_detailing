@@ -5,7 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 27;
+  static const int schemaVersion = 28;
 
   static Database? _database;
 
@@ -153,6 +153,10 @@ class AppDatabase {
         if (versaoAntiga < 27) {
           await _atualizarParaVersao27(database);
         }
+
+        if (versaoAntiga < 28) {
+          await _atualizarParaVersao28(database);
+        }
       },
     );
   }
@@ -172,6 +176,8 @@ class AppDatabase {
     await _criarTabelaContasFinanceiras(database);
     await _inserirContaFinanceiraPadrao(database);
     await _criarTabelaFornecedores(database);
+    await _criarTabelaNotasFiscaisEntrada(database);
+    await _criarTabelaNotasFiscaisEntradaItens(database);
     await _criarTabelaTransferenciasFinanceiras(database);
     await _criarTabelaCustosFixos(database);
     await _criarTabelaColaboradoresCusto(database);
@@ -1160,6 +1166,106 @@ class AppDatabase {
         CREATE INDEX IF NOT EXISTS
         idx_fornecedores_ativo_nome
         ON fornecedores (ativo, nome COLLATE NOCASE)
+      ''');
+  }
+
+  Future<void> _criarTabelaNotasFiscaisEntrada(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS notas_fiscais_entrada (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          chave_acesso TEXT NOT NULL UNIQUE,
+          modelo INTEGER,
+          numero INTEGER,
+          serie INTEGER,
+          data_emissao TEXT,
+          fornecedor_id INTEGER,
+          emitente_cnpj_cpf TEXT,
+          emitente_nome TEXT,
+          valor_produtos REAL,
+          valor_frete REAL NOT NULL DEFAULT 0,
+          valor_seguro REAL NOT NULL DEFAULT 0,
+          valor_desconto REAL NOT NULL DEFAULT 0,
+          valor_outras_despesas REAL NOT NULL DEFAULT 0,
+          valor_ipi REAL NOT NULL DEFAULT 0,
+          valor_icms_st REAL NOT NULL DEFAULT 0,
+          valor_total REAL,
+          situacao_fiscal TEXT NOT NULL DEFAULT 'desconhecida',
+          status_importacao TEXT NOT NULL DEFAULT 'pendente',
+          origem_importacao TEXT NOT NULL,
+          xml_original TEXT,
+          xml_hash TEXT,
+          importada_em TEXT NOT NULL,
+          observacoes TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY (fornecedor_id)
+            REFERENCES fornecedores (id)
+            ON DELETE SET NULL,
+          CHECK (length(chave_acesso) = 44),
+          CHECK (modelo IS NULL OR modelo IN (55, 65)),
+          CHECK (situacao_fiscal IN (
+            'autorizada',
+            'cancelada',
+            'denegada',
+            'inutilizada',
+            'desconhecida'
+          )),
+          CHECK (status_importacao IN ('pendente', 'processada', 'erro')),
+          CHECK (origem_importacao IN (
+            'xml',
+            'qrCode',
+            'codigoBarras',
+            'chaveManual'
+          ))
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_notas_fiscais_entrada_fornecedor_id
+        ON notas_fiscais_entrada (fornecedor_id)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_notas_fiscais_entrada_status_importacao
+        ON notas_fiscais_entrada (status_importacao)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_notas_fiscais_entrada_data_emissao
+        ON notas_fiscais_entrada (data_emissao)
+      ''');
+  }
+
+  Future<void> _criarTabelaNotasFiscaisEntradaItens(Database database) async {
+    await database.execute('''
+        CREATE TABLE IF NOT EXISTS notas_fiscais_entrada_itens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nota_fiscal_id INTEGER NOT NULL,
+          numero_item INTEGER NOT NULL,
+          codigo_produto TEXT,
+          ean TEXT,
+          descricao TEXT NOT NULL,
+          ncm TEXT,
+          cfop TEXT,
+          unidade TEXT NOT NULL,
+          quantidade REAL NOT NULL,
+          valor_unitario REAL NOT NULL,
+          valor_total REAL NOT NULL,
+          valor_desconto REAL NOT NULL DEFAULT 0,
+          estoque_item_id INTEGER,
+          observacoes TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY (nota_fiscal_id)
+            REFERENCES notas_fiscais_entrada (id)
+            ON DELETE CASCADE,
+          UNIQUE (nota_fiscal_id, numero_item)
+        )
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_notas_fiscais_entrada_itens_nota_fiscal_id
+        ON notas_fiscais_entrada_itens (nota_fiscal_id)
       ''');
   }
 
@@ -3321,6 +3427,11 @@ class AppDatabase {
         ON ordem_servico_ajustes_financeiros (pagamento_id, status)
       ''');
     }
+  }
+
+  Future<void> _atualizarParaVersao28(Database database) async {
+    await _criarTabelaNotasFiscaisEntrada(database);
+    await _criarTabelaNotasFiscaisEntradaItens(database);
   }
 
   String _normalizarUnidadeBase(String unidade) {
