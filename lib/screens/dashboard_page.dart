@@ -16,6 +16,7 @@ import 'estoque_page.dart';
 import 'dre_page.dart';
 import 'financeiro_dashboard_page.dart';
 import 'fluxo_caixa_page.dart';
+import 'importar_nota_fiscal_page.dart';
 import 'movimentacoes_financeiras_page.dart';
 import 'financeiro_page.dart';
 import 'fotos_page.dart';
@@ -313,6 +314,10 @@ class _DashboardPageState extends State<DashboardPage> {
     await _abrirPagina(const PontoFuncionariosPage());
   }
 
+  Future<void> _abrirImportarNotaFiscal() async {
+    await _abrirPagina(const ImportarNotaFiscalPage());
+  }
+
   int? _normalizarIdCliente(dynamic valor) {
     if (valor is int && valor > 0) {
       return valor;
@@ -446,6 +451,7 @@ class _DashboardPageState extends State<DashboardPage> {
         onServicos: () => _menuAbrir(_abrirServicos),
         onFotos: () => _menuAbrir(_abrirFotos),
         onPonto: () => _menuAbrir(_abrirPonto),
+        onImportarNotaFiscal: () => _menuAbrir(_abrirImportarNotaFiscal),
         onReceita: () => _menuAbrir(
           () => _abrirFinanceiroDireto(const FinanceiroDashboardPage()),
         ),
@@ -609,6 +615,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 onAbrirFotos: _abrirFotos,
                 onAbrirOrcamentos: _abrirOrcamentos,
                 onAbrirOrdens: () => _abrirOrdens('Todos'),
+                onAbrirNotaFiscal: _abrirImportarNotaFiscal,
                 onAbrirServicos: _abrirServicos,
                 onAbrirConfiguracoes: () {
                   if (!_validarAcesso('configuracoes')) return;
@@ -645,6 +652,7 @@ class _DashboardMenuV2 extends StatelessWidget {
     required this.onServicos,
     required this.onFotos,
     required this.onPonto,
+    required this.onImportarNotaFiscal,
     required this.onReceita,
     required this.onFluxoCaixa,
     required this.onMovimentacoes,
@@ -662,6 +670,7 @@ class _DashboardMenuV2 extends StatelessWidget {
   final VoidCallback onInicio, onAgenda, onClientes, onVeiculos;
   final VoidCallback onOrdens, onOrcamentos, onEstoque, onServicos;
   final VoidCallback onFotos, onPonto, onReceita, onFluxoCaixa;
+  final VoidCallback onImportarNotaFiscal;
   final VoidCallback onMovimentacoes, onDre, onFinanceiro;
   final VoidCallback onConfiguracoes;
   final VoidCallback? onLogout;
@@ -719,6 +728,11 @@ class _DashboardMenuV2 extends StatelessWidget {
               _item(Icons.car_repair_outlined, 'Ordens de serviço', onOrdens),
               _item(Icons.photo_library_outlined, 'Fotos', onFotos),
             ],
+            _item(
+              Icons.receipt_long_outlined,
+              'Importar Nota Fiscal',
+              onImportarNotaFiscal,
+            ),
             if (podeOrcamentos)
               _item(Icons.request_quote_outlined, 'Orçamentos', onOrcamentos),
             if (podeEstoque)
@@ -2667,6 +2681,7 @@ class _AtalhosRapidos extends StatelessWidget {
     required this.onAbrirFotos,
     required this.onAbrirOrcamentos,
     required this.onAbrirOrdens,
+    required this.onAbrirNotaFiscal,
     required this.onAbrirServicos,
     required this.onAbrirConfiguracoes,
   });
@@ -2679,6 +2694,7 @@ class _AtalhosRapidos extends StatelessWidget {
   final VoidCallback onAbrirFotos;
   final VoidCallback onAbrirOrcamentos;
   final VoidCallback onAbrirOrdens;
+  final VoidCallback onAbrirNotaFiscal;
   final VoidCallback onAbrirServicos;
   final VoidCallback onAbrirConfiguracoes;
 
@@ -2697,6 +2713,11 @@ class _AtalhosRapidos extends StatelessWidget {
         onAbrirOrcamentos,
       ),
       _AtalhoItem('Ordens', Icons.assignment_outlined, onAbrirOrdens),
+      _AtalhoItem(
+        'Notas fiscais',
+        Icons.receipt_long_outlined,
+        onAbrirNotaFiscal,
+      ),
       _AtalhoItem(
         'Serviços',
         Icons.miscellaneous_services_outlined,

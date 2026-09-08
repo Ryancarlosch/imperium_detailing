@@ -62,6 +62,23 @@ class NotaFiscalEntradaRepository {
         .toList();
   }
 
+  Future<List<NotaFiscalEntrada>> listar({String? statusImportacao}) async {
+    final database = await _databaseProvider();
+    final status = statusImportacao?.trim();
+    final resultado = await database.query(
+      'notas_fiscais_entrada',
+      where: status == null || status.isEmpty ? null : 'status_importacao = ?',
+      whereArgs: status == null || status.isEmpty ? null : [status],
+      orderBy: 'importada_em DESC, id DESC',
+    );
+
+    return resultado
+        .map(
+          (item) => NotaFiscalEntrada.fromMap(Map<String, dynamic>.from(item)),
+        )
+        .toList();
+  }
+
   Future<NotaFiscalEntrada> registrarPreliminar({
     required String chaveAcesso,
     required String origemImportacao,
