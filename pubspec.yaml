@@ -19,6 +19,7 @@ dependencies:
 
   # Segurança local de PIN
   crypto: ^3.0.7
+  xml: ^6.6.1
 
   # Fotos
   image_picker: ^1.2.0
