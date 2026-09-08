@@ -20,6 +20,7 @@ dependencies:
   # Segurança local de PIN
   crypto: ^3.0.7
   xml: ^6.6.1
+  mobile_scanner: ^7.0.0
 
   # Fotos
   image_picker: ^1.2.0

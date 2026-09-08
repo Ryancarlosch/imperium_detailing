@@ -6,6 +6,7 @@ import 'package:xml/xml.dart';
 import '../models/nota_fiscal_entrada.dart';
 import '../models/nota_fiscal_entrada_item.dart';
 import '../repositories/nota_fiscal_entrada_repository.dart';
+import 'chave_fiscal_service.dart';
 
 class NotaFiscalEntradaParseada {
   const NotaFiscalEntradaParseada({required this.nota, required this.itens});
@@ -219,7 +220,7 @@ class NotaFiscalEntradaXmlService {
   }
 
   static void _validarChave(String chave, String origem) {
-    if (!RegExp(r'^\d{44}$').hasMatch(chave)) {
+    if (!ChaveFiscalService.chaveValida(chave)) {
       throw FormatException('Chave fiscal inválida em $origem.');
     }
   }
