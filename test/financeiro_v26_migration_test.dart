@@ -144,7 +144,7 @@ void main() {
       await legado.close();
 
       final database = await AppDatabase.instance.database;
-      expect(await database.getVersion(), 29);
+      expect(await database.getVersion(), 30);
 
       final tabelas = await database.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'table'",
@@ -183,6 +183,29 @@ void main() {
         whereArgs: ['1.02.02', '1.02.03', '2.04.12', '9.06'],
       );
       expect(novosCodigos, hasLength(4));
+
+      final colunasMovimentos = await database.rawQuery(
+        'PRAGMA table_info(movimentos_financeiros)',
+      );
+      final nomesColunasMovimentos = colunasMovimentos
+          .map((item) => item['name'])
+          .toSet();
+      expect(nomesColunasMovimentos, contains('origem'));
+      expect(nomesColunasMovimentos, contains('status'));
+      expect(nomesColunasMovimentos, contains('nota_fiscal_id'));
+      expect(nomesColunasMovimentos, contains('parcela_numero'));
+      expect(nomesColunasMovimentos, contains('total_parcelas'));
+
+      final indicesMovimentos = await database.rawQuery(
+        'PRAGMA index_list(movimentos_financeiros)',
+      );
+      final nomesIndicesMovimentos = indicesMovimentos
+          .map((item) => item['name'])
+          .toSet();
+      expect(
+        nomesIndicesMovimentos,
+        contains('idx_movimentos_nota_fiscal_parcela_ativa'),
+      );
     },
   );
 }

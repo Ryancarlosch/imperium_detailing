@@ -14,6 +14,9 @@ class MovimentoFinanceiro {
     this.contaId,
     this.fornecedorId,
     this.transferenciaId,
+    this.notaFiscalId,
+    this.parcelaNumero,
+    this.totalParcelas = 1,
     this.natureza = 'Não classificado',
     this.origem = 'Manual',
     this.status = 'Realizado',
@@ -39,6 +42,9 @@ class MovimentoFinanceiro {
   final int? contaId;
   final int? fornecedorId;
   final int? transferenciaId;
+  final int? notaFiscalId;
+  final int? parcelaNumero;
+  final int totalParcelas;
   final String natureza;
   final String origem;
   final String status;
@@ -88,6 +94,9 @@ class MovimentoFinanceiro {
       'conta_id': contaId,
       'fornecedor_id': fornecedorId,
       'transferencia_id': transferenciaId,
+      'nota_fiscal_id': notaFiscalId,
+      'parcela_numero': parcelaNumero,
+      'total_parcelas': totalParcelas,
       'natureza': natureza,
       'origem': origem,
       'status': status,
@@ -122,6 +131,9 @@ class MovimentoFinanceiro {
       contaId: _int(map['conta_id']),
       fornecedorId: _int(map['fornecedor_id']),
       transferenciaId: _int(map['transferencia_id']),
+      notaFiscalId: _int(map['nota_fiscal_id']),
+      parcelaNumero: _int(map['parcela_numero']),
+      totalParcelas: _int(map['total_parcelas']) ?? 1,
       natureza: _texto(map['natureza'], padrao: 'Não classificado'),
       origem: _texto(map['origem'], padrao: 'Manual'),
       status: _texto(map['status'], padrao: 'Realizado'),
@@ -157,6 +169,11 @@ class MovimentoFinanceiro {
     bool removerFornecedorId = false,
     int? transferenciaId,
     bool removerTransferenciaId = false,
+    int? notaFiscalId,
+    bool removerNotaFiscalId = false,
+    int? parcelaNumero,
+    bool removerParcelaNumero = false,
+    int? totalParcelas,
     String? natureza,
     String? origem,
     String? status,
@@ -195,6 +212,13 @@ class MovimentoFinanceiro {
       transferenciaId: removerTransferenciaId
           ? null
           : transferenciaId ?? this.transferenciaId,
+      notaFiscalId: removerNotaFiscalId
+          ? null
+          : notaFiscalId ?? this.notaFiscalId,
+      parcelaNumero: removerParcelaNumero
+          ? null
+          : parcelaNumero ?? this.parcelaNumero,
+      totalParcelas: totalParcelas ?? this.totalParcelas,
       natureza: natureza ?? this.natureza,
       origem: origem ?? this.origem,
       status: status ?? this.status,

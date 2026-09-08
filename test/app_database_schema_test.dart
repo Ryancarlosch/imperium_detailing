@@ -15,7 +15,7 @@ void main() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     pastaTemporaria = await Directory.systemTemp.createTemp(
-      'imperium_database_schema_v29_test_',
+      'imperium_database_schema_v30_test_',
     );
     await databaseFactory.setDatabasesPath(pastaTemporaria.path);
     caminhoBanco = path.join(pastaTemporaria.path, 'imperium_detailing.db');
@@ -35,12 +35,12 @@ void main() {
     }
   });
 
-  group('AppDatabase - criação do banco versão 29', () {
+  group('AppDatabase - criação do banco versão 30', () {
     test('cria banco atual com integridade e foreign keys válidas', () async {
       final database = await AppDatabase.instance.database;
 
       expect(await database.getVersion(), AppDatabase.schemaVersion);
-      expect(AppDatabase.schemaVersion, 29);
+      expect(AppDatabase.schemaVersion, 30);
 
       final foreignKeys = await database.rawQuery('PRAGMA foreign_keys');
       expect(foreignKeys.single.values.single, 1);
@@ -146,6 +146,9 @@ void main() {
           'conta_id',
           'fornecedor_id',
           'transferencia_id',
+          'nota_fiscal_id',
+          'parcela_numero',
+          'total_parcelas',
           'natureza',
           'origem',
           'status',
@@ -164,6 +167,8 @@ void main() {
       expect(indices, contains('idx_movimentos_fornecedor_id'));
       expect(indices, contains('idx_movimentos_status_vencimento'));
       expect(indices, contains('idx_movimentos_competencia'));
+      expect(indices, contains('idx_movimentos_nota_fiscal_id'));
+      expect(indices, contains('idx_movimentos_nota_fiscal_parcela_ativa'));
     });
 
     test('cria plano de contas padrão e conta caixa sem duplicar', () async {

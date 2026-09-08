@@ -5,7 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 29;
+  static const int schemaVersion = 30;
 
   static Database? _database;
 
@@ -160,6 +160,10 @@ class AppDatabase {
 
         if (versaoAntiga < 29) {
           await _atualizarParaVersao29(database);
+        }
+
+        if (versaoAntiga < 30) {
+          await _atualizarParaVersao30(database);
         }
       },
     );
@@ -1492,6 +1496,9 @@ class AppDatabase {
           conta_id INTEGER,
           fornecedor_id INTEGER,
           transferencia_id INTEGER,
+          nota_fiscal_id INTEGER,
+          parcela_numero INTEGER,
+          total_parcelas INTEGER NOT NULL DEFAULT 1,
           natureza TEXT NOT NULL DEFAULT 'Não classificado',
           origem TEXT NOT NULL DEFAULT 'Manual',
           status TEXT NOT NULL DEFAULT 'Realizado',
@@ -1525,8 +1532,13 @@ class AppDatabase {
           FOREIGN KEY (transferencia_id)
             REFERENCES financeiro_transferencias (id)
             ON DELETE CASCADE,
+          FOREIGN KEY (nota_fiscal_id)
+            REFERENCES notas_fiscais_entrada (id)
+            ON DELETE SET NULL,
           CHECK (status IN ('Previsto', 'Realizado', 'Cancelado')),
-          CHECK (impacta_dre IN (0, 1))
+          CHECK (impacta_dre IN (0, 1)),
+          CHECK (parcela_numero IS NULL OR parcela_numero > 0),
+          CHECK (total_parcelas > 0)
         )
       ''');
 
@@ -1594,6 +1606,22 @@ class AppDatabase {
         CREATE INDEX IF NOT EXISTS
         idx_movimentos_competencia
         ON movimentos_financeiros (data_competencia)
+      ''');
+
+    await database.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_movimentos_nota_fiscal_id
+        ON movimentos_financeiros (nota_fiscal_id)
+      ''');
+
+    await database.execute('''
+        CREATE UNIQUE INDEX IF NOT EXISTS
+        idx_movimentos_nota_fiscal_parcela_ativa
+        ON movimentos_financeiros (nota_fiscal_id, parcela_numero)
+        WHERE nota_fiscal_id IS NOT NULL
+          AND parcela_numero IS NOT NULL
+          AND origem = 'Nota fiscal de entrada'
+          AND status != 'Cancelado'
       ''');
   }
 
@@ -3548,6 +3576,65 @@ class AppDatabase {
           AND origem = 'Nota fiscal de entrada'
       ''');
     }
+  }
+
+  Future<void> _atualizarParaVersao30(Database database) async {
+    if (!await _tabelaExiste(database, 'movimentos_financeiros')) {
+      await _criarTabelaMovimentosFinanceiros(database);
+      return;
+    }
+
+    // Alguns bancos legados/parciais podem chegar até esta migration sem
+    // colunas introduzidas na v24. O índice fiscal abaixo depende de
+    // `origem` e `status`, então a v30 garante explicitamente essas duas
+    // colunas antes de criar o índice.
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentos_financeiros',
+      coluna: 'origem',
+      definicao: "TEXT NOT NULL DEFAULT 'Manual'",
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentos_financeiros',
+      coluna: 'status',
+      definicao: "TEXT NOT NULL DEFAULT 'Realizado'",
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentos_financeiros',
+      coluna: 'nota_fiscal_id',
+      definicao:
+          'INTEGER REFERENCES notas_fiscais_entrada (id) ON DELETE SET NULL',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentos_financeiros',
+      coluna: 'parcela_numero',
+      definicao: 'INTEGER',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'movimentos_financeiros',
+      coluna: 'total_parcelas',
+      definicao: 'INTEGER NOT NULL DEFAULT 1',
+    );
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_movimentos_nota_fiscal_id
+      ON movimentos_financeiros (nota_fiscal_id)
+    ''');
+
+    await database.execute('''
+      CREATE UNIQUE INDEX IF NOT EXISTS
+      idx_movimentos_nota_fiscal_parcela_ativa
+      ON movimentos_financeiros (nota_fiscal_id, parcela_numero)
+      WHERE nota_fiscal_id IS NOT NULL
+        AND parcela_numero IS NOT NULL
+        AND origem = 'Nota fiscal de entrada'
+        AND status != 'Cancelado'
+    ''');
   }
 
   String _normalizarUnidadeBase(String unidade) {
