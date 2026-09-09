@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/nota_fiscal_entrada.dart';
 import '../repositories/nota_fiscal_entrada_repository.dart';
 import '../services/chave_fiscal_service.dart';
+import '../services/nota_fiscal_dfe_backend_service.dart';
 
 class ChaveFiscalManualPage extends StatefulWidget {
   const ChaveFiscalManualPage({super.key, this.repository});
@@ -16,14 +17,16 @@ class ChaveFiscalManualPage extends StatefulWidget {
 class _ChaveFiscalManualPageState extends State<ChaveFiscalManualPage> {
   final _chaveController = TextEditingController();
   late final ChaveFiscalService _service;
+  late final NotaFiscalDfeBackendService _dfeService;
   bool _salvando = false;
+  String _status = '';
 
   @override
   void initState() {
     super.initState();
-    _service = ChaveFiscalService(
-      repository: widget.repository ?? NotaFiscalEntradaRepository(),
-    );
+    final repository = widget.repository ?? NotaFiscalEntradaRepository();
+    _service = ChaveFiscalService(repository: repository);
+    _dfeService = NotaFiscalDfeBackendService(repository: repository);
   }
 
   @override
@@ -34,19 +37,45 @@ class _ChaveFiscalManualPageState extends State<ChaveFiscalManualPage> {
 
   Future<void> _registrar() async {
     if (_salvando) return;
-    setState(() => _salvando = true);
+    setState(() {
+      _salvando = true;
+      _status = 'Validando chave...';
+    });
     try {
-      final nota = await _service.registrarPreliminar(
+      final capturada = _service.extrair(
         _chaveController.text,
         origem: 'chaveManual',
       );
+      final metadados = ChaveFiscalService.metadados(capturada.chave);
+
+      NotaFiscalEntrada nota;
+      if (metadados.modelo == 55) {
+        setState(() => _status = 'Consultando NF-e recebida...');
+        try {
+          nota = await _dfeService.consultarEImportar(capturada.chave);
+        } on DfeBackendException {
+          nota = await _service.registrarPreliminar(
+            capturada.chave,
+            origem: 'chaveManual',
+          );
+        }
+      } else {
+        nota = await _service.registrarPreliminar(
+          capturada.chave,
+          origem: 'chaveManual',
+        );
+      }
+
       if (mounted) Navigator.of(context).pop<NotaFiscalEntrada>(nota);
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$error'), backgroundColor: Colors.red[700]),
         );
-        setState(() => _salvando = false);
+        setState(() {
+          _salvando = false;
+          _status = '$error';
+        });
       }
     }
   }
@@ -73,9 +102,15 @@ class _ChaveFiscalManualPageState extends State<ChaveFiscalManualPage> {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: _salvando ? null : _registrar,
-              icon: const Icon(Icons.save_outlined),
-              label: Text(_salvando ? 'Registrando...' : 'Registrar chave'),
+              icon: const Icon(Icons.search),
+              label: Text(
+                _salvando ? 'Consultando...' : 'Registrar / consultar',
+              ),
             ),
+            if (_status.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(_status, textAlign: TextAlign.center),
+            ],
           ],
         ),
       ),

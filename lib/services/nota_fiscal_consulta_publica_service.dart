@@ -74,9 +74,7 @@ class NotaFiscalConsultaPublicaService {
     }
 
     _validarUrlOficial(uri);
-    final segura = uri.scheme.toLowerCase() == 'http'
-        ? uri.replace(scheme: 'https')
-        : uri;
+    final segura = urlSegura(uri);
     final resposta = await (_fetcher ?? _buscar)(segura).timeout(_timeout);
     _validarUrlOficial(resposta.finalUri);
 
@@ -93,6 +91,23 @@ class NotaFiscalConsultaPublicaService {
       origemImportacao: origem,
     );
 
+    return _repository.salvarNotaCompleta(
+      nota: parsed.nota,
+      itens: parsed.itens,
+      removerItensAusentes: true,
+    );
+  }
+
+  Future<NotaFiscalEntrada> importarHtmlLiberado(
+    String html, {
+    required String chaveAcesso,
+    String origemImportacao = 'qrCode',
+  }) async {
+    final parsed = parsearHtml(
+      html,
+      chaveAcesso: chaveAcesso,
+      origemImportacao: origemImportacao,
+    );
     return _repository.salvarNotaCompleta(
       nota: parsed.nota,
       itens: parsed.itens,
@@ -123,12 +138,6 @@ class NotaFiscalConsultaPublicaService {
     final texto = linhas.join('\n');
     final textoMaiusculo = _semAcentos(texto).toUpperCase();
 
-    if (textoMaiusculo.contains('RECAPTCHA') ||
-        textoMaiusculo.contains('CAPTCHA')) {
-      throw const ConsultaPublicaFiscalException(
-        'O portal fiscal exigiu CAPTCHA e não permitiu a importação automática.',
-      );
-    }
     if (textoMaiusculo.contains('AMBIENTE DE HOMOLOGACAO') ||
         textoMaiusculo.contains('SEM VALOR FISCAL')) {
       throw const ConsultaPublicaFiscalException(
@@ -145,9 +154,15 @@ class NotaFiscalConsultaPublicaService {
 
     final itens = _extrairItens(documento, texto);
     if (itens.isEmpty) {
+      if (textoMaiusculo.contains('RECAPTCHA') ||
+          textoMaiusculo.contains('CAPTCHA')) {
+        throw const ConsultaPublicaFiscalException(
+          'O portal fiscal está aguardando a validação do CAPTCHA.',
+        );
+      }
       throw const ConsultaPublicaFiscalException(
         'O portal abriu a NFC-e, mas não entregou os itens em HTML utilizável. '
-        'O documento continuará disponível para nova tentativa.',
+        'Use a consulta assistida para carregar a página e importar os dados exibidos.',
       );
     }
 
@@ -262,13 +277,20 @@ class NotaFiscalConsultaPublicaService {
     }
   }
 
-  static void _validarUrlOficial(Uri uri) {
+  static bool urlOficial(Uri uri) {
     final scheme = uri.scheme.toLowerCase();
     final host = uri.host.toLowerCase();
     final oficial = host == 'gov.br' || host.endsWith('.gov.br');
-    if ((scheme != 'https' && scheme != 'http') || !oficial) {
+    return (scheme == 'https' || scheme == 'http') && oficial;
+  }
+
+  static Uri urlSegura(Uri uri) =>
+      uri.scheme.toLowerCase() == 'http' ? uri.replace(scheme: 'https') : uri;
+
+  static void _validarUrlOficial(Uri uri) {
+    if (!urlOficial(uri)) {
       throw const ConsultaPublicaFiscalException(
-        'Por segurança, o Imperium só consulta automaticamente URLs fiscais oficiais em domínio gov.br.',
+        'Por segurança, o Imperium só consulta URLs fiscais oficiais em domínio gov.br.',
       );
     }
   }

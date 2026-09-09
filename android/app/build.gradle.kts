@@ -31,7 +31,7 @@ android {
         applicationId =
             "br.com.imperiumdetailing.imperium_detailing"
 
-        minSdk = flutter.minSdkVersion
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
 
         versionCode = flutter.versionCode

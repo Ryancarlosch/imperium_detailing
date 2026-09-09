@@ -143,7 +143,22 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
       MaterialPageRoute(builder: (_) => const ChaveFiscalManualPage()),
     );
     if (!mounted || nota == null) return;
-    _mensagem('Chave registrada como pendente. Adicione o XML para completar.');
+
+    if (nota.statusImportacao == 'processada') {
+      final itens = nota.id == null
+          ? const <NotaFiscalEntradaItem>[]
+          : await _repository.listarItensDaNota(nota.id!);
+      if (!mounted) return;
+      _mensagem(
+        'NF-e consultada no backend fiscal: ${nota.emitenteNome ?? 'fornecedor'} · '
+        '${itens.length} itens.',
+      );
+    } else {
+      _mensagem(
+        'Chave registrada como pendente. Se for NF-e modelo 55, o conector DF-e '
+        'tentará trazer o XML quando o provedor fiscal estiver configurado.',
+      );
+    }
     await _carregar();
   }
 

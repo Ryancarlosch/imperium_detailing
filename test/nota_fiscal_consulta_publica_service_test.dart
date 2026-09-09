@@ -80,6 +80,36 @@ void main() {
     );
   });
 
+  test('aceita pagina liberada mesmo com texto residual de captcha', () {
+    final service = NotaFiscalConsultaPublicaService();
+    final parsed = service.parsearHtml('''
+      <html><body>
+        <div>reCAPTCHA</div>
+        <div>HIPER PRESIDENTE PRUDENTE</div>
+        <div>CNPJ: 45.543.915/0982-11</div>
+        <div>PRODUTO TESTE (Código: 123 )</div>
+        <div>Qtde.:1 UN: un Vl. Unit.: 10,00 | Vl. Total 10,00</div>
+        <div>Valor a pagar R\$: 10,00</div>
+        <div>Emissão: 08/08/2024 13:01:00</div>
+        <div>Chave de acesso: 3524 0845 5439 1509 8211 6501 7000 0016 8010 9636 9037</div>
+      </body></html>
+      ''', chaveAcesso: chave);
+
+    expect(parsed.itens, hasLength(1));
+    expect(parsed.nota.valorTotal, closeTo(10, 0.001));
+  });
+
+  test('pagina ainda parada no captcha sem itens continua pendente', () {
+    final service = NotaFiscalConsultaPublicaService();
+    expect(
+      () => service.parsearHtml(
+        '<html><body>reCAPTCHA $chave</body></html>',
+        chaveAcesso: chave,
+      ),
+      throwsA(isA<ConsultaPublicaFiscalException>()),
+    );
+  });
+
   test('extrai URL oficial do QR e metadados da chave', () {
     final uri = NotaFiscalConsultaPublicaService.extrairUrlConsulta(
       'https://www.nfce.fazenda.sp.gov.br/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx?p=$chave|2|1|1|ABC',
@@ -94,5 +124,20 @@ void main() {
     );
     expect(NotaFiscalConsultaPublicaService.serieDaChave(chave), 17);
     expect(NotaFiscalConsultaPublicaService.numeroDaChave(chave), 1680);
+  });
+
+  test('aceita portal oficial e rejeita domínio externo', () {
+    expect(
+      NotaFiscalConsultaPublicaService.urlOficial(
+        Uri.parse('https://sat.sef.sc.gov.br/nfce/consulta?p=$chave'),
+      ),
+      isTrue,
+    );
+    expect(
+      NotaFiscalConsultaPublicaService.urlOficial(
+        Uri.parse('https://exemplo.com/nfce/consulta?p=$chave'),
+      ),
+      isFalse,
+    );
   });
 }

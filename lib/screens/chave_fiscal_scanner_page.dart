@@ -5,6 +5,8 @@ import '../models/nota_fiscal_entrada.dart';
 import '../repositories/nota_fiscal_entrada_repository.dart';
 import '../services/chave_fiscal_service.dart';
 import '../services/nota_fiscal_consulta_publica_service.dart';
+import '../services/nota_fiscal_dfe_backend_service.dart';
+import 'nota_fiscal_portal_assistido_page.dart';
 
 class ChaveFiscalScannerPage extends StatefulWidget {
   const ChaveFiscalScannerPage({super.key, this.repository});
@@ -17,8 +19,10 @@ class ChaveFiscalScannerPage extends StatefulWidget {
 
 class _ChaveFiscalScannerPageState extends State<ChaveFiscalScannerPage> {
   late final MobileScannerController _controller;
+  late final NotaFiscalEntradaRepository _repository;
   late final ChaveFiscalService _chaveService;
   late final NotaFiscalConsultaPublicaService _consultaService;
+  late final NotaFiscalDfeBackendService _dfeService;
   bool _processando = false;
   bool _lanterna = false;
   String _status = 'Aponte para o QR Code ou código de barras fiscal.';
@@ -26,10 +30,13 @@ class _ChaveFiscalScannerPageState extends State<ChaveFiscalScannerPage> {
   @override
   void initState() {
     super.initState();
-    final repository = widget.repository ?? NotaFiscalEntradaRepository();
+    _repository = widget.repository ?? NotaFiscalEntradaRepository();
     _controller = MobileScannerController();
-    _chaveService = ChaveFiscalService(repository: repository);
-    _consultaService = NotaFiscalConsultaPublicaService(repository: repository);
+    _chaveService = ChaveFiscalService(repository: _repository);
+    _consultaService = NotaFiscalConsultaPublicaService(
+      repository: _repository,
+    );
+    _dfeService = NotaFiscalDfeBackendService(repository: _repository);
   }
 
   @override
@@ -65,26 +72,21 @@ class _ChaveFiscalScannerPageState extends State<ChaveFiscalScannerPage> {
       );
 
       NotaFiscalEntrada nota;
-      if (origem == 'qrCode' &&
-          modelo == 65 &&
-          NotaFiscalConsultaPublicaService.extrairUrlConsulta(conteudo) !=
-              null) {
-        if (mounted) {
-          setState(
-            () => _status = 'Consultando fornecedor, itens e valores...',
-          );
-        }
-        try {
-          nota = await _consultaService.consultarEImportar(
-            conteudo,
-            origem: origem,
-          );
-        } on ConsultaPublicaFiscalException {
-          nota = await _chaveService.registrarPreliminar(
-            conteudo,
-            origem: origem,
-          );
-        }
+      final url = NotaFiscalConsultaPublicaService.extrairUrlConsulta(conteudo);
+
+      if (origem == 'qrCode' && modelo == 65 && url != null) {
+        nota = await _processarNfceComQr(
+          conteudo: conteudo,
+          origem: origem,
+          chave: capturada.chave,
+          url: url,
+        );
+      } else if (modelo == 55) {
+        nota = await _processarNfeModelo55(
+          conteudo: conteudo,
+          origem: origem,
+          chave: capturada.chave,
+        );
       } else {
         nota = await _chaveService.registrarPreliminar(
           conteudo,
@@ -102,6 +104,65 @@ class _ChaveFiscalScannerPageState extends State<ChaveFiscalScannerPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$error'), backgroundColor: Colors.red[700]),
       );
+    }
+  }
+
+  Future<NotaFiscalEntrada> _processarNfceComQr({
+    required String conteudo,
+    required String origem,
+    required String chave,
+    required Uri url,
+  }) async {
+    if (mounted) {
+      setState(() => _status = 'Consultando fornecedor, itens e valores...');
+    }
+
+    try {
+      return await _consultaService.consultarEImportar(
+        conteudo,
+        origem: origem,
+      );
+    } on ConsultaPublicaFiscalException {
+      final preliminar = await _chaveService.registrarPreliminar(
+        conteudo,
+        origem: origem,
+      );
+      if (!mounted) return preliminar;
+
+      setState(() {
+        _status =
+            'O portal precisa de confirmação humana. Abra a consulta e resolva o CAPTCHA.';
+      });
+
+      final assistida = await Navigator.of(context).push<NotaFiscalEntrada>(
+        MaterialPageRoute(
+          builder: (_) => NotaFiscalPortalAssistidoPage(
+            url: NotaFiscalConsultaPublicaService.urlSegura(url),
+            chaveAcesso: chave,
+            origem: origem,
+            repository: _repository,
+          ),
+        ),
+      );
+      return assistida ?? preliminar;
+    }
+  }
+
+  Future<NotaFiscalEntrada> _processarNfeModelo55({
+    required String conteudo,
+    required String origem,
+    required String chave,
+  }) async {
+    if (mounted) {
+      setState(
+        () => _status = 'Consultando NF-e recebida no backend fiscal...',
+      );
+    }
+
+    try {
+      return await _dfeService.consultarEImportar(chave);
+    } on DfeBackendException {
+      return _chaveService.registrarPreliminar(conteudo, origem: origem);
     }
   }
 
