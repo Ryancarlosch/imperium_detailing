@@ -182,6 +182,12 @@ class NotaFiscalFinanceiroService {
           'A nota precisa estar processada antes do lançamento financeiro.',
         );
       }
+      final situacaoFiscal = (nota['situacao_fiscal'] ?? '').toString();
+      if ({'cancelada', 'denegada', 'inutilizada'}.contains(situacaoFiscal)) {
+        throw StateError(
+          'Documento fiscal $situacaoFiscal não pode gerar lançamento financeiro.',
+        );
+      }
 
       final valorTotal = _double(nota['valor_total']);
       if (valorTotal <= 0) {

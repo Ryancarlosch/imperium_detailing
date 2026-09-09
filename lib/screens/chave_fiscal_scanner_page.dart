@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/nota_fiscal_entrada.dart';
 import '../repositories/nota_fiscal_entrada_repository.dart';
 import '../services/chave_fiscal_service.dart';
+import '../services/nota_fiscal_consulta_publica_service.dart';
 
 class ChaveFiscalScannerPage extends StatefulWidget {
   const ChaveFiscalScannerPage({super.key, this.repository});
@@ -16,17 +17,19 @@ class ChaveFiscalScannerPage extends StatefulWidget {
 
 class _ChaveFiscalScannerPageState extends State<ChaveFiscalScannerPage> {
   late final MobileScannerController _controller;
-  late final ChaveFiscalService _service;
+  late final ChaveFiscalService _chaveService;
+  late final NotaFiscalConsultaPublicaService _consultaService;
   bool _processando = false;
   bool _lanterna = false;
+  String _status = 'Aponte para o QR Code ou código de barras fiscal.';
 
   @override
   void initState() {
     super.initState();
+    final repository = widget.repository ?? NotaFiscalEntradaRepository();
     _controller = MobileScannerController();
-    _service = ChaveFiscalService(
-      repository: widget.repository ?? NotaFiscalEntradaRepository(),
-    );
+    _chaveService = ChaveFiscalService(repository: repository);
+    _consultaService = NotaFiscalConsultaPublicaService(repository: repository);
   }
 
   @override
@@ -50,12 +53,55 @@ class _ChaveFiscalScannerPageState extends State<ChaveFiscalScannerPage> {
         ? 'qrCode'
         : 'codigoBarras';
 
-    setState(() => _processando = true);
+    setState(() {
+      _processando = true;
+      _status = 'Identificando documento fiscal...';
+    });
+
     try {
-      final nota = await _service.registrarPreliminar(conteudo, origem: origem);
+      final capturada = _chaveService.extrair(conteudo, origem: origem);
+      final modelo = NotaFiscalConsultaPublicaService.modeloDaChave(
+        capturada.chave,
+      );
+
+      NotaFiscalEntrada nota;
+      if (origem == 'qrCode' &&
+          modelo == 65 &&
+          NotaFiscalConsultaPublicaService.extrairUrlConsulta(conteudo) !=
+              null) {
+        if (mounted) {
+          setState(
+            () => _status = 'Consultando fornecedor, itens e valores...',
+          );
+        }
+        try {
+          nota = await _consultaService.consultarEImportar(
+            conteudo,
+            origem: origem,
+          );
+        } on ConsultaPublicaFiscalException {
+          nota = await _chaveService.registrarPreliminar(
+            conteudo,
+            origem: origem,
+          );
+        }
+      } else {
+        nota = await _chaveService.registrarPreliminar(
+          conteudo,
+          origem: origem,
+        );
+      }
+
       if (mounted) Navigator.of(context).pop<NotaFiscalEntrada>(nota);
-    } catch (_) {
-      if (mounted) setState(() => _processando = false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _processando = false;
+        _status = '$error';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error'), backgroundColor: Colors.red[700]),
+      );
     }
   }
 
@@ -68,7 +114,7 @@ class _ChaveFiscalScannerPageState extends State<ChaveFiscalScannerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ler chave fiscal'),
+        title: const Text('Ler documento fiscal'),
         actions: [
           IconButton(
             tooltip: 'Alternar lanterna',
@@ -93,7 +139,31 @@ class _ChaveFiscalScannerPageState extends State<ChaveFiscalScannerPage> {
               ),
             ),
           ),
-          if (_processando) const Center(child: CircularProgressIndicator()),
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 36,
+            child: Card(
+              color: Colors.black87,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Text(
+                  _status,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+          if (_processando)
+            const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(18),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ),
         ],
       ),
     );

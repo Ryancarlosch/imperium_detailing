@@ -46,6 +46,7 @@ dependencies:
   # Backup em nuvem - Google Drive
   google_sign_in: ^7.2.0
   http: ^1.6.0
+  html: ^0.15.7
 
   # Formatação brasileira
   intl: ^0.20.2

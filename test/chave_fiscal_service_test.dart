@@ -17,6 +17,16 @@ void main() {
     expect(resultado.chave, _chave);
   });
 
+  test('extrai metadados fiscais diretamente da chave', () {
+    const chaveNfce = '35240845543915098211650170000016801096369037';
+    final dados = ChaveFiscalService.metadados(chaveNfce);
+
+    expect(dados.modelo, 65);
+    expect(dados.cnpjEmitente, '45543915098211');
+    expect(dados.serie, 17);
+    expect(dados.numero, 1680);
+  });
+
   test('rejeita chave de 44 digitos com DV errado', () {
     expect(
       () => ChaveFiscalService().extrair(

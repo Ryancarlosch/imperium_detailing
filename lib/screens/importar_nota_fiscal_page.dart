@@ -109,7 +109,31 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
       MaterialPageRoute(builder: (_) => const ChaveFiscalScannerPage()),
     );
     if (!mounted || nota == null) return;
-    _mensagem('Chave registrada como pendente. Adicione o XML para completar.');
+
+    if (nota.statusImportacao == 'processada') {
+      final itens = nota.id == null
+          ? const <NotaFiscalEntradaItem>[]
+          : await _repository.listarItensDaNota(nota.id!);
+      if (!mounted) return;
+      final total = nota.valorTotal == null
+          ? ''
+          : ' · R\$ ${nota.valorTotal!.toStringAsFixed(2)}';
+      _mensagem(
+        'NFC-e consultada: ${nota.emitenteNome ?? 'fornecedor'} · '
+        '${itens.length} itens$total.',
+      );
+    } else {
+      final modelo = nota.chaveAcesso.length >= 22
+          ? int.tryParse(nota.chaveAcesso.substring(20, 22))
+          : null;
+      _mensagem(
+        modelo == 55
+            ? 'NF-e identificada pela chave. Para trazer os itens sem XML, '
+                  'será necessária a consulta DF-e autorizada da empresa.'
+            : 'Chave registrada, mas o portal não entregou os dados completos. '
+                  'Escaneie novamente o QR Code para tentar a consulta automática.',
+      );
+    }
     await _carregar();
   }
 
@@ -122,6 +146,9 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
     _mensagem('Chave registrada como pendente. Adicione o XML para completar.');
     await _carregar();
   }
+
+  bool _permiteMovimentar(NotaFiscalEntrada nota) =>
+      !{'cancelada', 'denegada', 'inutilizada'}.contains(nota.situacaoFiscal);
 
   void _mensagem(String texto, {bool erro = false}) {
     ScaffoldMessenger.of(context)
@@ -165,7 +192,7 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
                 Expanded(
                   child: _AcaoFiscal(
                     icone: Icons.qr_code_scanner,
-                    titulo: 'Ler QR/código',
+                    titulo: 'Ler e importar',
                     onTap: _abrirScanner,
                   ),
                 ),
@@ -230,7 +257,8 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
                 _selecionarXml();
               }
             : null,
-        onIntegrar: nota.statusImportacao == 'processada'
+        onIntegrar:
+            nota.statusImportacao == 'processada' && _permiteMovimentar(nota)
             ? () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -242,7 +270,8 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
                 ).then((_) => _carregar());
               }
             : null,
-        onFinanceiro: nota.statusImportacao == 'processada'
+        onFinanceiro:
+            nota.statusImportacao == 'processada' && _permiteMovimentar(nota)
             ? () {
                 Navigator.pop(context);
                 Navigator.push(

@@ -30,6 +30,31 @@ void main() {
     expect(await fixture.db.query('fornecedores'), hasLength(1));
   });
 
+  test(
+    'localiza item por descricao exata quando EAN nao veio no DANFE',
+    () async {
+      final fixture = await _Fixture.create();
+      addTearDown(fixture.close);
+      final itemId = await fixture.db.insert('itens_estoque', {
+        'nome': 'Shampoo Neutro 5L',
+        'ean': '',
+        'quantidade': 0,
+        'custo_unitario': 10,
+        'custo_unitario_calculado': 10,
+        'ativo': 1,
+        'unidade': 'un',
+        'atualizado_em': 'x',
+      });
+
+      expect(
+        await fixture.service.localizarItensPorDescricaoExata(
+          '  shampoo neutro 5l  ',
+        ),
+        [itemId],
+      );
+    },
+  );
+
   test('vincula item por EAN e registra entrada uma única vez', () async {
     final fixture = await _Fixture.create();
     addTearDown(fixture.close);

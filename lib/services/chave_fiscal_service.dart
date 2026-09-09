@@ -8,6 +8,20 @@ class ChaveFiscalCapturada {
   final String origem;
 }
 
+class ChaveFiscalMetadados {
+  const ChaveFiscalMetadados({
+    required this.modelo,
+    required this.cnpjEmitente,
+    required this.serie,
+    required this.numero,
+  });
+
+  final int modelo;
+  final String cnpjEmitente;
+  final int serie;
+  final int numero;
+}
+
 class ChaveFiscalService {
   ChaveFiscalService({this._repository});
 
@@ -53,10 +67,29 @@ class ChaveFiscalService {
     }
 
     final capturada = extrair(conteudo, origem: origem);
-    return repository.registrarPreliminar(
+    final nota = await repository.registrarPreliminar(
       chaveAcesso: capturada.chave,
       origemImportacao: capturada.origem,
       importadaEm: importadaEm ?? DateTime.now().toIso8601String(),
+    );
+    final dados = metadados(capturada.chave);
+    if (dados.modelo != 55 && dados.modelo != 65) return nota;
+    return repository.atualizarIdentificacaoPreliminar(
+      chaveAcesso: capturada.chave,
+      modelo: dados.modelo,
+      numero: dados.numero,
+      serie: dados.serie,
+      emitenteCnpjCpf: dados.cnpjEmitente,
+    );
+  }
+
+  static ChaveFiscalMetadados metadados(String chave) {
+    final normalizada = normalizar(chave);
+    return ChaveFiscalMetadados(
+      modelo: int.parse(normalizada.substring(20, 22)),
+      cnpjEmitente: normalizada.substring(6, 20),
+      serie: int.parse(normalizada.substring(22, 25)),
+      numero: int.parse(normalizada.substring(25, 34)),
     );
   }
 

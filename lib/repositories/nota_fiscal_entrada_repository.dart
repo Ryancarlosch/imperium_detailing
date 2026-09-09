@@ -99,6 +99,32 @@ class NotaFiscalEntradaRepository {
     );
   }
 
+  Future<NotaFiscalEntrada> atualizarIdentificacaoPreliminar({
+    required String chaveAcesso,
+    required int modelo,
+    required int numero,
+    required int serie,
+    required String emitenteCnpjCpf,
+  }) async {
+    final database = await _databaseProvider();
+    await database.update(
+      'notas_fiscais_entrada',
+      {
+        'modelo': modelo,
+        'numero': numero,
+        'serie': serie,
+        'emitente_cnpj_cpf': emitenteCnpjCpf,
+      },
+      where: 'chave_acesso = ? AND status_importacao = ?',
+      whereArgs: [chaveAcesso.trim(), 'pendente'],
+    );
+    final atualizada = await buscarPorChave(chaveAcesso.trim());
+    if (atualizada == null) {
+      throw StateError('Nota preliminar não encontrada após identificação.');
+    }
+    return atualizada;
+  }
+
   Future<NotaFiscalEntrada> registrarPreliminar({
     required String chaveAcesso,
     required String origemImportacao,

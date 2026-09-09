@@ -62,7 +62,12 @@ class _IntegrarNotaFiscalPageState extends State<IntegrarNotaFiscalPage> {
           _vinculos[item.id!] = item.estoqueItemId!;
           continue;
         }
-        final candidatos = await _service.localizarItensPorEan(item.ean ?? '');
+        var candidatos = await _service.localizarItensPorEan(item.ean ?? '');
+        if (candidatos.isEmpty) {
+          candidatos = await _service.localizarItensPorDescricaoExata(
+            item.descricao,
+          );
+        }
         if (candidatos.length == 1) {
           _vinculos[item.id!] = candidatos.single;
         }
@@ -111,7 +116,7 @@ class _IntegrarNotaFiscalPageState extends State<IntegrarNotaFiscalPage> {
     }
   }
 
-  Future<void> _criarItem(NotaFiscalEntradaItem fiscal) async {
+  Future<int> _criarItemSemRecarregar(NotaFiscalEntradaItem fiscal) async {
     final agora = DateTime.now().toIso8601String();
     final id = await _estoqueRepository.inserirItem(
       ItemEstoque(
@@ -131,8 +136,79 @@ class _IntegrarNotaFiscalPageState extends State<IntegrarNotaFiscalPage> {
       itemFiscalId: fiscal.id!,
       estoqueItemId: id,
     );
-    await _carregar();
-    if (mounted) setState(() => _vinculos[fiscal.id!] = id);
+    return id;
+  }
+
+  Future<void> _criarItem(NotaFiscalEntradaItem fiscal) async {
+    try {
+      final id = await _criarItemSemRecarregar(fiscal);
+      await _carregar();
+      if (mounted) setState(() => _vinculos[fiscal.id!] = id);
+    } catch (error) {
+      _mensagem('$error', erro: true);
+    }
+  }
+
+  Future<void> _prepararVinculosFaltantes() async {
+    final pendentes = widget.itens
+        .where((item) => item.id != null && !_vinculos.containsKey(item.id))
+        .toList();
+    final precisaFornecedor = _fornecedorId == null;
+    if (pendentes.isEmpty && !precisaFornecedor) {
+      _mensagem('Fornecedor e itens já estão vinculados.');
+      return;
+    }
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Preparar vínculos automaticamente?'),
+        content: Text(
+          '${precisaFornecedor ? 'O fornecedor será cadastrado a partir dos dados fiscais.\n' : ''}'
+          '${pendentes.isEmpty ? '' : '${pendentes.length} item(ns) sem correspondência exata serão criados no estoque.\n'}'
+          'Nenhuma quantidade entra no estoque até você confirmar a entrada.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Preparar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+
+    setState(() => _salvando = true);
+    try {
+      if (precisaFornecedor) {
+        final id = await _service.criarFornecedorConfirmado(
+          nome: widget.nota.emitenteNome ?? '',
+          documento: widget.nota.emitenteCnpjCpf ?? '',
+        );
+        await _service.vincularFornecedorDaNota(
+          notaFiscalId: widget.nota.id!,
+          fornecedorId: id,
+        );
+        _fornecedorId = id;
+      }
+
+      for (final fiscal in pendentes) {
+        final id = await _criarItemSemRecarregar(fiscal);
+        _vinculos[fiscal.id!] = id;
+      }
+      await _carregar();
+      if (mounted) {
+        setState(() => _salvando = false);
+        _mensagem('Vínculos fiscais preparados. Revise e confirme a entrada.');
+      }
+    } catch (error) {
+      if (mounted) setState(() => _salvando = false);
+      _mensagem('$error', erro: true);
+    }
   }
 
   Future<void> _confirmarEstoque() async {
@@ -197,6 +273,12 @@ class _IntegrarNotaFiscalPageState extends State<IntegrarNotaFiscalPage> {
           const Divider(),
           ...widget.itens.map(_itemTile),
           const SizedBox(height: 20),
+          OutlinedButton.icon(
+            onPressed: _salvando ? null : _prepararVinculosFaltantes,
+            icon: const Icon(Icons.auto_fix_high_outlined),
+            label: const Text('Criar vínculos faltantes'),
+          ),
+          const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: _salvando ? null : _confirmarEstoque,
             icon: const Icon(Icons.inventory_2_outlined),

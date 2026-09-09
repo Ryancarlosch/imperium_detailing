@@ -83,6 +83,26 @@ class NotaFiscalEntradaIntegracaoService {
         .toList();
   }
 
+  Future<List<int>> localizarItensPorDescricaoExata(String descricao) async {
+    final nome = descricao.trim();
+    if (nome.isEmpty) return const [];
+    final database = await _databaseProvider();
+    final resultados = await database.rawQuery(
+      '''
+      SELECT id
+      FROM itens_estoque
+      WHERE ativo = 1
+        AND LOWER(TRIM(nome)) = LOWER(TRIM(?))
+      ORDER BY id ASC
+      ''',
+      [nome],
+    );
+    return resultados
+        .map((item) => _int(item['id']))
+        .where((id) => id > 0)
+        .toList();
+  }
+
   Future<void> vincularFornecedorDaNota({
     required int notaFiscalId,
     required int fornecedorId,
@@ -100,6 +120,15 @@ class NotaFiscalEntradaIntegracaoService {
       if (nota == null) throw StateError('Nota fiscal não encontrada.');
       if (nota.statusImportacao != 'processada') {
         throw StateError('A nota precisa estar processada antes da entrada.');
+      }
+      if ({
+        'cancelada',
+        'denegada',
+        'inutilizada',
+      }.contains(nota.situacaoFiscal)) {
+        throw StateError(
+          'Documento fiscal ${nota.situacaoFiscal} não pode gerar entrada de estoque.',
+        );
       }
 
       final itens = await transaction.query(
