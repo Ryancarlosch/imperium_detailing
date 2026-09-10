@@ -85,7 +85,10 @@ class CustosRepository {
         .toList();
   }
 
-  Future<int> salvarColaborador(ColaboradorCusto colaborador) async {
+  Future<int> salvarColaborador(
+    ColaboradorCusto colaborador, {
+    String motivo = '',
+  }) async {
     final nome = colaborador.nome.trim();
     if (nome.length < 2) {
       throw ArgumentError('Informe o nome do colaborador.');
@@ -101,36 +104,376 @@ class CustosRepository {
 
     final database = await _appDatabase.database;
     final agora = DateTime.now().toIso8601String();
-    final mapa = colaborador.toMap(incluirId: false)
-      ..['nome'] = nome
-      ..['funcao'] = colaborador.funcao.trim()
-      ..['atualizado_em'] = agora;
 
-    if (colaborador.id == null) {
-      mapa['criado_em'] = agora;
-      return database.insert(
+    return database.transaction<int>((transaction) async {
+      await _garantirTabelaHistoricoColaboradores(transaction);
+
+      final mapa = colaborador.toMap(incluirId: false)
+        ..['nome'] = nome
+        ..['funcao'] = colaborador.funcao.trim()
+        ..['atualizado_em'] = agora;
+
+      if (colaborador.id == null) {
+        mapa['criado_em'] = agora;
+        final id = await transaction.insert(
+          'financeiro_colaboradores_custo',
+          mapa,
+          conflictAlgorithm: ConflictAlgorithm.abort,
+        );
+
+        await _registrarHistoricoColaborador(
+          transaction,
+          colaboradorId: id,
+          tipo: 'Cadastro',
+          remuneracaoAnterior: 0,
+          remuneracaoNova: colaborador.remuneracaoMensal,
+          encargosAnteriores: 0,
+          encargosNovos: colaborador.encargosMensais,
+          outrosCustosAnteriores: 0,
+          outrosCustosNovos: colaborador.outrosCustosMensais,
+          ativoAnterior: null,
+          ativoNovo: colaborador.ativo,
+          motivo: motivo.trim().isEmpty ? 'Cadastro do funcionário' : motivo,
+          vigencia: DateTime.now(),
+        );
+
+        return id;
+      }
+
+      final anterior = await transaction.query(
+        'financeiro_colaboradores_custo',
+        where: 'id = ?',
+        whereArgs: [colaborador.id],
+        limit: 1,
+      );
+      if (anterior.isEmpty) {
+        throw StateError('Funcionário não encontrado.');
+      }
+
+      final remuneracaoAnterior = _double(anterior.first['remuneracao_mensal']);
+      final encargosAnteriores = _double(anterior.first['encargos_mensais']);
+      final outrosAnteriores = _double(anterior.first['outros_custos_mensais']);
+      final ativoAnterior = _int(anterior.first['ativo']) == 1;
+
+      await transaction.update(
         'financeiro_colaboradores_custo',
         mapa,
-        conflictAlgorithm: ConflictAlgorithm.abort,
+        where: 'id = ?',
+        whereArgs: [colaborador.id],
+      );
+
+      final alterouRemuneracao =
+          (remuneracaoAnterior - colaborador.remuneracaoMensal).abs() >
+          0.000001;
+      final alterouCustos =
+          (encargosAnteriores - colaborador.encargosMensais).abs() > 0.000001 ||
+          (outrosAnteriores - colaborador.outrosCustosMensais).abs() > 0.000001;
+      final alterouAtivo = ativoAnterior != colaborador.ativo;
+
+      if (alterouRemuneracao || alterouCustos || alterouAtivo) {
+        final tipo = alterouAtivo
+            ? (colaborador.ativo ? 'Ativação' : 'Inativação')
+            : alterouRemuneracao
+            ? 'Reajuste salarial'
+            : 'Atualização de custos';
+
+        await _registrarHistoricoColaborador(
+          transaction,
+          colaboradorId: colaborador.id!,
+          tipo: tipo,
+          remuneracaoAnterior: remuneracaoAnterior,
+          remuneracaoNova: colaborador.remuneracaoMensal,
+          encargosAnteriores: encargosAnteriores,
+          encargosNovos: colaborador.encargosMensais,
+          outrosCustosAnteriores: outrosAnteriores,
+          outrosCustosNovos: colaborador.outrosCustosMensais,
+          ativoAnterior: ativoAnterior,
+          ativoNovo: colaborador.ativo,
+          motivo: motivo.trim(),
+          vigencia: DateTime.now(),
+        );
+      }
+
+      return colaborador.id!;
+    });
+  }
+
+  Future<void> arquivarColaborador(int id, {String motivo = ''}) async {
+    await definirAtivoColaborador(id, false, motivo: motivo);
+  }
+
+  Future<void> definirAtivoColaborador(
+    int id,
+    bool ativo, {
+    String motivo = '',
+  }) async {
+    final database = await _appDatabase.database;
+
+    await database.transaction((transaction) async {
+      await _garantirTabelaHistoricoColaboradores(transaction);
+
+      final resultado = await transaction.query(
+        'financeiro_colaboradores_custo',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (resultado.isEmpty) {
+        throw StateError('Funcionário não encontrado.');
+      }
+
+      final atual = resultado.first;
+      final ativoAnterior = _int(atual['ativo']) == 1;
+      if (ativoAnterior == ativo) {
+        return;
+      }
+
+      final agora = DateTime.now();
+      await transaction.update(
+        'financeiro_colaboradores_custo',
+        {'ativo': ativo ? 1 : 0, 'atualizado_em': agora.toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      await _registrarHistoricoColaborador(
+        transaction,
+        colaboradorId: id,
+        tipo: ativo ? 'Ativação' : 'Inativação',
+        remuneracaoAnterior: _double(atual['remuneracao_mensal']),
+        remuneracaoNova: _double(atual['remuneracao_mensal']),
+        encargosAnteriores: _double(atual['encargos_mensais']),
+        encargosNovos: _double(atual['encargos_mensais']),
+        outrosCustosAnteriores: _double(atual['outros_custos_mensais']),
+        outrosCustosNovos: _double(atual['outros_custos_mensais']),
+        ativoAnterior: ativoAnterior,
+        ativoNovo: ativo,
+        motivo: motivo.trim().isEmpty
+            ? (ativo ? 'Funcionário reativado' : 'Funcionário inativado')
+            : motivo.trim(),
+        vigencia: agora,
+      );
+    });
+  }
+
+  Future<void> registrarReajusteRemuneracao({
+    required int colaboradorId,
+    required double novaRemuneracao,
+    required DateTime vigencia,
+    String motivo = '',
+  }) async {
+    if (novaRemuneracao < 0) {
+      throw ArgumentError('A remuneração não pode ser negativa.');
+    }
+
+    final hoje = DateTime.now();
+    final hojeDia = DateTime(hoje.year, hoje.month, hoje.day);
+    final vigenciaDia = DateTime(vigencia.year, vigencia.month, vigencia.day);
+    if (vigenciaDia.isAfter(hojeDia)) {
+      throw ArgumentError(
+        'A vigência futura ainda não é suportada. Use a data em que o reajuste entrou em vigor.',
       );
     }
 
-    await database.update(
-      'financeiro_colaboradores_custo',
-      mapa,
-      where: 'id = ?',
-      whereArgs: [colaborador.id],
-    );
-    return colaborador.id!;
+    final database = await _appDatabase.database;
+    await database.transaction((transaction) async {
+      await _garantirTabelaHistoricoColaboradores(transaction);
+
+      final resultado = await transaction.query(
+        'financeiro_colaboradores_custo',
+        where: 'id = ?',
+        whereArgs: [colaboradorId],
+        limit: 1,
+      );
+      if (resultado.isEmpty) {
+        throw StateError('Funcionário não encontrado.');
+      }
+
+      final atual = resultado.first;
+      final anterior = _double(atual['remuneracao_mensal']);
+      if ((anterior - novaRemuneracao).abs() <= 0.000001) {
+        throw StateError('A nova remuneração é igual à atual.');
+      }
+
+      await transaction.update(
+        'financeiro_colaboradores_custo',
+        {
+          'remuneracao_mensal': novaRemuneracao,
+          'atualizado_em': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [colaboradorId],
+      );
+
+      await _registrarHistoricoColaborador(
+        transaction,
+        colaboradorId: colaboradorId,
+        tipo: 'Reajuste salarial',
+        remuneracaoAnterior: anterior,
+        remuneracaoNova: novaRemuneracao,
+        encargosAnteriores: _double(atual['encargos_mensais']),
+        encargosNovos: _double(atual['encargos_mensais']),
+        outrosCustosAnteriores: _double(atual['outros_custos_mensais']),
+        outrosCustosNovos: _double(atual['outros_custos_mensais']),
+        ativoAnterior: _int(atual['ativo']) == 1,
+        ativoNovo: _int(atual['ativo']) == 1,
+        motivo: motivo.trim().isEmpty ? 'Reajuste salarial' : motivo.trim(),
+        vigencia: vigenciaDia,
+      );
+    });
   }
 
-  Future<void> arquivarColaborador(int id) async {
+  Future<bool> colaboradorAtivoNoPeriodo({
+    required int colaboradorId,
+    required DateTime inicio,
+    required DateTime fim,
+  }) async {
     final database = await _appDatabase.database;
-    await database.update(
+    await _garantirTabelaHistoricoColaboradores(database);
+
+    final antesDoPeriodo = await database.rawQuery(
+      '''
+      SELECT ativo_novo
+      FROM financeiro_colaboradores_historico
+      WHERE colaborador_id = ?
+        AND ativo_novo IS NOT NULL
+        AND datetime(vigencia_em) < datetime(?)
+      ORDER BY datetime(vigencia_em) DESC, id DESC
+      LIMIT 1
+      ''',
+      [colaboradorId, inicio.toIso8601String()],
+    );
+
+    if (antesDoPeriodo.isNotEmpty &&
+        _int(antesDoPeriodo.first['ativo_novo']) == 1) {
+      return true;
+    }
+
+    final ativacoesNoPeriodo = await database.rawQuery(
+      '''
+      SELECT id
+      FROM financeiro_colaboradores_historico
+      WHERE colaborador_id = ?
+        AND ativo_novo = 1
+        AND datetime(vigencia_em) BETWEEN datetime(?) AND datetime(?)
+      LIMIT 1
+      ''',
+      [colaboradorId, inicio.toIso8601String(), fim.toIso8601String()],
+    );
+    if (ativacoesNoPeriodo.isNotEmpty) {
+      return true;
+    }
+
+    final temHistorico = await database.rawQuery(
+      '''
+      SELECT id
+      FROM financeiro_colaboradores_historico
+      WHERE colaborador_id = ?
+      LIMIT 1
+      ''',
+      [colaboradorId],
+    );
+    if (temHistorico.isNotEmpty) {
+      return false;
+    }
+
+    final atual = await database.query(
       'financeiro_colaboradores_custo',
-      {'ativo': 0, 'atualizado_em': DateTime.now().toIso8601String()},
+      columns: ['ativo'],
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [colaboradorId],
+      limit: 1,
+    );
+    return atual.isNotEmpty && _int(atual.first['ativo']) == 1;
+  }
+
+  Future<List<Map<String, dynamic>>> listarHistoricoColaborador(
+    int colaboradorId,
+  ) async {
+    final database = await _appDatabase.database;
+    await _garantirTabelaHistoricoColaboradores(database);
+
+    return database.rawQuery(
+      '''
+      SELECT *
+      FROM financeiro_colaboradores_historico
+      WHERE colaborador_id = ?
+      ORDER BY datetime(vigencia_em) DESC, id DESC
+      ''',
+      [colaboradorId],
+    );
+  }
+
+  Future<void> _garantirTabelaHistoricoColaboradores(
+    DatabaseExecutor executor,
+  ) async {
+    await executor.execute('''
+      CREATE TABLE IF NOT EXISTS financeiro_colaboradores_historico (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        colaborador_id INTEGER NOT NULL,
+        tipo TEXT NOT NULL,
+        remuneracao_anterior REAL NOT NULL DEFAULT 0,
+        remuneracao_nova REAL NOT NULL DEFAULT 0,
+        encargos_anteriores REAL NOT NULL DEFAULT 0,
+        encargos_novos REAL NOT NULL DEFAULT 0,
+        outros_custos_anteriores REAL NOT NULL DEFAULT 0,
+        outros_custos_novos REAL NOT NULL DEFAULT 0,
+        ativo_anterior INTEGER,
+        ativo_novo INTEGER,
+        motivo TEXT NOT NULL DEFAULT '',
+        vigencia_em TEXT NOT NULL,
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (colaborador_id)
+          REFERENCES financeiro_colaboradores_custo (id)
+          ON DELETE CASCADE
+      )
+    ''');
+
+    await executor.execute('''
+      CREATE INDEX IF NOT EXISTS idx_fin_colab_hist_colab_vigencia
+      ON financeiro_colaboradores_historico (
+        colaborador_id,
+        vigencia_em DESC,
+        id DESC
+      )
+    ''');
+  }
+
+  Future<void> _registrarHistoricoColaborador(
+    DatabaseExecutor executor, {
+    required int colaboradorId,
+    required String tipo,
+    required double remuneracaoAnterior,
+    required double remuneracaoNova,
+    required double encargosAnteriores,
+    required double encargosNovos,
+    required double outrosCustosAnteriores,
+    required double outrosCustosNovos,
+    required bool? ativoAnterior,
+    required bool? ativoNovo,
+    required String motivo,
+    required DateTime vigencia,
+  }) async {
+    await executor.insert(
+      'financeiro_colaboradores_historico',
+      {
+        'colaborador_id': colaboradorId,
+        'tipo': tipo,
+        'remuneracao_anterior': remuneracaoAnterior,
+        'remuneracao_nova': remuneracaoNova,
+        'encargos_anteriores': encargosAnteriores,
+        'encargos_novos': encargosNovos,
+        'outros_custos_anteriores': outrosCustosAnteriores,
+        'outros_custos_novos': outrosCustosNovos,
+        'ativo_anterior': ativoAnterior == null
+            ? null
+            : (ativoAnterior ? 1 : 0),
+        'ativo_novo': ativoNovo == null ? null : (ativoNovo ? 1 : 0),
+        'motivo': motivo,
+        'vigencia_em': vigencia.toIso8601String(),
+        'criado_em': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.abort,
     );
   }
 
@@ -534,10 +877,6 @@ class CustosRepository {
 
       if (colaborador.isEmpty) {
         throw StateError('Funcionário não encontrado.');
-      }
-
-      if (_int(colaborador.first['ativo']) != 1) {
-        throw StateError('O funcionário selecionado está inativo.');
       }
 
       final conta = await transaction.query(

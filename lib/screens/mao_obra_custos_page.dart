@@ -37,7 +37,7 @@ class _MaoObraCustosPageState extends State<MaoObraCustosPage> {
     }
     try {
       final resultados = await Future.wait<dynamic>([
-        _repository.listarColaboradores(),
+        _repository.listarColaboradores(incluirInativos: true),
         _repository.obterResumoEstruturaCustos(),
       ]);
       if (!mounted) {
@@ -161,16 +161,20 @@ class _MaoObraCustosPageState extends State<MaoObraCustosPage> {
     }
   }
 
-  Future<void> _arquivar(ColaboradorCusto colaborador) async {
+  Future<void> _alterarSituacao(ColaboradorCusto colaborador) async {
     if (colaborador.id == null) {
       return;
     }
+
+    final novoAtivo = !colaborador.ativo;
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Arquivar colaborador de custo'),
+        title: Text(novoAtivo ? 'Ativar funcionário' : 'Inativar funcionário'),
         content: Text(
-          'Arquivar "${colaborador.nome}"? Lançamentos históricos nas OS continuam preservados.',
+          novoAtivo
+              ? 'Ativar "${colaborador.nome}"? A partir disso ele volta a compor o custo mensal de mão de obra e o custo/hora da empresa.'
+              : 'Inativar "${colaborador.nome}"? Ele deixa de compor imediatamente o custo mensal de mão de obra e o custo/hora da empresa. Histórico, ponto e pagamentos anteriores continuam preservados.',
         ),
         actions: [
           TextButton(
@@ -179,7 +183,7 @@ class _MaoObraCustosPageState extends State<MaoObraCustosPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Arquivar'),
+            child: Text(novoAtivo ? 'Ativar' : 'Inativar'),
           ),
         ],
       ),
@@ -187,7 +191,14 @@ class _MaoObraCustosPageState extends State<MaoObraCustosPage> {
     if (confirmar != true) {
       return;
     }
-    await _repository.arquivarColaborador(colaborador.id!);
+
+    await _repository.definirAtivoColaborador(
+      colaborador.id!,
+      novoAtivo,
+      motivo: novoAtivo
+          ? 'Reativado pela tela de mão de obra'
+          : 'Inativado pela tela de mão de obra',
+    );
     await _carregar();
   }
 
@@ -244,6 +255,16 @@ class _MaoObraCustosPageState extends State<MaoObraCustosPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        'Somente funcionários ativos entram no custo mensal de mão de obra e no custo/hora da empresa. Inativar alguém preserva todo o histórico e retira esse custo imediatamente da precificação.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: _editarCargaHorariaEquipe,
                     icon: const Icon(Icons.schedule_outlined),
@@ -272,9 +293,13 @@ class _MaoObraCustosPageState extends State<MaoObraCustosPage> {
                       (item) => Card(
                         margin: const EdgeInsets.only(bottom: 9),
                         child: ListTile(
-                          leading: const Icon(
-                            Icons.engineering_outlined,
-                            color: Color(0xFFD6A84B),
+                          leading: Icon(
+                            item.ativo
+                                ? Icons.engineering_outlined
+                                : Icons.person_off_outlined,
+                            color: item.ativo
+                                ? const Color(0xFFD6A84B)
+                                : Colors.white38,
                           ),
                           title: Text(
                             item.nome,
@@ -283,6 +308,9 @@ class _MaoObraCustosPageState extends State<MaoObraCustosPage> {
                           subtitle: Text(
                             [
                               if (item.funcao.isNotEmpty) item.funcao,
+                              item.ativo
+                                  ? 'Ativo'
+                                  : 'Inativo • fora do custo/hora',
                               '${_moeda.format(item.custoHoraProdutiva)}/h de custo individual',
                             ].join(' • '),
                           ),
@@ -291,8 +319,8 @@ class _MaoObraCustosPageState extends State<MaoObraCustosPage> {
                               if (valor == 'editar') {
                                 _abrirFormulario(item);
                               }
-                              if (valor == 'arquivar') {
-                                _arquivar(item);
+                              if (valor == 'situacao') {
+                                _alterarSituacao(item);
                               }
                             },
                             itemBuilder: (_) => const [
@@ -301,8 +329,8 @@ class _MaoObraCustosPageState extends State<MaoObraCustosPage> {
                                 child: Text('Editar'),
                               ),
                               PopupMenuItem(
-                                value: 'arquivar',
-                                child: Text('Arquivar'),
+                                value: 'situacao',
+                                child: Text('Ativar / inativar'),
                               ),
                             ],
                           ),

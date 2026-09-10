@@ -44,19 +44,34 @@ class _FuncionariosResumoPageState extends State<FuncionariosResumoPage> {
     }
 
     try {
-      final colaboradores = await _custosRepository.listarColaboradores();
+      final todosColaboradores = await _custosRepository.listarColaboradores(
+        incluirInativos: true,
+      );
 
       final pagamentos = await _custosRepository.listarPagamentosColaboradores(
         inicio: _inicioMes,
         fim: _fimMes,
       );
 
+      final colaboradores = <ColaboradorCusto>[];
       final fechamentos = <int, Map<String, dynamic>>{};
 
-      for (final colaborador in colaboradores) {
+      for (final colaborador in todosColaboradores) {
         final id = colaborador.id;
-        if (id == null) continue;
+        if (id == null) {
+          continue;
+        }
+        final ativoNoPeriodo = await _custosRepository
+            .colaboradorAtivoNoPeriodo(
+              colaboradorId: id,
+              inicio: _inicioMes,
+              fim: _fimMes,
+            );
+        if (!ativoNoPeriodo) {
+          continue;
+        }
 
+        colaboradores.add(colaborador);
         fechamentos[id] = await _pontoRepository.obterFechamentoMes(
           colaboradorId: id,
           inicio: _inicioMes,
@@ -130,14 +145,17 @@ class _FuncionariosResumoPageState extends State<FuncionariosResumoPage> {
 
   Map<String, double> get _totaisGerais {
     var estimado = 0.0;
-    var pago = 0.0;
     var restante = 0.0;
 
     for (final item in _fechamentos.values) {
       estimado += _double(item['valor_estimado_pagar']);
-      pago += _double(item['ja_pago_mes']);
       restante += _double(item['restante_estimado']);
     }
+
+    final pago = _pagamentos.fold<double>(
+      0,
+      (total, item) => total + _double(item['valor']),
+    );
 
     return {'estimado': estimado, 'pago': pago, 'restante': restante};
   }
@@ -303,11 +321,22 @@ class _FuncionariosResumoPageState extends State<FuncionariosResumoPage> {
                           ),
                           const Divider(),
                           _ResumoFinanceiroLinha(
-                            titulo: 'Restante estimado',
+                            titulo: 'Falta pagar',
                             valor: _moeda.format(totais['restante'] ?? 0),
                             destaque: true,
                           ),
                         ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        'Este resumo considera somente valores relacionados aos funcionários: salário base, horas extras, descontos por horas faltantes e pagamentos realizados. Custos fixos e demais despesas da empresa não entram aqui.',
+                        style: TextStyle(color: Colors.white70),
                       ),
                     ),
                   ),

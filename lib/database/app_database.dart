@@ -5,7 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 31;
+  static const int schemaVersion = 32;
 
   static Database? _database;
 
@@ -169,6 +169,10 @@ class AppDatabase {
         if (versaoAntiga < 31) {
           await _atualizarParaVersao31(database);
         }
+
+        if (versaoAntiga < 32) {
+          await _atualizarParaVersao32(database);
+        }
       },
     );
   }
@@ -194,6 +198,7 @@ class AppDatabase {
     await _criarTabelaTransferenciasFinanceiras(database);
     await _criarTabelaCustosFixos(database);
     await _criarTabelaColaboradoresCusto(database);
+    await _criarTabelaHistoricoColaboradores(database);
     await _criarTabelaMaoObraOrdemServico(database);
     await _criarTabelaRegrasTaxaCartao(database);
     await _criarTabelaMetasFinanceiras(database);
@@ -1376,6 +1381,54 @@ class AppDatabase {
         idx_financeiro_colaboradores_custo_ativo_nome
         ON financeiro_colaboradores_custo (ativo, nome COLLATE NOCASE)
       ''');
+  }
+
+  Future<void> _criarTabelaHistoricoColaboradores(Database database) async {
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS financeiro_colaboradores_historico (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        colaborador_id INTEGER NOT NULL,
+        tipo TEXT NOT NULL,
+        remuneracao_anterior REAL NOT NULL DEFAULT 0,
+        remuneracao_nova REAL NOT NULL DEFAULT 0,
+        encargos_anteriores REAL NOT NULL DEFAULT 0,
+        encargos_novos REAL NOT NULL DEFAULT 0,
+        outros_custos_anteriores REAL NOT NULL DEFAULT 0,
+        outros_custos_novos REAL NOT NULL DEFAULT 0,
+        ativo_anterior INTEGER,
+        ativo_novo INTEGER,
+        motivo TEXT NOT NULL DEFAULT '',
+        vigencia_em TEXT NOT NULL,
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (colaborador_id)
+          REFERENCES financeiro_colaboradores_custo (id)
+          ON DELETE CASCADE,
+        CHECK (tipo IN (
+          'Cadastro',
+          'Reajuste salarial',
+          'Atualização de custos',
+          'Ativação',
+          'Inativação'
+        )),
+        CHECK (remuneracao_anterior >= 0),
+        CHECK (remuneracao_nova >= 0),
+        CHECK (encargos_anteriores >= 0),
+        CHECK (encargos_novos >= 0),
+        CHECK (outros_custos_anteriores >= 0),
+        CHECK (outros_custos_novos >= 0),
+        CHECK (ativo_anterior IS NULL OR ativo_anterior IN (0, 1)),
+        CHECK (ativo_novo IS NULL OR ativo_novo IN (0, 1))
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_fin_colab_hist_colab_vigencia
+      ON financeiro_colaboradores_historico (
+        colaborador_id,
+        vigencia_em DESC,
+        id DESC
+      )
+    ''');
   }
 
   Future<void> _criarTabelaMaoObraOrdemServico(Database database) async {
@@ -3747,6 +3800,57 @@ class AppDatabase {
   Future<void> _atualizarParaVersao31(Database database) async {
     await _criarTabelaNotaFiscalEntradaRevisoes(database);
     await _criarTabelasCrm(database);
+  }
+
+  Future<void> _atualizarParaVersao32(Database database) async {
+    // Bancos reais que já passaram pela v25 possuem esta tabela.
+    // Alguns bancos legados/sintéticos podem não possuí-la; a v32
+    // precisa ser resiliente e garantir a dependência antes do histórico.
+    if (!await _tabelaExiste(database, 'financeiro_colaboradores_custo')) {
+      await _criarTabelaColaboradoresCusto(database);
+    }
+
+    await _criarTabelaHistoricoColaboradores(database);
+
+    // funcionarios-historico-v32
+    // Cria uma linha-base para funcionários que já existiam antes da v32.
+    await database.execute('''
+      INSERT INTO financeiro_colaboradores_historico (
+        colaborador_id,
+        tipo,
+        remuneracao_anterior,
+        remuneracao_nova,
+        encargos_anteriores,
+        encargos_novos,
+        outros_custos_anteriores,
+        outros_custos_novos,
+        ativo_anterior,
+        ativo_novo,
+        motivo,
+        vigencia_em,
+        criado_em
+      )
+      SELECT
+        c.id,
+        'Cadastro',
+        0,
+        c.remuneracao_mensal,
+        0,
+        c.encargos_mensais,
+        0,
+        c.outros_custos_mensais,
+        NULL,
+        c.ativo,
+        'Registro inicial importado na v32',
+        COALESCE(NULLIF(c.criado_em, ''), CURRENT_TIMESTAMP),
+        CURRENT_TIMESTAMP
+      FROM financeiro_colaboradores_custo c
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM financeiro_colaboradores_historico h
+        WHERE h.colaborador_id = c.id
+      )
+    ''');
   }
 
   Future<void> _atualizarParaVersao29(Database database) async {

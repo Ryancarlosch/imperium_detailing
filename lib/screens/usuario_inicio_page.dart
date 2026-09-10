@@ -17,7 +17,7 @@ import 'meu_ponto_page.dart';
 import 'meu_perfil_page.dart';
 import 'orcamentos_page.dart';
 import 'ordens_servico_page.dart';
-import 'pagamentos_funcionarios_page.dart';
+import 'funcionarios_central_page.dart';
 
 class UsuarioInicioPage extends StatefulWidget {
   const UsuarioInicioPage({
@@ -271,7 +271,7 @@ class _UsuarioInicioPageState extends State<UsuarioInicioPage>
       'funcionarios',
       'Funcionários',
       Icons.badge_outlined,
-      const PagamentosFuncionariosPage(),
+      const FuncionariosCentralPage(),
     );
     adicionar(
       'configuracoes',

@@ -25,6 +25,6 @@ void main() {
     expect(repository, contains('PontoNuvemDiagnosticoService.instance'));
     expect(repository, contains('_operacional.sincronizarTudo()'));
     expect(repository, isNot(contains('service_role')));
-    expect(database, contains('static const int schemaVersion = 31;'));
+    expect(database, contains('static const int schemaVersion = 32;'));
   });
 }

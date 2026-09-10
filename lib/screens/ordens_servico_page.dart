@@ -57,6 +57,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
 
   final List<String> _statusDisponiveis = const [
     'Todos',
+    'Pendentes',
     'Aberta',
     'Em andamento',
     'Finalizada',

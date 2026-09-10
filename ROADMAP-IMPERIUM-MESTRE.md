@@ -1595,3 +1595,18 @@ Próximo passo:
 🟢 Painel mensal de conversão, origens, perdas, orçamentos e campanhas.
 🛡️ Sem alteração em Financeiro, Estoque, Ponto, RLS ou multiempresa.
 🛡️ SQLite permanece no schema 31; tabela auxiliar é criada idempotentemente pelo CRM.
+## Central Gerencial / BI V1 — implementada
+<!-- central-gerencial-bi-v1 -->
+- Visão executiva consolidada de Financeiro, DRE, CRM, Estoque, Precificação e Ponto.
+- Comparação automática com período anterior equivalente.
+- Alertas gerenciais, ranking de serviços e evolução mensal.
+- Sem banco paralelo: reutiliza os repositories oficiais do Imperium.
+## Funcionários V2 + OS Pendentes — implementado
+<!-- funcionarios-v2-os-pendentes-v32 -->
+- Funcionário ativo compõe mão de obra/custo-hora; inativo sai do cálculo imediatamente.
+- Histórico salarial, reajustes, ativação/inativação e pagamentos preservados.
+- Central de Funcionários com folha: estimado, pago e falta pagar.
+- Resumo de folha não mistura custos gerais da empresa.
+- Funcionário inativo pode receber acertos pendentes sem voltar ao custo/hora.
+- Ordens de Serviço ganharam filtro Pendentes = Aberta + Em andamento.
+- SQLite schema 32: financeiro_colaboradores_historico.

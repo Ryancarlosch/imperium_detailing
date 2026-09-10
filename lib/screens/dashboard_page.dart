@@ -13,6 +13,7 @@ import 'cliente_detalhes_page.dart';
 import 'clientes_page.dart';
 import 'configuracoes_page.dart';
 import 'crm_page.dart';
+import 'central_gerencial_page.dart';
 import 'estoque_page.dart';
 import 'dre_page.dart';
 import 'financeiro_dashboard_page.dart';
@@ -23,7 +24,7 @@ import 'financeiro_page.dart';
 import 'fotos_page.dart';
 import 'orcamentos_page.dart';
 import 'ordens_servico_page.dart';
-import 'ponto_funcionarios_page.dart';
+import 'funcionarios_central_page.dart';
 import 'pendencias_operacionais_page.dart';
 import 'servicos_page.dart';
 import 'veiculos_page.dart';
@@ -279,6 +280,11 @@ class _DashboardPageState extends State<DashboardPage> {
     await _abrirPagina(const CrmPage());
   }
 
+  Future<void> _abrirCentralGerencial() async {
+    if (!_validarAcesso('financeiro')) return;
+    await _abrirPagina(const CentralGerencialPage());
+  }
+
   Future<void> _abrirVeiculos() async {
     if (!_validarAcesso('clientes')) return;
     await _abrirPagina(const VeiculosPage());
@@ -317,7 +323,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _abrirPonto() async {
     if (!_validarAcesso('funcionarios')) return;
 
-    await _abrirPagina(const PontoFuncionariosPage());
+    await _abrirPagina(const FuncionariosCentralPage());
   }
 
   Future<void> _abrirImportarNotaFiscal() async {
@@ -452,6 +458,7 @@ class _DashboardPageState extends State<DashboardPage> {
         onAgenda: () => _menuAbrir(_abrirAgenda),
         onClientes: () => _menuAbrir(_abrirClientes),
         onCrm: () => _menuAbrir(_abrirCrm),
+        onCentralGerencial: () => _menuAbrir(_abrirCentralGerencial),
         onVeiculos: () => _menuAbrir(_abrirVeiculos),
         onOrdens: () => _menuAbrir(() => _abrirOrdens('Todos')),
         onOrcamentos: () => _menuAbrir(_abrirOrcamentos),
@@ -655,6 +662,7 @@ class _DashboardMenuV2 extends StatelessWidget {
     required this.onAgenda,
     required this.onClientes,
     required this.onCrm,
+    required this.onCentralGerencial,
     required this.onVeiculos,
     required this.onOrdens,
     required this.onOrcamentos,
@@ -678,6 +686,7 @@ class _DashboardMenuV2 extends StatelessWidget {
   final bool podePonto, podeConfiguracoes;
 
   final VoidCallback onInicio, onAgenda, onClientes, onCrm, onVeiculos;
+  final VoidCallback onCentralGerencial;
   final VoidCallback onOrdens, onOrcamentos, onEstoque, onServicos;
   final VoidCallback onFotos, onPonto, onReceita, onFluxoCaixa;
   final VoidCallback onImportarNotaFiscal;
@@ -755,9 +764,14 @@ class _DashboardMenuV2 extends StatelessWidget {
                 onServicos,
               ),
             if (podePonto)
-              _item(Icons.fingerprint_rounded, 'Ponto / Funcionários', onPonto),
+              _item(Icons.groups_2_outlined, 'Funcionários', onPonto),
             if (podeFinanceiro) ...[
               _secao('Financeiro'),
+              _item(
+                Icons.insights_outlined,
+                'Central Gerencial',
+                onCentralGerencial,
+              ),
               _item(
                 Icons.trending_up_rounded,
                 'Receita / visão financeira',

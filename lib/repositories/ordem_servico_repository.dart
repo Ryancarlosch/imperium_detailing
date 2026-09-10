@@ -171,8 +171,14 @@ class OrdemServicoRepository {
     final statusLimpo = status?.trim() ?? '';
 
     if (statusLimpo.isNotEmpty && statusLimpo.toLowerCase() != 'todos') {
-      filtros.add('os.status = ?');
-      argumentos.add(statusLimpo);
+      final normalizado = statusLimpo.toLowerCase();
+      if (normalizado == 'pendentes' || normalizado == 'pendente') {
+        filtros.add('os.status IN (?, ?)');
+        argumentos.addAll(['Aberta', 'Em andamento']);
+      } else {
+        filtros.add('os.status = ?');
+        argumentos.add(statusLimpo);
+      }
     }
 
     final pesquisaLimpa = pesquisa?.trim() ?? '';
@@ -233,8 +239,14 @@ class OrdemServicoRepository {
     final statusLimpo = status?.trim() ?? '';
 
     if (statusLimpo.isNotEmpty && statusLimpo.toLowerCase() != 'todos') {
-      filtros.add('os.status = ?');
-      argumentos.add(statusLimpo);
+      final normalizado = statusLimpo.toLowerCase();
+      if (normalizado == 'pendentes' || normalizado == 'pendente') {
+        filtros.add('os.status IN (?, ?)');
+        argumentos.addAll(['Aberta', 'Em andamento']);
+      } else {
+        filtros.add('os.status = ?');
+        argumentos.add(statusLimpo);
+      }
     }
 
     final pesquisaLimpa = pesquisa?.trim() ?? '';

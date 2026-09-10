@@ -54,7 +54,7 @@ class _PagamentosFuncionariosPageState
 
     try {
       final resultados = await Future.wait<dynamic>([
-        _repository.listarColaboradores(),
+        _repository.listarColaboradores(incluirInativos: true),
         _repository.listarPagamentosColaboradores(
           inicio: _inicioMes,
           fim: _fimMes,
@@ -288,7 +288,8 @@ class _PagamentosFuncionariosPageState
                       padding: EdgeInsets.all(12),
                       child: Text(
                         'Cada pagamento é independente. Você escolhe o valor, '
-                        'a conta e a data. Não existe valor mensal automático.',
+                        'a conta e a data. Funcionários inativos continuam disponíveis '
+                        'para quitar valores pendentes, mas não entram no custo/hora atual.',
                       ),
                     ),
                   ),
@@ -298,7 +299,7 @@ class _PagamentosFuncionariosPageState
                       child: Padding(
                         padding: EdgeInsets.all(18),
                         child: Text(
-                          'Nenhum funcionário ativo cadastrado.',
+                          'Nenhum funcionário cadastrado.',
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -325,6 +326,7 @@ class _PagamentosFuncionariosPageState
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
+                            '${colaborador.ativo ? 'Ativo' : 'Inativo'} • '
                             '${pagamentos.length} lançamentos • '
                             '${_moeda.format(total)}',
                           ),
@@ -555,7 +557,10 @@ class _PagamentoFuncionarioSheetState
                     .map(
                       (item) => DropdownMenuItem(
                         value: item,
-                        child: Text(item.nome, overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          item.ativo ? item.nome : '${item.nome} (inativo)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     )
                     .toList(),

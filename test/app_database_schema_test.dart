@@ -15,7 +15,7 @@ void main() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     pastaTemporaria = await Directory.systemTemp.createTemp(
-      'imperium_database_schema_v31_test_',
+      'imperium_database_schema_v32_test_',
     );
     await databaseFactory.setDatabasesPath(pastaTemporaria.path);
     caminhoBanco = path.join(pastaTemporaria.path, 'imperium_detailing.db');
@@ -35,12 +35,12 @@ void main() {
     }
   });
 
-  group('AppDatabase - criação do banco versão 31', () {
+  group('AppDatabase - criação do banco versão 32', () {
     test('cria banco atual com integridade e foreign keys válidas', () async {
       final database = await AppDatabase.instance.database;
 
       expect(await database.getVersion(), AppDatabase.schemaVersion);
-      expect(AppDatabase.schemaVersion, 31);
+      expect(AppDatabase.schemaVersion, 32);
 
       final foreignKeys = await database.rawQuery('PRAGMA foreign_keys');
       expect(foreignKeys.single.values.single, 1);
@@ -92,6 +92,7 @@ void main() {
           'crm_cupons',
           'financeiro_custos_fixos',
           'financeiro_colaboradores_custo',
+          'financeiro_colaboradores_historico',
           'financeiro_os_mao_obra',
           'financeiro_regras_taxa',
           'financeiro_metas',
@@ -143,6 +144,27 @@ void main() {
           'tipo',
           'motivo',
           'detalhes',
+        }),
+      );
+    });
+
+    test('cria histórico de funcionários da v32', () async {
+      final database = await AppDatabase.instance.database;
+      final colunas = await _obterColunas(
+        database,
+        'financeiro_colaboradores_historico',
+      );
+      expect(
+        colunas,
+        containsAll(<String>{
+          'colaborador_id',
+          'tipo',
+          'remuneracao_anterior',
+          'remuneracao_nova',
+          'ativo_anterior',
+          'ativo_novo',
+          'motivo',
+          'vigencia_em',
         }),
       );
     });
