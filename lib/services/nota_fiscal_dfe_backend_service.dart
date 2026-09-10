@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/nota_fiscal_entrada.dart';
@@ -12,31 +14,88 @@ class DfeBackendException implements Exception {
   final String codigo;
   final String mensagem;
 
+  bool get pendente => const {
+    'provider_not_configured',
+    'document_not_found',
+    'document_not_complete',
+    'provider_access_denied',
+    'supabase_unavailable',
+    'authentication_required',
+  }.contains(codigo);
+
   @override
   String toString() => mensagem;
 }
 
+class DfeBackendStatus {
+  const DfeBackendStatus({
+    required this.disponivel,
+    required this.autenticado,
+    required this.provedor,
+    required this.provedorConfigurado,
+    required this.cnpjConfigurado,
+    required this.manifestacaoAutomatica,
+    required this.mensagem,
+  });
+
+  final bool disponivel;
+  final bool autenticado;
+  final String provedor;
+  final bool provedorConfigurado;
+  final bool cnpjConfigurado;
+  final bool manifestacaoAutomatica;
+  final String mensagem;
+
+  factory DfeBackendStatus.fromMap(Map<String, dynamic> map) {
+    return DfeBackendStatus(
+      disponivel: map['ok'] == true,
+      autenticado: map['authenticated'] == true,
+      provedor: (map['provider'] ?? '').toString(),
+      provedorConfigurado: map['provider_configured'] == true,
+      cnpjConfigurado: map['cnpj_configured'] == true,
+      manifestacaoAutomatica: map['auto_manifestacao'] == true,
+      mensagem: (map['message'] ?? '').toString(),
+    );
+  }
+}
+
 typedef DfeBackendInvoker =
     Future<Map<String, dynamic>> Function(String chaveAcesso);
+typedef DfeStatusInvoker = Future<Map<String, dynamic>> Function();
 typedef DfeXmlImporter = Future<NotaFiscalEntrada> Function(String xml);
 
 class NotaFiscalDfeBackendService {
   NotaFiscalDfeBackendService({
     NotaFiscalEntradaRepository? repository,
     DfeBackendInvoker? invoker,
+    DfeStatusInvoker? statusInvoker,
     DfeXmlImporter? xmlImporter,
   }) : _repository = repository ?? NotaFiscalEntradaRepository(),
-       // Mantemos os nomes públicos `invoker` e `xmlImporter` para os testes
-       // e para futuras integrações. Usar initializing formal aqui mudaria
-       // esses parâmetros para nomes privados.
-       // ignore: prefer_initializing_formals
        _invoker = invoker,
-       // ignore: prefer_initializing_formals
+       _statusInvoker = statusInvoker,
        _xmlImporter = xmlImporter;
 
   final NotaFiscalEntradaRepository _repository;
   final DfeBackendInvoker? _invoker;
+  final DfeStatusInvoker? _statusInvoker;
   final DfeXmlImporter? _xmlImporter;
+
+  Future<DfeBackendStatus> diagnosticar() async {
+    try {
+      final resposta = await (_statusInvoker ?? _invocarStatusSupabase)();
+      return DfeBackendStatus.fromMap(resposta);
+    } on DfeBackendException catch (error) {
+      return DfeBackendStatus(
+        disponivel: false,
+        autenticado: false,
+        provedor: '',
+        provedorConfigurado: false,
+        cnpjConfigurado: false,
+        manifestacaoAutomatica: false,
+        mensagem: error.mensagem,
+      );
+    }
+  }
 
   Future<NotaFiscalEntrada> consultarEImportar(String chaveAcesso) async {
     final chave = ChaveFiscalService.normalizar(chaveAcesso);
@@ -44,7 +103,7 @@ class NotaFiscalDfeBackendService {
     if (metadados.modelo != 55) {
       throw const DfeBackendException(
         'unsupported_model',
-        'A consulta DF-e estruturada desta etapa é destinada a NF-e modelo 55.',
+        'A consulta DF-e estruturada é destinada a NF-e modelo 55.',
       );
     }
 
@@ -66,13 +125,30 @@ class NotaFiscalDfeBackendService {
     }
 
     final importer = _xmlImporter;
-    if (importer != null) return importer(xml);
-    return NotaFiscalEntradaXmlService(
-      repository: _repository,
-    ).importarXml(xml);
+    final nota = importer != null
+        ? await importer(xml)
+        : await NotaFiscalEntradaXmlService(
+            repository: _repository,
+          ).importarXml(xml);
+
+    if (nota.chaveAcesso != chave) {
+      throw const DfeBackendException(
+        'key_mismatch',
+        'O XML devolvido pelo backend não corresponde à chave solicitada.',
+      );
+    }
+    return nota;
   }
 
-  Future<Map<String, dynamic>> _invocarSupabase(String chave) async {
+  Future<Map<String, dynamic>> _invocarStatusSupabase() =>
+      _invocarFunction({'acao': 'status'});
+
+  Future<Map<String, dynamic>> _invocarSupabase(String chave) =>
+      _invocarFunction({'chave': chave});
+
+  Future<Map<String, dynamic>> _invocarFunction(
+    Map<String, dynamic> body,
+  ) async {
     final client = SupabaseBootstrap.client;
     if (client == null) {
       throw const DfeBackendException(
@@ -92,7 +168,7 @@ class NotaFiscalDfeBackendService {
     try {
       final response = await client.functions.invoke(
         'imperium-fiscal-dfe',
-        body: {'chave': chave},
+        body: body,
         headers: {'Authorization': 'Bearer ${sessao.accessToken}'},
       );
       final data = response.data;

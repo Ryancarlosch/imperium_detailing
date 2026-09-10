@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../models/nota_fiscal_entrada.dart';
 import '../repositories/nota_fiscal_entrada_repository.dart';
 import '../services/nota_fiscal_consulta_publica_service.dart';
+import '../services/nota_fiscal_importacao_service.dart';
 
 class NotaFiscalPortalAssistidoPage extends StatefulWidget {
   const NotaFiscalPortalAssistidoPage({
@@ -31,6 +32,7 @@ class _NotaFiscalPortalAssistidoPageState
     extends State<NotaFiscalPortalAssistidoPage> {
   late final WebViewController _controller;
   late final NotaFiscalConsultaPublicaService _consultaService;
+  late final NotaFiscalImportacaoService _importacaoService;
 
   int _progresso = 0;
   bool _importando = false;
@@ -46,6 +48,7 @@ class _NotaFiscalPortalAssistidoPageState
     super.initState();
     final repository = widget.repository ?? NotaFiscalEntradaRepository();
     _consultaService = NotaFiscalConsultaPublicaService(repository: repository);
+    _importacaoService = NotaFiscalImportacaoService(repository: repository);
 
     final inicial = NotaFiscalConsultaPublicaService.urlSegura(widget.url);
     if (!NotaFiscalConsultaPublicaService.urlOficial(inicial)) {
@@ -124,23 +127,37 @@ class _NotaFiscalPortalAssistidoPageState
         );
       }
 
-      final snapshot = await _capturarSnapshotPortal();
+      final snapshot = await _capturarSnapshotEstavel();
       if (snapshot.html.trim().isEmpty && snapshot.texto.trim().isEmpty) {
         throw const ConsultaPublicaFiscalException(
           'O portal não disponibilizou o conteúdo da página para leitura.',
         );
       }
 
-      final nota = await _consultaService.importarHtmlLiberado(
+      var nota = await _consultaService.importarHtmlLiberado(
         snapshot.html,
         chaveAcesso: widget.chaveAcesso,
         origemImportacao: widget.origem,
         textoVisivel: snapshot.texto,
+        consultaUrl: uriAtual.toString(),
+      );
+      nota = await _importacaoService.registrarPortalAssistidoSucesso(
+        nota: nota,
+        url: uriAtual,
       );
 
       if (!mounted) return;
       Navigator.of(context).pop<NotaFiscalEntrada>(nota);
     } on ConsultaPublicaFiscalException catch (error) {
+      final atualTexto = await _controller.currentUrl();
+      final atual = Uri.tryParse(atualTexto ?? '') ?? widget.url;
+      await _importacaoService.registrarPortalAssistidoFalha(
+        chaveAcesso: widget.chaveAcesso,
+        modelo: 65,
+        url: atual,
+        codigo: error.codigo,
+        mensagem: error.mensagem,
+      );
       final falhaDeConteudo =
           error.mensagem.contains('não entregou os itens') ||
           error.mensagem.contains('nome do fornecedor');
@@ -175,12 +192,40 @@ class _NotaFiscalPortalAssistidoPageState
     }
   }
 
+  Future<_PortalSnapshot> _capturarSnapshotEstavel() async {
+    final snapshots = <_PortalSnapshot>[];
+    for (var tentativa = 0; tentativa < 3; tentativa++) {
+      if (tentativa > 0) {
+        await Future<void>.delayed(Duration(milliseconds: 450 * tentativa));
+      }
+      snapshots.add(await _capturarSnapshotPortal());
+    }
+    snapshots.sort((a, b) {
+      final tamanhoA = a.html.length + a.texto.length;
+      final tamanhoB = b.html.length + b.texto.length;
+      return tamanhoB.compareTo(tamanhoA);
+    });
+    return snapshots.first;
+  }
+
   Future<_PortalSnapshot> _capturarSnapshotPortal() async {
     final resultado = await _controller.runJavaScriptReturningResult(r'''
       (() => {
         const partesHtml = [];
         const partesTexto = [];
         const frames = [];
+        const visitados = new Set();
+
+        function visivel(el) {
+          try {
+            const estilo = getComputedStyle(el);
+            if (estilo.display === 'none' || estilo.visibility === 'hidden') return false;
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 || rect.height > 0;
+          } catch (_) {
+            return true;
+          }
+        }
 
         function coletarShadow(root) {
           if (!root || !root.querySelectorAll) return;
@@ -195,9 +240,42 @@ class _NotaFiscalPortalAssistidoPageState
           }
         }
 
-        function coletarDocumento(doc) {
-          if (!doc) return;
+        function coletarValores(doc) {
           try {
+            for (const el of doc.querySelectorAll('input,textarea,select,[aria-label],[title]')) {
+              if (!visivel(el)) continue;
+              const rotulo = el.getAttribute('aria-label') || el.getAttribute('title') || '';
+              const valor = el.value || el.textContent || '';
+              const txt = `${rotulo} ${valor}`.trim();
+              if (txt) partesTexto.push(txt);
+            }
+          } catch (_) {}
+        }
+
+        function coletarTextoVisual(doc) {
+          try {
+            const folhas = [...doc.querySelectorAll('body *')]
+              .filter(el => visivel(el) && el.children.length === 0)
+              .map(el => ({
+                texto: (el.innerText || el.textContent || '').trim(),
+                rect: el.getBoundingClientRect(),
+              }))
+              .filter(x => x.texto.length > 0)
+              .sort((a, b) => {
+                const dy = a.rect.top - b.rect.top;
+                return Math.abs(dy) > 4 ? dy : a.rect.left - b.rect.left;
+              });
+            if (folhas.length) partesTexto.push(folhas.map(x => x.texto).join('\n'));
+          } catch (_) {}
+        }
+
+        function coletarDocumento(doc, profundidade = 0) {
+          if (!doc || profundidade > 4) return;
+          try {
+            const chave = `${doc.URL || ''}|${profundidade}`;
+            if (visitados.has(chave)) return;
+            visitados.add(chave);
+
             if (doc.documentElement) {
               partesHtml.push(doc.documentElement.outerHTML || '');
               partesTexto.push(doc.documentElement.innerText || '');
@@ -207,32 +285,30 @@ class _NotaFiscalPortalAssistidoPageState
               partesTexto.push(doc.body.innerText || '');
               partesTexto.push(doc.body.textContent || '');
             }
+            coletarValores(doc);
+            coletarTextoVisual(doc);
             coletarShadow(doc);
+
+            for (const el of doc.querySelectorAll('iframe,frame,object,embed')) {
+              try {
+                const src = el.src || el.data || el.getAttribute('src') || el.getAttribute('data') || '';
+                if (src) {
+                  try { frames.push(new URL(src, doc.baseURI).href); }
+                  catch (_) { frames.push(src); }
+                }
+                const srcdoc = el.getAttribute && el.getAttribute('srcdoc');
+                if (srcdoc && srcdoc.trim()) partesHtml.push(srcdoc);
+              } catch (_) {}
+              try {
+                coletarDocumento(el.contentDocument || el.contentWindow?.document, profundidade + 1);
+              } catch (_) {
+                // Frame cross-origin: não tentamos contornar a política do navegador.
+              }
+            }
           } catch (_) {}
         }
 
         coletarDocumento(document);
-
-        const elementos = document.querySelectorAll('iframe, frame, object, embed');
-        for (const el of elementos) {
-          let src = '';
-          try {
-            src = el.src || el.data || el.getAttribute('src') || el.getAttribute('data') || '';
-            if (src) {
-              try {
-                frames.push(new URL(src, document.baseURI).href);
-              } catch (_) {
-                frames.push(src);
-              }
-            }
-            const srcdoc = el.getAttribute && el.getAttribute('srcdoc');
-            if (srcdoc && srcdoc.trim()) partesHtml.push(srcdoc);
-          } catch (_) {}
-          try {
-            coletarDocumento(el.contentDocument || el.contentWindow?.document);
-          } catch (_) {}
-        }
-
         return JSON.stringify({
           html: partesHtml.join('\n'),
           texto: partesTexto.join('\n'),
@@ -256,7 +332,7 @@ class _NotaFiscalPortalAssistidoPageState
         );
       }
     } catch (_) {
-      // Fallback abaixo: ainda tentamos tratar o retorno como texto simples.
+      // Algumas plataformas já retornam a String desserializada.
     }
     return _PortalSnapshot(html: normalizado, texto: normalizado);
   }

@@ -162,7 +162,7 @@ void main() {
       await AppDatabase.instance.fecharBanco();
 
       final migrado = await AppDatabase.instance.database;
-      expect(await migrado.getVersion(), 32);
+      expect(await migrado.getVersion(), AppDatabase.schemaVersion);
 
       final colaboradores = await migrado.query(
         'financeiro_colaboradores_custo',

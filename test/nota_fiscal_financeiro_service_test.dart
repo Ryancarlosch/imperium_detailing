@@ -205,6 +205,34 @@ void main() {
     },
   );
 
+  test('documento não autorizado não gera financeiro', () async {
+    final database = await AppDatabase.instance.database;
+    final notaId = await _criarNota(
+      database,
+      valor: 100,
+      situacaoFiscal: 'cancelada',
+    );
+    final plano = await _plano(database, '9.06');
+
+    await expectLater(
+      service.criarLancamento(
+        notaFiscalId: notaId,
+        jaPago: false,
+        planoContaId: plano,
+        formaPagamento: 'Boleto',
+        primeiroVencimento: DateTime(2026, 10, 10),
+      ),
+      throwsA(isA<StateError>()),
+    );
+
+    final movimentos = await database.query(
+      'movimentos_financeiros',
+      where: 'nota_fiscal_id = ?',
+      whereArgs: [notaId],
+    );
+    expect(movimentos, isEmpty);
+  });
+
   test(
     'idempotência bloqueia duplicação e cancelamento permite refazer previsão',
     () async {
@@ -243,7 +271,11 @@ void main() {
   );
 }
 
-Future<int> _criarNota(Database database, {required double valor}) {
+Future<int> _criarNota(
+  Database database, {
+  required double valor,
+  String situacaoFiscal = 'autorizada',
+}) {
   return database.insert('notas_fiscais_entrada', {
     'chave_acesso': '35191111111111111111550010000000011000000012',
     'modelo': 55,
@@ -254,7 +286,7 @@ Future<int> _criarNota(Database database, {required double valor}) {
     'emitente_nome': 'Fornecedor Fiscal Teste',
     'valor_produtos': valor,
     'valor_total': valor,
-    'situacao_fiscal': 'autorizada',
+    'situacao_fiscal': situacaoFiscal,
     'status_importacao': 'processada',
     'origem_importacao': 'xml',
     'importada_em': '2026-09-08T10:00:00.000',

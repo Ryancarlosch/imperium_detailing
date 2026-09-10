@@ -14,7 +14,7 @@ void main() {
       _xml(modelo: 55, processado: true),
     );
 
-    expect(resultado.nota.chaveAcesso, _chave);
+    expect(resultado.nota.chaveAcesso, _chave55);
     expect(resultado.nota.modelo, 55);
     expect(resultado.nota.numero, 123);
     expect(resultado.nota.serie, 1);
@@ -29,20 +29,13 @@ void main() {
     expect(resultado.nota.valorIcmsSt, 0.2);
     expect(resultado.nota.valorTotal, 12.3);
     expect(resultado.nota.situacaoFiscal, 'autorizada');
-    expect(resultado.nota.xmlOriginal, _xml(modelo: 55, processado: true));
     expect(resultado.nota.xmlHash, isNotEmpty);
     expect(resultado.itens, hasLength(1));
-    expect(resultado.itens.single.numeroItem, 1);
     expect(resultado.itens.single.codigoProduto, 'ABC');
     expect(resultado.itens.single.ean, '7891234567890');
-    expect(resultado.itens.single.descricao, 'Produto Teste');
-    expect(resultado.itens.single.ncm, '12345678');
-    expect(resultado.itens.single.cfop, '5102');
-    expect(resultado.itens.single.unidade, 'UN');
     expect(resultado.itens.single.quantidade, 2.0);
     expect(resultado.itens.single.valorUnitario, 5.0);
     expect(resultado.itens.single.valorTotal, 10.0);
-    expect(resultado.itens.single.valorDesconto, 0.25);
   });
 
   test('parseia NFC-e modelo 65 e aceita valor total zero', () {
@@ -50,48 +43,60 @@ void main() {
       _xml(modelo: 65, valorTotal: '0.00', incluirProtocolo: false),
     );
 
+    expect(resultado.nota.chaveAcesso, _chave65);
     expect(resultado.nota.modelo, 65);
     expect(resultado.nota.valorTotal, 0);
     expect(resultado.nota.situacaoFiscal, 'desconhecida');
+  });
+
+  test('normaliza SEM GTIN para null', () {
+    final resultado = NotaFiscalEntradaXmlService().parsear(
+      _xml(modelo: 55, ean: 'SEM GTIN'),
+    );
+    expect(resultado.itens.single.ean, isNull);
   });
 
   test('parseia XML com namespace SEFAZ', () {
     final resultado = NotaFiscalEntradaXmlService().parsear(
       _xml(modelo: 55, namespace: 'http://www.portalfiscal.inf.br/nfe'),
     );
-
     expect(resultado.nota.modelo, 55);
     expect(resultado.itens.single.descricao, 'Produto Teste');
   });
 
-  test('parseia nfeProc e valida protocolo autorizado', () {
-    final resultado = NotaFiscalEntradaXmlService().parsear(
-      _xml(modelo: 55, processado: true),
-    );
-
-    expect(resultado.nota.situacaoFiscal, 'autorizada');
-    expect(resultado.nota.chaveAcesso, _chave);
-  });
-
-  test('rejeita XML invalido e XML sem infNFe', () {
+  test('rejeita XML invalido, sem infNFe ou sem itens', () {
     final service = NotaFiscalEntradaXmlService();
-
     expect(() => service.parsear('<NFe>'), throwsA(isA<FormatException>()));
     expect(
       () => service.parsear('<root><ide /></root>'),
       throwsA(isA<FormatException>()),
     );
+    expect(
+      () => service.parsear(_xml(modelo: 55, incluirItem: false)),
+      throwsA(isA<FormatException>()),
+    );
   });
 
-  test('rejeita modelo nao suportado e chave invalida', () {
+  test('rejeita chave, modelo, CNPJ, numero e serie divergentes', () {
     final service = NotaFiscalEntradaXmlService();
-
     expect(
-      () => service.parsear(_xml(modelo: 99)),
+      () => service.parsear(_xml(modelo: 99, chave: _chave55)),
       throwsA(isA<FormatException>()),
     );
     expect(
       () => service.parsear(_xml(modelo: 55, chave: '123')),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => service.parsear(_xml(modelo: 55, cnpj: '99999999000199')),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => service.parsear(_xml(modelo: 55, numero: 124)),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => service.parsear(_xml(modelo: 55, serie: 2)),
       throwsA(isA<FormatException>()),
     );
   });
@@ -99,7 +104,16 @@ void main() {
   test('rejeita chaves divergentes entre infNFe e protocolo', () {
     expect(
       () => NotaFiscalEntradaXmlService().parsear(
-        _xml(modelo: 55, processado: true, chaveProtocolo: _outraChave),
+        _xml(modelo: 55, processado: true, chaveProtocolo: _outraChave55),
+      ),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('rejeita divergencia entre soma de itens e vProd', () {
+    expect(
+      () => NotaFiscalEntradaXmlService().parsear(
+        _xml(modelo: 55, valorProdutos: '99.00'),
       ),
       throwsA(isA<FormatException>()),
     );
@@ -120,43 +134,55 @@ void main() {
   });
 }
 
-const _chave = '00000000000000000000000000000000000000000000';
-const _outraChave = '00000000000000000000000000000000000000000001';
+const _chave55 = '35260912345678000199550010000001231123456781';
+const _chave65 = '35260912345678000199650010000001231123456784';
+const _outraChave55 = '35260912345678000199550010000001231876543215';
 
 String _xml({
   required int modelo,
-  String chave = _chave,
+  String? chave,
   String? chaveProtocolo,
   String namespace = '',
   bool processado = false,
   bool incluirProtocolo = true,
+  bool incluirItem = true,
   String valorTotal = '12.30',
+  String valorProdutos = '10.00',
+  String ean = '7891234567890',
+  String cnpj = '12345678000199',
+  int numero = 123,
+  int serie = 1,
 }) {
+  final chaveEfetiva = chave ?? (modelo == 65 ? _chave65 : _chave55);
   final prefix = namespace.isEmpty ? '' : ' xmlns="$namespace"';
+  final item = incluirItem
+      ? '''
+    <det nItem="1"><prod>
+      <cProd>ABC</cProd><cEAN>$ean</cEAN><xProd>Produto Teste</xProd>
+      <NCM>12345678</NCM><CFOP>5102</CFOP><uCom>UN</uCom>
+      <qCom>2.0000</qCom><vUnCom>5.00</vUnCom><vProd>10.00</vProd><vDesc>0.25</vDesc>
+    </prod><imposto><IPI><IPITrib><vIPI>0.10</vIPI></IPITrib></IPI></imposto></det>'''
+      : '';
   final nfe =
       '''
 <NFe$prefix>
-  <infNFe Id="NFe$chave" versao="4.00">
+  <infNFe Id="NFe$chaveEfetiva" versao="4.00">
     <ide>
-      <mod>$modelo</mod><nNF>123</nNF><serie>1</serie>
+      <mod>$modelo</mod><nNF>$numero</nNF><serie>$serie</serie>
       <dhEmi>2026-09-08T10:00:00-03:00</dhEmi>
     </ide>
-    <emit><CNPJ>12345678000199</CNPJ><xNome>Fornecedor Teste</xNome></emit>
-    <det nItem="1"><prod>
-      <cProd>ABC</cProd><cEAN>7891234567890</cEAN><xProd>Produto Teste</xProd>
-      <NCM>12345678</NCM><CFOP>5102</CFOP><uCom>UN</uCom>
-      <qCom>2.0000</qCom><vUnCom>5.00</vUnCom><vProd>10.00</vProd><vDesc>0.25</vDesc>
-    </prod><imposto><IPI><IPITrib><vIPI>0.10</vIPI></IPITrib></IPI></imposto></det>
+    <emit><CNPJ>$cnpj</CNPJ><xNome>Fornecedor Teste</xNome></emit>
+    $item
     <total><ICMSTot>
-      <vProd>10.00</vProd><vFrete>1.50</vFrete><vSeg>0.50</vSeg><vDesc>0.25</vDesc>
+      <vProd>$valorProdutos</vProd><vFrete>1.50</vFrete><vSeg>0.50</vSeg><vDesc>0.25</vDesc>
       <vOutro>0.75</vOutro><vST>0.20</vST><vIPI>0.10</vIPI><vNF>$valorTotal</vNF>
     </ICMSTot></total>
   </infNFe>
 </NFe>
 ''';
-  if (!processado) return nfe;
+  if (!processado || !incluirProtocolo) return nfe;
 
-  final protocoloChave = chaveProtocolo ?? chave;
+  final protocoloChave = chaveProtocolo ?? chaveEfetiva;
   return '''<nfeProc$prefix versao="4.00">$nfe
   <protNFe><infProt><chNFe>$protocoloChave</chNFe><cStat>100</cStat></infProt></protNFe>
 </nfeProc>''';

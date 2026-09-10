@@ -183,9 +183,10 @@ class NotaFiscalFinanceiroService {
         );
       }
       final situacaoFiscal = (nota['situacao_fiscal'] ?? '').toString();
-      if ({'cancelada', 'denegada', 'inutilizada'}.contains(situacaoFiscal)) {
+      if (situacaoFiscal != 'autorizada') {
         throw StateError(
-          'Documento fiscal $situacaoFiscal não pode gerar lançamento financeiro.',
+          'Somente documento fiscal autorizado pode gerar lançamento financeiro. '
+          'Situação atual: $situacaoFiscal.',
         );
       }
 

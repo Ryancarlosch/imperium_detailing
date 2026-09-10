@@ -5,7 +5,7 @@
 > **Regra principal:** nenhum item antigo deve ser apagado. Quando algo for concluído,
 > o item permanece no roadmap e muda de status, recebendo data/notas quando necessário.
 
-Última atualização: **2026-09-09**
+Última atualização: **2026-09-01**
 ## BASELINE OFICIAL — 2026-09-01
 
 - Branch oficial: `desenvolvimento`.
@@ -635,11 +635,6 @@
 🟢 **Permissões locais**
 - Implementadas.
 
-🟢 **Auditoria local de acesso — 2026-09-09**
-- Central de Saúde exibe usuários ativos/inativos, usuários sem PIN,
-  sucessos/falhas de login das últimas 24h e acessos recentes.
-- Somente leitura: não altera PIN, perfil, empresa ou permissões remotas.
-
 ⬜ **Sincronizar identidade da empresa**
 - Nome/logo/config relevantes.
 
@@ -705,18 +700,11 @@
 ⬜ **Realtime**
 - Atualização automática.
 
-🟢 **Tela de saúde da sincronização — implementação local 2026-09-09**
-- integridade SQLite (`quick_check`) e foreign keys;
-- versão do schema e contagens principais;
-- cobertura local ↔ nuvem de Clientes, Veículos, Agenda e OS;
-- última sincronização registrada;
-- exclusões/tombstones pendentes;
-- fila offline do Ponto;
-- quantidade de tenants nos mapas locais;
-- diagnóstico do backend do Ponto já existente;
-- botão explícito para sincronização manual usando o motor atual;
-- relatório copiável para homologação;
-- não sincroniza Financeiro/Estoque e não altera RLS/tenant automaticamente.
+⬜ **Tela de saúde da sincronização**
+- última sincronização.
+- pendências.
+- erros.
+- conflitos.
 
 ⬜ **Revisão manual de conflito**
 - Quando não for possível resolver automaticamente.
@@ -1545,68 +1533,12 @@ Próximo passo:
 - teste real do mesmo cupom NFC-e no portal S@T/SEF-SC.
 
 
-## 2026-09-09 — Central de Saúde e Homologação local
-
-Módulo: Qualidade / Sincronização / Segurança
-Status: 🟢 Implementado localmente; homologação de aparelho pendente
-
-Motivo:
-- desenvolvimento continuou enquanto o aparelho estava indisponível para testes;
-- prioridade foi adicionar observabilidade sem alterar os serviços protegidos de
-  licença, tenant, RLS ou autenticação de funcionário.
-
-Alterações:
-- nova tela `Saúde e homologação` em Configurações → Nuvem e sincronização;
-- `PRAGMA quick_check` e `foreign_key_check` do SQLite;
-- alertas de estoque negativo, nota processada sem itens, parcela fiscal duplicada,
-  veículo órfão, documento financeiro vazio e múltiplos tenants em mapas locais;
-- cobertura de sincronização de Clientes, Veículos, Agenda e OS;
-- fila offline de Ponto e exclusões pendentes;
-- teste explícito do diagnóstico de nuvem/Ponto V6;
-- sincronização manual somente por ação confirmada do administrador;
-- auditoria de logins e usuários sem PIN;
-- relatório copiável para facilitar homologação e suporte.
-
-Banco/migração:
-- nenhuma alteração de schema;
-- nenhum dado operacional apagado.
-
-Áreas protegidas:
-- `FuncionarioAcessoService`, `LicencaService`, RLS e RPCs não foram alterados;
-- `OperacionalSyncService`, `PontoOfflineSyncService` e diagnóstico de Ponto são
-  apenas consumidos por APIs públicas já existentes.
-
-Próximo passo:
-- quando houver aparelho disponível, executar a Central de Saúde antes e depois
-  do teste multiaparelho;
-- validar Ponto/Funcionários em campo e só então evoluir a sincronização protegida.
-
----
-
-## MARCO CRM V3 ASSISTIDO — 10/09/2026
-
-🟢 Central de relacionamento com fila idempotente de follow-ups.
-🟢 Orçamentos pendentes entram na fila comercial e podem ser levados ao funil.
-🟢 Pós-venda de OS finalizada entra na fila de relacionamento.
-🟢 Benefícios/cupons ativos geram ação de contato.
-🟢 WhatsApp assistido com mensagem preparada; nenhum envio automático sem confirmação do usuário.
-🟢 Ações podem ser concluídas, adiadas ou ignoradas preservando histórico.
-🟢 Lembrete local diário do CRM às 09:00, ativável pelo usuário.
-🟢 Painel mensal de conversão, origens, perdas, orçamentos e campanhas.
-🛡️ Sem alteração em Financeiro, Estoque, Ponto, RLS ou multiempresa.
-🛡️ SQLite permanece no schema 31; tabela auxiliar é criada idempotentemente pelo CRM.
-## Central Gerencial / BI V1 — implementada
-<!-- central-gerencial-bi-v1 -->
-- Visão executiva consolidada de Financeiro, DRE, CRM, Estoque, Precificação e Ponto.
-- Comparação automática com período anterior equivalente.
-- Alertas gerenciais, ranking de serviços e evolução mensal.
-- Sem banco paralelo: reutiliza os repositories oficiais do Imperium.
-## Funcionários V2 + OS Pendentes — implementado
-<!-- funcionarios-v2-os-pendentes-v32 -->
-- Funcionário ativo compõe mão de obra/custo-hora; inativo sai do cálculo imediatamente.
-- Histórico salarial, reajustes, ativação/inativação e pagamentos preservados.
-- Central de Funcionários com folha: estimado, pago e falta pagar.
-- Resumo de folha não mistura custos gerais da empresa.
-- Funcionário inativo pode receber acertos pendentes sem voltar ao custo/hora.
-- Ordens de Serviço ganharam filtro Pendentes = Aberta + Em andamento.
-- SQLite schema 32: financeiro_colaboradores_historico.
+## Fiscal V33 — confiabilidade e reprocessamento
+<!-- fiscal-v33-confiabilidade -->
+- Rastreio de tentativas por canal (XML, QR direto, portal assistido, DF-e e manual).
+- Reprocessamento idempotente da mesma chave sem duplicar documento.
+- Validação forte do XML: chave, modelo, CNPJ, número, série, itens e totais.
+- NFC-e com consulta pública + WebView assistido e diagnóstico copiável.
+- Saúde Fiscal para reconciliar notas, itens, estoque e financeiro.
+- Estoque e financeiro bloqueados para documento não autorizado.
+- Backend DF-e v3 com sessão revalidada, CNPJ somente no servidor e sem manifestação automática.

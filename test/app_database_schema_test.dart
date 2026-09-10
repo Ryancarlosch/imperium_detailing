@@ -15,7 +15,7 @@ void main() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     pastaTemporaria = await Directory.systemTemp.createTemp(
-      'imperium_database_schema_v32_test_',
+      'imperium_database_schema_v33_test_',
     );
     await databaseFactory.setDatabasesPath(pastaTemporaria.path);
     caminhoBanco = path.join(pastaTemporaria.path, 'imperium_detailing.db');
@@ -35,12 +35,12 @@ void main() {
     }
   });
 
-  group('AppDatabase - criação do banco versão 32', () {
+  group('AppDatabase - criação do banco versão 33', () {
     test('cria banco atual com integridade e foreign keys válidas', () async {
       final database = await AppDatabase.instance.database;
 
       expect(await database.getVersion(), AppDatabase.schemaVersion);
-      expect(AppDatabase.schemaVersion, 32);
+      expect(AppDatabase.schemaVersion, 33);
 
       final foreignKeys = await database.rawQuery('PRAGMA foreign_keys');
       expect(foreignKeys.single.values.single, 1);
@@ -86,6 +86,7 @@ void main() {
           'notas_fiscais_entrada',
           'notas_fiscais_entrada_itens',
           'nota_fiscal_entrada_revisoes',
+          'nota_fiscal_importacao_tentativas',
           'crm_leads',
           'crm_interacoes',
           'crm_campanhas',
@@ -165,6 +166,40 @@ void main() {
           'ativo_novo',
           'motivo',
           'vigencia_em',
+        }),
+      );
+    });
+
+    test('cria rastreabilidade fiscal da v33', () async {
+      final database = await AppDatabase.instance.database;
+      final notas = await _obterColunas(database, 'notas_fiscais_entrada');
+      expect(
+        notas,
+        containsAll(<String>{
+          'consulta_url',
+          'tentativas_importacao',
+          'ultima_tentativa_em',
+          'ultimo_erro_codigo',
+          'ultimo_erro_mensagem',
+        }),
+      );
+
+      final tentativas = await _obterColunas(
+        database,
+        'nota_fiscal_importacao_tentativas',
+      );
+      expect(
+        tentativas,
+        containsAll(<String>{
+          'nota_fiscal_id',
+          'chave_acesso',
+          'modelo',
+          'canal',
+          'resultado',
+          'codigo',
+          'mensagem',
+          'url',
+          'criado_em',
         }),
       );
     });

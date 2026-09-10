@@ -5,7 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 32;
+  static const int schemaVersion = 33;
 
   static Database? _database;
 
@@ -173,6 +173,10 @@ class AppDatabase {
         if (versaoAntiga < 32) {
           await _atualizarParaVersao32(database);
         }
+
+        if (versaoAntiga < 33) {
+          await _atualizarParaVersao33(database);
+        }
       },
     );
   }
@@ -194,6 +198,7 @@ class AppDatabase {
     await _criarTabelaFornecedores(database);
     await _criarTabelaNotasFiscaisEntrada(database);
     await _criarTabelaNotasFiscaisEntradaItens(database);
+    await _criarTabelaNotaFiscalImportacaoTentativas(database);
     await _criarTabelaNotaFiscalEntradaRevisoes(database);
     await _criarTabelaTransferenciasFinanceiras(database);
     await _criarTabelaCustosFixos(database);
@@ -1221,6 +1226,11 @@ class AppDatabase {
           origem_importacao TEXT NOT NULL,
           xml_original TEXT,
           xml_hash TEXT,
+          consulta_url TEXT,
+          tentativas_importacao INTEGER NOT NULL DEFAULT 0,
+          ultima_tentativa_em TEXT,
+          ultimo_erro_codigo TEXT NOT NULL DEFAULT '',
+          ultimo_erro_mensagem TEXT NOT NULL DEFAULT '',
           importada_em TEXT NOT NULL,
           observacoes TEXT NOT NULL DEFAULT '',
           FOREIGN KEY (fornecedor_id)
@@ -1236,6 +1246,7 @@ class AppDatabase {
             'desconhecida'
           )),
           CHECK (status_importacao IN ('pendente', 'processada', 'erro')),
+          CHECK (tentativas_importacao >= 0),
           CHECK (origem_importacao IN (
             'xml',
             'qrCode',
@@ -1294,6 +1305,48 @@ class AppDatabase {
         idx_notas_fiscais_entrada_itens_nota_fiscal_id
         ON notas_fiscais_entrada_itens (nota_fiscal_id)
       ''');
+  }
+
+  Future<void> _criarTabelaNotaFiscalImportacaoTentativas(
+    Database database,
+  ) async {
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS nota_fiscal_importacao_tentativas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nota_fiscal_id INTEGER,
+        chave_acesso TEXT NOT NULL,
+        modelo INTEGER,
+        canal TEXT NOT NULL,
+        resultado TEXT NOT NULL,
+        codigo TEXT NOT NULL DEFAULT '',
+        mensagem TEXT NOT NULL DEFAULT '',
+        url TEXT,
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (nota_fiscal_id)
+          REFERENCES notas_fiscais_entrada (id)
+          ON DELETE SET NULL,
+        CHECK (length(chave_acesso) = 44),
+        CHECK (modelo IS NULL OR modelo IN (55, 65)),
+        CHECK (canal IN (
+          'xml',
+          'qr_direto',
+          'portal_assistido',
+          'dfe',
+          'manual'
+        )),
+        CHECK (resultado IN ('sucesso', 'pendente', 'erro'))
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_nf_importacao_tentativas_nota
+      ON nota_fiscal_importacao_tentativas (nota_fiscal_id, criado_em DESC)
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_nf_importacao_tentativas_chave
+      ON nota_fiscal_importacao_tentativas (chave_acesso, criado_em DESC)
+    ''');
   }
 
   Future<void> _criarTabelaTransferenciasFinanceiras(Database database) async {
@@ -3851,6 +3904,49 @@ class AppDatabase {
         WHERE h.colaborador_id = c.id
       )
     ''');
+  }
+
+  Future<void> _atualizarParaVersao33(Database database) async {
+    // fiscal-v33: reprocessamento rastreável sem duplicar notas.
+    if (!await _tabelaExiste(database, 'notas_fiscais_entrada')) {
+      await _criarTabelaNotasFiscaisEntrada(database);
+    }
+    if (!await _tabelaExiste(database, 'notas_fiscais_entrada_itens')) {
+      await _criarTabelaNotasFiscaisEntradaItens(database);
+    }
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'notas_fiscais_entrada',
+      coluna: 'consulta_url',
+      definicao: 'TEXT',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'notas_fiscais_entrada',
+      coluna: 'tentativas_importacao',
+      definicao: 'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'notas_fiscais_entrada',
+      coluna: 'ultima_tentativa_em',
+      definicao: 'TEXT',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'notas_fiscais_entrada',
+      coluna: 'ultimo_erro_codigo',
+      definicao: "TEXT NOT NULL DEFAULT ''",
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'notas_fiscais_entrada',
+      coluna: 'ultimo_erro_mensagem',
+      definicao: "TEXT NOT NULL DEFAULT ''",
+    );
+
+    await _criarTabelaNotaFiscalImportacaoTentativas(database);
   }
 
   Future<void> _atualizarParaVersao29(Database database) async {

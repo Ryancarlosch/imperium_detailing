@@ -1,19 +1,20 @@
-# imperium-fiscal-dfe
+# imperium-fiscal-dfe — Fiscal V33
 
-Edge Function autenticada para obter XML completo de NF-e modelo 55 recebida pela empresa.
+Edge Function autenticada para obter XML completo de NF-e modelo 55 recebida.
 
 ## Segurança
+- deploy com `verify_jwt = true`;
+- valida o JWT novamente com `auth.getUser()`;
+- token Focus NFe fica somente em `FOCUS_NFE_TOKEN` no Supabase;
+- `FOCUS_NFE_CNPJ`, quando usado, é lido somente do servidor e não pode ser sobrescrito pelo APK;
+- nenhuma manifestação do destinatário é executada automaticamente.
 
-- `verify_jwt = true` no deploy.
-- O token do provedor fiscal nunca deve entrar no APK ou no Git.
-- A função já está implantada no projeto Supabase Imperium Manager.
+## Status
+`POST {"acao":"status"}` devolve somente flags de configuração, nunca segredos.
 
 ## Segredos esperados
+- `FISCAL_DFE_PROVIDER=focusnfe` (opcional; padrão focusnfe)
+- `FOCUS_NFE_TOKEN=<token>` (necessário para consulta automática de NF-e 55)
+- `FOCUS_NFE_CNPJ=<CNPJ destinatário>` (recomendado quando a conta possui múltiplos CNPJs)
 
-- `FISCAL_DFE_PROVIDER=focusnfe` (opcional; `focusnfe` é o padrão)
-- `FOCUS_NFE_TOKEN=<token da conta Focus NFe>` (obrigatório para ativar NF-e 55)
-- `FOCUS_NFE_CNPJ=<CNPJ da empresa>` (opcional, útil quando a conta possui múltiplas empresas)
-
-A NFC-e modelo 65 de mercado não depende desse provedor: ela usa o QR Code e a consulta assistida no portal oficial, com o CAPTCHA resolvido manualmente pelo usuário.
-
-A função não manifesta NF-e automaticamente. Se a distribuição só tiver o resumo `resNFe`, retorna `document_not_complete`.
+Sem token, a importação manual por XML continua funcionando normalmente.

@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -8,11 +8,14 @@ import '../models/nota_fiscal_entrada.dart';
 import '../models/nota_fiscal_entrada_item.dart';
 import '../repositories/nota_fiscal_entrada_repository.dart';
 import '../services/nota_fiscal_entrada_xml_service.dart';
+import '../services/nota_fiscal_importacao_service.dart';
 import 'chave_fiscal_manual_page.dart';
 import 'chave_fiscal_scanner_page.dart';
 import 'integrar_nota_fiscal_page.dart';
 import 'nota_fiscal_financeiro_page.dart';
 import 'nota_fiscal_correcao_page.dart';
+import 'nota_fiscal_integridade_page.dart';
+import 'nota_fiscal_portal_assistido_page.dart';
 
 class ImportarNotaFiscalPage extends StatefulWidget {
   const ImportarNotaFiscalPage({super.key});
@@ -24,6 +27,7 @@ class ImportarNotaFiscalPage extends StatefulWidget {
 class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
   final NotaFiscalEntradaRepository _repository = NotaFiscalEntradaRepository();
   late final NotaFiscalEntradaXmlService _xmlService;
+  late final NotaFiscalImportacaoService _importacaoService;
 
   String _filtro = 'todos';
   bool _carregando = true;
@@ -33,6 +37,7 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
   void initState() {
     super.initState();
     _xmlService = NotaFiscalEntradaXmlService(repository: _repository);
+    _importacaoService = NotaFiscalImportacaoService(repository: _repository);
     _carregar();
   }
 
@@ -89,7 +94,7 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
       );
       if (confirmar != true) return;
 
-      await _xmlService.importarXml(conteudo);
+      await _importacaoService.importarXml(conteudo);
       if (!mounted) return;
       _mensagem(
         existente == null
@@ -164,7 +169,40 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
   }
 
   bool _permiteMovimentar(NotaFiscalEntrada nota) =>
-      !{'cancelada', 'denegada', 'inutilizada'}.contains(nota.situacaoFiscal);
+      nota.situacaoFiscal == 'autorizada';
+
+  Future<void> _reprocessar(NotaFiscalEntrada nota) async {
+    _mensagem('Reprocessando documento fiscal...');
+    try {
+      var resultado = await _importacaoService.reprocessar(nota);
+      if (!mounted) return;
+      if (resultado.exigePortalAssistido) {
+        final assistida = await Navigator.push<NotaFiscalEntrada>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotaFiscalPortalAssistidoPage(
+              url: resultado.portalAssistidoUrl!,
+              chaveAcesso: resultado.nota.chaveAcesso,
+              origem: resultado.nota.origemImportacao,
+              repository: _repository,
+            ),
+          ),
+        );
+        if (assistida != null) {
+          resultado = NotaFiscalImportacaoResultado(
+            nota: assistida,
+            mensagem: 'Documento importado pela consulta assistida.',
+          );
+        }
+      }
+      if (!mounted) return;
+      _mensagem(resultado.mensagem, erro: !resultado.processada);
+      await _carregar();
+    } catch (error) {
+      if (!mounted) return;
+      _mensagem('Falha ao reprocessar: $error', erro: true);
+    }
+  }
 
   void _mensagem(String texto, {bool erro = false}) {
     ScaffoldMessenger.of(context)
@@ -183,6 +221,16 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
       appBar: AppBar(
         title: const Text('Importar Nota Fiscal'),
         actions: [
+          IconButton(
+            tooltip: 'Saúde Fiscal',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const NotaFiscalIntegridadePage(),
+              ),
+            ),
+            icon: const Icon(Icons.health_and_safety_outlined),
+          ),
           IconButton(
             tooltip: 'Atualizar lista',
             onPressed: _carregar,
@@ -267,7 +315,13 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
       builder: (_) => _NotaDetalhes(
         nota: nota,
         itens: itens,
-        onAdicionarXml: nota.statusImportacao == 'pendente'
+        onReprocessar: nota.statusImportacao != 'processada'
+            ? () {
+                Navigator.pop(context);
+                _reprocessar(nota);
+              }
+            : null,
+        onAdicionarXml: nota.statusImportacao != 'processada'
             ? () {
                 Navigator.pop(context);
                 _selecionarXml();
@@ -417,6 +471,7 @@ class _NotaDetalhes extends StatelessWidget {
     required this.nota,
     required this.itens,
     this.onAdicionarXml,
+    this.onReprocessar,
     this.onIntegrar,
     this.onFinanceiro,
     this.onCorrigirExcluir,
@@ -424,6 +479,7 @@ class _NotaDetalhes extends StatelessWidget {
   final NotaFiscalEntrada nota;
   final List<NotaFiscalEntradaItem> itens;
   final VoidCallback? onAdicionarXml;
+  final VoidCallback? onReprocessar;
   final VoidCallback? onIntegrar;
   final VoidCallback? onFinanceiro;
   final VoidCallback? onCorrigirExcluir;
@@ -445,6 +501,24 @@ class _NotaDetalhes extends StatelessWidget {
         Text('Situação: ${nota.situacaoFiscal}'),
         Text('Status: ${nota.statusImportacao}'),
         Text('Origem: ${nota.origemImportacao}'),
+        Text('Tentativas: ${nota.tentativasImportacao}'),
+        if (nota.ultimaTentativaEm != null)
+          Text('Última tentativa: ${nota.ultimaTentativaEm}'),
+        if (nota.ultimoErroMensagem.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Última pendência: ${nota.ultimoErroMensagem}',
+            style: const TextStyle(color: Colors.orangeAccent),
+          ),
+        ],
+        if (onReprocessar != null) ...[
+          const SizedBox(height: 14),
+          FilledButton.tonalIcon(
+            onPressed: onReprocessar,
+            icon: const Icon(Icons.sync_problem_outlined),
+            label: const Text('Reprocessar consulta'),
+          ),
+        ],
         if (onAdicionarXml != null) ...[
           const SizedBox(height: 14),
           OutlinedButton.icon(

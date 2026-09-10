@@ -60,6 +60,30 @@ void main() {
     );
   });
 
+  test(
+    'diagnóstico informa configuração do backend sem expor segredo',
+    () async {
+      final service = NotaFiscalDfeBackendService(
+        statusInvoker: () async => {
+          'ok': true,
+          'authenticated': true,
+          'provider': 'focusnfe',
+          'provider_configured': false,
+          'cnpj_configured': false,
+          'auto_manifestacao': false,
+          'message': 'Conector instalado, token pendente.',
+        },
+      );
+
+      final status = await service.diagnosticar();
+      expect(status.disponivel, isTrue);
+      expect(status.autenticado, isTrue);
+      expect(status.provedor, 'focusnfe');
+      expect(status.provedorConfigurado, isFalse);
+      expect(status.manifestacaoAutomatica, isFalse);
+    },
+  );
+
   test('não envia NFC-e modelo 65 ao conector DF-e', () async {
     const chaveNfce = '35240845543915098211650170000016801096369037';
     var chamou = false;

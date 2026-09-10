@@ -11,9 +11,20 @@ import 'chave_fiscal_service.dart';
 import 'nota_fiscal_entrada_xml_service.dart';
 
 class ConsultaPublicaFiscalException implements Exception {
-  const ConsultaPublicaFiscalException(this.mensagem);
+  const ConsultaPublicaFiscalException(
+    this.mensagem, {
+    this.codigo = 'consulta_publica_erro',
+  });
 
   final String mensagem;
+  final String codigo;
+
+  bool get pendente => const {
+    'captcha_required',
+    'portal_content_unavailable',
+    'portal_http_error',
+    'portal_timeout',
+  }.contains(codigo);
 
   @override
   String toString() => mensagem;
@@ -75,13 +86,22 @@ class NotaFiscalConsultaPublicaService {
 
     _validarUrlOficial(uri);
     final segura = urlSegura(uri);
-    final resposta = await (_fetcher ?? _buscar)(segura).timeout(_timeout);
+    late final ConsultaPublicaHttpResponse resposta;
+    try {
+      resposta = await (_fetcher ?? _buscar)(segura).timeout(_timeout);
+    } on TimeoutException {
+      throw const ConsultaPublicaFiscalException(
+        'O portal fiscal demorou demais para responder. Use a consulta assistida ou tente novamente.',
+        codigo: 'portal_timeout',
+      );
+    }
     _validarUrlOficial(resposta.finalUri);
 
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ConsultaPublicaFiscalException(
         'O portal fiscal respondeu HTTP ${resposta.statusCode}. '
         'A chave foi reconhecida, mas os dados completos não puderam ser obtidos.',
+        codigo: 'portal_http_error',
       );
     }
 
@@ -92,7 +112,7 @@ class NotaFiscalConsultaPublicaService {
     );
 
     return _repository.salvarNotaCompleta(
-      nota: parsed.nota,
+      nota: parsed.nota.copyWith(consultaUrl: segura.toString()),
       itens: parsed.itens,
       removerItensAusentes: true,
     );
@@ -103,6 +123,7 @@ class NotaFiscalConsultaPublicaService {
     required String chaveAcesso,
     String origemImportacao = 'qrCode',
     String? textoVisivel,
+    String? consultaUrl,
   }) async {
     final parsed = parsearHtml(
       html,
@@ -111,7 +132,7 @@ class NotaFiscalConsultaPublicaService {
       textoVisivel: textoVisivel,
     );
     return _repository.salvarNotaCompleta(
-      nota: parsed.nota,
+      nota: parsed.nota.copyWith(consultaUrl: consultaUrl),
       itens: parsed.itens,
       removerItensAusentes: true,
     );
@@ -175,11 +196,13 @@ class NotaFiscalConsultaPublicaService {
           textoMaiusculo.contains('CAPTCHA')) {
         throw const ConsultaPublicaFiscalException(
           'O portal fiscal está aguardando a validação do CAPTCHA.',
+          codigo: 'captcha_required',
         );
       }
       throw const ConsultaPublicaFiscalException(
         'O portal abriu a NFC-e, mas não entregou os itens em HTML utilizável. '
         'Use a consulta assistida para carregar a página e importar os dados exibidos.',
+        codigo: 'portal_content_unavailable',
       );
     }
 
@@ -559,15 +582,17 @@ class NotaFiscalConsultaPublicaService {
   }
 
   static List<NotaFiscalEntradaItem> _extrairItensPorCards(String texto) {
-    // Portais estaduais, especialmente o S@T/SEF-SC, usam vários elementos
-    // visuais para montar cada item. Descrição, código, "Vl. Total", quantidade
-    // e preço podem ficar em linhas/elementos separados. Por isso o ponto
-    // estável é "(Código: ...)" e não uma linha HTML específica.
+    // Portais estaduais quebram cada item em elementos visuais diferentes.
+    // Trabalhamos sobre o texto renderizado e aceitamos as formas mais comuns:
+    // "(Código: 123)", "Código: 123" e "Cod. 123".
     final codigoRegex = RegExp(
-      r'\(C[oó]digo:\s*([^)]+?)\s*\)',
+      r'(?:\(\s*)?(?:C[oó]digo|C[oó]d\.?)[\s.:]*([A-Z0-9._/\-]+)\s*\)?',
       caseSensitive: false,
     );
-    final codigos = codigoRegex.allMatches(texto).toList();
+    final codigos = codigoRegex.allMatches(texto).where((match) {
+      final codigo = match.group(1)?.trim() ?? '';
+      return codigo.isNotEmpty && codigo.length <= 80;
+    }).toList();
     final itens = <NotaFiscalEntradaItem>[];
 
     for (var indice = 0; indice < codigos.length; indice++) {
@@ -577,7 +602,10 @@ class NotaFiscalConsultaPublicaService {
           ? texto.lastIndexOf('\n', codigos[indice + 1].start - 1) + 1
           : -1;
       final limiteResumo = texto.indexOf(
-        RegExp(r'Qtd\.?\s+total\s+de\s+itens', caseSensitive: false),
+        RegExp(
+          r'(?:Qtd\.?|Qtde\.?|Quantidade)\s+total\s+de\s+itens',
+          caseSensitive: false,
+        ),
         atual.end,
       );
       final fim = proximoInicio >= 0
@@ -590,59 +618,55 @@ class NotaFiscalConsultaPublicaService {
       final descricao = _descricaoDoItem(texto, atual.start);
       if (descricao == null) continue;
 
-      final quantidade = _capturarNumero(
-        bloco,
-        RegExp(r'Qtd(?:e)?\.?\s*:\s*([0-9.,]+)', caseSensitive: false),
-      );
+      final quantidade = _primeiroNumero(bloco, const [
+        r'(?:Qtd(?:e)?|Qtde|Quantidade)\.?\s*:?\s*([0-9.,]+)',
+        r'([0-9.,]+)\s*(?:x|X)\s*(?:R\$\s*)?[0-9.,]+',
+      ]);
 
-      final unidadeMatch = RegExp(
-        r'\bUN\s*:\s*([A-Z0-9]{1,12}?)(?=\s*V[lI]\.?\s*Unit|\s{2,}|\n|$)',
+      String? unidade;
+      for (final padrao in const [
+        r'\bUN(?:ID(?:ADE)?)?\s*:?\s*([A-Z0-9]{1,12}?)(?=\s*(?:V[lI]\.?|Valor)|\s{2,}|\n|$)',
+        r'\b(?:Unidade|UN)\s*:?\s*([A-Z]{1,12})\b',
+      ]) {
+        final match = RegExp(padrao, caseSensitive: false).firstMatch(bloco);
+        final valor = match?.group(1)?.trim();
+        if (valor != null && valor.isNotEmpty) {
+          unidade = valor;
+          break;
+        }
+      }
+
+      final unitarioMatch = RegExp(
+        r'(?:V[lI]\.?|Valor)\s*(?:Unit\.?|Unit[aá]rio)\s*:?\s*(?:R\$\s*)?([0-9.,]+)',
         caseSensitive: false,
       ).firstMatch(bloco);
-      final unidade = unidadeMatch?.group(1)?.trim();
-
-      final unitarioRegex = RegExp(
-        r'V[lI]\.?\s*Unit\.?\s*:\s*(?:R\$\s*)?([0-9.,]+)',
-        caseSensitive: false,
-      );
-      final unitarioMatch = unitarioRegex.firstMatch(bloco);
       final unitario = unitarioMatch == null
           ? null
           : _numeroBr(unitarioMatch.group(1)!);
 
       double? valorTotal;
       final totalRotulado = RegExp(
-        r'V[lI]\.?\s*Total\s*(?:R\$\s*)?[:]?\s*([0-9.,]+)',
+        r'(?:V[lI]\.?|Valor)\s*Total\s*(?:R\$\s*)?[:=]?\s*([0-9.,]+)',
         caseSensitive: false,
       ).allMatches(bloco).toList();
       if (totalRotulado.isNotEmpty) {
         valorTotal = _numeroBr(totalRotulado.last.group(1)!);
       }
 
-      // No S@T/SEF-SC o rótulo "Vl. Total" pode aparecer numa coluna antes
-      // do restante do item, e o número total aparece isolado depois do preço
-      // unitário. Capturamos esse número como fallback.
+      // S@T/SEF-SC: o rótulo "Vl. Total" pode estar antes da linha de
+      // quantidade e o valor aparece isolado depois do unitário.
       if (valorTotal == null && unitarioMatch != null) {
         final depoisUnitario = bloco.substring(unitarioMatch.end);
-        final proximoNumero = RegExp(
-          r'([0-9]+(?:[.,][0-9]{1,4})?)',
+        final isolado = RegExp(
+          r'(?:^|\n|\s{2,})([0-9]+(?:[.,][0-9]{1,4})?)(?=\s*(?:\n|$))',
         ).firstMatch(depoisUnitario);
-        if (proximoNumero != null) {
-          valorTotal = _numeroBr(proximoNumero.group(1)!);
-        }
+        if (isolado != null) valorTotal = _numeroBr(isolado.group(1)!);
       }
 
-      if (quantidade == null ||
-          quantidade <= 0 ||
-          unidade == null ||
-          unidade.isEmpty ||
-          unitario == null) {
-        continue;
-      }
-
-      // Último fallback: quando a página não expõe a coluna total de forma
-      // legível, quantidade x unitário ainda nos permite montar o item.
+      if (quantidade == null || quantidade <= 0 || unitario == null) continue;
+      unidade ??= 'UN';
       valorTotal ??= quantidade * unitario;
+      if (!valorTotal.isFinite || valorTotal < 0) continue;
 
       itens.add(
         NotaFiscalEntradaItem(
@@ -650,7 +674,7 @@ class NotaFiscalConsultaPublicaService {
           numeroItem: itens.length + 1,
           codigoProduto: atual.group(1)?.trim(),
           descricao: descricao,
-          unidade: unidade,
+          unidade: unidade.toUpperCase(),
           quantidade: quantidade,
           valorUnitario: unitario,
           valorTotal: valorTotal,
@@ -658,6 +682,17 @@ class NotaFiscalConsultaPublicaService {
       );
     }
     return itens;
+  }
+
+  static double? _primeiroNumero(String texto, List<String> padroes) {
+    for (final padrao in padroes) {
+      final match = RegExp(padrao, caseSensitive: false).firstMatch(texto);
+      if (match != null) {
+        final numero = _numeroBr(match.group(1)!);
+        if (numero != null) return numero;
+      }
+    }
+    return null;
   }
 
   static String? _descricaoDoItem(String texto, int inicioCodigo) {
@@ -721,51 +756,94 @@ class NotaFiscalConsultaPublicaService {
     dom.Document documento,
   ) {
     final itens = <NotaFiscalEntradaItem>[];
-    for (final linha in documento.querySelectorAll('tr')) {
-      final celulas = linha
-          .querySelectorAll('td')
-          .map((item) => item.text.replaceAll('\u00A0', ' ').trim())
-          .where((item) => item.isNotEmpty)
-          .toList();
-      if (celulas.length < 6) continue;
+    for (final tabela in documento.querySelectorAll('table')) {
+      final linhas = tabela.querySelectorAll('tr');
+      if (linhas.isEmpty) continue;
 
-      final quantidade = _numeroBr(celulas[2]);
-      final unitario = _numeroBr(celulas[4]);
-      final total = _numeroBr(celulas[5]);
-      if (quantidade == null ||
-          quantidade <= 0 ||
-          unitario == null ||
-          total == null ||
-          celulas[1].length < 2) {
-        continue;
+      Map<String, int>? mapa;
+      for (final linha in linhas) {
+        final celulasElementos = linha.querySelectorAll('th,td');
+        final celulas = celulasElementos
+            .map((item) => item.text.replaceAll('\u00A0', ' ').trim())
+            .toList();
+        if (celulas.isEmpty) continue;
+
+        if (mapa == null) {
+          final candidato = _mapearCabecalhoTabela(celulas);
+          if (candidato.length >= 5 && candidato.containsKey('descricao')) {
+            mapa = candidato;
+            continue;
+          }
+        }
+        if (mapa == null) continue;
+
+        String campo(String chave) {
+          final indice = mapa![chave];
+          if (indice == null || indice < 0 || indice >= celulas.length) {
+            return '';
+          }
+          return celulas[indice].trim();
+        }
+
+        final descricao = campo('descricao');
+        final quantidade = _numeroBr(campo('quantidade'));
+        final unitario = _numeroBr(campo('unitario'));
+        final total = _numeroBr(campo('total'));
+        if (descricao.length < 2 ||
+            quantidade == null ||
+            quantidade <= 0 ||
+            unitario == null ||
+            total == null) {
+          continue;
+        }
+
+        itens.add(
+          NotaFiscalEntradaItem(
+            notaFiscalId: 0,
+            numeroItem: itens.length + 1,
+            codigoProduto: _textoNulo(campo('codigo')),
+            descricao: descricao,
+            unidade: campo('unidade').isEmpty ? 'UN' : campo('unidade'),
+            quantidade: quantidade,
+            valorUnitario: unitario,
+            valorTotal: total,
+          ),
+        );
       }
-
-      itens.add(
-        NotaFiscalEntradaItem(
-          notaFiscalId: 0,
-          numeroItem: itens.length + 1,
-          codigoProduto: celulas[0],
-          descricao: celulas[1],
-          unidade: celulas[3],
-          quantidade: quantidade,
-          valorUnitario: unitario,
-          valorTotal: total,
-        ),
-      );
     }
     return itens;
   }
 
-  static double? _capturarNumero(String texto, RegExp regex) {
-    final match = regex.firstMatch(texto);
-    if (match == null) return null;
-    return _numeroBr(match.group(1)!);
+  static Map<String, int> _mapearCabecalhoTabela(List<String> celulas) {
+    final mapa = <String, int>{};
+    for (var i = 0; i < celulas.length; i++) {
+      final texto = _semAcentos(celulas[i]).toUpperCase();
+      if (texto.contains('COD')) mapa.putIfAbsent('codigo', () => i);
+      if (texto.contains('DESCR') || texto.contains('PRODUTO')) {
+        mapa.putIfAbsent('descricao', () => i);
+      }
+      if (texto.contains('QTD') ||
+          texto.contains('QTDE') ||
+          texto.contains('QUANT')) {
+        mapa.putIfAbsent('quantidade', () => i);
+      }
+      if (texto == 'UN' || texto.contains('UNIDADE')) {
+        mapa.putIfAbsent('unidade', () => i);
+      }
+      if (texto.contains('UNIT')) mapa.putIfAbsent('unitario', () => i);
+      if (texto.contains('TOTAL')) mapa.putIfAbsent('total', () => i);
+    }
+    return mapa;
   }
+
+  static String? _textoNulo(String valor) =>
+      valor.trim().isEmpty ? null : valor.trim();
 
   static double? _extrairValorRotulo(String texto, List<String> rotulos) {
     for (final rotulo in rotulos) {
       final match = RegExp(
-        '$rotulo([0-9][0-9.,]*)',
+        '$rotulo\\s*(?:R'
+        r'\$\s*)?[:=]?\s*([0-9][0-9.,]*)',
         caseSensitive: false,
       ).firstMatch(texto);
       if (match != null) return _numeroBr(match.group(1)!);

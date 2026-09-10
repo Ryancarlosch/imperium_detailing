@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 import 'package:xml/xml.dart';
@@ -26,7 +27,7 @@ class NotaFiscalEntradaXmlService {
     String? importadaEm,
   }) {
     if (xml.trim().isEmpty) {
-      throw FormatException('XML fiscal vazio.');
+      throw const FormatException('XML fiscal vazio.');
     }
     if (origemImportacao != 'xml') {
       throw ArgumentError('Importação XML deve usar origem xml.');
@@ -43,19 +44,25 @@ class NotaFiscalEntradaXmlService {
 
     final infNfe = _descendente(documento, 'infNFe');
     if (infNfe == null) {
-      throw FormatException('XML fiscal não contém infNFe.');
+      throw const FormatException('XML fiscal não contém infNFe.');
     }
 
     final chaveInformada = _atributo(infNfe, 'Id');
     final chaveInfNfe = _normalizarChave(chaveInformada);
     _validarChave(chaveInfNfe, 'infNFe/@Id');
+    final metadadosChave = ChaveFiscalService.metadados(chaveInfNfe);
 
     final ide = _filho(infNfe, 'ide');
-    if (ide == null) throw FormatException('XML fiscal não contém ide.');
+    if (ide == null) throw const FormatException('XML fiscal não contém ide.');
 
     final modelo = _int(_textoFilho(ide, 'mod'));
     if (modelo != 55 && modelo != 65) {
       throw FormatException('Modelo fiscal não suportado: $modelo.');
+    }
+    if (modelo != metadadosChave.modelo) {
+      throw const FormatException(
+        'O modelo informado no XML diverge do modelo presente na chave de acesso.',
+      );
     }
 
     final protocolo = _descendente(documento, 'protNFe');
@@ -66,47 +73,26 @@ class NotaFiscalEntradaXmlService {
     if (chaveProtocolo.isNotEmpty) {
       _validarChave(chaveProtocolo, 'protNFe/infProt/chNFe');
       if (chaveProtocolo != chaveInfNfe) {
-        throw FormatException('Chaves fiscais divergentes no XML.');
+        throw const FormatException('Chaves fiscais divergentes no XML.');
       }
     }
 
     final emit = _filho(infNfe, 'emit');
     final total = _filho(_filho(infNfe, 'total'), 'ICMSTot');
+    if (emit == null || total == null) {
+      throw const FormatException('XML fiscal não contém emitente ou totais.');
+    }
+
     final emitenteNome = _textoFilho(emit, 'xNome');
     final emitenteCnpjCpf = _primeiroTexto(emit, const ['CNPJ', 'CPF']);
-    final valorTotalTexto = _textoFilho(total, 'vNF');
-    if (valorTotalTexto.isEmpty) {
-      throw FormatException('XML fiscal não contém valor total vNF.');
+    if (emitenteNome.isEmpty || emitenteCnpjCpf.isEmpty) {
+      throw const FormatException('XML fiscal não contém emitente completo.');
     }
-    final valorTotal = _doubleTexto(valorTotalTexto);
 
-    final itens = <NotaFiscalEntradaItem>[];
-    for (final det in _filhos(infNfe, 'det')) {
-      final prod = _filho(det, 'prod');
-      if (prod == null) {
-        throw FormatException('Item fiscal sem grupo prod.');
-      }
-
-      final numeroItem = _int(_atributo(det, 'nItem'));
-      if (numeroItem == null || numeroItem <= 0) {
-        throw FormatException('Item fiscal sem numeroItem válido.');
-      }
-
-      itens.add(
-        NotaFiscalEntradaItem(
-          notaFiscalId: 0,
-          numeroItem: numeroItem,
-          codigoProduto: _textoNulo(_textoFilho(prod, 'cProd')),
-          ean: _textoNulo(_primeiroTexto(prod, const ['cEAN', 'cEANTrib'])),
-          descricao: _textoFilho(prod, 'xProd'),
-          ncm: _textoNulo(_textoFilho(prod, 'NCM')),
-          cfop: _textoNulo(_textoFilho(prod, 'CFOP')),
-          unidade: _textoFilho(prod, 'uCom'),
-          quantidade: _doubleTexto(_textoFilho(prod, 'qCom')),
-          valorUnitario: _doubleTexto(_textoFilho(prod, 'vUnCom')),
-          valorTotal: _doubleTexto(_textoFilho(prod, 'vProd')),
-          valorDesconto: _doubleTexto(_textoFilho(prod, 'vDesc')),
-        ),
+    final cnpjXml = _somenteDigitos(_textoFilho(emit, 'CNPJ'));
+    if (cnpjXml.isNotEmpty && cnpjXml != metadadosChave.cnpjEmitente) {
+      throw const FormatException(
+        'O CNPJ do emitente no XML diverge do CNPJ presente na chave de acesso.',
       );
     }
 
@@ -118,14 +104,89 @@ class NotaFiscalEntradaXmlService {
     final numero = _int(_textoFilho(ide, 'nNF'));
     final serie = _int(_textoFilho(ide, 'serie'));
     if (numero == null || serie == null || dataEmissao == null) {
-      throw FormatException(
+      throw const FormatException(
         'XML fiscal não contém número, série ou data de emissão válidos.',
       );
     }
-    if (emitenteNome.isEmpty || emitenteCnpjCpf.isEmpty) {
-      throw FormatException('XML fiscal não contém emitente completo.');
+    if (numero != metadadosChave.numero || serie != metadadosChave.serie) {
+      throw const FormatException(
+        'Número ou série do XML divergem da chave de acesso.',
+      );
     }
-    final situacaoFiscal = _situacaoFiscal(infProt);
+    if (DateTime.tryParse(dataEmissao) == null) {
+      throw const FormatException('Data de emissão do XML fiscal é inválida.');
+    }
+
+    final valorTotalTexto = _textoFilho(total, 'vNF');
+    if (valorTotalTexto.isEmpty) {
+      throw const FormatException('XML fiscal não contém valor total vNF.');
+    }
+    final valorTotal = _doubleTexto(valorTotalTexto);
+    if (valorTotal < 0) {
+      throw const FormatException('Valor total da nota não pode ser negativo.');
+    }
+
+    final itens = <NotaFiscalEntradaItem>[];
+    for (final det in _filhos(infNfe, 'det')) {
+      final prod = _filho(det, 'prod');
+      if (prod == null) {
+        throw const FormatException('Item fiscal sem grupo prod.');
+      }
+
+      final numeroItem = _int(_atributo(det, 'nItem'));
+      if (numeroItem == null || numeroItem <= 0) {
+        throw const FormatException('Item fiscal sem numeroItem válido.');
+      }
+
+      final descricao = _textoFilho(prod, 'xProd');
+      final unidade = _textoFilho(prod, 'uCom');
+      final quantidade = _doubleObrigatorio(prod, 'qCom', numeroItem);
+      final valorUnitario = _doubleObrigatorio(prod, 'vUnCom', numeroItem);
+      final valorProduto = _doubleObrigatorio(prod, 'vProd', numeroItem);
+      if (descricao.isEmpty || unidade.isEmpty) {
+        throw FormatException(
+          'Item $numeroItem sem descrição ou unidade comercial.',
+        );
+      }
+      if (quantidade <= 0 || valorUnitario < 0 || valorProduto < 0) {
+        throw FormatException('Valores inválidos no item fiscal $numeroItem.');
+      }
+
+      itens.add(
+        NotaFiscalEntradaItem(
+          notaFiscalId: 0,
+          numeroItem: numeroItem,
+          codigoProduto: _textoNulo(_textoFilho(prod, 'cProd')),
+          ean: _normalizarGtin(
+            _primeiroTexto(prod, const ['cEAN', 'cEANTrib']),
+          ),
+          descricao: descricao,
+          ncm: _textoNulo(_textoFilho(prod, 'NCM')),
+          cfop: _textoNulo(_textoFilho(prod, 'CFOP')),
+          unidade: unidade,
+          quantidade: quantidade,
+          valorUnitario: valorUnitario,
+          valorTotal: valorProduto,
+          valorDesconto: _doubleTexto(_textoFilho(prod, 'vDesc')),
+        ),
+      );
+    }
+    if (itens.isEmpty) {
+      throw const FormatException('XML fiscal não contém itens de produto.');
+    }
+
+    final valorProdutos = _doubleTexto(_textoFilho(total, 'vProd'));
+    final somaProdutos = itens.fold<double>(
+      0,
+      (soma, item) => soma + item.valorTotal,
+    );
+    final tolerancia = math.max(0.05, valorProdutos.abs() * 0.0001);
+    if ((somaProdutos - valorProdutos).abs() > tolerancia) {
+      throw FormatException(
+        'A soma dos itens (${somaProdutos.toStringAsFixed(2)}) diverge do '
+        'total de produtos do XML (${valorProdutos.toStringAsFixed(2)}).',
+      );
+    }
 
     final nota = NotaFiscalEntrada(
       chaveAcesso: chaveInfNfe,
@@ -135,7 +196,7 @@ class NotaFiscalEntradaXmlService {
       dataEmissao: dataEmissao,
       emitenteCnpjCpf: _textoNulo(emitenteCnpjCpf),
       emitenteNome: _textoNulo(emitenteNome),
-      valorProdutos: _doubleTexto(_textoFilho(total, 'vProd')),
+      valorProdutos: valorProdutos,
       valorFrete: _doubleTexto(_textoFilho(total, 'vFrete')),
       valorSeguro: _doubleTexto(_textoFilho(total, 'vSeg')),
       valorDesconto: _doubleTexto(_textoFilho(total, 'vDesc')),
@@ -143,7 +204,7 @@ class NotaFiscalEntradaXmlService {
       valorIpi: _doubleDescendente(total, const ['vIPI']),
       valorIcmsSt: _doubleTexto(_textoFilho(total, 'vST')),
       valorTotal: valorTotal,
-      situacaoFiscal: situacaoFiscal,
+      situacaoFiscal: _situacaoFiscal(infProt),
       statusImportacao: 'pendente',
       origemImportacao: 'xml',
       xmlOriginal: xml,
@@ -170,10 +231,23 @@ class NotaFiscalEntradaXmlService {
     );
   }
 
-  String _situacaoFiscal(XmlElement? infProt) {
+  static String _situacaoFiscal(XmlElement? infProt) {
     if (infProt == null) return 'desconhecida';
     final cStat = _textoFilho(infProt, 'cStat');
-    return cStat == '100' || cStat == '150' ? 'autorizada' : 'desconhecida';
+    switch (cStat) {
+      case '100':
+      case '150':
+        return 'autorizada';
+      case '101':
+      case '151':
+        return 'cancelada';
+      case '110':
+      case '301':
+      case '302':
+        return 'denegada';
+      default:
+        return 'desconhecida';
+    }
   }
 
   static XmlElement? _descendente(XmlNode node, String nome) {
@@ -230,10 +304,22 @@ class NotaFiscalEntradaXmlService {
     return int.tryParse(valor.trim());
   }
 
+  static double _doubleObrigatorio(
+    XmlElement prod,
+    String campo,
+    int numeroItem,
+  ) {
+    final texto = _textoFilho(prod, campo);
+    if (texto.isEmpty) {
+      throw FormatException('Item $numeroItem sem campo $campo.');
+    }
+    return _doubleTexto(texto);
+  }
+
   static double _doubleTexto(String valor) {
     if (valor.trim().isEmpty) return 0;
     final resultado = double.tryParse(valor.trim().replaceAll(',', '.'));
-    if (resultado == null) {
+    if (resultado == null || !resultado.isFinite) {
       throw FormatException('Valor numérico inválido: $valor.');
     }
     return resultado;
@@ -247,6 +333,22 @@ class NotaFiscalEntradaXmlService {
     }
     return 0;
   }
+
+  static String? _normalizarGtin(String valor) {
+    final texto = valor.trim();
+    if (texto.isEmpty) return null;
+    final superior = texto.toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
+    if (superior == 'SEM GTIN' ||
+        superior == 'SEM EAN' ||
+        superior == 'NO GTIN') {
+      return null;
+    }
+    final digitos = _somenteDigitos(texto);
+    return digitos.isEmpty ? null : digitos;
+  }
+
+  static String _somenteDigitos(String valor) =>
+      valor.replaceAll(RegExp(r'\D'), '');
 
   static String? _textoNulo(String valor) =>
       valor.trim().isEmpty ? null : valor.trim();

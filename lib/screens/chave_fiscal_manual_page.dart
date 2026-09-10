@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/nota_fiscal_entrada.dart';
 import '../repositories/nota_fiscal_entrada_repository.dart';
-import '../services/chave_fiscal_service.dart';
-import '../services/nota_fiscal_dfe_backend_service.dart';
+import '../services/nota_fiscal_importacao_service.dart';
 
 class ChaveFiscalManualPage extends StatefulWidget {
   const ChaveFiscalManualPage({super.key, this.repository});
@@ -16,8 +15,7 @@ class ChaveFiscalManualPage extends StatefulWidget {
 
 class _ChaveFiscalManualPageState extends State<ChaveFiscalManualPage> {
   final _chaveController = TextEditingController();
-  late final ChaveFiscalService _service;
-  late final NotaFiscalDfeBackendService _dfeService;
+  late final NotaFiscalImportacaoService _importacao;
   bool _salvando = false;
   String _status = '';
 
@@ -25,8 +23,7 @@ class _ChaveFiscalManualPageState extends State<ChaveFiscalManualPage> {
   void initState() {
     super.initState();
     final repository = widget.repository ?? NotaFiscalEntradaRepository();
-    _service = ChaveFiscalService(repository: repository);
-    _dfeService = NotaFiscalDfeBackendService(repository: repository);
+    _importacao = NotaFiscalImportacaoService(repository: repository);
   }
 
   @override
@@ -39,44 +36,30 @@ class _ChaveFiscalManualPageState extends State<ChaveFiscalManualPage> {
     if (_salvando) return;
     setState(() {
       _salvando = true;
-      _status = 'Validando chave...';
+      _status = 'Validando e consultando a chave...';
     });
     try {
-      final capturada = _service.extrair(
+      final resultado = await _importacao.processarConteudo(
         _chaveController.text,
         origem: 'chaveManual',
       );
-      final metadados = ChaveFiscalService.metadados(capturada.chave);
-
-      NotaFiscalEntrada nota;
-      if (metadados.modelo == 55) {
-        setState(() => _status = 'Consultando NF-e recebida...');
-        try {
-          nota = await _dfeService.consultarEImportar(capturada.chave);
-        } on DfeBackendException {
-          nota = await _service.registrarPreliminar(
-            capturada.chave,
-            origem: 'chaveManual',
-          );
-        }
-      } else {
-        nota = await _service.registrarPreliminar(
-          capturada.chave,
-          origem: 'chaveManual',
-        );
-      }
-
-      if (mounted) Navigator.of(context).pop<NotaFiscalEntrada>(nota);
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$error'), backgroundColor: Colors.red[700]),
-        );
+      if (!mounted) return;
+      if (!resultado.processada) {
         setState(() {
+          _status = resultado.mensagem;
           _salvando = false;
-          _status = '$error';
         });
       }
+      Navigator.of(context).pop<NotaFiscalEntrada>(resultado.nota);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error'), backgroundColor: Colors.red[700]),
+      );
+      setState(() {
+        _salvando = false;
+        _status = '$error';
+      });
     }
   }
 
@@ -84,35 +67,35 @@ class _ChaveFiscalManualPageState extends State<ChaveFiscalManualPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Chave fiscal')),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _chaveController,
-              keyboardType: TextInputType.number,
-              maxLength: 60,
-              decoration: const InputDecoration(
-                labelText: 'Chave de acesso',
-                hintText: '44 dígitos',
-                border: OutlineInputBorder(),
-              ),
+        children: [
+          TextField(
+            controller: _chaveController,
+            keyboardType: TextInputType.number,
+            maxLength: 60,
+            decoration: const InputDecoration(
+              labelText: 'Chave de acesso',
+              hintText: '44 dígitos',
+              border: OutlineInputBorder(),
             ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _salvando ? null : _registrar,
-              icon: const Icon(Icons.search),
-              label: Text(
-                _salvando ? 'Consultando...' : 'Registrar / consultar',
-              ),
-            ),
-            if (_status.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(_status, textAlign: TextAlign.center),
-            ],
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _salvando ? null : _registrar,
+            icon: const Icon(Icons.search),
+            label: Text(_salvando ? 'Consultando...' : 'Registrar / consultar'),
+          ),
+          if (_status.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(_status, textAlign: TextAlign.center),
           ],
-        ),
+          const SizedBox(height: 24),
+          const Text(
+            'NF-e modelo 55: o Imperium tenta o backend DF-e. Se o XML completo ainda não estiver disponível, a chave fica pendente para reprocessamento ou importação manual do XML.\n\n'
+            'NFC-e modelo 65: digitar apenas a chave registra o documento; para trazer os itens automaticamente, prefira ler o QR Code do cupom.',
+          ),
+        ],
       ),
     );
   }

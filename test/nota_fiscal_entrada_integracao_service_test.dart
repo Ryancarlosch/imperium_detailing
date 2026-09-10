@@ -88,6 +88,31 @@ void main() {
     expect(await fixture.db.query('estoque_lotes'), hasLength(1));
   });
 
+  test('documento não autorizado não movimenta estoque', () async {
+    final fixture = await _Fixture.create();
+    addTearDown(fixture.close);
+    final itemId = await fixture.db.insert('itens_estoque', {
+      'nome': 'Produto',
+      'quantidade': 0,
+      'custo_unitario': 10,
+      'custo_unitario_calculado': 10,
+      'ativo': 1,
+      'unidade': 'un',
+      'atualizado_em': 'x',
+    });
+    final notaId = await fixture.criarNota(
+      itemId: itemId,
+      situacaoFiscal: 'cancelada',
+    );
+
+    await expectLater(
+      fixture.service.confirmarEntradaEstoque(notaId),
+      throwsA(isA<StateError>()),
+    );
+    expect(await fixture.db.query('movimentacoes_estoque'), isEmpty);
+    expect(await fixture.db.query('estoque_lotes'), isEmpty);
+  });
+
   test('falha em item sem vínculo faz rollback da entrada', () async {
     final fixture = await _Fixture.create();
     addTearDown(fixture.close);
@@ -158,6 +183,7 @@ class _Fixture {
   Future<int> criarNota({
     required int itemId,
     bool segundoSemVinculo = false,
+    String situacaoFiscal = 'autorizada',
   }) async {
     final nota = await db.insert('notas_fiscais_entrada', {
       'chave_acesso': '00000000000000000000000000000000000000000000',
@@ -167,7 +193,7 @@ class _Fixture {
       'data_emissao': '2026-09-08',
       'valor_total': 20,
       'origem_importacao': 'xml',
-      'situacao_fiscal': 'autorizada',
+      'situacao_fiscal': situacaoFiscal,
       'importada_em': 'x',
     });
     await db.insert('notas_fiscais_entrada_itens', {

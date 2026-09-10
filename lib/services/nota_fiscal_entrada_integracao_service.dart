@@ -121,13 +121,10 @@ class NotaFiscalEntradaIntegracaoService {
       if (nota.statusImportacao != 'processada') {
         throw StateError('A nota precisa estar processada antes da entrada.');
       }
-      if ({
-        'cancelada',
-        'denegada',
-        'inutilizada',
-      }.contains(nota.situacaoFiscal)) {
+      if (nota.situacaoFiscal != 'autorizada') {
         throw StateError(
-          'Documento fiscal ${nota.situacaoFiscal} não pode gerar entrada de estoque.',
+          'Somente documento fiscal autorizado pode gerar entrada de estoque. '
+          'Situação atual: ${nota.situacaoFiscal}.',
         );
       }
 
