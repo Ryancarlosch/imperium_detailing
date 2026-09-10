@@ -5,7 +5,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 30;
+  static const int schemaVersion = 31;
 
   static Database? _database;
 
@@ -165,6 +165,10 @@ class AppDatabase {
         if (versaoAntiga < 30) {
           await _atualizarParaVersao30(database);
         }
+
+        if (versaoAntiga < 31) {
+          await _atualizarParaVersao31(database);
+        }
       },
     );
   }
@@ -186,6 +190,7 @@ class AppDatabase {
     await _criarTabelaFornecedores(database);
     await _criarTabelaNotasFiscaisEntrada(database);
     await _criarTabelaNotasFiscaisEntradaItens(database);
+    await _criarTabelaNotaFiscalEntradaRevisoes(database);
     await _criarTabelaTransferenciasFinanceiras(database);
     await _criarTabelaCustosFixos(database);
     await _criarTabelaColaboradoresCusto(database);
@@ -211,6 +216,7 @@ class AppDatabase {
     await _criarTabelaServicosRelacionados(database);
     await _criarTabelaCategoriasServico(database);
     await _criarTabelaOrdemServicoProdutoLotes(database);
+    await _criarTabelasCrm(database);
   }
 
   // financeiro-conciliacao-schema-v1
@@ -252,6 +258,7 @@ class AppDatabase {
           email TEXT,
           endereco TEXT,
           observacoes TEXT,
+          data_nascimento TEXT,
           ativo INTEGER NOT NULL DEFAULT 1,
           arquivado_em TEXT
         )
@@ -268,6 +275,13 @@ class AppDatabase {
       database: database,
       tabela: 'clientes',
       coluna: 'arquivado_em',
+      definicao: 'TEXT',
+    );
+
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'clientes',
+      coluna: 'data_nascimento',
       definicao: 'TEXT',
     );
 
@@ -3516,6 +3530,223 @@ class AppDatabase {
   Future<void> _atualizarParaVersao28(Database database) async {
     await _criarTabelaNotasFiscaisEntrada(database);
     await _criarTabelaNotasFiscaisEntradaItens(database);
+  }
+
+  Future<void> _criarTabelaNotaFiscalEntradaRevisoes(Database database) async {
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS nota_fiscal_entrada_revisoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nota_fiscal_id INTEGER,
+        chave_acesso_snapshot TEXT NOT NULL,
+        numero_snapshot TEXT NOT NULL DEFAULT '',
+        emitente_snapshot TEXT NOT NULL DEFAULT '',
+        tipo TEXT NOT NULL,
+        motivo TEXT NOT NULL,
+        detalhes TEXT NOT NULL DEFAULT '',
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (nota_fiscal_id)
+          REFERENCES notas_fiscais_entrada (id)
+          ON DELETE SET NULL,
+        CHECK (tipo IN (
+          'Desfazer integrações',
+          'Excluir nota',
+          'Estorno financeiro',
+          'Estorno estoque'
+        ))
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_nf_revisoes_nota
+      ON nota_fiscal_entrada_revisoes (nota_fiscal_id, criado_em)
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_nf_revisoes_chave
+      ON nota_fiscal_entrada_revisoes (chave_acesso_snapshot, criado_em)
+    ''');
+  }
+
+  Future<void> _criarTabelasCrm(Database database) async {
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'clientes',
+      coluna: 'data_nascimento',
+      definicao: 'TEXT',
+    );
+
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS crm_leads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        telefone TEXT NOT NULL DEFAULT '',
+        email TEXT NOT NULL DEFAULT '',
+        cliente_id INTEGER,
+        veiculo_id INTEGER,
+        origem TEXT NOT NULL DEFAULT 'Outro',
+        servico_interesse TEXT NOT NULL DEFAULT '',
+        veiculo_interesse TEXT NOT NULL DEFAULT '',
+        valor_potencial REAL NOT NULL DEFAULT 0,
+        etapa TEXT NOT NULL DEFAULT 'Novo contato',
+        responsavel TEXT NOT NULL DEFAULT '',
+        proximo_contato TEXT,
+        observacoes TEXT NOT NULL DEFAULT '',
+        motivo_perda TEXT NOT NULL DEFAULT '',
+        agendamento_id INTEGER,
+        criado_em TEXT NOT NULL,
+        atualizado_em TEXT NOT NULL,
+        convertido_em TEXT,
+        FOREIGN KEY (cliente_id)
+          REFERENCES clientes (id)
+          ON DELETE SET NULL,
+        FOREIGN KEY (veiculo_id)
+          REFERENCES veiculos (id)
+          ON DELETE SET NULL,
+        FOREIGN KEY (agendamento_id)
+          REFERENCES agendamentos (id)
+          ON DELETE SET NULL,
+        CHECK (etapa IN (
+          'Novo contato',
+          'Qualificação',
+          'Orçamento',
+          'Aguardando cliente',
+          'Negociação',
+          'Agendado',
+          'Ganho',
+          'Perdido'
+        ))
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_crm_leads_etapa
+      ON crm_leads (etapa, atualizado_em)
+    ''');
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_crm_leads_proximo_contato
+      ON crm_leads (proximo_contato, etapa)
+    ''');
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_crm_leads_cliente
+      ON crm_leads (cliente_id)
+    ''');
+
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS crm_interacoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER NOT NULL,
+        tipo TEXT NOT NULL DEFAULT 'Contato',
+        descricao TEXT NOT NULL,
+        data_interacao TEXT NOT NULL,
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (lead_id)
+          REFERENCES crm_leads (id)
+          ON DELETE CASCADE
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_crm_interacoes_lead_data
+      ON crm_interacoes (lead_id, data_interacao DESC, id DESC)
+    ''');
+
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS crm_campanhas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        tipo TEXT NOT NULL DEFAULT 'Manual',
+        beneficio_tipo TEXT NOT NULL DEFAULT 'Percentual',
+        beneficio_valor REAL NOT NULL DEFAULT 0,
+        beneficio_descricao TEXT NOT NULL DEFAULT '',
+        valor_minimo REAL NOT NULL DEFAULT 0,
+        dias_validade INTEGER NOT NULL DEFAULT 30,
+        dias_sem_retorno INTEGER NOT NULL DEFAULT 180,
+        ativo INTEGER NOT NULL DEFAULT 1,
+        criado_em TEXT NOT NULL,
+        atualizado_em TEXT NOT NULL,
+        CHECK (tipo IN ('Aniversário', 'Reativação', 'Indicação', 'Manual')),
+        CHECK (beneficio_tipo IN ('Percentual', 'Valor', 'Serviço', 'Crédito')),
+        CHECK (ativo IN (0, 1))
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_crm_campanhas_tipo_ativo
+      ON crm_campanhas (tipo, ativo)
+    ''');
+
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS crm_cupons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        codigo TEXT NOT NULL UNIQUE,
+        campanha_id INTEGER,
+        cliente_id INTEGER,
+        lead_id INTEGER,
+        beneficio_tipo TEXT NOT NULL,
+        beneficio_valor REAL NOT NULL DEFAULT 0,
+        beneficio_descricao TEXT NOT NULL DEFAULT '',
+        valor_minimo REAL NOT NULL DEFAULT 0,
+        validade_inicio TEXT NOT NULL,
+        validade_fim TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'Ativo',
+        usado_em TEXT,
+        ordem_servico_id INTEGER,
+        chave_geracao TEXT NOT NULL UNIQUE,
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (campanha_id)
+          REFERENCES crm_campanhas (id)
+          ON DELETE SET NULL,
+        FOREIGN KEY (cliente_id)
+          REFERENCES clientes (id)
+          ON DELETE SET NULL,
+        FOREIGN KEY (lead_id)
+          REFERENCES crm_leads (id)
+          ON DELETE SET NULL,
+        FOREIGN KEY (ordem_servico_id)
+          REFERENCES ordens_servico (id)
+          ON DELETE SET NULL,
+        CHECK (beneficio_tipo IN ('Percentual', 'Valor', 'Serviço', 'Crédito')),
+        CHECK (status IN ('Ativo', 'Usado', 'Expirado', 'Cancelado'))
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_crm_cupons_cliente_status
+      ON crm_cupons (cliente_id, status, validade_fim)
+    ''');
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_crm_cupons_validade
+      ON crm_cupons (status, validade_fim)
+    ''');
+
+    final agora = DateTime.now().toIso8601String();
+    final existentes = await database.query(
+      'crm_campanhas',
+      columns: ['id'],
+      where: 'tipo = ? AND nome = ?',
+      whereArgs: ['Aniversário', 'Benefício de aniversário'],
+      limit: 1,
+    );
+    if (existentes.isEmpty) {
+      await database.insert('crm_campanhas', {
+        'nome': 'Benefício de aniversário',
+        'tipo': 'Aniversário',
+        'beneficio_tipo': 'Percentual',
+        'beneficio_valor': 10,
+        'beneficio_descricao': 'Benefício de aniversário',
+        'valor_minimo': 0,
+        'dias_validade': 30,
+        'dias_sem_retorno': 180,
+        'ativo': 0,
+        'criado_em': agora,
+        'atualizado_em': agora,
+      }, conflictAlgorithm: ConflictAlgorithm.abort);
+    }
+  }
+
+  Future<void> _atualizarParaVersao31(Database database) async {
+    await _criarTabelaNotaFiscalEntradaRevisoes(database);
+    await _criarTabelasCrm(database);
   }
 
   Future<void> _atualizarParaVersao29(Database database) async {

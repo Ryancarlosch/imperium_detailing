@@ -14,6 +14,7 @@ import 'dre_page.dart';
 import 'estoque_page.dart';
 import 'financeiro_page.dart';
 import 'meu_ponto_page.dart';
+import 'meu_perfil_page.dart';
 import 'orcamentos_page.dart';
 import 'ordens_servico_page.dart';
 import 'pagamentos_funcionarios_page.dart';
@@ -312,6 +313,14 @@ class _UsuarioInicioPageState extends State<UsuarioInicioPage>
       appBar: AppBar(
         title: const Text('Imperium'),
         actions: [
+          IconButton(
+            tooltip: 'Meu perfil e segurança',
+            onPressed: () => _abrir(
+              context,
+              MeuPerfilPage(sessao: Map<String, dynamic>.from(_sessao)),
+            ),
+            icon: const Icon(Icons.account_circle_outlined),
+          ),
           IconButton(
             tooltip: 'Atualizar dados e permissões',
             onPressed: _sincronizando

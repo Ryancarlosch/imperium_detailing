@@ -5,7 +5,7 @@
 > **Regra principal:** nenhum item antigo deve ser apagado. Quando algo for concluído,
 > o item permanece no roadmap e muda de status, recebendo data/notas quando necessário.
 
-Última atualização: **2026-09-01**
+Última atualização: **2026-09-09**
 ## BASELINE OFICIAL — 2026-09-01
 
 - Branch oficial: `desenvolvimento`.
@@ -635,6 +635,11 @@
 🟢 **Permissões locais**
 - Implementadas.
 
+🟢 **Auditoria local de acesso — 2026-09-09**
+- Central de Saúde exibe usuários ativos/inativos, usuários sem PIN,
+  sucessos/falhas de login das últimas 24h e acessos recentes.
+- Somente leitura: não altera PIN, perfil, empresa ou permissões remotas.
+
 ⬜ **Sincronizar identidade da empresa**
 - Nome/logo/config relevantes.
 
@@ -700,11 +705,18 @@
 ⬜ **Realtime**
 - Atualização automática.
 
-⬜ **Tela de saúde da sincronização**
-- última sincronização.
-- pendências.
-- erros.
-- conflitos.
+🟢 **Tela de saúde da sincronização — implementação local 2026-09-09**
+- integridade SQLite (`quick_check`) e foreign keys;
+- versão do schema e contagens principais;
+- cobertura local ↔ nuvem de Clientes, Veículos, Agenda e OS;
+- última sincronização registrada;
+- exclusões/tombstones pendentes;
+- fila offline do Ponto;
+- quantidade de tenants nos mapas locais;
+- diagnóstico do backend do Ponto já existente;
+- botão explícito para sincronização manual usando o motor atual;
+- relatório copiável para homologação;
+- não sincroniza Financeiro/Estoque e não altera RLS/tenant automaticamente.
 
 ⬜ **Revisão manual de conflito**
 - Quando não for possível resolver automaticamente.
@@ -1448,3 +1460,138 @@ Testes:
 Próximo passo:
 - homologar consulta de placa;
 - homologar OS Cloud Upload-Only V1 com OS real.
+
+---
+
+## 2026-09-09 — Fiscal v31/v32 + CRM v1/v2 + revisão dos blocos comerciais
+
+### Fiscal de entrada
+
+🟡 **Consulta NFC-e assistida em validação real**
+- QR/chave 44 dígitos e DV validados.
+- XML NF-e/NFC-e continua como fonte estruturada preferencial quando disponível.
+- Portal público oficial pode ser aberto dentro do Imperium; CAPTCHA é resolvido manualmente pelo usuário.
+- Parser S@T/SEF-SC cobre o formato real homologado em cupom de mercado.
+- Hotfix passa a detectar conteúdo fiscal em `iframe/frame/object/embed`, abrir o quadro oficial como página principal e repetir a importação.
+- Edge Function autenticada `imperium-fiscal-dfe` permanece preparada para consulta estruturada de NF-e modelo 55 via provedor fiscal; credenciais nunca ficam no APK.
+
+🟢 **Correção / exclusão segura de nota fiscal — implementação local v31**
+- Nova auditoria `nota_fiscal_entrada_revisoes` preserva chave, número, emitente, motivo e detalhes.
+- Nota sem integração pode ser excluída com motivo.
+- Entrada de estoque ainda não consumida pode ser estornada transacionalmente.
+- Lote já consumido por OS bloqueia desfazimento automático para proteger custo histórico/FIFO.
+- Financeiro `Previsto` é cancelado sem mexer no saldo.
+- Financeiro `Realizado` permanece no histórico como origem estornada, deixa de impactar DRE e recebe movimento compensatório de caixa; o saldo volta ao estado anterior sem apagar histórico.
+- Depois da exclusão segura a mesma chave pode ser importada novamente.
+- Tela fiscal recebe ação **Corrigir / excluir nota**.
+
+### CRM
+
+🟢 **CRM v1 — implementação local**
+- Leads e pipeline: Novo contato, Qualificação, Orçamento, Aguardando cliente, Negociação, Agendado, Ganho e Perdido.
+- Origem do lead, serviço/veículo de interesse, valor potencial, responsável, próximo contato e observações.
+- Histórico de interações e mudança de etapa.
+- Motivo obrigatório ao marcar oportunidade como perdida.
+- Conversão de lead para cliente com anti-duplicação por telefone/e-mail.
+- Vínculo de cliente e criação de agendamento quando cliente/veículo estiverem definidos.
+- Indicadores: oportunidades abertas, valor do pipeline, follow-ups atrasados, ganhos/perdas e conversão mensal.
+- Módulo `crm` incluído nas permissões; administrador recebe acesso padrão, funcionário continua restrito.
+
+🟢 **CRM v2 — campanhas e benefícios, implementação local**
+- Data de nascimento adicionada ao cadastro local de clientes.
+- Campanhas: Aniversário, Reativação, Indicação e Manual.
+- Benefícios: percentual, valor fixo, serviço ou crédito.
+- Valor mínimo, validade e período sem retorno configuráveis.
+- Geração idempotente de cupom de aniversário uma vez por cliente/ano/campanha.
+- Geração idempotente de benefício de reativação por cliente/campanha/mês.
+- Cupons com status Ativo, Usado, Expirado ou Cancelado e vínculo opcional à OS.
+- Simulação de benefício informa quando o valor final fica abaixo do preço mínimo seguro.
+- Automação externa de WhatsApp permanece futura; a v2 organiza e mede o benefício localmente.
+
+### Precificação
+
+✅ **Motor de precificação inteligente já existente — não duplicar**
+- Custos fixos, mão de obra, regra das 220h, materiais, taxas, margem, preço mínimo seguro e preço sugerido já existem no módulo atual.
+- CRM passa a poder comparar benefício/cupom com o preço mínimo seguro.
+- Próxima evolução será experiência de simulação/integração comercial, não criação de um segundo motor de preço.
+
+### Ordem de Serviço
+
+✅ **Adicionar serviço em OS aberta/em andamento já implementado**
+- `adicionarServicoCatalogoNaOrdem` trabalha em transação, valida produtos vinculados/estoque, adiciona itens e recalcula subtotal.
+- Estoque continua sendo consumido na finalização conforme motor atual.
+- Não criar fluxo paralelo para esta funcionalidade.
+
+### Máquina de cartão
+
+✅ **Regras avançadas já implementadas**
+- Crédito/débito, parcelas 1x–12x, percentual/valor fixo, prazo de recebimento, repasse e conta da maquininha já fazem parte da estrutura atual.
+- Próximas alterações devem ser refinamentos de UX/homologação, não um novo motor.
+
+### Ponto / funcionários / login
+
+🛡️ **Mantidos protegidos neste bloco**
+- Estrutura existente permanece preservada para não arriscar autenticação, multiempresa e sincronização durante a expansão Fiscal/CRM.
+- Avançar somente após homologação do APK desta etapa.
+
+### Qualidade exigida antes do commit
+
+- `dart format` nos arquivos alterados;
+- `flutter analyze --no-pub` sem issues;
+- testes focados Fiscal/CRM/schema/migrações;
+- suíte completa;
+- `git diff --check`;
+- build `app-debug.apk`;
+- teste real do mesmo cupom NFC-e no portal S@T/SEF-SC.
+
+
+## 2026-09-09 — Central de Saúde e Homologação local
+
+Módulo: Qualidade / Sincronização / Segurança
+Status: 🟢 Implementado localmente; homologação de aparelho pendente
+
+Motivo:
+- desenvolvimento continuou enquanto o aparelho estava indisponível para testes;
+- prioridade foi adicionar observabilidade sem alterar os serviços protegidos de
+  licença, tenant, RLS ou autenticação de funcionário.
+
+Alterações:
+- nova tela `Saúde e homologação` em Configurações → Nuvem e sincronização;
+- `PRAGMA quick_check` e `foreign_key_check` do SQLite;
+- alertas de estoque negativo, nota processada sem itens, parcela fiscal duplicada,
+  veículo órfão, documento financeiro vazio e múltiplos tenants em mapas locais;
+- cobertura de sincronização de Clientes, Veículos, Agenda e OS;
+- fila offline de Ponto e exclusões pendentes;
+- teste explícito do diagnóstico de nuvem/Ponto V6;
+- sincronização manual somente por ação confirmada do administrador;
+- auditoria de logins e usuários sem PIN;
+- relatório copiável para facilitar homologação e suporte.
+
+Banco/migração:
+- nenhuma alteração de schema;
+- nenhum dado operacional apagado.
+
+Áreas protegidas:
+- `FuncionarioAcessoService`, `LicencaService`, RLS e RPCs não foram alterados;
+- `OperacionalSyncService`, `PontoOfflineSyncService` e diagnóstico de Ponto são
+  apenas consumidos por APIs públicas já existentes.
+
+Próximo passo:
+- quando houver aparelho disponível, executar a Central de Saúde antes e depois
+  do teste multiaparelho;
+- validar Ponto/Funcionários em campo e só então evoluir a sincronização protegida.
+
+---
+
+## MARCO CRM V3 ASSISTIDO — 10/09/2026
+
+🟢 Central de relacionamento com fila idempotente de follow-ups.
+🟢 Orçamentos pendentes entram na fila comercial e podem ser levados ao funil.
+🟢 Pós-venda de OS finalizada entra na fila de relacionamento.
+🟢 Benefícios/cupons ativos geram ação de contato.
+🟢 WhatsApp assistido com mensagem preparada; nenhum envio automático sem confirmação do usuário.
+🟢 Ações podem ser concluídas, adiadas ou ignoradas preservando histórico.
+🟢 Lembrete local diário do CRM às 09:00, ativável pelo usuário.
+🟢 Painel mensal de conversão, origens, perdas, orçamentos e campanhas.
+🛡️ Sem alteração em Financeiro, Estoque, Ponto, RLS ou multiempresa.
+🛡️ SQLite permanece no schema 31; tabela auxiliar é criada idempotentemente pelo CRM.

@@ -17,6 +17,9 @@ class UsuarioRepository {
     perfilFuncionario,
   ];
 
+  static const int maxTentativasPin = 5;
+  static const Duration janelaBloqueioPin = Duration(minutes: 15);
+
   Future<void> garantirEstrutura() async {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
@@ -99,6 +102,31 @@ class UsuarioRepository {
       CREATE INDEX IF NOT EXISTS idx_financeiro_usuario_acessos_login
       ON financeiro_usuario_acessos (
         login,
+        criado_em
+      )
+    ''');
+
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS financeiro_usuario_auditoria (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER,
+        ator_usuario_id INTEGER,
+        acao TEXT NOT NULL,
+        detalhe TEXT NOT NULL DEFAULT '',
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (usuario_id)
+          REFERENCES financeiro_usuarios (id)
+          ON DELETE SET NULL,
+        FOREIGN KEY (ator_usuario_id)
+          REFERENCES financeiro_usuarios (id)
+          ON DELETE SET NULL
+      )
+    ''');
+
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_financeiro_usuario_auditoria_usuario
+      ON financeiro_usuario_auditoria (
+        usuario_id,
         criado_em
       )
     ''');
@@ -251,6 +279,13 @@ class UsuarioRepository {
       where: 'id = ?',
       whereArgs: [usuarioId],
     );
+
+    await _registrarAuditoria(
+      database,
+      usuarioId: usuarioId,
+      acao: 'DefinicaoPin',
+      detalhe: 'PIN definido ou redefinido pelo administrador.',
+    );
   }
 
   Future<void> removerPin(int usuarioId) async {
@@ -309,6 +344,13 @@ class UsuarioRepository {
       whereArgs: [usuarioId],
     );
 
+    await _registrarAuditoria(
+      database,
+      usuarioId: usuarioId,
+      acao: 'RemocaoPin',
+      detalhe: 'PIN removido pelo administrador.',
+    );
+
     if (_int(_sessaoAtual?['id']) == usuarioId) {
       await limparSessaoPersistida();
       encerrarSessao();
@@ -329,6 +371,13 @@ class UsuarioRepository {
 
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
+
+    final bloqueio = await obterBloqueioLogin(loginLimpo, database: database);
+    if (bloqueio['bloqueado'] == true) {
+      throw StateError(
+        'Muitas tentativas de PIN incorreto. Aguarde alguns minutos ou peça ao administrador para liberar o acesso.',
+      );
+    }
 
     final resultado = await database.rawQuery(
       '''
@@ -558,6 +607,227 @@ class UsuarioRepository {
     return false;
   }
 
+  Future<Map<String, dynamic>> obterBloqueioLogin(
+    String login, {
+    DatabaseExecutor? database,
+  }) async {
+    final executor = database ?? await _appDatabase.database;
+    await _garantirEstrutura(executor);
+
+    final loginLimpo = login.trim().toLowerCase();
+    if (loginLimpo.isEmpty) {
+      return const <String, dynamic>{'bloqueado': false, 'falhas': 0};
+    }
+
+    final agora = DateTime.now();
+    final limite = agora.subtract(janelaBloqueioPin);
+
+    final ultimoSucesso = await executor.rawQuery(
+      '''
+      SELECT MAX(criado_em) AS ultimo_sucesso
+      FROM financeiro_usuario_acessos
+      WHERE LOWER(login) = LOWER(?)
+        AND sucesso = 1
+      ''',
+      [loginLimpo],
+    );
+
+    final ultimoSucessoTexto = (ultimoSucesso.first['ultimo_sucesso'] ?? '')
+        .toString();
+    final ultimoSucessoData = DateTime.tryParse(ultimoSucessoTexto);
+
+    final inicioJanela =
+        ultimoSucessoData != null && ultimoSucessoData.isAfter(limite)
+        ? ultimoSucessoData
+        : limite;
+
+    final falhas =
+        Sqflite.firstIntValue(
+          await executor.rawQuery(
+            '''
+            SELECT COUNT(*)
+            FROM financeiro_usuario_acessos
+            WHERE LOWER(login) = LOWER(?)
+              AND sucesso = 0
+              AND motivo IN ('PIN inválido', 'Usuário não encontrado')
+              AND datetime(criado_em) > datetime(?)
+            ''',
+            [loginLimpo, inicioJanela.toIso8601String()],
+          ),
+        ) ??
+        0;
+
+    return <String, dynamic>{
+      'bloqueado': falhas >= maxTentativasPin,
+      'falhas': falhas,
+      'restantes': (maxTentativasPin - falhas).clamp(0, maxTentativasPin),
+      'janela_minutos': janelaBloqueioPin.inMinutes,
+    };
+  }
+
+  Future<void> liberarBloqueioUsuario(int usuarioId) async {
+    final database = await _appDatabase.database;
+    await _garantirEstrutura(database);
+
+    final usuario = await database.query(
+      'financeiro_usuarios',
+      columns: ['id', 'login', 'nome'],
+      where: 'id = ?',
+      whereArgs: [usuarioId],
+      limit: 1,
+    );
+
+    if (usuario.isEmpty) {
+      throw StateError('Usuário não encontrado.');
+    }
+
+    final login = (usuario.first['login'] ?? '').toString();
+
+    await database.transaction((transaction) async {
+      await _registrarTentativa(
+        transaction,
+        usuarioId: usuarioId,
+        login: login,
+        sucesso: true,
+        motivo: 'Bloqueio de tentativas liberado pelo administrador',
+      );
+      await _registrarAuditoria(
+        transaction,
+        usuarioId: usuarioId,
+        acao: 'LiberacaoBloqueio',
+        detalhe: 'Tentativas de PIN liberadas manualmente.',
+      );
+    });
+  }
+
+  Future<void> alterarPinComPinAtual({
+    required int usuarioId,
+    required String pinAtual,
+    required String novoPin,
+  }) async {
+    _validarPin(pinAtual);
+    _validarPin(novoPin);
+
+    if (pinAtual.trim() == novoPin.trim()) {
+      throw ArgumentError('O novo PIN precisa ser diferente do PIN atual.');
+    }
+
+    final database = await _appDatabase.database;
+    await _garantirEstrutura(database);
+
+    final resultado = await database.query(
+      'financeiro_usuarios',
+      columns: [
+        'id',
+        'login',
+        'ativo',
+        'pin_salt',
+        'pin_hash',
+        'pin_iteracoes',
+      ],
+      where: 'id = ?',
+      whereArgs: [usuarioId],
+      limit: 1,
+    );
+
+    if (resultado.isEmpty || _int(resultado.first['ativo']) != 1) {
+      throw StateError('Usuário não encontrado ou inativo.');
+    }
+
+    final usuario = resultado.first;
+    final saltAtual = (usuario['pin_salt'] ?? '').toString().trim();
+    final hashAtual = (usuario['pin_hash'] ?? '').toString().trim();
+    final iteracoesAtuais = _int(usuario['pin_iteracoes']) > 0
+        ? _int(usuario['pin_iteracoes'])
+        : 120000;
+
+    if (saltAtual.isEmpty || hashAtual.isEmpty) {
+      throw StateError('Este usuário ainda não possui PIN configurado.');
+    }
+
+    final hashInformado = _derivarPin(
+      pin: pinAtual.trim(),
+      salt: saltAtual,
+      iteracoes: iteracoesAtuais,
+    );
+
+    if (!_comparacaoTempoConstante(hashAtual, hashInformado)) {
+      await _registrarTentativa(
+        database,
+        usuarioId: usuarioId,
+        login: (usuario['login'] ?? '').toString(),
+        sucesso: false,
+        motivo: 'PIN atual inválido na troca',
+      );
+      throw StateError('O PIN atual informado está incorreto.');
+    }
+
+    const novasIteracoes = 120000;
+    final novoSalt = _gerarSalt();
+    final novoHash = _derivarPin(
+      pin: novoPin.trim(),
+      salt: novoSalt,
+      iteracoes: novasIteracoes,
+    );
+    final agora = DateTime.now().toIso8601String();
+
+    await database.transaction((transaction) async {
+      await transaction.update(
+        'financeiro_usuarios',
+        {
+          'pin_salt': novoSalt,
+          'pin_hash': novoHash,
+          'pin_iteracoes': novasIteracoes,
+          'pin_atualizado_em': agora,
+          'atualizado_em': agora,
+        },
+        where: 'id = ?',
+        whereArgs: [usuarioId],
+      );
+
+      await _registrarTentativa(
+        transaction,
+        usuarioId: usuarioId,
+        login: (usuario['login'] ?? '').toString(),
+        sucesso: true,
+        motivo: 'PIN alterado pelo próprio usuário',
+      );
+
+      await _registrarAuditoria(
+        transaction,
+        usuarioId: usuarioId,
+        acao: 'AlteracaoPinProprio',
+        detalhe: 'PIN alterado após validação do PIN atual.',
+      );
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> listarAuditoriaUsuario({
+    int? usuarioId,
+    int limite = 200,
+  }) async {
+    final database = await _appDatabase.database;
+    await _garantirEstrutura(database);
+
+    final where = usuarioId == null ? '' : 'WHERE a.usuario_id = ?';
+    final args = <Object?>[?usuarioId, limite.clamp(1, 500)];
+
+    return database.rawQuery('''
+      SELECT
+        a.*,
+        u.nome AS usuario_nome,
+        ator.nome AS ator_nome
+      FROM financeiro_usuario_auditoria a
+      LEFT JOIN financeiro_usuarios u
+        ON u.id = a.usuario_id
+      LEFT JOIN financeiro_usuarios ator
+        ON ator.id = a.ator_usuario_id
+      $where
+      ORDER BY a.id DESC
+      LIMIT ?
+      ''', args);
+  }
+
   Future<List<Map<String, dynamic>>> listarAcessos({int limite = 100}) async {
     final database = await _appDatabase.database;
     await _garantirEstrutura(database);
@@ -589,6 +859,21 @@ class UsuarioRepository {
       'login': login,
       'sucesso': sucesso ? 1 : 0,
       'motivo': motivo,
+      'criado_em': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.abort);
+  }
+
+  Future<void> _registrarAuditoria(
+    DatabaseExecutor database, {
+    required int? usuarioId,
+    required String acao,
+    String detalhe = '',
+  }) async {
+    await database.insert('financeiro_usuario_auditoria', {
+      'usuario_id': usuarioId,
+      'ator_usuario_id': _intNulo(_sessaoAtual?['id']),
+      'acao': acao,
+      'detalhe': detalhe.trim(),
       'criado_em': DateTime.now().toIso8601String(),
     }, conflictAlgorithm: ConflictAlgorithm.abort);
   }
@@ -918,6 +1203,29 @@ class UsuarioRepository {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    await _registrarAuditoria(
+      database,
+      usuarioId: usuarioId,
+      acao: 'Permissao',
+      detalhe:
+          '${nomesModulos[modulo] ?? modulo}: ${permitido ? 'liberado' : 'bloqueado'}',
+    );
+
+    if (_int(_sessaoAtual?['id']) == usuarioId) {
+      final atual = _sessaoAtual;
+      if (atual != null) {
+        final permissoes = <String, bool>{};
+        final brutas = atual['permissoes'];
+        if (brutas is Map) {
+          for (final entry in brutas.entries) {
+            permissoes[entry.key.toString()] = entry.value == true;
+          }
+        }
+        permissoes[modulo] = permitido;
+        _sessaoAtual = <String, dynamic>{...atual, 'permissoes': permissoes};
+      }
+    }
   }
 
   Future<Map<String, bool>> obterPermissoes(int usuarioId) async {
@@ -973,6 +1281,7 @@ class UsuarioRepository {
   static const List<String> modulos = <String>[
     'dashboard',
     'clientes',
+    'crm',
     'agenda',
     'orcamentos',
     'ordens_servico',
@@ -988,6 +1297,7 @@ class UsuarioRepository {
   static const Map<String, String> nomesModulos = <String, String>{
     'dashboard': 'Dashboard',
     'clientes': 'Clientes',
+    'crm': 'CRM',
     'agenda': 'Agenda',
     'orcamentos': 'Orçamentos',
     'ordens_servico': 'Ordens de Serviço',
@@ -1010,6 +1320,12 @@ class UsuarioRepository {
     }
 
     return false;
+  }
+
+  static int? _intNulo(dynamic valor) {
+    if (valor is int) return valor;
+    if (valor is num) return valor.toInt();
+    return int.tryParse(valor?.toString() ?? '');
   }
 
   static int _int(dynamic valor) {

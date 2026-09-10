@@ -140,4 +140,122 @@ void main() {
       isFalse,
     );
   });
+
+  test('parseia texto renderizado real do portal SAT SEF SC', () {
+    const chaveSc = '42260983305235009841650150001422351123456784';
+    final service = NotaFiscalConsultaPublicaService();
+
+    final parsed = service.parsearHtml(
+      '''
+      <html><body>
+        <div>Chave de acesso: 4226 0983 3052 3500 9841 6501 5000 1422 3511 2345 6784</div>
+      </body></html>
+      ''',
+      chaveAcesso: chaveSc,
+      textoVisivel: '''
+COOPERATIVA AGROINDUSTRIAL ALFA
+CNPJ: 83.305.235/0098-41
+AV TRANCREDO NEVES , SN , , BOM JESUS , ITAIOPOLIS , SC
+Filtrar itens...
+CHA MATE LEAO PESSEGO 25SAQ (Código: 12065 )
+Vl. Total
+Qtde.:1 UN: UNIDVl. Unit.: 6,29
+6,29
+LEITE LVIDA AURORA PAR DESNATILT (Código: 702133 )
+Vl. Total
+Qtde.:2 UN: UNIDVl. Unit.: 4,99
+9,98
+Qtd. total de itens:
+2
+Valor total R\$:
+16,27
+Descontos R\$:
+0,80
+Valor a pagar R\$:
+15,47
+Forma de pagamento:
+Valor pago R\$:
+17 - Pagamento Instantâneo (PIX)
+15,47
+Informações gerais da Nota
+EMISSÃO NORMAL
+Número: 142235 Série: 15 Emissão: 02/09/2026 18:08:21 - Via Consumidor 2
+Protocolo de Autorização: 242261350388217 02/09/2026 às 18:11:00
+Ambiente de Produção - Versão XML: 4.00 - Versão XSLT: 2.07
+''',
+    );
+
+    expect(parsed.nota.emitenteNome, 'COOPERATIVA AGROINDUSTRIAL ALFA');
+    expect(parsed.nota.emitenteCnpjCpf, '83305235009841');
+    expect(parsed.nota.numero, 142235);
+    expect(parsed.nota.serie, 15);
+    expect(parsed.nota.valorProdutos, closeTo(16.27, 0.001));
+    expect(parsed.nota.valorDesconto, closeTo(0.80, 0.001));
+    expect(parsed.nota.valorTotal, closeTo(15.47, 0.001));
+
+    expect(parsed.itens, hasLength(2));
+    expect(parsed.itens.first.codigoProduto, '12065');
+    expect(parsed.itens.first.descricao, 'CHA MATE LEAO PESSEGO 25SAQ');
+    expect(parsed.itens.first.unidade, 'UNID');
+    expect(parsed.itens.first.quantidade, 1);
+    expect(parsed.itens.first.valorUnitario, closeTo(6.29, 0.001));
+    expect(parsed.itens.first.valorTotal, closeTo(6.29, 0.001));
+
+    expect(parsed.itens.last.codigoProduto, '702133');
+    expect(parsed.itens.last.quantidade, 2);
+    expect(parsed.itens.last.valorUnitario, closeTo(4.99, 0.001));
+    expect(parsed.itens.last.valorTotal, closeTo(9.98, 0.001));
+  });
+
+  test('identifica fornecedor quando CNPJ aparece antes da razão social', () {
+    final service = NotaFiscalConsultaPublicaService();
+    final parsed = service.parsearHtml('''
+      <html><body>
+        <div>CNPJ: 45.543.915/0982-11</div>
+        <div>HIPER PRESIDENTE PRUDENTE</div>
+        <div>PRODUTO TESTE (Código: 123 )</div>
+        <div>Qtde.:1 UN: UN Vl. Unit.: 10,00 Vl. Total 10,00</div>
+        <div>Valor a pagar R\$: 10,00</div>
+        <div>Emissão: 08/08/2024 13:01:00</div>
+        <div>Chave de acesso: 3524 0845 5439 1509 8211 6501 7000 0016 8010 9636 9037</div>
+      </body></html>
+      ''', chaveAcesso: chave);
+
+    expect(parsed.nota.emitenteNome, 'HIPER PRESIDENTE PRUDENTE');
+  });
+
+  test('identifica fornecedor em linha tabular CNPJ razão social IE UF', () {
+    final service = NotaFiscalConsultaPublicaService();
+    final parsed = service.parsearHtml('''
+      <html><body>
+        <div>CNPJ Nome / Razão Social Inscrição Estadual UF</div>
+        <div>45.543.915/0982-11 HIPER PRESIDENTE PRUDENTE IE: 123456789 SC</div>
+        <div>PRODUTO TESTE (Código: 123 )</div>
+        <div>Qtde.:1 UN: UN Vl. Unit.: 10,00 Vl. Total 10,00</div>
+        <div>Valor a pagar R\$: 10,00</div>
+        <div>Emissão: 08/08/2024 13:01:00</div>
+        <div>Chave de acesso: 3524 0845 5439 1509 8211 6501 7000 0016 8010 9636 9037</div>
+      </body></html>
+      ''', chaveAcesso: chave);
+
+    expect(parsed.nota.emitenteNome, 'HIPER PRESIDENTE PRUDENTE');
+  });
+
+  test('resolve URL relativa de frame fiscal no portal oficial', () {
+    final resolved = NotaFiscalConsultaPublicaService.resolverUrlPortal(
+      Uri.parse('https://sat.sef.sc.gov.br/nfce/consulta?p=abc'),
+      '/tax.net/Sat.Dfe.NFCe.Web/Consultas/NFe_Print.aspx?id=1',
+    );
+    expect(resolved, isNotNull);
+    expect(resolved!.host, 'sat.sef.sc.gov.br');
+    expect(resolved.path, contains('NFe_Print.aspx'));
+
+    expect(
+      NotaFiscalConsultaPublicaService.resolverUrlPortal(
+        Uri.parse('https://sat.sef.sc.gov.br/nfce/consulta'),
+        'https://exemplo.com/frame',
+      ),
+      isNull,
+    );
+  });
 }

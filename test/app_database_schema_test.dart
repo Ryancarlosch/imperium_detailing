@@ -15,7 +15,7 @@ void main() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     pastaTemporaria = await Directory.systemTemp.createTemp(
-      'imperium_database_schema_v30_test_',
+      'imperium_database_schema_v31_test_',
     );
     await databaseFactory.setDatabasesPath(pastaTemporaria.path);
     caminhoBanco = path.join(pastaTemporaria.path, 'imperium_detailing.db');
@@ -35,12 +35,12 @@ void main() {
     }
   });
 
-  group('AppDatabase - criação do banco versão 30', () {
+  group('AppDatabase - criação do banco versão 31', () {
     test('cria banco atual com integridade e foreign keys válidas', () async {
       final database = await AppDatabase.instance.database;
 
       expect(await database.getVersion(), AppDatabase.schemaVersion);
-      expect(AppDatabase.schemaVersion, 30);
+      expect(AppDatabase.schemaVersion, 31);
 
       final foreignKeys = await database.rawQuery('PRAGMA foreign_keys');
       expect(foreignKeys.single.values.single, 1);
@@ -85,11 +85,64 @@ void main() {
           'fornecedores',
           'notas_fiscais_entrada',
           'notas_fiscais_entrada_itens',
+          'nota_fiscal_entrada_revisoes',
+          'crm_leads',
+          'crm_interacoes',
+          'crm_campanhas',
+          'crm_cupons',
           'financeiro_custos_fixos',
           'financeiro_colaboradores_custo',
           'financeiro_os_mao_obra',
           'financeiro_regras_taxa',
           'financeiro_metas',
+        }),
+      );
+    });
+
+    test('cria CRM e auditoria fiscal da v31', () async {
+      final database = await AppDatabase.instance.database;
+
+      final clientes = await _obterColunas(database, 'clientes');
+      expect(clientes, contains('data_nascimento'));
+
+      final leads = await _obterColunas(database, 'crm_leads');
+      expect(
+        leads,
+        containsAll(<String>{
+          'etapa',
+          'origem',
+          'valor_potencial',
+          'proximo_contato',
+          'motivo_perda',
+        }),
+      );
+
+      final cupons = await _obterColunas(database, 'crm_cupons');
+      expect(
+        cupons,
+        containsAll(<String>{
+          'codigo',
+          'cliente_id',
+          'beneficio_tipo',
+          'valor_minimo',
+          'validade_fim',
+          'status',
+          'chave_geracao',
+        }),
+      );
+
+      final revisoes = await _obterColunas(
+        database,
+        'nota_fiscal_entrada_revisoes',
+      );
+      expect(
+        revisoes,
+        containsAll(<String>{
+          'nota_fiscal_id',
+          'chave_acesso_snapshot',
+          'tipo',
+          'motivo',
+          'detalhes',
         }),
       );
     });

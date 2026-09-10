@@ -17,6 +17,7 @@ import '../services/backup_service.dart';
 import '../widgets/backup_automatico_card.dart';
 import '../services/primeiro_uso_assistente.dart';
 
+import 'saude_sistema_page.dart';
 import 'supabase_conta_page.dart';
 
 class ConfiguracoesPage extends StatefulWidget {
@@ -1341,8 +1342,28 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
                           },
                         ),
                         const SizedBox(height: 6),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.monitor_heart_outlined),
+                          title: const Text('Saúde e homologação'),
+                          subtitle: const Text(
+                            'Integridade do SQLite, cobertura de sincronização, '
+                            'fila do Ponto, diagnóstico da nuvem e auditoria de acessos.',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const SaudeSistemaPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 6),
                         const Text(
-                          'A sincronização dos dados ainda não está ativa nesta etapa.',
+                          'Clientes, veículos, agenda, OS e Ponto possuem etapas '
+                          'de sincronização em validação. Financeiro e Estoque '
+                          'continuam locais até homologação específica.',
                           style: TextStyle(color: Colors.white54, fontSize: 12),
                         ),
                       ],

@@ -75,7 +75,7 @@ void main() {
         final database = await AppDatabase.instance.database;
 
         expect(await database.getVersion(), AppDatabase.schemaVersion);
-        expect(AppDatabase.schemaVersion, 30);
+        expect(AppDatabase.schemaVersion, 31);
 
         final cliente = await database.query(
           'clientes',
@@ -185,7 +185,7 @@ void main() {
 
         final database = await AppDatabase.instance.database;
 
-        expect(await database.getVersion(), 30);
+        expect(await database.getVersion(), AppDatabase.schemaVersion);
 
         final cliente = await database.query(
           'clientes',
@@ -267,7 +267,7 @@ void main() {
 
         final database = await AppDatabase.instance.database;
 
-        expect(await database.getVersion(), 30);
+        expect(await database.getVersion(), AppDatabase.schemaVersion);
 
         final ordem = await database.query(
           'ordens_servico',
@@ -308,7 +308,7 @@ void main() {
 
         final database = await AppDatabase.instance.database;
 
-        expect(await database.getVersion(), 30);
+        expect(await database.getVersion(), AppDatabase.schemaVersion);
 
         final ordem = await database.query(
           'ordens_servico',

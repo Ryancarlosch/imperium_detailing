@@ -12,6 +12,7 @@ import 'chave_fiscal_manual_page.dart';
 import 'chave_fiscal_scanner_page.dart';
 import 'integrar_nota_fiscal_page.dart';
 import 'nota_fiscal_financeiro_page.dart';
+import 'nota_fiscal_correcao_page.dart';
 
 class ImportarNotaFiscalPage extends StatefulWidget {
   const ImportarNotaFiscalPage({super.key});
@@ -297,6 +298,17 @@ class _ImportarNotaFiscalPageState extends State<ImportarNotaFiscalPage> {
                 ).then((_) => _carregar());
               }
             : null,
+        onCorrigirExcluir: () {
+          Navigator.pop(context);
+          Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => NotaFiscalCorrecaoPage(nota: nota),
+            ),
+          ).then((alterou) {
+            if (alterou == true) _carregar();
+          });
+        },
       ),
     );
   }
@@ -407,12 +419,14 @@ class _NotaDetalhes extends StatelessWidget {
     this.onAdicionarXml,
     this.onIntegrar,
     this.onFinanceiro,
+    this.onCorrigirExcluir,
   });
   final NotaFiscalEntrada nota;
   final List<NotaFiscalEntradaItem> itens;
   final VoidCallback? onAdicionarXml;
   final VoidCallback? onIntegrar;
   final VoidCallback? onFinanceiro;
+  final VoidCallback? onCorrigirExcluir;
 
   @override
   Widget build(BuildContext context) => DraggableScrollableSheet(
@@ -453,6 +467,14 @@ class _NotaDetalhes extends StatelessWidget {
             onPressed: onFinanceiro,
             icon: const Icon(Icons.account_balance_wallet_outlined),
             label: const Text('Financeiro da nota'),
+          ),
+        ],
+        if (onCorrigirExcluir != null) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: onCorrigirExcluir,
+            icon: const Icon(Icons.edit_note_outlined),
+            label: const Text('Corrigir / excluir nota'),
           ),
         ],
         const SizedBox(height: 16),

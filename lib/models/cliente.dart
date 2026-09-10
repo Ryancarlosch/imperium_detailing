@@ -8,6 +8,7 @@ class Cliente {
     required this.email,
     required this.endereco,
     required this.observacoes,
+    this.dataNascimento,
     this.ativo = true,
     this.arquivadoEm,
   });
@@ -18,6 +19,7 @@ class Cliente {
   final String email;
   final String endereco;
   final String observacoes;
+  final String? dataNascimento;
   final bool ativo;
   final String? arquivadoEm;
 
@@ -29,6 +31,7 @@ class Cliente {
       'email': email,
       'endereco': endereco,
       'observacoes': observacoes,
+      'data_nascimento': dataNascimento,
       'ativo': ativo ? 1 : 0,
       'arquivado_em': arquivadoEm,
     };
@@ -42,6 +45,7 @@ class Cliente {
       email: (map['email'] ?? '').toString(),
       endereco: (map['endereco'] ?? '').toString(),
       observacoes: (map['observacoes'] ?? '').toString(),
+      dataNascimento: _converterTextoOpcional(map['data_nascimento']),
       ativo: _converterAtivo(map['ativo']),
       arquivadoEm: _converterTextoOpcional(map['arquivado_em']),
     );
@@ -54,6 +58,7 @@ class Cliente {
     String? email,
     String? endereco,
     String? observacoes,
+    Object? dataNascimento = _valorNaoInformado,
     bool? ativo,
     Object? arquivadoEm = _valorNaoInformado,
   }) {
@@ -64,6 +69,9 @@ class Cliente {
       email: email ?? this.email,
       endereco: endereco ?? this.endereco,
       observacoes: observacoes ?? this.observacoes,
+      dataNascimento: identical(dataNascimento, _valorNaoInformado)
+          ? this.dataNascimento
+          : dataNascimento as String?,
       ativo: ativo ?? this.ativo,
       arquivadoEm: identical(arquivadoEm, _valorNaoInformado)
           ? this.arquivadoEm

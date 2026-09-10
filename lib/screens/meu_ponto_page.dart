@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../repositories/ponto_repository.dart';
 import '../repositories/ponto_sincronizado_repository.dart';
 import '../services/ponto_realtime_service.dart';
+import 'ponto_solicitacoes_ajuste_page.dart';
 
 class MeuPontoPage extends StatefulWidget {
   const MeuPontoPage({
@@ -166,6 +167,36 @@ class _MeuPontoPageState extends State<MeuPontoPage> {
     }
   }
 
+  Future<void> _abrirSolicitacoes() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => PontoSolicitacoesAjustePage.minhas(
+          colaboradorLocalId: widget.colaboradorId,
+          colaboradorNome: widget.nome,
+        ),
+      ),
+    );
+
+    if (mounted) {
+      await _carregar();
+    }
+  }
+
+  Future<void> _solicitarCorrecao() async {
+    final salvou = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => PontoSolicitarAjustePage(
+          colaboradorLocalId: widget.colaboradorId,
+          colaboradorNome: widget.nome,
+        ),
+      ),
+    );
+
+    if (salvou == true && mounted) {
+      await _carregar();
+    }
+  }
+
   void _mensagem(String texto, {bool erro = false}) {
     if (!mounted) return;
 
@@ -218,6 +249,11 @@ class _MeuPontoPageState extends State<MeuPontoPage> {
                 color: Colors.greenAccent,
               ),
             ), // meu-ponto-indicador-realtime-v4b
+          IconButton(
+            tooltip: 'Minhas solicitações de correção',
+            onPressed: _carregando ? null : _abrirSolicitacoes,
+            icon: const Icon(Icons.assignment_outlined),
+          ),
           IconButton(
             tooltip: 'Atualizar',
             onPressed: _carregando ? null : _carregar,
@@ -318,6 +354,24 @@ class _MeuPontoPageState extends State<MeuPontoPage> {
                           ),
                         ],
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: ListTile(
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.edit_calendar_outlined),
+                      ),
+                      title: const Text(
+                        'Precisa corrigir uma batida?',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: const Text(
+                        'Envie os horários corretos e o motivo. O administrador revisa antes de alterar seu ponto.',
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: _solicitarCorrecao,
                     ),
                   ),
                   const SizedBox(height: 14),

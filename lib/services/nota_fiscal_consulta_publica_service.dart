@@ -102,11 +102,13 @@ class NotaFiscalConsultaPublicaService {
     String html, {
     required String chaveAcesso,
     String origemImportacao = 'qrCode',
+    String? textoVisivel,
   }) async {
     final parsed = parsearHtml(
       html,
       chaveAcesso: chaveAcesso,
       origemImportacao: origemImportacao,
+      textoVisivel: textoVisivel,
     );
     return _repository.salvarNotaCompleta(
       nota: parsed.nota,
@@ -120,6 +122,7 @@ class NotaFiscalConsultaPublicaService {
     required String chaveAcesso,
     String origemImportacao = 'qrCode',
     String? importadaEm,
+    String? textoVisivel,
   }) {
     final chave = ChaveFiscalService.normalizar(chaveAcesso);
     if (modeloDaChave(chave) != 65) {
@@ -134,9 +137,23 @@ class NotaFiscalConsultaPublicaService {
     }
 
     final documento = html_parser.parse(html);
-    final linhas = _linhasVisiveis(documento);
+    final linhasHtml = _linhasVisiveis(documento);
+    final linhasRenderizadas =
+        textoVisivel == null || textoVisivel.trim().isEmpty
+        ? const <String>[]
+        : _linhasDoTexto(textoVisivel);
+    final linhas = linhasRenderizadas.isNotEmpty
+        ? linhasRenderizadas
+        : linhasHtml;
     final texto = linhas.join('\n');
-    final textoMaiusculo = _semAcentos(texto).toUpperCase();
+    // A chave pode existir no DOM mas não estar na área atualmente renderizada.
+    // Usamos ambos apenas para validação; itens e valores vêm do texto visível
+    // quando o WebView consegue fornecê-lo.
+    final textoValidacao = [
+      texto,
+      if (linhasRenderizadas.isNotEmpty) linhasHtml.join('\n'),
+    ].join('\n');
+    final textoMaiusculo = _semAcentos(textoValidacao).toUpperCase();
 
     if (textoMaiusculo.contains('AMBIENTE DE HOMOLOGACAO') ||
         textoMaiusculo.contains('SEM VALOR FISCAL')) {
@@ -145,7 +162,7 @@ class NotaFiscalConsultaPublicaService {
       );
     }
 
-    final todosDigitos = texto.replaceAll(RegExp(r'\D'), '');
+    final todosDigitos = textoValidacao.replaceAll(RegExp(r'\D'), '');
     if (!todosDigitos.contains(chave)) {
       throw const ConsultaPublicaFiscalException(
         'A chave exibida pelo portal é diferente da chave lida no QR Code.',
@@ -287,12 +304,39 @@ class NotaFiscalConsultaPublicaService {
   static Uri urlSegura(Uri uri) =>
       uri.scheme.toLowerCase() == 'http' ? uri.replace(scheme: 'https') : uri;
 
+  static Uri? resolverUrlPortal(Uri base, String valor) {
+    final bruto = valor.trim();
+    if (bruto.isEmpty ||
+        bruto == 'about:blank' ||
+        bruto.startsWith('javascript:')) {
+      return null;
+    }
+    try {
+      final parsed = Uri.parse(bruto);
+      final resolvida = parsed.hasScheme ? parsed : base.resolveUri(parsed);
+      final segura = urlSegura(resolvida);
+      return urlOficial(segura) ? segura : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static void _validarUrlOficial(Uri uri) {
     if (!urlOficial(uri)) {
       throw const ConsultaPublicaFiscalException(
         'Por segurança, o Imperium só consulta URLs fiscais oficiais em domínio gov.br.',
       );
     }
+  }
+
+  static List<String> _linhasDoTexto(String texto) {
+    return texto
+        .replaceAll('\u00A0', ' ')
+        .replaceAll('\t', ' ')
+        .split(RegExp(r'[\r\n]+'))
+        .map((linha) => linha.replaceAll(RegExp(r'\s+'), ' ').trim())
+        .where((linha) => linha.isNotEmpty)
+        .toList();
   }
 
   static List<String> _linhasVisiveis(dom.Document documento) {
@@ -344,32 +388,115 @@ class NotaFiscalConsultaPublicaService {
         .toList();
   }
 
+  static bool _linhaContemCnpjEmitente(String linha, String cnpjDigitos) {
+    if (cnpjDigitos.length != 14) {
+      return false;
+    }
+
+    final g1 = cnpjDigitos.substring(0, 2);
+    final g2 = cnpjDigitos.substring(2, 5);
+    final g3 = cnpjDigitos.substring(5, 8);
+    final g4 = cnpjDigitos.substring(8, 12);
+    final g5 = cnpjDigitos.substring(12, 14);
+
+    // Exige o CNPJ como um identificador isolado. Isso impede que os 14
+    // dígitos internos da chave de acesso (44 dígitos) sejam confundidos com
+    // a linha do emitente.
+    return RegExp(
+      '(^|\\D)$g1[.\\s]*$g2[.\\s]*$g3[/\\s]*$g4[-\\s]*$g5(\\D|\$)',
+    ).hasMatch(linha);
+  }
+
   static String? _extrairEmitente(List<String> linhas, String cnpj) {
     final cnpjDigitos = cnpj.replaceAll(RegExp(r'\D'), '');
+    final candidatos = <({String texto, int pontos})>[];
+
+    void adicionar(String texto, int pontos) {
+      final limpo = _limparNomeEmitente(texto);
+      if (!_pareceNomeEmitente(limpo)) return;
+      candidatos.add((texto: limpo, pontos: pontos));
+    }
+
     for (var indice = 0; indice < linhas.length; indice++) {
-      final linha = linhas[indice];
-      final digitos = linha.replaceAll(RegExp(r'\D'), '');
-      if (!linha.toUpperCase().contains('CNPJ') ||
-          !digitos.contains(cnpjDigitos)) {
-        continue;
+      final linha = linhas[indice].trim();
+      if (!_linhaContemCnpjEmitente(linha, cnpjDigitos)) continue;
+
+      final cnpjMatch = RegExp(
+        r'\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}',
+      ).firstMatch(linha);
+
+      if (cnpjMatch != null) {
+        adicionar(linha.substring(0, cnpjMatch.start), 120);
+        adicionar(linha.substring(cnpjMatch.end), 110);
+      } else {
+        adicionar(
+          linha.replaceAll(RegExp(r'CNPJ\s*:?', caseSensitive: false), ''),
+          90,
+        );
       }
 
-      final posicaoCnpj = linha.toUpperCase().indexOf('CNPJ');
-      if (posicaoCnpj > 1) {
-        final antes = linha.substring(0, posicaoCnpj).trim();
-        if (_pareceNomeEmitente(antes)) return antes;
-      }
-
-      for (
-        var anterior = indice - 1;
-        anterior >= 0 && anterior >= indice - 5;
-        anterior--
-      ) {
-        final candidato = linhas[anterior].trim();
-        if (_pareceNomeEmitente(candidato)) return candidato;
+      for (var deslocamento = 1; deslocamento <= 6; deslocamento++) {
+        final anterior = indice - deslocamento;
+        final proximo = indice + deslocamento;
+        if (anterior >= 0) {
+          adicionar(linhas[anterior], 100 - deslocamento * 5);
+        }
+        if (proximo < linhas.length) {
+          adicionar(linhas[proximo], 95 - deslocamento * 5);
+        }
       }
     }
-    return null;
+
+    for (var indice = 0; indice < linhas.length; indice++) {
+      final normalizada = _semAcentos(linhas[indice]).toUpperCase();
+      if (!normalizada.contains('NOME / RAZAO SOCIAL') &&
+          !normalizada.contains('NOME/RAZAO SOCIAL')) {
+        continue;
+      }
+      for (
+        var proximo = indice + 1;
+        proximo < linhas.length && proximo <= indice + 4;
+        proximo++
+      ) {
+        final linha = linhas[proximo];
+        if (_linhaContemCnpjEmitente(linha, cnpjDigitos)) {
+          final match = RegExp(
+            r'\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}',
+          ).firstMatch(linha);
+          if (match != null) adicionar(linha.substring(match.end), 115);
+        } else {
+          adicionar(linha, 80);
+        }
+      }
+    }
+
+    if (candidatos.isEmpty) return null;
+    candidatos.sort((a, b) => b.pontos.compareTo(a.pontos));
+    return candidatos.first.texto;
+  }
+
+  static String _limparNomeEmitente(String texto) {
+    var valor = texto
+        .replaceAll(RegExp(r'CNPJ\s*:?', caseSensitive: false), '')
+        .replaceAll(RegExp(r'^[\s:;|\-]+|[\s:;|\-]+$'), '')
+        .trim();
+
+    final cortes = <RegExp>[
+      RegExp(
+        r'\s+(?:I\.?E\.?|INSCRI[CÇ][AÃ]O\s+ESTADUAL)\s*[:\-]?',
+        caseSensitive: false,
+      ),
+      RegExp(r'\s+UF\s*[:\-]?', caseSensitive: false),
+      RegExp(r'\s+ENDERE[CÇ]O\s*[:\-]?', caseSensitive: false),
+      RegExp(r'\s+\d{6,}\s+(?:SC|[A-Z]{2})\s*$', caseSensitive: false),
+    ];
+    for (final corte in cortes) {
+      final match = corte.firstMatch(valor);
+      if (match != null && match.start > 1) {
+        valor = valor.substring(0, match.start).trim();
+      }
+    }
+    return valor;
   }
 
   static bool _pareceNomeEmitente(String texto) {
@@ -383,8 +510,43 @@ class NotaFiscalConsultaPublicaService {
       'SECRETARIA',
       'GOVERNO DO ESTADO',
       'CHAVE DE ACESSO',
+      'FILTRAR ITENS',
+      'NOME / RAZAO SOCIAL',
+      'NOME/RAZAO SOCIAL',
+      'INSCRICAO ESTADUAL',
+      'INFORMACOES GERAIS',
+      'EMISSAO NORMAL',
     ];
-    return !bloqueados.any(normalizado.contains);
+    if (bloqueados.any(normalizado.contains)) return false;
+
+    const prefixosMetadados = [
+      'EMISSAO',
+      'PROTOCOLO',
+      'VALOR ',
+      'QTDE',
+      'QUANTIDADE',
+      'VL. UNIT',
+      'VL UNIT',
+      'FORMA DE PAGAMENTO',
+      'AMBIENTE DE ',
+      'CODIGO:',
+      'CODIGO ',
+    ];
+    if (prefixosMetadados.any(normalizado.startsWith)) return false;
+
+    const prefixosEndereco = [
+      'RUA ',
+      'AV ',
+      'AV. ',
+      'AVENIDA ',
+      'RODOVIA ',
+      'ESTRADA ',
+      'CEP ',
+      'BAIRRO ',
+      'MUNICIPIO ',
+    ];
+    if (prefixosEndereco.any(normalizado.startsWith)) return false;
+    return RegExp(r'[A-ZÀ-Ü]{2,}', caseSensitive: false).hasMatch(texto);
   }
 
   static List<NotaFiscalEntradaItem> _extrairItens(
@@ -397,61 +559,97 @@ class NotaFiscalConsultaPublicaService {
   }
 
   static List<NotaFiscalEntradaItem> _extrairItensPorCards(String texto) {
-    final marcador = RegExp(
-      r'^([^\n]{2,}?)\s*\(C[oó]digo:\s*([^)]+?)\s*\)',
+    // Portais estaduais, especialmente o S@T/SEF-SC, usam vários elementos
+    // visuais para montar cada item. Descrição, código, "Vl. Total", quantidade
+    // e preço podem ficar em linhas/elementos separados. Por isso o ponto
+    // estável é "(Código: ...)" e não uma linha HTML específica.
+    final codigoRegex = RegExp(
+      r'\(C[oó]digo:\s*([^)]+?)\s*\)',
       caseSensitive: false,
-      multiLine: true,
     );
-    final marcadores = marcador.allMatches(texto).toList();
+    final codigos = codigoRegex.allMatches(texto).toList();
     final itens = <NotaFiscalEntradaItem>[];
 
-    for (var indice = 0; indice < marcadores.length; indice++) {
-      final atual = marcadores[indice];
-      final limiteNatural = texto.indexOf('Qtd. total', atual.end);
-      final fim = indice + 1 < marcadores.length
-          ? marcadores[indice + 1].start
-          : limiteNatural >= 0
-          ? limiteNatural
+    for (var indice = 0; indice < codigos.length; indice++) {
+      final atual = codigos[indice];
+      final inicioLinha = texto.lastIndexOf('\n', atual.start - 1) + 1;
+      final proximoInicio = indice + 1 < codigos.length
+          ? texto.lastIndexOf('\n', codigos[indice + 1].start - 1) + 1
+          : -1;
+      final limiteResumo = texto.indexOf(
+        RegExp(r'Qtd\.?\s+total\s+de\s+itens', caseSensitive: false),
+        atual.end,
+      );
+      final fim = proximoInicio >= 0
+          ? proximoInicio
+          : limiteResumo >= 0
+          ? limiteResumo
           : texto.length;
-      final bloco = texto.substring(atual.start, fim);
+
+      final bloco = texto.substring(inicioLinha, fim);
+      final descricao = _descricaoDoItem(texto, atual.start);
+      if (descricao == null) continue;
+
       final quantidade = _capturarNumero(
         bloco,
         RegExp(r'Qtd(?:e)?\.?\s*:\s*([0-9.,]+)', caseSensitive: false),
       );
-      final unidade = RegExp(
-        r'\bUN\s*:\s*([^\s|]+)',
+
+      final unidadeMatch = RegExp(
+        r'\bUN\s*:\s*([A-Z0-9]{1,12}?)(?=\s*V[lI]\.?\s*Unit|\s{2,}|\n|$)',
         caseSensitive: false,
-      ).firstMatch(bloco)?.group(1)?.trim();
-      final unitario = _capturarNumero(
-        bloco,
-        RegExp(
-          r'V[lI]\.?\s*Unit\.?\s*:\s*(?:R\$\s*)?([0-9.,]+)',
-          caseSensitive: false,
-        ),
+      ).firstMatch(bloco);
+      final unidade = unidadeMatch?.group(1)?.trim();
+
+      final unitarioRegex = RegExp(
+        r'V[lI]\.?\s*Unit\.?\s*:\s*(?:R\$\s*)?([0-9.,]+)',
+        caseSensitive: false,
       );
-      final totalMatches = RegExp(
+      final unitarioMatch = unitarioRegex.firstMatch(bloco);
+      final unitario = unitarioMatch == null
+          ? null
+          : _numeroBr(unitarioMatch.group(1)!);
+
+      double? valorTotal;
+      final totalRotulado = RegExp(
         r'V[lI]\.?\s*Total\s*(?:R\$\s*)?[:]?\s*([0-9.,]+)',
         caseSensitive: false,
       ).allMatches(bloco).toList();
-      final valorTotal = totalMatches.isEmpty
-          ? null
-          : _numeroBr(totalMatches.last.group(1)!);
+      if (totalRotulado.isNotEmpty) {
+        valorTotal = _numeroBr(totalRotulado.last.group(1)!);
+      }
+
+      // No S@T/SEF-SC o rótulo "Vl. Total" pode aparecer numa coluna antes
+      // do restante do item, e o número total aparece isolado depois do preço
+      // unitário. Capturamos esse número como fallback.
+      if (valorTotal == null && unitarioMatch != null) {
+        final depoisUnitario = bloco.substring(unitarioMatch.end);
+        final proximoNumero = RegExp(
+          r'([0-9]+(?:[.,][0-9]{1,4})?)',
+        ).firstMatch(depoisUnitario);
+        if (proximoNumero != null) {
+          valorTotal = _numeroBr(proximoNumero.group(1)!);
+        }
+      }
 
       if (quantidade == null ||
           quantidade <= 0 ||
           unidade == null ||
           unidade.isEmpty ||
-          unitario == null ||
-          valorTotal == null) {
+          unitario == null) {
         continue;
       }
+
+      // Último fallback: quando a página não expõe a coluna total de forma
+      // legível, quantidade x unitário ainda nos permite montar o item.
+      valorTotal ??= quantidade * unitario;
 
       itens.add(
         NotaFiscalEntradaItem(
           notaFiscalId: 0,
           numeroItem: itens.length + 1,
-          codigoProduto: atual.group(2)?.trim(),
-          descricao: atual.group(1)!.trim(),
+          codigoProduto: atual.group(1)?.trim(),
+          descricao: descricao,
           unidade: unidade,
           quantidade: quantidade,
           valorUnitario: unitario,
@@ -460,6 +658,63 @@ class NotaFiscalConsultaPublicaService {
       );
     }
     return itens;
+  }
+
+  static String? _descricaoDoItem(String texto, int inicioCodigo) {
+    final inicioLinha = texto.lastIndexOf('\n', inicioCodigo - 1) + 1;
+    var mesmaLinha = texto.substring(inicioLinha, inicioCodigo).trim();
+    mesmaLinha = mesmaLinha
+        .replaceFirst(
+          RegExp(r'^\s*V[lI]\.?\s*Total\s*', caseSensitive: false),
+          '',
+        )
+        .replaceFirst(
+          RegExp(r'\s*V[lI]\.?\s*Total\s*$', caseSensitive: false),
+          '',
+        )
+        .trim();
+    if (_pareceDescricaoItem(mesmaLinha)) return mesmaLinha;
+
+    final anteriores = texto.substring(0, inicioLinha).split('\n');
+    for (
+      var i = anteriores.length - 1;
+      i >= 0 && i >= anteriores.length - 5;
+      i--
+    ) {
+      var candidato = anteriores[i].trim();
+      candidato = candidato
+          .replaceFirst(
+            RegExp(r'^\s*V[lI]\.?\s*Total\s*', caseSensitive: false),
+            '',
+          )
+          .trim();
+      if (_pareceDescricaoItem(candidato)) return candidato;
+    }
+    return null;
+  }
+
+  static bool _pareceDescricaoItem(String texto) {
+    if (texto.length < 2) return false;
+    final normalizado = _semAcentos(texto).toUpperCase();
+    const bloqueados = [
+      'VL. TOTAL',
+      'VL TOTAL',
+      'QTDE.',
+      'QTDE:',
+      'QTD.',
+      'UN:',
+      'VL. UNIT',
+      'FILTRAR ITENS',
+      'VALOR TOTAL',
+      'VALOR A PAGAR',
+      'DESCONTOS',
+    ];
+    if (bloqueados.any(
+      (item) => normalizado == item || normalizado.startsWith(item),
+    )) {
+      return false;
+    }
+    return !RegExp(r'^[0-9., R$]+$').hasMatch(texto);
   }
 
   static List<NotaFiscalEntradaItem> _extrairItensPorTabela(

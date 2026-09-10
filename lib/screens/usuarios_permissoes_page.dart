@@ -160,6 +160,53 @@ class _UsuariosPermissoesPageState extends State<UsuariosPermissoesPage> {
     }
   }
 
+  Future<void> _liberarBloqueio(Map<String, dynamic> usuario) async {
+    final id = _int(usuario['id']);
+    if (id == null) {
+      return;
+    }
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Liberar tentativas de PIN?'),
+        content: Text(
+          'O bloqueio temporário de @${usuario['login'] ?? ''} será zerado. '
+          'A liberação ficará registrada na auditoria de segurança.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Liberar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) {
+      return;
+    }
+
+    try {
+      await _repository.liberarBloqueioUsuario(id);
+      _mensagem('Tentativas de PIN liberadas.');
+    } catch (erro) {
+      _mensagem('$erro', erro: true);
+    }
+  }
+
+  Future<void> _abrirAuditoria() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => _HistoricoSegurancaPage(repository: _repository),
+      ),
+    );
+  }
+
   Future<void> _abrirAcessos() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
@@ -211,6 +258,11 @@ class _UsuariosPermissoesPageState extends State<UsuariosPermissoesPage> {
       appBar: AppBar(
         title: const Text('Usuários e permissões'),
         actions: [
+          IconButton(
+            tooltip: 'Auditoria de segurança',
+            onPressed: _carregando ? null : _abrirAuditoria,
+            icon: const Icon(Icons.security_outlined),
+          ),
           IconButton(
             tooltip: 'Histórico de acessos',
             onPressed: _carregando ? null : _abrirAcessos,
@@ -296,6 +348,8 @@ class _UsuariosPermissoesPageState extends State<UsuariosPermissoesPage> {
                               _configurarPin(usuario);
                             } else if (valor == 'permissoes') {
                               _permissoes(usuario);
+                            } else if (valor == 'liberar_bloqueio') {
+                              _liberarBloqueio(usuario);
                             }
                           },
                           itemBuilder: (_) => const [
@@ -310,6 +364,10 @@ class _UsuariosPermissoesPageState extends State<UsuariosPermissoesPage> {
                             PopupMenuItem(
                               value: 'permissoes',
                               child: Text('Permissões'),
+                            ),
+                            PopupMenuItem(
+                              value: 'liberar_bloqueio',
+                              child: Text('Liberar tentativas de PIN'),
                             ),
                           ],
                         ),
@@ -665,6 +723,117 @@ class _PermissoesUsuarioPageState extends State<_PermissoesUsuarioPage> {
                   ),
                 ),
               ],
+            ),
+    );
+  }
+}
+
+class _HistoricoSegurancaPage extends StatefulWidget {
+  const _HistoricoSegurancaPage({required this.repository});
+
+  final UsuarioRepository repository;
+
+  @override
+  State<_HistoricoSegurancaPage> createState() =>
+      _HistoricoSegurancaPageState();
+}
+
+class _HistoricoSegurancaPageState extends State<_HistoricoSegurancaPage> {
+  bool _carregando = true;
+  List<Map<String, dynamic>> _itens = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _carregar();
+  }
+
+  Future<void> _carregar() async {
+    final itens = await widget.repository.listarAuditoriaUsuario();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _itens = itens;
+      _carregando = false;
+    });
+  }
+
+  String _data(dynamic valor) {
+    final data = DateTime.tryParse(valor?.toString() ?? '');
+    if (data == null) {
+      return '';
+    }
+
+    return '${data.day.toString().padLeft(2, '0')}/'
+        '${data.month.toString().padLeft(2, '0')}/'
+        '${data.year} '
+        '${data.hour.toString().padLeft(2, '0')}:'
+        '${data.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Auditoria de segurança')),
+      body: _carregando
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _carregar,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(14),
+                children: [
+                  const Card(
+                    margin: EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: EdgeInsets.all(13),
+                      child: Text(
+                        'Alterações de PIN, permissões e liberações de bloqueio '
+                        'ficam registradas aqui. O PIN original nunca é gravado.',
+                      ),
+                    ),
+                  ),
+                  if (_itens.isEmpty)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(18),
+                        child: Text(
+                          'Nenhuma alteração de segurança registrada.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    )
+                  else
+                    ..._itens.map((item) {
+                      final usuario = (item['usuario_nome'] ?? '')
+                          .toString()
+                          .trim();
+                      final ator = (item['ator_nome'] ?? '').toString().trim();
+                      final acao = (item['acao'] ?? '').toString();
+                      final detalhe = (item['detalhe'] ?? '').toString();
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: const Icon(Icons.shield_outlined),
+                          title: Text(
+                            usuario.isEmpty ? acao : '$usuario • $acao',
+                          ),
+                          subtitle: Text(
+                            [
+                              if (detalhe.trim().isNotEmpty) detalhe,
+                              if (ator.isNotEmpty) 'Por: $ator',
+                              _data(item['criado_em']),
+                            ].where((e) => e.trim().isNotEmpty).join(' • '),
+                          ),
+                        ),
+                      );
+                    }),
+                ],
+              ),
             ),
     );
   }

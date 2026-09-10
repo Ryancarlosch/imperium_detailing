@@ -13,6 +13,7 @@ class NotificationService {
 
   static const int _idBase = 100000;
   static const int _idLimite = 200000;
+  static const int _idCrmLembreteDiario = 300001;
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
@@ -190,6 +191,72 @@ class NotificationService {
     await inicializar();
 
     await _plugin.cancel(id: _idDaNotificacao(agendamentoId));
+  }
+
+  Future<bool> lembreteDiarioCrmAtivo() async {
+    await inicializar();
+    final pendentes = await _plugin.pendingNotificationRequests();
+    return pendentes.any((item) => item.id == _idCrmLembreteDiario);
+  }
+
+  Future<void> ativarLembreteDiarioCrm({int hora = 9, int minuto = 0}) async {
+    await inicializar();
+    if (hora < 0 || hora > 23 || minuto < 0 || minuto > 59) {
+      throw ArgumentError('Horário inválido para o lembrete do CRM.');
+    }
+
+    await _plugin.cancel(id: _idCrmLembreteDiario);
+
+    final agora = tz.TZDateTime.now(tz.local);
+    var proxima = tz.TZDateTime(
+      tz.local,
+      agora.year,
+      agora.month,
+      agora.day,
+      hora,
+      minuto,
+    );
+    if (!proxima.isAfter(agora)) {
+      proxima = proxima.add(const Duration(days: 1));
+    }
+
+    const detalhesAndroid = AndroidNotificationDetails(
+      'lembretes_crm',
+      'Lembretes do CRM',
+      channelDescription: 'Lembrete diário para revisar follow-ups e pós-venda',
+      importance: Importance.high,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.reminder,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const detalhesIos = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const detalhes = NotificationDetails(
+      android: detalhesAndroid,
+      iOS: detalhesIos,
+    );
+
+    await _plugin.zonedSchedule(
+      id: _idCrmLembreteDiario,
+      title: 'CRM • ações do dia',
+      body:
+          'Revise follow-ups, orçamentos, pós-venda e benefícios no Imperium.',
+      scheduledDate: proxima,
+      notificationDetails: detalhes,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: 'crm:acoes',
+    );
+  }
+
+  Future<void> desativarLembreteDiarioCrm() async {
+    await inicializar();
+    await _plugin.cancel(id: _idCrmLembreteDiario);
   }
 
   int _idDaNotificacao(int agendamentoId) {

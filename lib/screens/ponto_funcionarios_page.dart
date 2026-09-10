@@ -6,6 +6,7 @@ import '../repositories/custos_repository.dart';
 import '../repositories/ponto_repository.dart';
 import '../repositories/ponto_sincronizado_repository.dart';
 import 'funcionarios_resumo_page.dart';
+import 'ponto_solicitacoes_ajuste_page.dart';
 import 'usuarios_permissoes_page.dart';
 
 class PontoFuncionariosPage extends StatefulWidget {
@@ -592,6 +593,18 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
     await _carregar();
   }
 
+  Future<void> _abrirSolicitacoesAjuste() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => const PontoSolicitacoesAjustePage.admin(),
+      ),
+    );
+
+    if (mounted) {
+      await _carregar();
+    }
+  }
+
   void _mensagem(String texto, {bool erro = false}) {
     if (!mounted) return;
 
@@ -611,6 +624,11 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
       appBar: AppBar(
         title: const Text('Controle de ponto'),
         actions: [
+          IconButton(
+            tooltip: 'Solicitações de ajuste',
+            onPressed: _carregando ? null : _abrirSolicitacoesAjuste,
+            icon: const Icon(Icons.pending_actions_outlined),
+          ),
           IconButton(
             tooltip: 'Usuários e permissões',
             onPressed: _carregando
@@ -715,9 +733,9 @@ class _PontoFuncionariosPageState extends State<PontoFuncionariosPage> {
                       padding: EdgeInsets.all(13),
                       child: Text(
                         'O ponto controla presença, horas reais e uma '
-                        'estimativa de pagamento. Use a batida rápida para '
-                        'entrada, intervalo e saída. Correções continuam '
-                        'sendo feitas manualmente e ficam auditadas.',
+                        'estimativa de pagamento. O funcionário pode solicitar '
+                        'correção pelo próprio login; a alteração só entra no '
+                        'ponto depois da sua aprovação e fica auditada.',
                       ),
                     ),
                   ),
