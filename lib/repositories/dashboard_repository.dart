@@ -785,10 +785,33 @@ class DashboardRepository {
       SELECT
         TRIM(item.servico) AS nome,
         COUNT(*) AS quantidade,
-        COALESCE(SUM(item.quantidade * item.valor_unitario), 0) AS total
+        COALESCE(SUM(
+          CASE
+            WHEN COALESCE(totais_itens.valor_bruto_itens, 0) <= 0 THEN 0
+            ELSE (
+              1.0 * item.quantidade * item.valor_unitario
+              / totais_itens.valor_bruto_itens
+            ) * MAX(
+              COALESCE(os.valor_total, 0)
+              - COALESCE(os.desconto, 0)
+              - COALESCE(os.desconto_negociacao, 0)
+              + COALESCE(os.acrescimo_negociacao, 0)
+              + COALESCE(os.juros_parcelamento, 0),
+              0
+            )
+          END
+        ), 0) AS total
       FROM ordem_servico_itens item
       INNER JOIN ordens_servico os
         ON os.id = item.ordem_servico_id
+      INNER JOIN (
+        SELECT
+          ordem_servico_id,
+          COALESCE(SUM(quantidade * valor_unitario), 0) AS valor_bruto_itens
+        FROM ordem_servico_itens
+        GROUP BY ordem_servico_id
+      ) totais_itens
+        ON totais_itens.ordem_servico_id = os.id
       WHERE LOWER(os.status) = 'finalizada'
         AND os.data_finalizacao >= ?
         AND os.data_finalizacao < ?

@@ -5,7 +5,7 @@
 > **Regra principal:** nenhum item antigo deve ser apagado. Quando algo for concluído,
 > o item permanece no roadmap e muda de status, recebendo data/notas quando necessário.
 
-Última atualização: **2026-09-01**
+Última atualização: **2026-09-10**
 ## BASELINE OFICIAL — 2026-09-01
 
 - Branch oficial: `desenvolvimento`.
@@ -456,9 +456,11 @@
 🟢 **DRE / competência x caixa**
 - Estrutura local implementada.
 
-🟡 **Relatórios financeiros**
-- Existe tela oficial e houve uma cópia `_corrigido` temporária.
-- Consolidar/validar sem duplicidade.
+✅ **Relatórios financeiros**
+- Consolidados em 2026-09-10.
+- `relatorios_financeiros_page.dart` permanece como tela oficial.
+- A cópia temporária `_corrigido` foi removida somente após validação de conteúdo idêntico.
+- Teste-fonte impede a reintrodução da duplicidade.
 
 ⬜ **Sincronização financeira Supabase**
 - contas.
@@ -603,6 +605,13 @@
 
 🟢 **Ranking de serviços/clientes**
 - implementado.
+
+✅ **Correção do ranking de serviços pelo valor líquido da OS**
+- Corrigido em 2026-09-10.
+- O ranking deixa de somar o valor bruto dos itens quando a OS possui desconto.
+- Desconto, desconto de negociação, acréscimo e juros da OS são rateados proporcionalmente entre os serviços pelo valor bruto de cada item.
+- A soma dos valores do ranking permanece coerente com o faturamento por competência das OS finalizadas.
+- Caso validado: serviço de R$ 600 com desconto de R$ 250 passa a contabilizar R$ 350 no ranking.
 
 🟢 **Alertas**
 - agenda.
@@ -1542,3 +1551,43 @@ Próximo passo:
 - Saúde Fiscal para reconciliar notas, itens, estoque e financeiro.
 - Estoque e financeiro bloqueados para documento não autorizado.
 - Backend DF-e v3 com sessão revalidada, CNPJ somente no servidor e sem manifestação automática.
+---
+
+## 2026-09-10 — Ranking de serviços pelo valor líquido
+
+Módulo: Dashboard / Financeiro
+Status anterior: 🟢 Implementado com divergência de valor / relatório duplicado
+Status novo: ✅ Corrigido, consolidado e protegido por testes
+
+Alterações:
+- ranking de serviços deixou de somar o bruto dos itens isoladamente;
+- valor líquido final da OS é distribuído proporcionalmente entre os serviços;
+- desconto simples e desconto de negociação reduzem o ranking;
+- acréscimo de negociação e juros de parcelamento seguem a mesma base usada pelo faturamento por competência;
+- caso real de R$ 600 com R$ 250 de desconto passa a mostrar R$ 350;
+- criado teste automatizado também cobrindo uma OS com múltiplos serviços;
+- consolidada a tela de relatórios financeiros, removendo a cópia temporária `_corrigido` quando idêntica à oficial;
+- criado teste-fonte garantindo que exista apenas a tela oficial de relatórios.
+
+Arquivos principais alterados:
+- lib/repositories/dashboard_repository.dart
+- test/dashboard_ranking_servicos_liquido_test.dart
+- lib/screens/relatorios_financeiros_page_corrigido.dart (removido quando idêntico)
+- test/financeiro_relatorios_consolidacao_source_test.dart
+- ROADMAP-IMPERIUM-MESTRE.md
+
+Banco/migração:
+- nenhuma alteração de schema;
+- nenhum dado existente é regravado;
+- correção é somente de consulta/relatório.
+
+Impacto em sincronização/multiempresa:
+- nenhum;
+- não altera serviços protegidos, RLS, empresa_id, Auth ou sincronização.
+
+Testes:
+- dart format;
+- flutter analyze;
+- teste específico do ranking líquido;
+- flutter test completo;
+- git diff --check.
