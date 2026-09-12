@@ -519,14 +519,7 @@ class DreRepository {
       WITH custos_os AS (
         SELECT
           os.id AS ordem_servico_id,
-          MAX(
-            COALESCE(os.valor_total, 0)
-            - COALESCE(os.desconto, 0)
-            - COALESCE(os.desconto_negociacao, 0)
-            + COALESCE(os.acrescimo_negociacao, 0)
-            + COALESCE(os.juros_parcelamento, 0),
-            0
-          ) AS valor_final_os,
+          ${OrdemServicoValor.sqlValorNegociado(alias: 'os')} AS valor_final_os,
           COALESCE(SUM(
             CASE
               WHEN COALESCE(p.custo_total_no_momento, 0) > 0

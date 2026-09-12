@@ -1622,3 +1622,18 @@ Testes:
 - teste específico do ranking líquido;
 - flutter test completo;
 - git diff --check.
+
+## 2026-09-11 - Sprint 1B - fluxo financeiro ponta a ponta
+
+Status: ✅ validado localmente.
+
+- teste integrado de OS com desconto e recebimento parcial;
+- validacao de movimento financeiro e saldo da conta;
+- validacao de Dashboard, ranking, DRE e Financeiro Dashboard;
+- teste de parcelamento com taxa de cartao;
+- teste de estorno com recomposicao do saldo a receber;
+- DRE caixa passou a usar o mesmo contrato monetario da OS na alocacao de custo de produtos;
+- schema permanece v33;
+- nenhuma migration.
+
+---

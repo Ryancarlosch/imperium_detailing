@@ -29,7 +29,7 @@ Status: ✅ implementado, aguardando validacao local deste patch
 
 ## Proxima etapa
 
-Sprint 1B - teste contratual ponta a ponta:
+Sprint 1B - teste contratual ponta a ponta: ✅ validado
 
 `OS -> pagamento -> movimento -> conta -> Dashboard -> DRE/relatorios`
 
