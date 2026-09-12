@@ -11,6 +11,7 @@ import 'estoque_cloud_download_service.dart';
 import 'estoque_cloud_reserva_service.dart';
 import 'estoque_cloud_upload_service.dart';
 import 'financeiro_cloud_upload_service.dart';
+import 'financeiro_cloud_v2_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'ponto_nuvem_service.dart';
@@ -247,10 +248,19 @@ class OperacionalSyncService {
       );
       await EstoqueCloudUploadService.instance.sincronizarUpload(empresaId);
 
-      // financeiro-cloud-upload-call-v1
-      // Upload-only: plano -> contas -> pagamentos -> movimentos.
-      // Nao altera saldo/DRE local.
-      await FinanceiroCloudUploadService.instance.sincronizarUpload(empresaId);
+      // financeiro-cloud-v2-upload-guard
+      // Conflito concorrente bloqueia todo o Financeiro para nao sobrescrever caixa.
+      final financeiroPodePublicar = await FinanceiroCloudV2Service.instance
+          .prepararUpload(empresaId);
+      if (financeiroPodePublicar) {
+        // financeiro-cloud-upload-call-v1
+        // Upload base: plano -> contas -> pagamentos -> movimentos.
+        await FinanceiroCloudUploadService.instance.sincronizarUpload(
+          empresaId,
+        );
+        // Complementos: fornecedor -> regra -> transferencia -> vinculos.
+        await FinanceiroCloudV2Service.instance.completarUpload(empresaId);
+      }
       // Depois baixa o estado compartilhado.
       await _baixarClientes(empresaId);
       await _baixarVeiculos(empresaId);
@@ -266,6 +276,10 @@ class OperacionalSyncService {
       // estoque-cloud-alertas-call-v3
       // Espelha alertas compartilhados apos atualizar o estoque.
       await EstoqueCloudReservaService.instance.sincronizarAlertas(empresaId);
+
+      // financeiro-cloud-v2-download-call
+      // Importacao direta: nao gera pagamento/movimento duplicado.
+      await FinanceiroCloudV2Service.instance.sincronizarDownload(empresaId);
 
       // O Ponto já possui sua própria estrutura de nuvem.
       await _sincronizarPontoFuncionario();

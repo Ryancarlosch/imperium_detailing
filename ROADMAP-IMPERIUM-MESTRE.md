@@ -1914,3 +1914,36 @@ Supabase:
 Banco local:
 - `AppDatabase.schemaVersion` permanece 33;
 - mapas são criados dinamicamente e não exigem migration SQLite.
+
+
+## 2026-09-12 - Financeiro Cloud V2 — download, conflitos e complementos
+
+Status: 🟡 núcleo multiaparelho desenvolvido; homologação real fica para o lote final.
+
+Pacote V2:
+- reconciliação antes do upload V1;
+- alteração local + remota registra conflito e bloqueia todo upload financeiro;
+- alteração somente remota é aplicada diretamente no SQLite;
+- resolução técnica “usar local” / “usar nuvem” com auditoria;
+- download controlado de novos planos, contas, pagamentos e movimentos;
+- fornecedores Cloud;
+- regras de taxa/cartão Cloud vinculadas à conta;
+- transferências Cloud vinculadas às contas;
+- pagamentos remotos passam a referenciar regra de taxa remota;
+- movimentos remotos passam a referenciar fornecedor e transferência;
+- reconstrução de mapa para registros originados no próprio aparelho;
+- plano converge por código e conta converge por nome para evitar duplicação.
+
+Proteção contábil:
+- download de pagamento não chama `PagamentoRepository`;
+- download de movimento não chama `FinanceiroRepository`;
+- pagamentos e movimentos são inseridos separadamente, uma única vez;
+- saldo de conta continua derivado apenas dos movimentos `Realizado`;
+- nenhuma rotina de download cria movimento automático;
+- comprovante de outro aparelho não é tratado como arquivo local válido.
+
+Banco:
+- migration Supabase `20260912034429_financeiro_cloud_v2_complementos`;
+- novas tabelas têm RLS + grants explícitos;
+- nenhuma função SECURITY DEFINER nova;
+- SQLite de domínio permanece v33.

@@ -144,3 +144,14 @@ Próximos blocos:
 - atualizar resumo da OS sem recriar movimento financeiro;
 - transferências, fornecedores, taxas de cartão e conciliações cloud;
 - homologação multiaparelho de competência x caixa.
+
+
+## Financeiro Cloud V3 — próximos blocos
+
+- conciliações bancárias Cloud;
+- custos fixos/metas/colaboradores de custo conforme prioridade;
+- comprovantes financeiros via Storage;
+- resolução de exclusão financeira com regra de auditoria;
+- UI/diagnóstico de conflitos financeiros;
+- recalcular/espelhar resumo de contas a receber da OS sem recriar movimentos;
+- homologação multiaparelho: Pix, dinheiro, cartão, parcelado, taxa, estorno e transferência.
