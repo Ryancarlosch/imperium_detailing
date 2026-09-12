@@ -1813,3 +1813,21 @@ Banco/migração:
 Próximo passo:
 - V2.1: versão/conflitos e atualização segura de itens/lotes já mapeados;
 - depois reserva/consumo compartilhado por OS.
+
+
+## 2026-09-11 - Estoque Cloud Conflitos V2.1
+
+Status: 🟡 proteção contra concorrência implementada; resolução V2.2 pendente.
+
+Regra:
+- só local mudou: upload pode seguir;
+- só nuvem mudou: aplica versão remota localmente;
+- local e nuvem mudaram: registra conflito e não sobrescreve;
+- conflito pendente bloqueia upload do item/lote;
+- movimentações seguem append-only.
+
+Infraestrutura:
+- `imperium_sync_estoque_conflitos` guarda snapshots e metadados;
+- reconciliação ocorre antes do upload;
+- SQLite de domínio continua v33;
+- nenhuma migration Supabase nova.

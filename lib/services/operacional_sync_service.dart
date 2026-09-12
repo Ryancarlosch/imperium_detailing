@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
+import 'estoque_cloud_conflito_service.dart';
 import 'estoque_cloud_download_service.dart';
 import 'estoque_cloud_upload_service.dart';
 import 'os_cloud_download_service.dart';
@@ -233,6 +234,11 @@ class OperacionalSyncService {
       // estoque-cloud-upload-call-v1
       // Etapa 5 inicia upload-only: item -> lote -> movimentacao.
       // Nao altera saldo local nem Financeiro.
+      // estoque-cloud-conflitos-call-v2-1
+      // Reconciliacao obrigatoria antes do upload.
+      await EstoqueCloudConflitoService.instance.reconciliarAntesDoUpload(
+        empresaId,
+      );
       await EstoqueCloudUploadService.instance.sincronizarUpload(empresaId);
       // Depois baixa o estado compartilhado.
       await _baixarClientes(empresaId);

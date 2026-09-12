@@ -72,6 +72,13 @@ class EstoqueCloudUploadService {
     for (final local in locais) {
       final localId = _int(local['id']);
       if (localId <= 0) continue;
+      if (await _possuiConflitoPendente(
+        empresaId: empresaId,
+        entidade: 'item',
+        localId: localId,
+      )) {
+        continue;
+      }
 
       final hash = _hashItem(local);
       final mapa = await _mapaLocal(
@@ -176,6 +183,13 @@ class EstoqueCloudUploadService {
     for (final local in locais) {
       final localId = _int(local['id']);
       if (localId <= 0) continue;
+      if (await _possuiConflitoPendente(
+        empresaId: empresaId,
+        entidade: 'lote',
+        localId: localId,
+      )) {
+        continue;
+      }
 
       final hash = _hashLote(local);
       final mapa = await _mapaLocal(
@@ -497,6 +511,34 @@ class EstoqueCloudUploadService {
         whereArgs: [empresaId, localId],
       );
     }
+  }
+
+  Future<bool> _possuiConflitoPendente({
+    required String empresaId,
+    required String entidade,
+    required int localId,
+  }) async {
+    final database = await _appDatabase.database;
+
+    final tabela = await database.rawQuery(
+      "SELECT name FROM sqlite_master "
+      "WHERE type = 'table' AND name = 'imperium_sync_estoque_conflitos' "
+      "LIMIT 1",
+    );
+
+    if (tabela.isEmpty) return false;
+
+    final resultado = await database.query(
+      'imperium_sync_estoque_conflitos',
+      columns: ['id'],
+      where:
+          "empresa_id = ? AND entidade = ? AND local_id = ? "
+          "AND status = 'Pendente'",
+      whereArgs: [empresaId, entidade, localId],
+      limit: 1,
+    );
+
+    return resultado.isNotEmpty;
   }
 
   Future<Map<String, Object?>?> _mapaLocal({

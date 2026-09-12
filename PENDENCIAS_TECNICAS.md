@@ -103,3 +103,13 @@ Status: ⬜ próximo refinamento.
 - registrar conflito para resolução controlada;
 - propagar soft delete remotamente para aparelhos secundários;
 - validar em dois dispositivos após o lote de desenvolvimento.
+
+
+## Estoque Cloud V2.2 — resolução de conflito
+
+Status: ⬜ próximo passo.
+
+- listar conflitos no diagnóstico/admin;
+- escolher versão local ou versão da nuvem;
+- preservar auditoria da decisão;
+- homologar concorrência em dois aparelhos.
