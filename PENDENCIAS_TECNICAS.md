@@ -80,3 +80,15 @@ Pré-requisitos:
 - conflitos/versionamento/retry/idempotência;
 - Storage para arquivos compartilhados;
 - contratos remotos sem dependência de IDs SQLite locais.
+
+
+## Estoque Cloud V1
+
+Status: 🟡 desenvolvido para upload-only; homologação posterior em lote.
+
+- Supabase: itens, lotes e movimentações.
+- RLS por `empresa_id` e permissão `estoque`.
+- Movimentações remotas append-only.
+- App: upload integrado ao sync operacional.
+- Sem download de estoque nesta V1.
+- SQLite permanece v33.

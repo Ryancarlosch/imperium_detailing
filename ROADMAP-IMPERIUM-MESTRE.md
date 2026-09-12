@@ -1758,3 +1758,29 @@ Próximo passo:
 - concluir homologação Financeiro no Android;
 - seguir homologações multi-dispositivo;
 - continuar migração cloud na ordem oficial.
+
+
+## 2026-09-11 - Estoque Cloud Upload-Only V1
+
+Módulo: Estoque / Sincronização
+Status anterior: 🟢 estoque local avançado; cloud pendente
+Status novo: 🟡 upload-only V1 preparado; homologação real pendente
+
+Alterações:
+- tabelas remotas de itens, lotes e movimentações criadas no Supabase;
+- isolamento por `empresa_id` e RLS usando permissão do módulo `estoque`;
+- identidade remota idempotente por dispositivo + ID local;
+- itens e lotes podem ser atualizados/soft-deletados;
+- movimentações são append-only para o app: INSERT/SELECT, sem UPDATE/DELETE;
+- `EstoqueCloudUploadService` publica na ordem item → lote → movimentação;
+- relação com OS usa o UUID remoto já mapeado quando existir;
+- usuário sem permissão de Estoque não bloqueia os outros módulos do sync;
+- nenhuma rotina de download de estoque foi ativada nesta V1.
+
+Banco/migração:
+- SQLite continua v33, sem migration local;
+- Supabase migration `20260912023332_estoque_cloud_upload_v1`.
+
+Próximo passo:
+- download controlado/reconciliação do Estoque;
+- homologação posterior em dois dispositivos.

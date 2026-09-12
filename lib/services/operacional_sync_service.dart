@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
+import 'estoque_cloud_upload_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'ponto_nuvem_service.dart';
@@ -228,6 +229,10 @@ class OperacionalSyncService {
       // nem baixar OS antes da homologacao do nucleo.
       await OsCloudUploadService.instance.sincronizarUpload(empresaId);
 
+      // estoque-cloud-upload-call-v1
+      // Etapa 5 inicia upload-only: item -> lote -> movimentacao.
+      // Nao altera saldo local nem Financeiro.
+      await EstoqueCloudUploadService.instance.sincronizarUpload(empresaId);
       // Depois baixa o estado compartilhado.
       await _baixarClientes(empresaId);
       await _baixarVeiculos(empresaId);

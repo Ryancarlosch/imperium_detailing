@@ -46,62 +46,10 @@
 - adição de serviços em OS aberta
 
 ### 5. Estoque
-- itens e lotes
-- movimentações append-only
-- reserva/consumo por OS
-- saldo calculado de forma consistente
-- alertas em todos os aparelhos
-
-### 6. Financeiro
-- contas
-- movimentos
-- pagamentos/parcelas
-- taxas de cartão
-- transferências
-- recebimento por data real
-- operações críticas transacionais no PostgreSQL
-
-### 7. Precificação
-- custos fixos
-- estrutura
-- colaboradores: dados financeiros somente para admin
-- regras de precificação
-- configuração de horas
-- margens e parâmetros
-
-### 8. Configurações/Usuários
-- identidade da empresa
-- permissões
-- usuários
-- tema e preferências relevantes
-- separação entre dados globais e preferências por aparelho
-
-### 9. Arquivos
-- fotos de OS
-- logos
-- assinaturas
-- PDFs quando necessário
-- Supabase Storage com RLS
-- cache local
-
-### 10. Motor de sincronização
-- fila offline
-- retry
-- idempotência
-- device_id
-- updated_at/version
-- tombstone/arquivamento
-- Realtime
-- tela de saúde da sincronização
-- última sincronização
-- conflitos que exigem revisão
-- modo offline seguro
-
-### 11. Migração final
-- importação completa do SQLite existente
-- comparação de contagens/totais
-- backup obrigatório antes da migração
-- teste em segundo aparelho
-- teste funcionário
-- teste offline/online
-- só depois nuvem vira fonte principal dos módulos migrados
+- 🟢 Upload-only V1 de itens/lotes/movimentacoes preparado
+- 🟢 RLS multiempresa + idempotencia por origem
+- 🟢 movimentações remotas append-only
+- ⬜ download controlado/reconciliacao
+- ⬜ reserva/consumo compartilhado por OS
+- ⬜ saldo consistente entre aparelhos
+- ⬜ alertas em todos os aparelhos
