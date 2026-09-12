@@ -57,3 +57,46 @@
 - 🟡 reserva/consumo compartilhado por OS — V3 desenvolvido
 - 🟡 saldo remoto serializado entre aparelhos — V3 desenvolvido
 - 🟡 alertas compartilhados de estoque baixo — V3 desenvolvido
+
+
+### 6. Financeiro
+- 🟢 Upload Cloud V1: plano de contas + contas + pagamentos + movimentos
+- 🟢 RLS multiempresa e idempotência por origem
+- 🟢 nenhuma alteração de saldo local durante upload
+- ⬜ download controlado
+- ⬜ conflitos e reconciliação
+- ⬜ transferências/fornecedores/regras de cartão/conciliações
+- ⬜ homologação competência x caixa em dois aparelhos
+
+### 7. Precificação
+- ⬜ custos mensais compartilhados
+- ⬜ regra de 220h da empresa preservada
+- ⬜ custos de mão de obra
+- ⬜ margem/preço sugerido
+- ⬜ cenários e metas
+
+### 8. Configurações e Usuários
+- ⬜ configurações compartilhadas
+- ⬜ usuários/perfis finais
+- ⬜ permissões cloud por todos os módulos
+- ⬜ segunda empresa ponta a ponta
+
+### 9. Arquivos
+- ⬜ fotos da OS via Storage
+- ⬜ assinatura via Storage
+- ⬜ comprovantes financeiros
+- ⬜ documentos fiscais necessários
+
+### 10. Motor de sincronização
+- ⬜ fila/retry unificados
+- ⬜ diagnóstico de conflitos
+- ⬜ Realtime onde fizer sentido
+- ⬜ idempotência e observabilidade comuns
+- ⬜ política offline por módulo
+
+### 11. Migração final / plataformas
+- ⬜ homologação Android multiaparelho
+- ⬜ Web
+- ⬜ iOS
+- ⬜ segunda empresa
+- ⬜ suíte completa de contratos e regressão

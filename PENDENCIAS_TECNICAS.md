@@ -133,3 +133,14 @@ Próximos blocos:
 - conferir bloqueio de item/lote/movimentação quando reserva falhar;
 - conferir alerta de estoque baixo nos dois aparelhos;
 - decidir depois se a UI exibirá badge/notificação push além do alerta sincronizado.
+
+
+## Financeiro Cloud V2 — próximo pacote
+
+- download controlado de contas/plano/pagamentos/movimentos;
+- reconstrução de mapas após interrupção;
+- conflitos de conta/plano/pagamento/movimento;
+- impedir dupla contabilização ao baixar pagamento + movimento;
+- atualizar resumo da OS sem recriar movimento financeiro;
+- transferências, fornecedores, taxas de cartão e conciliações cloud;
+- homologação multiaparelho de competência x caixa.

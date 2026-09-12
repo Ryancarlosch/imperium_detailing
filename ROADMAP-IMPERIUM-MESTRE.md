@@ -1878,3 +1878,39 @@ Limite inevitável do offline:
   não podem ser serializadas em tempo real;
 - no retorno da conexão, divergência não é sobrescrita silenciosamente:
   a reserva falha e o item fica bloqueado por conflito para resolução controlada.
+
+
+## 2026-09-12 - Financeiro Cloud Upload V1
+
+Módulo: Financeiro / Sincronização
+Status: 🟡 backend + upload-only desenvolvido; download/conflitos ficam para V2.
+
+Escopo do pacote:
+- plano de contas remoto;
+- contas financeiras remotas;
+- pagamentos de Ordem de Serviço remotos;
+- movimentos financeiros remotos;
+- mapas SQLite↔UUID para as quatro entidades;
+- ordem de publicação: plano → conta → pagamento → movimento;
+- referências de OS, cliente e agendamento usam os mapas cloud existentes;
+- fornecedor, transferência, nota fiscal e regra de taxa permanecem como IDs de origem até seus módulos cloud;
+- idempotência por `(empresa_id, origem_dispositivo, origem_local_id)`;
+- planos convergem por código e contas por nome;
+- RLS usa permissão do módulo `financeiro`;
+- nenhuma operação de download no V1.
+
+Regra de segurança:
+- o V1 não grava, atualiza ou recalcula tabelas financeiras locais;
+- saldo, competência, caixa, DRE e contas a receber continuam sendo calculados pelo SQLite atual;
+- o comprovante ainda é apenas caminho de origem, não arquivo compartilhado;
+- não há exclusão remota automática nesta etapa.
+
+Supabase:
+- migration `20260912033511_financeiro_cloud_upload_v1`;
+- 4 tabelas com RLS;
+- 3 políticas por tabela (SELECT/INSERT/UPDATE);
+- nenhuma nova função SECURITY DEFINER foi criada por este pacote.
+
+Banco local:
+- `AppDatabase.schemaVersion` permanece 33;
+- mapas são criados dinamicamente e não exigem migration SQLite.

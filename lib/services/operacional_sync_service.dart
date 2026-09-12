@@ -10,6 +10,7 @@ import 'estoque_cloud_conflito_service.dart';
 import 'estoque_cloud_download_service.dart';
 import 'estoque_cloud_reserva_service.dart';
 import 'estoque_cloud_upload_service.dart';
+import 'financeiro_cloud_upload_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'ponto_nuvem_service.dart';
@@ -245,6 +246,11 @@ class OperacionalSyncService {
         empresaId,
       );
       await EstoqueCloudUploadService.instance.sincronizarUpload(empresaId);
+
+      // financeiro-cloud-upload-call-v1
+      // Upload-only: plano -> contas -> pagamentos -> movimentos.
+      // Nao altera saldo/DRE local.
+      await FinanceiroCloudUploadService.instance.sincronizarUpload(empresaId);
       // Depois baixa o estado compartilhado.
       await _baixarClientes(empresaId);
       await _baixarVeiculos(empresaId);
