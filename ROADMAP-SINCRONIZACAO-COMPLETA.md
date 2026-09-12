@@ -51,6 +51,7 @@
 - 🟢 movimentações remotas append-only
 - 🟡 Download controlado V2 de novos registros
 - 🟡 V2.1 detecção de conflitos concorrentes
+- 🟡 V2.2 resolução local/nuvem com auditoria
 - ⬜ download controlado/reconciliacao
 - ⬜ reserva/consumo compartilhado por OS
 - ⬜ saldo consistente entre aparelhos

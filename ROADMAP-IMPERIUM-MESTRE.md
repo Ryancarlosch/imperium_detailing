@@ -1831,3 +1831,15 @@ Infraestrutura:
 - reconciliação ocorre antes do upload;
 - SQLite de domínio continua v33;
 - nenhuma migration Supabase nova.
+
+
+## 2026-09-12 - Estoque Cloud Resolução V2.2
+
+Status: 🟡 resolução técnica implementada; interface administrativa opcional pendente.
+
+- `usar local` aplica o SQLite na nuvem e só então encerra o conflito;
+- `usar nuvem` aplica o remoto no SQLite e só então encerra o conflito;
+- mapa/baseline é atualizado antes de liberar o sync;
+- histórico preserva resolução, detalhe e horário;
+- nenhuma alteração no schema de domínio: SQLite continua v33;
+- nenhuma migration Supabase nova.

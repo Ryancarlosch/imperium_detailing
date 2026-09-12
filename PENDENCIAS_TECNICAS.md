@@ -113,3 +113,13 @@ Status: ⬜ próximo passo.
 - escolher versão local ou versão da nuvem;
 - preservar auditoria da decisão;
 - homologar concorrência em dois aparelhos.
+
+
+## Estoque Cloud após V2.2
+
+Próximos blocos:
+- reserva/consumo compartilhado por Ordem de Serviço;
+- saldo consistente sob concorrência;
+- alertas de estoque entre aparelhos;
+- interface de conflitos pode ser acoplada ao diagnóstico/admin;
+- homologação real em dois dispositivos no lote final.
