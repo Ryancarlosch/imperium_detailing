@@ -105,6 +105,28 @@
 
 ---
 
+
+## 1.5 Multiplataforma e identidade única
+
+🛡️ **Regra oficial**
+
+- O Imperium Manager deve evoluir como **um único produto** para Android, Web e iOS.
+- O mesmo usuário deve utilizar a **mesma conta Supabase Auth** em todas as plataformas.
+- A mesma conta deve manter o mesmo vínculo com empresa, função e permissões.
+- Todos os dados remotos devem continuar isolados por `empresa_id` e protegidos por RLS.
+- Android, Web e iOS devem enxergar a mesma fonte de verdade na nuvem para os módulos sincronizados.
+- O aplicativo não deve criar bancos, usuários ou cadastros independentes por plataforma.
+- Funcionalidades novas devem evitar dependência exclusiva de Android quando existir solução Flutter/multiplataforma adequada.
+- Recursos específicos de plataforma, como câmera, arquivos, notificações, impressão, biometria e deep links, devem ficar atrás de adapters/services.
+- Repositories e regras de domínio devem permanecer independentes da UI e, sempre que possível, independentes de plataforma.
+- Offline continua sendo prioridade para Android/iOS quando fizer sentido; Web pode operar prioritariamente online.
+- A sequência oficial é:
+  1. consolidar cloud e sincronização multi-dispositivo no Android atual;
+  2. garantir contratos remotos, RLS, idempotência e conflitos;
+  3. adaptar UI/layout para responsividade;
+  4. habilitar e homologar Web;
+  5. habilitar e homologar iOS;
+  6. manter testes de contrato comuns entre as plataformas.
 # 2. FUNDAÇÃO, BACKUP E SEGURANÇA
 
 ✅ **Backup automático local**
@@ -840,6 +862,78 @@ Antes de alterar qualquer um destes blocos, revisar impacto e dependências:
 
 ---
 
+
+# 18. PLATAFORMAS — ANDROID, WEB E IOS
+
+> Diretriz oficial: o Imperium deve ser o mesmo sistema, com a mesma conta, empresa, permissões e dados em qualquer plataforma.
+
+🟢 **Android**
+- Plataforma operacional principal durante a fase atual.
+- SQLite/offline e integração com Supabase continuam sendo consolidados primeiro aqui.
+- Homologações reais atuais permanecem prioritárias.
+
+⬜ **Base cloud pronta para multiplataforma**
+- Todos os módulos estratégicos devem possuir contrato remoto estável.
+- `empresa_id` obrigatório nos dados compartilhados.
+- RLS/RPCs e idempotência validadas.
+- Tratamento de conflitos/versionamento definido.
+- Arquivos/fotos devem usar Storage quando entrarem na etapa oficial de cloud.
+- Nenhuma plataforma pode depender de IDs locais SQLite como identidade global.
+
+⬜ **Flutter Web**
+- Reutilizar domínio, repositories e contratos já existentes.
+- Criar layout responsivo para monitor/notebook.
+- Priorizar Dashboard, Financeiro, DRE, relatórios, estoque, clientes, agenda e OS.
+- Login deve usar a mesma conta Supabase Auth do Android/iOS.
+- Permissões e empresa devem ser as mesmas do usuário autenticado.
+- Validar impressão/PDF, upload/download de arquivos e navegação Web.
+- Web será habilitado somente após a base cloud dos módulos necessários estar estável.
+
+⬜ **iOS**
+- Reutilizar a mesma base Flutter e os mesmos contratos de domínio/cloud.
+- Login deve usar a mesma conta Supabase Auth.
+- Mesma empresa, permissões e dados de Android/Web.
+- Adaptar apenas integrações específicas de plataforma quando necessário.
+- Validar câmera, fotos, assinatura, notificações, arquivos, deep links e login no ecossistema Apple.
+
+⬜ **Paridade multiplataforma**
+- Usuário cria/edita informação no Web e vê no Android/iOS.
+- Usuário cria/edita no Android/iOS e vê no Web.
+- Funcionário mantém as mesmas permissões em todos os dispositivos autorizados.
+- Alteração de permissão/revogação deve refletir nas demais plataformas.
+- Nenhuma duplicação causada por sincronização entre plataformas.
+- Teste multiempresa obrigatório em Android + Web + iOS antes de produção ampla.
+
+### Gate para iniciar Web/iOS
+
+Antes de abrir desenvolvimento de produção para Web/iOS, validar:
+- Clientes/Veículos cloud;
+- Agenda cloud;
+- OS cloud;
+- Estoque cloud;
+- Financeiro cloud;
+- Precificação/configurações cloud;
+- Auth/permissões/empresa estáveis;
+- estratégia de arquivos/Storage;
+- retry/idempotência/conflitos;
+- testes multi-dispositivo aprovados.
+
+### Princípio técnico
+
+```text
+Flutter UI por plataforma
+        ↓
+Domínio / regras de negócio compartilhadas
+        ↓
+Repositories / serviços
+        ↓
+Supabase Auth + PostgreSQL + RLS + Storage
+        ↓
+mesma empresa / mesmos dados / mesmas permissões
+```
+
+SQLite continua como cache/base offline de dispositivos móveis enquanto a arquitetura exigir.
+O Supabase será a fonte compartilhada para sincronização entre plataformas.
 # 21. HISTÓRICO PERMANENTE
 ## 2026-09-11 - Sprint 1A - Parte B SQL financeiro
 
@@ -1637,3 +1731,30 @@ Status: ✅ validado localmente.
 - nenhuma migration.
 
 ---
+## 2026-09-11 - Diretriz multiplataforma oficial
+
+Módulo: Arquitetura / Produto
+Status novo: 🛡️ diretriz oficial registrada
+
+Alterações:
+- Android, Web e iOS passam a fazer parte do objetivo oficial do produto;
+- mesma conta Supabase Auth entre plataformas;
+- mesmo `empresa_id`, permissões e dados;
+- cloud/multi-dispositivo deve ser consolidado antes da abertura Web/iOS;
+- novas implementações devem preservar portabilidade Flutter;
+- regras de negócio e repositories devem evitar dependências de plataforma.
+
+Banco/migração:
+- nenhuma.
+
+Impacto na sincronização:
+- define Supabase como fonte compartilhada entre plataformas para módulos migrados;
+- reforça idempotência, conflitos, RLS e identidade global.
+
+Impacto multiempresa:
+- mantém isolamento obrigatório por `empresa_id`.
+
+Próximo passo:
+- concluir homologação Financeiro no Android;
+- seguir homologações multi-dispositivo;
+- continuar migração cloud na ordem oficial.

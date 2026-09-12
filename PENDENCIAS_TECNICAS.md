@@ -62,3 +62,21 @@ Objetivo:
 - nao migrar Financeiro para nuvem incidentalmente;
 - proteger Auth/Licenca/RLS/Ponto/sync de funcionario;
 - atualizar roadmap a cada etapa relevante.
+## Multiplataforma — futuro oficial
+
+Status: ⬜ planejado após consolidação cloud/multi-dispositivo.
+
+Objetivo:
+- mesmo login Supabase Auth no Android, Web e iOS;
+- mesma empresa e mesmas permissões;
+- mesma base remota compartilhada;
+- UI responsiva no Web;
+- integrações nativas isoladas no iOS/Android;
+- testes de paridade e multiempresa entre plataformas.
+
+Pré-requisitos:
+- concluir homologações atuais;
+- estabilizar sync cloud por módulo;
+- conflitos/versionamento/retry/idempotência;
+- Storage para arquivos compartilhados;
+- contratos remotos sem dependência de IDs SQLite locais.

@@ -121,3 +121,31 @@ Nao alterar incidentalmente:
 3. `flutter test`;
 4. `git diff --check`;
 5. APK quando o fluxo exigir dispositivo real.
+## Diretriz multiplataforma
+
+O alvo do Imperium Manager é um único produto Flutter para Android, Web e iOS.
+
+Contrato arquitetural:
+- Supabase Auth é a identidade do usuário em todas as plataformas;
+- `empresa_id` é a fronteira de isolamento multiempresa;
+- RLS/RPCs continuam sendo a barreira de autorização remota;
+- regras de negócio e repositories devem permanecer compartilháveis;
+- código específico de Android/iOS/Web deve ser isolado atrás de adapters/services;
+- IDs remotos devem ser a referência compartilhada entre dispositivos/plataformas;
+- SQLite não deve ser tratado como fonte global entre plataformas;
+- Web opera prioritariamente online;
+- Android/iOS podem manter cache/offline e fila de sincronização;
+- Storage será usado para arquivos compartilhados quando cada módulo entrar na etapa cloud.
+
+Objetivo de identidade:
+
+```text
+mesmo login
+   → mesmo usuário
+   → mesma empresa
+   → mesmas permissões
+   → mesmos dados
+   → Android / Web / iOS
+```
+
+A expansão para Web/iOS não deve duplicar regras financeiras, de OS, estoque, ponto ou precificação.
