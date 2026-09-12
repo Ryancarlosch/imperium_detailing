@@ -1,4 +1,5 @@
 import '../database/app_database.dart';
+import '../domain/ordem_servico_valor.dart';
 import 'custos_repository.dart';
 import 'dre_repository.dart';
 import 'financeiro_repository.dart';
@@ -167,14 +168,7 @@ class FinanceiroDashboardRepository {
       WITH resumo AS (
         SELECT
           os.id,
-          MAX(
-            COALESCE(os.valor_total, 0)
-            - COALESCE(os.desconto, 0)
-            - COALESCE(os.desconto_negociacao, 0)
-            + COALESCE(os.acrescimo_negociacao, 0)
-            + COALESCE(os.juros_parcelamento, 0),
-            0
-          ) AS total,
+          ${OrdemServicoValor.sqlValorNegociado(alias: 'os')} AS total,
           COALESCE((
             SELECT SUM(p.valor)
             FROM ordem_servico_pagamentos p

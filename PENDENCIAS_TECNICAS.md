@@ -1,32 +1,64 @@
-# Pendências técnicas
+# Pendencias tecnicas
 
-Última atualização: **2026-09-01**
+Ultima atualizacao: **2026-09-11**
 
-## Baseline de qualidade
-- `dart format --output=none --set-exit-if-changed lib test`: ✅
-- `flutter analyze`: ✅ sem issues
-- `flutter test`: ✅ suíte completa
-- `git diff --check`: ✅
-- GitHub Actions: 🟡 conferir após o push desta Sprint 0
+## Sprint 1A - consolidacao arquitetural
 
-## Sprint 0
-- warning `_data` removido;
-- `.imperium_backup_*` removidos da árvore rastreada, mantendo histórico Git;
-- logs antigos de análise/teste fora do índice;
-- contexto persistente do Copilot criado;
-- fonte `consultar-placa` alinhada à V5 ativa, preservando marcador de contrato dos testes;
-- roadmap atualizado para o baseline de 2026-09-01.
+### Parte A - contrato monetario Dart
+Status: ✅
 
-## Pendências reais
-1. consulta de placa homologada no fluxo disponível, com fallback manual quando a base gratuita não possui o veículo; acompanhar logs do Falcon;
-2. homologar em produção controlada o download OS Cloud V2.1, incluindo dependências pendentes e isolamento;
-3. homologar Financeiro local completo no APK;
-4. fechar Ponto em dois aparelhos;
-5. validar Clientes/Veículos/Agenda multiaparelho e conflitos;
-6. seguir ordem oficial de migração cloud.
+- `lib/domain/ordem_servico_valor.dart`;
+- model;
+- pagamentos;
+- custos;
+- finalizacao da OS;
+- sem migration;
+- schema v33 preservado.
+
+### Parte B - contrato monetario SQL
+Status: ✅ implementado, aguardando validacao local deste patch
+
+- status financeiro de pagamentos;
+- Dashboard por competencia;
+- ticket medio;
+- ranking cliente/servico;
+- contas a receber;
+- resumos cliente/veiculo;
+- DRE competencia;
+- teste de equivalencia Dart x SQLite.
+
+## Proxima etapa
+
+Sprint 1B - teste contratual ponta a ponta:
+
+`OS -> pagamento -> movimento -> conta -> Dashboard -> DRE/relatorios`
+
+Objetivo:
+- provar por teste de integracao que uma mesma venda gera os mesmos valores
+  em todos os pontos criticos;
+- incluir desconto, pagamento parcial, parcelamento, taxa de maquininha,
+  estorno e saldo de conta.
+
+## Homologacoes de campo ainda necessarias
+
+- Financeiro completo no APK;
+- Ponto em dois aparelhos;
+- Clientes/Veiculos/Agenda multiaparelho;
+- OS Cloud V2.1;
+- consulta de placa real;
+- Fiscal posteriormente.
+
+## Divida acompanhada
+
+- arquivos centrais grandes;
+- migrations historicas concentradas;
+- sync acoplado a algumas leituras;
+- motor generico de retry/conflito/realtime incompleto.
 
 ## Regras
-- Não aumentar warnings.
-- Não esconder warnings no `analysis_options.yaml`.
-- Não migrar Financeiro para nuvem incidentalmente.
-- Multiempresa, licença, Auth, RLS e sincronização de funcionário são áreas protegidas.
+
+- nao apagar dados para corrigir migration;
+- nao esconder warnings;
+- nao migrar Financeiro para nuvem incidentalmente;
+- proteger Auth/Licenca/RLS/Ponto/sync de funcionario;
+- atualizar roadmap a cada etapa relevante.

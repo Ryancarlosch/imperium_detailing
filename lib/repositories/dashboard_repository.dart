@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
+import '../domain/ordem_servico_valor.dart';
 
 enum DashboardPeriodo { hoje, ultimos7Dias, mesAtual, anoAtual, personalizado }
 
@@ -414,14 +415,7 @@ class DashboardRepository {
     final resultado = await database.rawQuery(
       '''
       SELECT COALESCE(SUM(
-        MAX(
-          COALESCE(valor_total, 0)
-          - COALESCE(desconto, 0)
-          - COALESCE(desconto_negociacao, 0)
-          + COALESCE(acrescimo_negociacao, 0)
-          + COALESCE(juros_parcelamento, 0),
-          0
-        )
+        ${OrdemServicoValor.sqlValorNegociado()}
       ), 0) AS total
       FROM ordens_servico
       WHERE LOWER(status) = 'finalizada'
@@ -494,14 +488,7 @@ class DashboardRepository {
           WHEN LOWER(status) = 'finalizada'
             AND data_finalizacao >= ?
             AND data_finalizacao < ?
-          THEN MAX(
-            COALESCE(valor_total, 0)
-            - COALESCE(desconto, 0)
-            - COALESCE(desconto_negociacao, 0)
-            + COALESCE(acrescimo_negociacao, 0)
-            + COALESCE(juros_parcelamento, 0),
-            0
-          )
+          THEN ${OrdemServicoValor.sqlValorNegociado()}
         END), 0) AS ticket_medio
       FROM ordens_servico
       ''',
@@ -791,14 +778,7 @@ class DashboardRepository {
             ELSE (
               1.0 * item.quantidade * item.valor_unitario
               / totais_itens.valor_bruto_itens
-            ) * MAX(
-              COALESCE(os.valor_total, 0)
-              - COALESCE(os.desconto, 0)
-              - COALESCE(os.desconto_negociacao, 0)
-              + COALESCE(os.acrescimo_negociacao, 0)
-              + COALESCE(os.juros_parcelamento, 0),
-              0
-            )
+            ) * ${OrdemServicoValor.sqlValorNegociado(alias: 'os')}
           END
         ), 0) AS total
       FROM ordem_servico_itens item
@@ -846,14 +826,7 @@ class DashboardRepository {
         c.nome AS nome,
         COUNT(*) AS quantidade,
         COALESCE(SUM(
-          MAX(
-            COALESCE(os.valor_total, 0)
-            - COALESCE(os.desconto, 0)
-            - COALESCE(os.desconto_negociacao, 0)
-            + COALESCE(os.acrescimo_negociacao, 0)
-            + COALESCE(os.juros_parcelamento, 0),
-            0
-          )
+          ${OrdemServicoValor.sqlValorNegociado(alias: 'os')}
         ), 0) AS total
       FROM ordens_servico os
       INNER JOIN clientes c

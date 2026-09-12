@@ -1,3 +1,5 @@
+import '../domain/ordem_servico_valor.dart';
+
 class OrdemServico {
   const OrdemServico({
     this.id,
@@ -67,25 +69,16 @@ class OrdemServico {
   final double acrescimoNegociacao;
   final double jurosParcelamento;
 
-  double get valorFinal {
-    final resultado = valorTotal - desconto;
+  double get valorFinal =>
+      OrdemServicoValor.valorBase(valorTotal: valorTotal, desconto: desconto);
 
-    if (resultado < 0) {
-      return 0;
-    }
-
-    return resultado;
-  }
-
-  double get valorNegociado {
-    final resultado =
-        valorFinal -
-        descontoNegociacao +
-        acrescimoNegociacao +
-        jurosParcelamento;
-
-    return resultado.clamp(0, double.infinity).toDouble();
-  }
+  double get valorNegociado => OrdemServicoValor.valorNegociado(
+    valorTotal: valorTotal,
+    desconto: desconto,
+    descontoNegociacao: descontoNegociacao,
+    acrescimoNegociacao: acrescimoNegociacao,
+    jurosParcelamento: jurosParcelamento,
+  );
 
   bool get estaAberta {
     return status == 'Aberta';

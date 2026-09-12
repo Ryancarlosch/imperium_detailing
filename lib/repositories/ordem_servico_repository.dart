@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
+import '../domain/ordem_servico_valor.dart';
 import '../models/ordem_servico.dart';
 import '../models/ordem_servico_item.dart';
 import '../repositories/agendamento_repository.dart';
@@ -881,28 +882,8 @@ class OrdemServicoRepository {
 
       final pagamentoEfetivo = dataHoraPagamento ?? saidaEfetiva;
 
-      final valorTotal = (ordem['valor_total'] as num?)?.toDouble() ?? 0;
-
-      final desconto = (ordem['desconto'] as num?)?.toDouble() ?? 0;
-      final descontoNegociacao =
-          (ordem['desconto_negociacao'] as num?)?.toDouble() ?? 0;
-      final acrescimoNegociacao =
-          (ordem['acrescimo_negociacao'] as num?)?.toDouble() ?? 0;
-      final jurosParcelamento =
-          (ordem['juros_parcelamento'] as num?)?.toDouble() ?? 0;
-
-      // Deve ser a mesma fórmula exibida na tela, usada pelos pagamentos
-      // e pelo DRE. Antes a finalização considerava apenas valor_total -
-      // desconto e podia divergir após negociação/acréscimos/juros.
-      final valorFinal =
-          (valorTotal -
-                  desconto -
-                  descontoNegociacao +
-                  acrescimoNegociacao +
-                  jurosParcelamento)
-              .clamp(0, double.infinity)
-              .toDouble();
-
+      // contrato-valor-os-v1
+      final valorFinal = OrdemServicoValor.valorNegociadoDeMapa(ordem);
       final pagamentoSolicitado =
           valorPagamento ?? (formaPagamentoLimpa.isNotEmpty ? valorFinal : 0.0);
 
@@ -1520,14 +1501,7 @@ class OrdemServicoRepository {
           SUM(
             CASE
               WHEN status = 'Finalizada'
-              THEN MAX(
-                COALESCE(valor_total, 0)
-                - COALESCE(desconto, 0)
-                - COALESCE(desconto_negociacao, 0)
-                + COALESCE(acrescimo_negociacao, 0)
-                + COALESCE(juros_parcelamento, 0),
-                0
-              )
+              THEN ${OrdemServicoValor.sqlValorNegociado()}
               ELSE 0
             END
           ),
@@ -1636,23 +1610,7 @@ class OrdemServicoRepository {
           SUM(
             CASE
               WHEN status = 'Finalizada'
-              THEN CASE
-                WHEN (
-                  COALESCE(valor_total, 0)
-                  - COALESCE(desconto, 0)
-                  - COALESCE(desconto_negociacao, 0)
-                  + COALESCE(acrescimo_negociacao, 0)
-                  + COALESCE(juros_parcelamento, 0)
-                ) > 0
-                THEN (
-                  COALESCE(valor_total, 0)
-                  - COALESCE(desconto, 0)
-                  - COALESCE(desconto_negociacao, 0)
-                  + COALESCE(acrescimo_negociacao, 0)
-                  + COALESCE(juros_parcelamento, 0)
-                )
-                ELSE 0
-              END
+              THEN ${OrdemServicoValor.sqlValorNegociado()}
               ELSE 0
             END
           ),

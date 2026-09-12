@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
+import '../domain/ordem_servico_valor.dart';
 
 enum DreRegime { caixa, competencia }
 
@@ -377,8 +378,12 @@ class DreRepository {
           + COALESCE(juros_parcelamento, 0)
         ), 0) AS receita_bruta,
         COALESCE(SUM(
-          COALESCE(desconto, 0)
-          + COALESCE(desconto_negociacao, 0)
+          (
+            COALESCE(valor_total, 0)
+            + COALESCE(acrescimo_negociacao, 0)
+            + COALESCE(juros_parcelamento, 0)
+          )
+          - ${OrdemServicoValor.sqlValorNegociado()}
         ), 0) AS deducoes
       FROM ordens_servico
       WHERE status = 'Finalizada'

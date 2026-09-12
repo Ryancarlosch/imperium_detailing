@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../config/imperium_regras_negocio.dart';
 import '../database/app_database.dart';
+import '../domain/ordem_servico_valor.dart';
 import '../models/colaborador_custo.dart';
 import '../models/custo_fixo.dart';
 
@@ -1204,13 +1205,7 @@ class CustosRepository {
   }
 
   double _valorNegociado(Map<String, dynamic> ordem) {
-    final base = _double(ordem['valor_total']) - _double(ordem['desconto']);
-    final negociado =
-        base -
-        _double(ordem['desconto_negociacao']) +
-        _double(ordem['acrescimo_negociacao']) +
-        _double(ordem['juros_parcelamento']);
-    return negociado < 0 ? 0 : negociado;
+    return OrdemServicoValor.valorNegociadoDeMapa(ordem);
   }
 
   static int? _int(dynamic value) {

@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
+import '../domain/ordem_servico_valor.dart';
 import '../models/ajuste_financeiro_ordem_servico.dart';
 import '../models/pagamento_ordem_servico.dart';
 
@@ -232,22 +233,7 @@ class PagamentoRepository {
       SELECT
         os.id,
         os.status_pagamento,
-        CASE
-          WHEN (
-            COALESCE(os.valor_total, 0)
-            - COALESCE(os.desconto, 0)
-            - COALESCE(os.desconto_negociacao, 0)
-            + COALESCE(os.acrescimo_negociacao, 0)
-            + COALESCE(os.juros_parcelamento, 0)
-          ) < 0 THEN 0
-          ELSE (
-            COALESCE(os.valor_total, 0)
-            - COALESCE(os.desconto, 0)
-            - COALESCE(os.desconto_negociacao, 0)
-            + COALESCE(os.acrescimo_negociacao, 0)
-            + COALESCE(os.juros_parcelamento, 0)
-          )
-        END AS total,
+        ${OrdemServicoValor.sqlValorNegociado(alias: 'os')} AS total,
         COALESCE(
           (
             SELECT SUM(p.valor)
@@ -1606,14 +1592,7 @@ class PagamentoRepository {
       UPDATE ordens_servico
       SET status_pagamento = CASE
         WHEN status != 'Finalizada' THEN status_pagamento
-        WHEN MAX(
-          COALESCE(valor_total, 0)
-          - COALESCE(desconto, 0)
-          - COALESCE(desconto_negociacao, 0)
-          + COALESCE(acrescimo_negociacao, 0)
-          + COALESCE(juros_parcelamento, 0),
-          0
-        ) <= COALESCE(valor_recebido, 0) + 0.000001
+        WHEN ${OrdemServicoValor.sqlValorNegociado()} <= COALESCE(valor_recebido, 0) + 0.000001
           THEN 'Pago'
         WHEN vencimento_pagamento IS NOT NULL
           AND TRIM(vencimento_pagamento) != ''
@@ -1630,23 +1609,11 @@ class PagamentoRepository {
   }
 
   double _valorBase(Map<String, Object?> ordem) {
-    final total = _double(ordem['valor_total']);
-    final desconto = _double(ordem['desconto']);
-    return (total - desconto).clamp(0, double.infinity).toDouble();
+    return OrdemServicoValor.valorBaseDeMapa(ordem);
   }
 
   double _valorFinal(Map<String, Object?> ordem) {
-    final valorBase = _valorBase(ordem);
-    final descontoNegociacao = _double(ordem['desconto_negociacao']);
-    final acrescimoNegociacao = _double(ordem['acrescimo_negociacao']);
-    final jurosParcelamento = _double(ordem['juros_parcelamento']);
-
-    return (valorBase -
-            descontoNegociacao +
-            acrescimoNegociacao +
-            jurosParcelamento)
-        .clamp(0, double.infinity)
-        .toDouble();
+    return OrdemServicoValor.valorNegociadoDeMapa(ordem);
   }
 
   Future<_TaxaPagamentoResolvida> _resolverTaxaPagamento(

@@ -1,226 +1,123 @@
-# Arquitetura do Projeto Imperium Detailing
+# Arquitetura do Projeto Imperium Manager
 
-## 1. Visão geral da arquitetura
+Ultima atualizacao: **2026-09-11**
 
-O projeto é um aplicativo Flutter para gestão de serviços automotivos. A estrutura principal está organizada em camadas claras:
+## Baseline atual
 
-- `lib/main.dart`: ponto de entrada do app.
-- `lib/screens/`: telas e interface do usuário.
-- `lib/repositories/`: abstração de acesso a dados e consultas SQLite.
-- `lib/models/`: definições de entidades de domínio e conversão entre Dart e SQLite.
-- `lib/database/app_database.dart`: implementação do banco SQLite e criação de tabelas.
-- `lib/services/`: serviços de infraestrutura (notificações, PDF, WhatsApp).
-- `lib/modules/`: pasta vazia no momento.
+- Aplicativo Flutter.
+- Branch oficial: `desenvolvimento`.
+- Banco local SQLite: `imperium_detailing.db`.
+- Schema local atual: **v33**.
+- Estrategia: offline-first.
+- Supabase participa de autenticacao, licenca e sincronizacoes selecionadas.
+- CI oficial: formatacao, `flutter analyze`, `flutter test` e `git diff --check`.
 
-O app usa Flutter puro com widgets, `StatefulWidget` e `setState`, sem gerenciadores de estado externos como Provider/Bloc/GetX.
+## Camadas
 
----
+### `lib/config/`
+Regras e configuracoes estaveis. A regra empresarial das 220 h/mes vive aqui.
 
-## 2. Models identificados
+### `lib/domain/`
+Regras puras e compartilhadas de negocio.
 
-Todos os arquivos em `lib/models/`:
+Contrato consolidado:
+- `ordem_servico_valor.dart`: fonte unica do valor comercial final da OS em Dart e SQLite.
 
-- `agendamento.dart`
-- `cliente.dart`
-- `configuracao.dart`
-- `configuracao_estoque.dart`
-- `foto_servico.dart`
-- `item_estoque.dart`
-- `item_orcamento.dart`
-- `movimentacao_estoque.dart`
-- `movimento_financeiro.dart`
-- `orcamento.dart`
-- `ordem_servico.dart`
-- `ordem_servico_item.dart`
-- `produto_ordem_servico.dart`
-- `servico_catalogo.dart`
-- `servico_produto.dart`
-- `veiculo.dart`
+### `lib/models/`
+Entidades e serializacao Dart/SQLite.
 
-Esses models representam as principais entidades do domínio: clientes, veículos, agendamentos, orçamentos, ordens de serviço, finanças, estoque, fotos, serviços e configurações.
+### `lib/database/`
+`app_database.dart` concentra abertura, schema e migrations historicas ate v33.
 
----
+Diretriz:
+- nao reescrever migrations antigas;
+- preservar bancos instalados;
+- extrair migrations futuras gradualmente quando a complexidade justificar.
 
-## 3. Repositories identificados
+### `lib/repositories/`
+Persistencia e consultas de OS, Financeiro, DRE, custos, precificacao,
+Dashboard, CRM, Fiscal, Estoque, Funcionarios, Ponto e Saude.
 
-Todos os arquivos em `lib/repositories/`:
+### `lib/services/`
+Supabase, licenca, acesso de funcionario, sincronizacao, backup, PDF,
+WhatsApp, notificacoes, placa e integracoes fiscais.
 
-- `agendamento_repository.dart`
-- `cliente_repository.dart`
-- `configuracao_repository.dart`
-- `dashboard_repository.dart`
-- `estoque_repository.dart`
-- `financeiro_repository.dart`
-- `foto_servico_repository.dart`
-- `orcamento_repository.dart`
-- `ordem_servico_checklist_repository.dart`
-- `ordem_servico_foto_repository.dart`
-- `ordem_servico_repository.dart`
-- `produto_ordem_servico_repository.dart`
-- `servico_repository.dart`
-- `veiculo_repository.dart`
+### `lib/screens/`
+Interface Flutter.
 
-Padrões observados:
+## Contrato monetario da OS
 
-- cada repository usa `AppDatabase.instance.database`
-- encapsula consultas SQL e mapeia resultados para models
-- permite operações CRUD e consultas customizadas
+Fonte: `lib/domain/ordem_servico_valor.dart`.
 
----
+Regra oficial:
 
-## 4. Telas identificadas
+1. `base = max(valor_total - desconto, 0)`
+2. `valor_negociado = max(base - desconto_negociacao + acrescimo_negociacao + juros_parcelamento, 0)`
 
-Todos os arquivos em `lib/screens/`:
+Consumidores consolidados:
+- model `OrdemServico`;
+- finalizacao da OS;
+- `PagamentoRepository`;
+- `CustosRepository`;
+- Dashboard por competencia;
+- ticket medio;
+- ranking de servicos;
+- ranking de clientes;
+- contas a receber;
+- resumo financeiro de cliente;
+- resumo financeiro de veiculo;
+- DRE por competencia.
 
-- `agenda_page.dart`
-- `agendamento_detalhes_page.dart`
-- `clientes_page.dart`
-- `cliente_detalhes_page.dart`
-- `configuracoes_page.dart`
-- `dashboard_page.dart`
-- `estoque_page.dart`
-- `financeiro_page.dart`
-- `fotos_page.dart`
-- `foto_detalhes_page.dart`
-- `foto_veiculo_detalhes_page.dart`
-- `galeria_veiculo_page.dart`
-- `item_estoque_detalhes_page.dart`
-- `nova_foto_page.dart`
-- `nova_movimentacao_estoque_page.dart`
-- `nova_ordem_servico_page.dart`
-- `novo_agendamento_page.dart`
-- `novo_item_estoque_page.dart`
-- `novo_movimento_page.dart`
-- `novo_orcamento_page.dart`
-- `novo_servico_page.dart`
-- `novo_veiculo_page.dart`
-- `orcamentos_page.dart`
-- `orcamento_detalhes_page.dart`
-- `ordem_servico_assinatura_page.dart`
-- `ordem_servico_checklist_page.dart`
-- `ordem_servico_fotos_page.dart`
-- `ordem_servico_produtos_page.dart`
-- `ordens_servico_page.dart`
-- `servicos_page.dart`
-- `veiculos_cliente_page.dart`
-- `veiculos_page.dart`
-- `veiculo_detalhes_page.dart`
+O DRE continua exibindo Receita Bruta e Deducoes separadamente. As deducoes
+efetivas sao calculadas de forma que `receita_bruta - deducoes` permaneça
+equivalente ao valor liquido oficial da OS.
 
-`main.dart` inicia o app em `DashboardPage`.
+## Financeiro
 
----
+Fluxo de consistencia:
 
-## 5. Banco SQLite
+`OS -> pagamento -> movimento -> conta -> Dashboard -> DRE/relatorios`
 
-Arquivo principal: `lib/database/app_database.dart`.
+Separar sempre:
+- competencia = venda finalizada;
+- caixa = recebimento/pagamento efetivo;
+- saldo = saldo inicial + movimentos realizados.
 
-Características do banco:
+## Precificacao
 
-- banco local `imperium_detailing.db`
-- `PRAGMA foreign_keys = ON`
-- schema versionado até `version: 12`
-- `onCreate` gera todas as tabelas necessárias
-- `onUpgrade` aplica migrações conforme versões anteriores
+Regra protegida:
+- empresa = 220 h/mes;
+- nao multiplicar 220 pela quantidade de funcionarios.
 
-Tabelas e relações principais:
+## Sincronizacao
 
-- `clientes`
-- `veiculos`
-- `agendamentos`
-- `fotos_servico`
-- `movimentos_financeiros`
-- `orcamentos`
-- `orcamento_itens`
-- `ordens_servico`
-- `ordem_servico_itens`
-- `ordem_servico_checklist`
-- `ordem_servico_fotos`
-- `ordem_servico_produtos`
-- `itens_estoque`
-- `movimentacoes_estoque`
-- `configuracoes_estoque`
-- `servicos_catalogo`
-- `servico_produtos`
-- `servicos_relacionados`
-- `configuracoes`
+A operacao continua offline-first. Financeiro nao deve ser migrado
+incidentalmente para nuvem antes da etapa oficial.
 
-Relações importantes:
+## Areas protegidas
 
-- `veiculos.cliente_id` → `clientes.id`
-- `agendamentos.cliente_id`, `agendamentos.veiculo_id`
-- `fotos_servico.cliente_id`, `fotos_servico.veiculo_id`
-- `movimentos_financeiros.cliente_id`, `movimentos_financeiros.agendamento_id`
-- `orcamentos.cliente_id`, `orcamentos.veiculo_id`
-- `ordens_servico.cliente_id`, `ordens_servico.veiculo_id`, `ordens_servico.orcamento_id`, `ordens_servico.agendamento_id`
-- `ordem_servico_itens.ordem_servico_id`
-- `ordem_servico_checklist.ordem_servico_id`
-- `ordem_servico_fotos.ordem_servico_id`
-- `ordem_servico_produtos.ordem_servico_id`
-- `movimentacoes_estoque.item_estoque_id`, `movimentacoes_estoque.ordem_servico_id`
-- `servico_produtos.servico_id`, `servico_produtos.item_estoque_id`
-- `servicos_relacionados.servico_id`, `servicos_relacionados.servico_relacionado_id`
+Nao alterar incidentalmente:
+- Supabase Auth;
+- licenca;
+- RLS/RPC;
+- `empresa_id`;
+- sincronizacao de funcionario;
+- Ponto cloud/offline;
+- OS Cloud;
+- deep links.
 
-Existem tabelas de configuração single-row: `configuracoes` e `configuracoes_estoque`.
+## Divida arquitetural conhecida
 
----
+- arquivos centrais grandes;
+- migrations historicas concentradas;
+- parte do SQL ainda e extensa, embora o contrato monetario esteja centralizado;
+- algumas leituras operacionais disparam sync;
+- retry/conflito/realtime cloud ainda precisam evoluir.
 
-## 6. Dependências no `pubspec.yaml`
+## Validacao obrigatoria
 
-Dependências de produção:
-
-- `flutter`
-- `flutter_localizations`
-- `sqflite`
-- `path`
-- `image_picker`
-- `path_provider`
-- `photo_view`
-- `signature`
-- `pdf`
-- `printing`
-- `share_plus`
-- `intl`
-- `fl_chart`
-- `url_launcher`
-- `flutter_local_notifications`
-- `timezone`
-- `flutter_timezone`
-
-Dependências de desenvolvimento:
-
-- `flutter_test`
-- `flutter_lints`
-
----
-
-## 7. Comunicação entre módulos
-
-Fluxo de dados e integração do app:
-
-- `main.dart` inicializa `NotificationService` e abre `DashboardPage`.
-- `screens/` consultam `repositories/` diretamente para dados.
-- `repositories/` usam `AppDatabase` para executar SQL e retornar models.
-- `models/` representam os dados e providenciam conversão para e de `Map<String, dynamic>`.
-- `services/` cuidam da infraestrutura:
-  - `NotificationService`: agenda notificações de agendamentos.
-  - `OrdemServicoPdfService`: geração de PDFs de ordens/órçamentos.
-  - `WhatsappService`: integração com WhatsApp.
-- Navegação é feita por `Navigator.push` entre telas.
-- O padrão é de comunicação imperativa: UI chama repositórios, espera resultados e atualiza estado local.
-- Algumas telas usam consultas SQL diretas no `DashboardPage`, sem repository adicional.
-
----
-
-## 8. Observações de arquitetura
-
-- O projeto é organizado por camada, mas ainda não possui um padrão de injeção de dependência ou gerenciamento de estado global.
-- A pasta `lib/modules/` existe, mas está vazia, indicando possível intenção de modularização futura.
-- A navegação e o fluxo de dados são tratados localmente em cada tela.
-- A lógica de persistência e o mapeamento de dados estão bem centralizados em `repositories/` e `app_database.dart`.
-- O uso de SQLite, com tabelas e índices, é suficiente para o escopo de CRM/serviços e controle financeiro local.
-
----
-
-## 9. Conclusão
-
-O projeto é uma aplicação Flutter com arquitetura tradicional de camadas. A persistência é baseada em SQLite, com repositórios atuando como camada de dados e modelos representando entidades de negócio. A interface é construída com telas diretas e chamadas assíncronas a repositórios, sem camadas avançadas de estado.
+1. formatacao;
+2. `flutter analyze`;
+3. `flutter test`;
+4. `git diff --check`;
+5. APK quando o fluxo exigir dispositivo real.

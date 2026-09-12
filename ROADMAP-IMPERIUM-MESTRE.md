@@ -841,6 +841,37 @@ Antes de alterar qualquer um destes blocos, revisar impacto e dependências:
 ---
 
 # 21. HISTÓRICO PERMANENTE
+## 2026-09-11 - Sprint 1A - Parte B SQL financeiro
+
+Status: ✅ implementado para validacao.
+
+- Dashboard, ticket medio e rankings usam o contrato monetario unico;
+- contas a receber usam o contrato unico;
+- status de pagamento usa o contrato unico;
+- resumos de cliente e veiculo usam o contrato unico;
+- DRE mantem bruto/deducoes separados com liquido equivalente ao contrato;
+- criado teste de equivalencia Dart x SQLite;
+- schema permanece v33;
+- nenhuma migration;
+- nenhuma alteracao em Auth, Licenca, RLS, Ponto cloud ou sync de funcionario.
+
+Proxima etapa:
+- Sprint 1B: teste ponta a ponta `OS -> pagamento -> movimento -> conta -> Dashboard -> DRE/relatorios`.
+
+---
+## 2026-09-11 - Sprint 1A - contrato monetario da OS
+
+Status: Parte A preparada para validacao.
+
+- camada `lib/domain/` iniciada;
+- regra unica do valor comercial da OS;
+- model, pagamentos, custos e finalizacao usam o mesmo contrato;
+- schema permanece v33;
+- nenhuma migration;
+- nenhuma alteracao em Auth, Licenca, RLS, Ponto cloud ou sync de funcionario;
+- Parte B migrara os SQLs de Dashboard/Financeiro/DRE.
+
+---
 
 ## 2026-08-13 — Roadmap mestre criado
 
