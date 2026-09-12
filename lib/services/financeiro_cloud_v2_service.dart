@@ -1216,7 +1216,8 @@ class FinanceiroCloudV2Service {
         final parentId = _int(local['parent_id']);
 
         if (parentId > 0) {
-          final parent = await _appDatabase.database.query(
+          final database = await _appDatabase.database;
+          final parent = await database.query(
             'financeiro_plano_contas',
             columns: ['codigo'],
             where: 'id = ?',
