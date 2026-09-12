@@ -123,3 +123,13 @@ Próximos blocos:
 - alertas de estoque entre aparelhos;
 - interface de conflitos pode ser acoplada ao diagnóstico/admin;
 - homologação real em dois dispositivos no lote final.
+
+
+## Estoque Cloud V3 — homologação posterior
+
+- testar duas OS concorrendo pelo mesmo item em dois aparelhos;
+- validar reserva, liberação e consumo;
+- validar finalização offline seguida de reconexão;
+- conferir bloqueio de item/lote/movimentação quando reserva falhar;
+- conferir alerta de estoque baixo nos dois aparelhos;
+- decidir depois se a UI exibirá badge/notificação push além do alerta sincronizado.

@@ -190,6 +190,16 @@ class EstoqueCloudUploadService {
       )) {
         continue;
       }
+      // estoque-cloud-item-conflict-guard-v3-lote
+      final itemLocalId = _int(local['item_estoque_id']);
+      if (itemLocalId > 0 &&
+          await _possuiConflitoPendente(
+            empresaId: empresaId,
+            entidade: 'item',
+            localId: itemLocalId,
+          )) {
+        continue;
+      }
 
       final hash = _hashLote(local);
       final mapa = await _mapaLocal(
@@ -309,6 +319,16 @@ class EstoqueCloudUploadService {
     for (final local in locais) {
       final localId = _int(local['id']);
       if (localId <= 0) continue;
+      // estoque-cloud-item-conflict-guard-v3-mov
+      final itemLocalId = _int(local['item_estoque_id']);
+      if (itemLocalId > 0 &&
+          await _possuiConflitoPendente(
+            empresaId: empresaId,
+            entidade: 'item',
+            localId: itemLocalId,
+          )) {
+        continue;
+      }
 
       final mapa = await _mapaLocal(
         tabela: 'imperium_sync_estoque_movimentacoes',

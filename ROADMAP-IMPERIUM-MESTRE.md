@@ -1843,3 +1843,38 @@ Status: 🟡 resolução técnica implementada; interface administrativa opciona
 - histórico preserva resolução, detalhe e horário;
 - nenhuma alteração no schema de domínio: SQLite continua v33;
 - nenhuma migration Supabase nova.
+
+
+## 2026-09-12 - Estoque Cloud V3 — reservas, saldo compartilhado e alertas
+
+Módulo: Estoque / OS / Sincronização
+Status: 🟡 desenvolvido; homologação multiaparelho ficará para o lote final.
+
+Pacote:
+- reserva remota por OS aberta/em andamento;
+- reserva serializada por empresa no PostgreSQL;
+- finalização consome a reserva de forma idempotente;
+- cancelamento libera a reserva;
+- saldo remoto do item é decrementado atomicamente no consumo;
+- baseline local é atualizado antes do upload para não gerar falso conflito;
+- falha de reserva gera conflito local e bloqueia item/lote/movimentação;
+- alerta de estoque baixo é gerado na nuvem e baixado em todos os aparelhos;
+- tabela local auxiliar expõe alertas ativos para futura UI/notificação.
+
+Segurança:
+- isolamento por `empresa_id`;
+- RLS de leitura nas tabelas compartilhadas;
+- RPCs validam usuário autenticado + permissão do módulo Estoque;
+- RPCs privilegiadas usam `search_path = ''` e grants explícitos;
+- nenhuma chave privilegiada é usada no app.
+
+Banco:
+- migration Supabase `20260912032554_estoque_reservas_saldo_alertas_v3`;
+- SQLite de domínio permanece v33;
+- estruturas locais adicionais são apenas metadados de sincronização.
+
+Limite inevitável do offline:
+- duas finalizações realmente simultâneas enquanto ambos os aparelhos estão sem internet
+  não podem ser serializadas em tempo real;
+- no retorno da conexão, divergência não é sobrescrita silenciosamente:
+  a reserva falha e o item fica bloqueado por conflito para resolução controlada.

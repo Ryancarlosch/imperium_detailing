@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/app_database.dart';
 import 'estoque_cloud_conflito_service.dart';
 import 'estoque_cloud_download_service.dart';
+import 'estoque_cloud_reserva_service.dart';
 import 'estoque_cloud_upload_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
@@ -231,6 +232,10 @@ class OperacionalSyncService {
       // nem baixar OS antes da homologacao do nucleo.
       await OsCloudUploadService.instance.sincronizarUpload(empresaId);
 
+      // estoque-cloud-reserva-call-v3
+      // Reserva/consome estoque remoto antes do upload de snapshots.
+      await EstoqueCloudReservaService.instance.sincronizarReservas(empresaId);
+
       // estoque-cloud-upload-call-v1
       // Etapa 5 inicia upload-only: item -> lote -> movimentacao.
       // Nao altera saldo local nem Financeiro.
@@ -251,6 +256,10 @@ class OperacionalSyncService {
       await EstoqueCloudDownloadService.instance.sincronizarDownloadNovos(
         empresaId,
       );
+
+      // estoque-cloud-alertas-call-v3
+      // Espelha alertas compartilhados apos atualizar o estoque.
+      await EstoqueCloudReservaService.instance.sincronizarAlertas(empresaId);
 
       // O Ponto já possui sua própria estrutura de nuvem.
       await _sincronizarPontoFuncionario();

@@ -52,7 +52,8 @@
 - 🟡 Download controlado V2 de novos registros
 - 🟡 V2.1 detecção de conflitos concorrentes
 - 🟡 V2.2 resolução local/nuvem com auditoria
+- 🟡 V3 reserva + consumo + saldo serializado + alertas compartilhados
 - ⬜ download controlado/reconciliacao
-- ⬜ reserva/consumo compartilhado por OS
-- ⬜ saldo consistente entre aparelhos
-- ⬜ alertas em todos os aparelhos
+- 🟡 reserva/consumo compartilhado por OS — V3 desenvolvido
+- 🟡 saldo remoto serializado entre aparelhos — V3 desenvolvido
+- 🟡 alertas compartilhados de estoque baixo — V3 desenvolvido
