@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
+import 'estoque_cloud_download_service.dart';
 import 'estoque_cloud_upload_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
@@ -238,6 +239,12 @@ class OperacionalSyncService {
       await _baixarVeiculos(empresaId);
       await _baixarAgendamentos(empresaId);
       await OsCloudDownloadService.instance.sincronizarDownloadNovos(empresaId);
+
+      // estoque-cloud-download-call-v2
+      // Importa somente registros novos; existentes ficam para conflitos V2.1.
+      await EstoqueCloudDownloadService.instance.sincronizarDownloadNovos(
+        empresaId,
+      );
 
       // O Ponto já possui sua própria estrutura de nuvem.
       await _sincronizarPontoFuncionario();

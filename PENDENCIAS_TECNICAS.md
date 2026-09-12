@@ -92,3 +92,14 @@ Status: 🟡 desenvolvido para upload-only; homologação posterior em lote.
 - App: upload integrado ao sync operacional.
 - Sem download de estoque nesta V1.
 - SQLite permanece v33.
+
+
+## Estoque Cloud V2.1 — conflitos
+
+Status: ⬜ próximo refinamento.
+
+- atualizar itens/lotes já mapeados sem last-write-wins silencioso;
+- detectar alteração local + alteração remota concorrente;
+- registrar conflito para resolução controlada;
+- propagar soft delete remotamente para aparelhos secundários;
+- validar em dois dispositivos após o lote de desenvolvimento.

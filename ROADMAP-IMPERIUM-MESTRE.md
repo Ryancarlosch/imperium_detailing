@@ -1784,3 +1784,32 @@ Banco/migração:
 Próximo passo:
 - download controlado/reconciliação do Estoque;
 - homologação posterior em dois dispositivos.
+
+
+## 2026-09-11 - Estoque Cloud Download Controlado V2
+
+Módulo: Estoque / Sincronização
+Status anterior: 🟡 upload-only V1
+Status novo: 🟡 download de novos registros implementado; conflitos V2.1 pendentes
+
+Alterações:
+- itens novos da mesma empresa podem ser importados para outro dispositivo;
+- lotes novos são importados após o item correspondente;
+- movimentações novas são importadas como histórico append-only;
+- movimentação baixada não reaplica saldo sobre o snapshot do item;
+- mapas locais são reconstruídos quando a origem é o próprio dispositivo e houve interrupção antes de salvar o mapa;
+- registros remotos já mapeados não sobrescrevem a versão local nesta etapa;
+- download do estoque ocorre depois do download da OS para aproveitar vínculos já disponíveis.
+
+Segurança:
+- RLS existente do Estoque V1 continua protegendo por `empresa_id`;
+- usuário sem permissão de Estoque não interrompe a sincronização dos demais módulos.
+
+Banco/migração:
+- nenhuma migration SQLite;
+- schema local continua v33;
+- nenhuma nova migration Supabase nesta etapa.
+
+Próximo passo:
+- V2.1: versão/conflitos e atualização segura de itens/lotes já mapeados;
+- depois reserva/consumo compartilhado por OS.

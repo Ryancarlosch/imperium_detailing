@@ -49,6 +49,7 @@
 - 🟢 Upload-only V1 de itens/lotes/movimentacoes preparado
 - 🟢 RLS multiempresa + idempotencia por origem
 - 🟢 movimentações remotas append-only
+- 🟡 Download controlado V2 de novos registros
 - ⬜ download controlado/reconciliacao
 - ⬜ reserva/consumo compartilhado por OS
 - ⬜ saldo consistente entre aparelhos
