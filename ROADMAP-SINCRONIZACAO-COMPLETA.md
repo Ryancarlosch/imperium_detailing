@@ -232,3 +232,18 @@
 - ⬜ CRM/Orçamentos Web
 - ⬜ arquivos/assinatura Web
 - ⬜ PDF/download browser
+### 14. Web Gestão V2
+- 🟢 criação de OS aberta no Web
+- 🟢 múltiplos serviços na nova OS Web
+- 🟢 importação posterior da nova OS pelo Android
+- 🟢 compensação por soft delete se falhar criação de itens
+- 🟢 Estoque Web gerencial
+- 🟢 alertas de estoque baixo no Web
+- 🟢 Financeiro Web gerencial
+- 🟢 saldos por conta a partir de movimentos realizados
+- 🟢 entradas/saídas e resultado de caixa do mês
+- 🟢 valores a receber via pagamentos Cloud
+- ⬜ edição concorrente de OS existente Web ↔ Android
+- ⬜ finalização transacional de OS no Web
+- ⬜ lançamentos financeiros pelo Web
+- ⬜ movimentações de estoque pelo Web

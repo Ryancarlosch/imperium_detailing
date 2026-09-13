@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../domain/ordem_servico_valor.dart';
 
 import '../services/web_cloud_operacional_service.dart';
+import 'web_gestao_pages.dart';
 
 class WebOperacionalShell extends StatefulWidget {
   const WebOperacionalShell({
@@ -38,6 +39,9 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     'Veículos',
     'Agenda',
     'Ordens de serviço',
+    'Nova OS',
+    'Estoque',
+    'Financeiro',
   ];
 
   void _atualizar() => setState(() => _revisao++);
@@ -65,11 +69,17 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         moeda: _moeda,
         onChanged: _atualizar,
       ),
-      _ => _OrdensPage(
+      4 => _OrdensPage(
         key: ValueKey('os-$_revisao'),
         service: _service,
         moeda: _moeda,
       ),
+      5 => WebNovaOrdemPage(
+        key: ValueKey('nova-os-$_revisao'),
+        onCreated: _atualizar,
+      ),
+      6 => WebEstoquePage(key: ValueKey('estoque-$_revisao')),
+      _ => WebFinanceiroPage(key: ValueKey('financeiro-$_revisao')),
     };
   }
 
@@ -134,6 +144,18 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
                       icon: Icon(Icons.receipt_long_outlined),
                       label: Text('OS'),
                     ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.add_business_outlined),
+                      label: Text('Nova OS'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.inventory_2_outlined),
+                      label: Text('Estoque'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.account_balance_wallet_outlined),
+                      label: Text('Financeiro'),
+                    ),
                   ],
                 ),
                 const VerticalDivider(width: 1),
@@ -166,6 +188,18 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
                 NavigationDestination(
                   icon: Icon(Icons.receipt_long_outlined),
                   label: 'OS',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.add_business_outlined),
+                  label: 'Nova OS',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.inventory_2_outlined),
+                  label: 'Estoque',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.account_balance_wallet_outlined),
+                  label: 'Financeiro',
                 ),
               ],
             ),
