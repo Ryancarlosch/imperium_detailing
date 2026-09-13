@@ -233,3 +233,19 @@ Homologação pendente da Precificação:
    - diagnóstico;
    - observabilidade.
 5. Web e iOS.
+
+
+## CRM + Orçamentos Cloud V2
+
+- CAS por `atualizado_em`;
+- detecção de alteração concorrente;
+- resolução Local/Nuvem;
+- propagação controlada de exclusão remota;
+- diagnóstico visual de conflitos;
+- relacionamento de orçamento com OS criada a partir dele;
+- homologação em dois aparelhos.
+
+Depois disso:
+- Arquivos/Storage da OS;
+- isolamento SQLite multiempresa;
+- motor unificado de sincronização.

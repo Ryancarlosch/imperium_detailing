@@ -2093,3 +2093,40 @@ Segurança:
 - SQLite de domínio permanece v33;
 - troca de empresa não é oferecida enquanto as tabelas locais não forem
   isoladas por `empresa_id`.
+
+
+## 2026-09-12 - CRM + Orçamentos Cloud V1
+
+Status: 🟡 base multiaparelho implementada; conflitos concorrentes ficam para V2.
+
+Orçamentos:
+- cabeçalho Cloud;
+- itens Cloud;
+- cliente e veículo por UUID remoto;
+- perfil de preço compartilhado;
+- vínculo opcional com catálogo de serviços;
+- soft delete;
+- upload idempotente;
+- download somente de registros novos.
+
+CRM:
+- leads Cloud;
+- interações Cloud;
+- campanhas Cloud;
+- cupons/benefícios Cloud;
+- vínculos opcionais com Cliente, Veículo, Agenda e OS;
+- soft delete;
+- upload idempotente;
+- download somente de registros novos.
+
+Permissões:
+- `crm` passa a integrar `modulosRemotosProntos`;
+- `orcamentos` passa a integrar `modulosRemotosProntos`;
+- RLS permanece independente por módulo.
+
+Proteções:
+- V1 não sobrescreve registros locais já mapeados durante download;
+- nenhuma conversão de lead, criação de agendamento ou efeito financeiro é
+  reproduzido durante download;
+- importação grava diretamente no SQLite;
+- SQLite de domínio continua v33.

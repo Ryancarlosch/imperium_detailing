@@ -126,3 +126,13 @@
 - 🟢 conflitos Local x Nuvem resolvíveis pela UI;
 - 🟢 aplicação individual confirmada do preço sugerido;
 - ⬜ homologação real multiaparelho.
+
+### CRM + Orçamentos Cloud
+- 🟢 Orçamentos V1 upload/download de novos
+- 🟢 itens + perfil de preço
+- 🟢 CRM V1 leads/interações
+- 🟢 campanhas/cupons compartilhados
+- 🟢 soft delete remoto
+- 🟢 permissões `crm` e `orcamentos` liberadas no acesso funcionário
+- ⬜ V2 CAS e conflitos Local/Nuvem
+- ⬜ homologação multiaparelho

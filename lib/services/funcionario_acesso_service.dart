@@ -27,7 +27,9 @@ class FuncionarioAcessoService {
   static const Set<String> modulosRemotosProntos = <String>{
     'ponto',
     'clientes',
+    'crm',
     'agenda',
+    'orcamentos',
     'ordens_servico',
     'estoque',
     'financeiro',

@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
 import 'configuracao_cloud_service.dart';
+import 'crm_orcamentos_cloud_service.dart';
 import 'estoque_cloud_conflito_service.dart';
 import 'estoque_cloud_download_service.dart';
 import 'estoque_cloud_reserva_service.dart';
@@ -242,6 +243,9 @@ class OperacionalSyncService {
       // Etapa 4 inicia upload-only para nao contaminar Financeiro/Estoque
       // nem baixar OS antes da homologacao do nucleo.
       await OsCloudUploadService.instance.sincronizarUpload(empresaId);
+      // crm-orcamentos-cloud-upload-v1
+      // Depende de Cliente/Veiculo/Agenda e, para cupons usados, OS.
+      await CrmOrcamentosCloudService.instance.sincronizarUpload(empresaId);
 
       // estoque-cloud-reserva-call-v3
       // Reserva/consome estoque remoto antes do upload de snapshots.
@@ -287,6 +291,10 @@ class OperacionalSyncService {
       await _baixarVeiculos(empresaId);
       await _baixarAgendamentos(empresaId);
       await OsCloudDownloadService.instance.sincronizarDownloadNovos(empresaId);
+      // crm-orcamentos-cloud-download-v1
+      await CrmOrcamentosCloudService.instance.sincronizarDownloadNovos(
+        empresaId,
+      );
 
       // estoque-cloud-download-call-v2
       // Importa somente registros novos; existentes ficam para conflitos V2.1.
