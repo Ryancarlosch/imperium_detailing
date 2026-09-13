@@ -4,14 +4,27 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('AppDatabase separa um arquivo SQLite por empresa', () {
-    final source = File('lib/database/app_database.dart').readAsStringSync();
+    final appDatabase = File(
+      'lib/database/app_database.dart',
+    ).readAsStringSync();
+    final platformIo = File(
+      'lib/database/tenant_database_platform_io.dart',
+    ).readAsStringSync();
 
-    expect(source, contains('imperium_tenant_atual.txt'));
-    expect(source, contains('imperium_detailing_empresa_'));
-    expect(source, contains('ativarEmpresa('));
-    expect(source, contains('adotarBancoLegado'));
-    expect(source, contains('legado.copy(temporario.path)'));
-    expect(source, isNot(contains('legado.rename(destino.path)')));
+    // O AppDatabase agora apenas orquestra a plataforma.
+    expect(appDatabase, contains("import 'tenant_database_platform.dart';"));
+    expect(appDatabase, contains('ativarEmpresa('));
+    expect(appDatabase, contains('adotarBancoLegado'));
+    expect(appDatabase, contains('caminhoBancoEmpresaPlatform'));
+    expect(appDatabase, contains('salvarTenantAtivoPlatform'));
+
+    // Android/IO continua garantindo um arquivo físico por empresa.
+    expect(platformIo, contains('imperium_tenant_atual.txt'));
+    expect(platformIo, contains('imperium_detailing_empresa_'));
+
+    // A adoção do banco legado continua não destrutiva.
+    expect(platformIo, contains('origem.copy(temporario.path)'));
+    expect(platformIo, isNot(contains('origem.rename(')));
   });
 
   test('Schema de dominio continua v33', () {
