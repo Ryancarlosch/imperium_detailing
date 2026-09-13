@@ -79,3 +79,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+# Compatibilidade Android temporaria:
+# google_sign_in_android 7.2.12+ migrou para Built-in Kotlin.
+# Neste projeto 7.2.17 falha no javac por ResultUtilsKt ausente.
+dependency_overrides:
+  google_sign_in_android: 7.2.11
