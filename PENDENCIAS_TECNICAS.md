@@ -272,3 +272,19 @@ Próximo bloco: Arquivos/Storage Cloud da OS.
   - foto de avaria aparece no B;
   - assinatura criada no A abre no B;
   - exclusão local vira soft delete remoto.
+
+
+## Depois de Arquivos/Storage V2
+
+- homologação real em dois Androids;
+- testar checklist alterado simultaneamente;
+- testar assinatura trocada simultaneamente;
+- testar exclusão concorrente de checklist;
+- UI de retry para arquivo local ausente;
+- suporte Web para leitura/upload sem caminho `File`.
+
+Próximo bloco estrutural:
+- isolamento SQLite por empresa;
+- impedir vazamento local ao alternar tenant;
+- preparar troca segura de empresa;
+- depois motor unificado de sincronização/hardening.

@@ -161,3 +161,23 @@
 - ⬜ UI de erros/pendências
 - ⬜ suporte Web para arquivos
 - ⬜ homologação multiaparelho
+
+
+### 9. Arquivos / Storage V2
+- 🟢 reconciliação antes de upload
+- 🟢 reconciliação antes de download
+- 🟢 conflito concorrente de checklist
+- 🟢 conflito concorrente de assinatura
+- 🟢 autoaplicação quando só nuvem mudou
+- 🟢 CAS ao escolher versão local
+- 🟢 resolução pela versão da nuvem
+- 🟢 painel na Central Cloud
+- ⬜ homologação multiaparelho
+- ⬜ retry visual de arquivos
+- ⬜ adaptação Web
+
+### 10. Isolamento local multiempresa
+- ⬜ separar SQLite por empresa/tenant
+- ⬜ troca segura de empresa
+- ⬜ limpeza de caches de tenant
+- ⬜ garantir mapas de sync isolados

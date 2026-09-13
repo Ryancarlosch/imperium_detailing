@@ -2186,3 +2186,33 @@ Proteções:
 - assinatura atualiza o baseline remoto da OS para evitar falso conflito;
 - conflito simples de assinatura local x nuvem é marcado no diagnóstico;
 - SQLite de domínio permanece v33.
+
+
+## 2026-09-13 - Arquivos/Storage Cloud da OS V2
+
+Status: 🟡 conflitos de checklist e assinatura protegidos; homologação real em
+dois aparelhos continua pendente.
+
+Proteções:
+- reconciliação antes do upload de arquivos;
+- nova reconciliação antes do download;
+- checklist/foto de avaria:
+  - só local mudou → publica;
+  - só nuvem mudou → aplica nuvem localmente;
+  - ambos mudaram → conflito;
+- assinatura:
+  - só local mudou → publica;
+  - só nuvem mudou → baixa e aplica;
+  - ambos mudaram → conflito;
+- exclusão concorrente do checklist gera conflito;
+- escolha Local usa CAS por `atualizado_em`;
+- escolha Nuvem aplica diretamente no SQLite.
+
+Central Cloud:
+- diagnóstico de fotos/checklist/assinaturas;
+- total de erros de arquivo;
+- conflitos pendentes;
+- botões Usar nuvem / Usar local.
+
+Fotos Antes/Depois continuam no modelo append + soft delete do V1.
+SQLite de domínio permanece v33.

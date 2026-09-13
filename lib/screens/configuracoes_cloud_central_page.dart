@@ -7,6 +7,7 @@ import '../services/crm_orcamentos_cloud_v2_service.dart';
 import '../services/empresa_cloud_service.dart';
 import '../services/funcionario_acesso_service.dart';
 import '../services/operacional_sync_service.dart';
+import '../services/os_arquivos_cloud_v2_service.dart';
 
 class ConfiguracoesCloudCentralPage extends StatefulWidget {
   const ConfiguracoesCloudCentralPage({super.key});
@@ -30,6 +31,8 @@ class _ConfiguracoesCloudCentralPageState
   List<Map<String, Object?>> _conflitos = const [];
   List<Map<String, Object?>> _conflitosCrmOrcamentos = const [];
   Map<String, Object?> _diagnosticoCrmOrcamentos = const {};
+  Map<String, Object?> _diagnosticoArquivosOs = const {};
+  List<Map<String, Object?>> _conflitosArquivosOs = const [];
   Map<String, Object?> _diagnosticoConfig = const {};
   Map<String, Object?> _diagnosticoMultiempresa = const {};
 
@@ -53,6 +56,8 @@ class _ConfiguracoesCloudCentralPageState
 
       Map<String, Object?> crmOrcamentos = const {};
       List<Map<String, Object?>> conflitosCrmOrcamentos = const [];
+      Map<String, Object?> arquivosOs = const {};
+      List<Map<String, Object?>> conflitosArquivosOs = const [];
       if (empresaAtualId != null && empresaAtualId.isNotEmpty) {
         config = await _configCloud.diagnosticar(empresaAtualId);
         conflitos = await _configCloud.listarConflitosPendentes(
@@ -62,6 +67,11 @@ class _ConfiguracoesCloudCentralPageState
           empresaAtualId,
         );
         conflitosCrmOrcamentos = await CrmOrcamentosCloudV2Service.instance
+            .listarConflitosPendentes(empresaId: empresaAtualId);
+        arquivosOs = await OsArquivosCloudV2Service.instance.diagnosticar(
+          empresaAtualId,
+        );
+        conflitosArquivosOs = await OsArquivosCloudV2Service.instance
             .listarConflitosPendentes(empresaId: empresaAtualId);
       }
 
@@ -75,6 +85,8 @@ class _ConfiguracoesCloudCentralPageState
         _conflitos = conflitos;
         _diagnosticoCrmOrcamentos = crmOrcamentos;
         _conflitosCrmOrcamentos = conflitosCrmOrcamentos;
+        _diagnosticoArquivosOs = arquivosOs;
+        _conflitosArquivosOs = conflitosArquivosOs;
         _carregando = false;
       });
     } catch (erro) {
@@ -195,6 +207,54 @@ class _ConfiguracoesCloudCentralPageState
     }
   }
 
+  Future<void> _resolverArquivoOs(
+    Map<String, Object?> conflito, {
+    required bool local,
+  }) async {
+    final id = _int(conflito['id']);
+    if (id <= 0) return;
+
+    final entidade = (conflito['entidade'] ?? 'arquivo').toString().replaceAll(
+      '_',
+      ' ',
+    );
+    final escolha = local ? 'deste aparelho' : 'da nuvem';
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Resolver conflito de arquivo?'),
+        content: Text(
+          'Será mantida a versão $escolha para $entidade.\n\n'
+          'A outra versão será substituída.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      if (local) {
+        await OsArquivosCloudV2Service.instance.resolverUsandoLocal(id);
+      } else {
+        await OsArquivosCloudV2Service.instance.resolverUsandoNuvem(id);
+      }
+      await _sincronizar();
+    } catch (erro) {
+      if (mounted) _mensagem('$erro', erro: true);
+    }
+  }
+
   void _mensagem(String texto, {bool erro = false}) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -247,6 +307,8 @@ class _ConfiguracoesCloudCentralPageState
                   _conflitosCard(),
                   const SizedBox(height: 12),
                   _crmOrcamentosCard(),
+                  const SizedBox(height: 12),
+                  _arquivosOsCard(),
                 ],
               ),
             ),
@@ -586,6 +648,111 @@ class _ConfiguracoesCloudCentralPageState
               Expanded(
                 child: FilledButton.icon(
                   onPressed: () => _resolverCrmOrcamento(conflito, local: true),
+                  icon: const Icon(Icons.phone_android_rounded),
+                  label: const Text('Usar local'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _arquivosOsCard() {
+    final fotos = _int(_diagnosticoArquivosOs['fotos_mapeadas']);
+    final checklist = _int(_diagnosticoArquivosOs['checklist_mapeado']);
+    final assinaturas = _int(_diagnosticoArquivosOs['assinaturas_mapeadas']);
+    final conflitos = _int(_diagnosticoArquivosOs['conflitos_pendentes']);
+    final erros =
+        _int(_diagnosticoArquivosOs['fotos_com_erro']) +
+        _int(_diagnosticoArquivosOs['checklist_com_erro']) +
+        _int(_diagnosticoArquivosOs['assinaturas_com_erro']);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.folder_copy_outlined),
+                SizedBox(width: 8),
+                Text(
+                  'Arquivos da OS',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _linha('Fotos mapeadas', '$fotos'),
+            _linha('Itens de checklist', '$checklist'),
+            _linha('Assinaturas mapeadas', '$assinaturas'),
+            _linha('Erros de arquivo', '$erros'),
+            _linha('Conflitos pendentes', '$conflitos'),
+            const SizedBox(height: 10),
+            if (_conflitosArquivosOs.isEmpty)
+              const Text('Nenhum conflito de arquivo pendente.')
+            else
+              ..._conflitosArquivosOs.map(
+                (conflito) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _arquivoOsConflitoItem(conflito),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _arquivoOsConflitoItem(Map<String, Object?> conflito) {
+    final entidade = (conflito['entidade'] ?? 'arquivo').toString().replaceAll(
+      '_',
+      ' ',
+    );
+    final motivo = (conflito['motivo'] ?? 'alteracao_concorrente')
+        .toString()
+        .replaceAll('_', ' ');
+    final localId = _int(conflito['local_id']);
+    final detectado = DateTime.tryParse(
+      (conflito['detectado_em'] ?? '').toString(),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '$entidade #$localId',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Text(motivo),
+          if (detectado != null)
+            Text(
+              'Detectado em ${_dataHora.format(detectado)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _resolverArquivoOs(conflito, local: false),
+                  icon: const Icon(Icons.cloud_download_outlined),
+                  label: const Text('Usar nuvem'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _resolverArquivoOs(conflito, local: true),
                   icon: const Icon(Icons.phone_android_rounded),
                   label: const Text('Usar local'),
                 ),

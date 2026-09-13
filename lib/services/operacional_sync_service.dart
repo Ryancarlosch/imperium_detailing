@@ -21,6 +21,7 @@ import 'precificacao_cloud_v2_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'os_arquivos_cloud_service.dart';
+import 'os_arquivos_cloud_v2_service.dart';
 import 'ponto_nuvem_service.dart';
 import 'supabase_bootstrap.dart';
 
@@ -247,7 +248,12 @@ class OperacionalSyncService {
       await OsCloudUploadService.instance.sincronizarUpload(empresaId);
       // os-arquivos-cloud-upload-v1
       // A OS precisa existir remotamente antes dos arquivos.
-      await OsArquivosCloudService.instance.sincronizarUpload(empresaId);
+      // os-arquivos-cloud-v2-guard-upload
+      final osArquivosPodePublicar = await OsArquivosCloudV2Service.instance
+          .prepararSincronizacao(empresaId);
+      if (osArquivosPodePublicar) {
+        await OsArquivosCloudService.instance.sincronizarUpload(empresaId);
+      }
       // crm-orcamentos-cloud-v2-guard
       // Conflito bloqueia apenas CRM/Orcamentos; os demais modulos continuam.
       final crmOrcamentosPodePublicar = await CrmOrcamentosCloudV2Service
@@ -305,7 +311,12 @@ class OperacionalSyncService {
       await OsCloudDownloadService.instance.sincronizarDownloadNovos(empresaId);
       // os-arquivos-cloud-download-v1
       // Materializa arquivos na pasta local da OS no Android.
-      await OsArquivosCloudService.instance.sincronizarDownload(empresaId);
+      // os-arquivos-cloud-v2-guard-download
+      final osArquivosPodeBaixar = await OsArquivosCloudV2Service.instance
+          .prepararSincronizacao(empresaId);
+      if (osArquivosPodeBaixar) {
+        await OsArquivosCloudService.instance.sincronizarDownload(empresaId);
+      }
       // crm-orcamentos-cloud-download-v1
       await CrmOrcamentosCloudService.instance.sincronizarDownloadNovos(
         empresaId,
