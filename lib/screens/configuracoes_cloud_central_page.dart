@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../repositories/usuario_repository.dart';
 import '../services/configuracao_cloud_service.dart';
+import '../services/crm_orcamentos_cloud_v2_service.dart';
 import '../services/empresa_cloud_service.dart';
 import '../services/funcionario_acesso_service.dart';
 import '../services/operacional_sync_service.dart';
@@ -27,6 +28,8 @@ class _ConfiguracoesCloudCentralPageState
   String? _empresaAtualId;
   List<Map<String, dynamic>> _empresas = const [];
   List<Map<String, Object?>> _conflitos = const [];
+  List<Map<String, Object?>> _conflitosCrmOrcamentos = const [];
+  Map<String, Object?> _diagnosticoCrmOrcamentos = const {};
   Map<String, Object?> _diagnosticoConfig = const {};
   Map<String, Object?> _diagnosticoMultiempresa = const {};
 
@@ -48,11 +51,18 @@ class _ConfiguracoesCloudCentralPageState
       Map<String, Object?> config = const {};
       List<Map<String, Object?>> conflitos = const [];
 
+      Map<String, Object?> crmOrcamentos = const {};
+      List<Map<String, Object?>> conflitosCrmOrcamentos = const [];
       if (empresaAtualId != null && empresaAtualId.isNotEmpty) {
         config = await _configCloud.diagnosticar(empresaAtualId);
         conflitos = await _configCloud.listarConflitosPendentes(
           empresaId: empresaAtualId,
         );
+        crmOrcamentos = await CrmOrcamentosCloudV2Service.instance.diagnosticar(
+          empresaAtualId,
+        );
+        conflitosCrmOrcamentos = await CrmOrcamentosCloudV2Service.instance
+            .listarConflitosPendentes(empresaId: empresaAtualId);
       }
 
       if (!mounted) return;
@@ -63,6 +73,8 @@ class _ConfiguracoesCloudCentralPageState
         _diagnosticoConfig = config;
         _diagnosticoMultiempresa = multi;
         _conflitos = conflitos;
+        _diagnosticoCrmOrcamentos = crmOrcamentos;
+        _conflitosCrmOrcamentos = conflitosCrmOrcamentos;
         _carregando = false;
       });
     } catch (erro) {
@@ -134,6 +146,55 @@ class _ConfiguracoesCloudCentralPageState
     }
   }
 
+  Future<void> _resolverCrmOrcamento(
+    Map<String, Object?> conflito, {
+    required bool local,
+  }) async {
+    final id = _int(conflito['id']);
+    if (id <= 0) return;
+
+    final escolha = local ? 'deste aparelho' : 'da nuvem';
+    final entidade = (conflito['entidade'] ?? 'registro').toString().replaceAll(
+      '_',
+      ' ',
+    );
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Resolver conflito CRM/Orçamento?'),
+        content: Text(
+          'Será mantida a versão $escolha para $entidade.\n\n'
+          'A outra versão será substituída.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      if (local) {
+        await CrmOrcamentosCloudV2Service.instance.resolverUsandoLocal(id);
+      } else {
+        await CrmOrcamentosCloudV2Service.instance.resolverUsandoNuvem(id);
+      }
+
+      await _sincronizar();
+    } catch (erro) {
+      if (mounted) _mensagem('$erro', erro: true);
+    }
+  }
+
   void _mensagem(String texto, {bool erro = false}) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -184,6 +245,8 @@ class _ConfiguracoesCloudCentralPageState
                   _modulosCard(),
                   const SizedBox(height: 12),
                   _conflitosCard(),
+                  const SizedBox(height: 12),
+                  _crmOrcamentosCard(),
                 ],
               ),
             ),
@@ -422,6 +485,107 @@ class _ConfiguracoesCloudCentralPageState
               Expanded(
                 child: FilledButton.icon(
                   onPressed: () => _resolver(conflito, local: true),
+                  icon: const Icon(Icons.phone_android_rounded),
+                  label: const Text('Usar local'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _crmOrcamentosCard() {
+    final conflitos = _int(_diagnosticoCrmOrcamentos['conflitos_pendentes']);
+    final orcamentos = _int(_diagnosticoCrmOrcamentos['orcamentos_mapeados']);
+    final leads = _int(_diagnosticoCrmOrcamentos['crm_leads_mapeados']);
+    final campanhas = _int(_diagnosticoCrmOrcamentos['crm_campanhas_mapeadas']);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.hub_outlined),
+                SizedBox(width: 8),
+                Text(
+                  'CRM e Orçamentos',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _linha('Orçamentos mapeados', '$orcamentos'),
+            _linha('Leads mapeados', '$leads'),
+            _linha('Campanhas mapeadas', '$campanhas'),
+            _linha('Conflitos pendentes', '$conflitos'),
+            const SizedBox(height: 10),
+            if (_conflitosCrmOrcamentos.isEmpty)
+              const Text('Nenhum conflito CRM/Orçamentos pendente.')
+            else
+              ..._conflitosCrmOrcamentos.map(
+                (conflito) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _crmOrcamentoConflitoItem(conflito),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _crmOrcamentoConflitoItem(Map<String, Object?> conflito) {
+    final entidade = (conflito['entidade'] ?? 'registro').toString().replaceAll(
+      '_',
+      ' ',
+    );
+    final motivo = (conflito['motivo'] ?? 'alteracao_concorrente')
+        .toString()
+        .replaceAll('_', ' ');
+    final localId = _int(conflito['local_id']);
+    final detectado = DateTime.tryParse(
+      (conflito['detectado_em'] ?? '').toString(),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '$entidade #$localId',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Text(motivo),
+          if (detectado != null)
+            Text(
+              'Detectado em ${_dataHora.format(detectado)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () =>
+                      _resolverCrmOrcamento(conflito, local: false),
+                  icon: const Icon(Icons.cloud_download_outlined),
+                  label: const Text('Usar nuvem'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _resolverCrmOrcamento(conflito, local: true),
                   icon: const Icon(Icons.phone_android_rounded),
                   label: const Text('Usar local'),
                 ),

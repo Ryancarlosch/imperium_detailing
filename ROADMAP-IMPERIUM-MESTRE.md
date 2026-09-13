@@ -2130,3 +2130,23 @@ Proteções:
   reproduzido durante download;
 - importação grava diretamente no SQLite;
 - SQLite de domínio continua v33.
+
+## 2026-09-12 - CRM + Orçamentos Cloud V2
+
+Status: 🟡 proteção concorrente implementada; homologação real em dois aparelhos pendente.
+
+Entidades protegidas:
+- orçamento e itens;
+- lead e interações;
+- campanha e cupom.
+
+Semântica:
+- local limpo + nuvem mudou: aplica nuvem diretamente no SQLite;
+- local mudou + nuvem igual à base: V1 publica normalmente;
+- local mudou + nuvem mudou: conflito;
+- exclusão remota: conflito explícito;
+- Usar local: CAS por atualizado_em;
+- Usar nuvem: aplicação direta no SQLite.
+
+Central Cloud passa a mostrar e resolver as pendências CRM/Orçamentos.
+SQLite de domínio permanece v33.

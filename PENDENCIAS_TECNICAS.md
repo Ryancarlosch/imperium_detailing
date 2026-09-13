@@ -249,3 +249,12 @@ Depois disso:
 - Arquivos/Storage da OS;
 - isolamento SQLite multiempresa;
 - motor unificado de sincronização.
+
+## CRM + Orçamentos - depois do V2
+
+- homologar dois aparelhos editando o mesmo lead;
+- homologar dois aparelhos editando o mesmo orçamento;
+- testar conflito de exclusão;
+- histórico visual de resoluções.
+
+Próximo bloco: Arquivos/Storage Cloud da OS.

@@ -136,3 +136,13 @@
 - 🟢 permissões `crm` e `orcamentos` liberadas no acesso funcionário
 - ⬜ V2 CAS e conflitos Local/Nuvem
 - ⬜ homologação multiaparelho
+
+### CRM + Orçamentos Cloud V2
+- 🟢 alteração concorrente
+- 🟢 baseline hash + atualizado_em
+- 🟢 autoaplicação quando só nuvem mudou
+- 🟢 conflito quando ambos mudaram
+- 🟢 CAS ao escolher local
+- 🟢 aplicação direta ao escolher nuvem
+- 🟢 Central Cloud
+- ⬜ homologação multiaparelho
