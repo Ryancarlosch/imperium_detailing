@@ -181,3 +181,22 @@
 - ⬜ troca segura de empresa
 - ⬜ limpeza de caches de tenant
 - ⬜ garantir mapas de sync isolados
+
+### 10. Multiempresa SQLite isolado
+- 🟢 banco físico separado por empresa
+- 🟢 adoção não destrutiva do banco legado
+- 🟢 tenant resolvido antes da sessão local
+- 🟢 troca segura pela Central Cloud
+- 🟢 reload do app após troca
+- 🟢 backup aponta para tenant ativo
+- 🟢 restore bloqueia tenant incorreto
+- 🟢 novos arquivos da OS em pasta por tenant
+- ⬜ homologação real empresa A ↔ empresa B
+- ⬜ limpeza/gestão de tenants locais órfãos
+
+### 11. Motor unificado de sincronização
+- ⬜ fila única por módulo
+- ⬜ retry/backoff
+- ⬜ telemetria
+- ⬜ diagnóstico de pendências
+- ⬜ observabilidade e homologação

@@ -113,6 +113,20 @@ class BackupService {
       final validacao = await _validarArquivoBackup(arquivoBackup);
       _validarMetadados(validacao.metadados);
 
+      final empresaBackup = (validacao.metadados['empresa_id'] ?? '')
+          .toString()
+          .trim();
+      final empresaAtual = (await _appDatabase.empresaAtivaId ?? '').trim();
+
+      if (empresaBackup.isNotEmpty &&
+          empresaAtual.isNotEmpty &&
+          empresaBackup != empresaAtual) {
+        throw const BackupException(
+          'Este backup pertence a outra empresa. Troque para a empresa '
+          'correta antes de restaurar.',
+        );
+      }
+
       if (validacao.versaoBanco > AppDatabase.schemaVersion) {
         throw BackupException(
           'Este backup foi criado com um schema de banco mais novo. '
@@ -260,6 +274,7 @@ class BackupService {
         'versao_app': packageInfo.version,
         'build_app': packageInfo.buildNumber,
         'versao_banco': AppDatabase.schemaVersion,
+        'empresa_id': await _appDatabase.empresaAtivaId,
         'quantidade_arquivos': quantidadeArquivos + 1,
         'tamanho_total': tamanhoConteudo,
       };
@@ -920,8 +935,7 @@ class BackupService {
   }
 
   Future<String> _obterCaminhoBanco() async {
-    final pastaBanco = await getDatabasesPath();
-    return path.join(pastaBanco, 'imperium_detailing.db');
+    return _appDatabase.caminhoBancoAtual();
   }
 
   Future<void> _reabrirBanco() async {

@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 
 import '../repositories/ordem_servico_checklist_repository.dart';
+import '../services/tenant_local_storage_service.dart';
 
 class OrdemServicoChecklistPage extends StatefulWidget {
   const OrdemServicoChecklistPage({
@@ -246,15 +246,12 @@ class _OrdemServicoChecklistPageState extends State<OrdemServicoChecklistPage> {
     XFile imagem,
     int checklistId,
   ) async {
-    final diretorioBase = await getApplicationDocumentsDirectory();
-
-    final diretorioFotos = Directory(
-      path.join(
-        diretorioBase.path,
-        'ordens_servico',
+    final diretorioFotos = await TenantLocalStorageService.instance.pasta(
+      'ordens_servico',
+      segmentos: <String>[
         widget.ordemServicoId.toString(),
         'checklist_avarias',
-      ),
+      ],
     );
 
     if (!await diretorioFotos.exists()) {

@@ -3,13 +3,13 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
 import 'os_arquivos_cloud_service.dart';
 import 'supabase_bootstrap.dart';
+import 'tenant_local_storage_service.dart';
 
 /// Arquivos Cloud da OS V2.
 ///
@@ -1015,15 +1015,9 @@ class OsArquivosCloudV2Service {
 
     if (bytes.isEmpty) return null;
 
-    final docs = await getApplicationDocumentsDirectory();
-    final pasta = Directory(
-      path.join(
-        docs.path,
-        'ordens_servico',
-        osLocalId.toString(),
-        'cloud',
-        tipo,
-      ),
+    final pasta = await TenantLocalStorageService.instance.pasta(
+      'ordens_servico',
+      segmentos: <String>[osLocalId.toString(), 'cloud', tipo],
     );
 
     if (!await pasta.exists()) {

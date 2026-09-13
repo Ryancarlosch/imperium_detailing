@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -9,6 +11,11 @@ class AppDatabase {
 
   static Database? _database;
 
+  static const String _nomeBancoLegado = 'imperium_detailing.db';
+  static const String _nomeMarcadorTenant = 'imperium_tenant_atual.txt';
+
+  static String? _empresaAtivaMemoria;
+
   Future<Database> get database async {
     if (_database != null) {
       return _database!;
@@ -18,10 +25,161 @@ class AppDatabase {
     return _database!;
   }
 
-  Future<Database> _abrirBanco() async {
-    final pastaBanco = await getDatabasesPath();
+  Future<String?> get empresaAtivaId async {
+    final memoria = _empresaAtivaMemoria?.trim() ?? '';
+    if (memoria.isNotEmpty) return memoria;
 
-    final caminho = join(pastaBanco, 'imperium_detailing.db');
+    final pastaBanco = await getDatabasesPath();
+    final marcador = File(join(pastaBanco, _nomeMarcadorTenant));
+
+    if (!await marcador.exists()) return null;
+
+    try {
+      final valor = (await marcador.readAsString()).trim();
+      if (valor.isEmpty) return null;
+
+      final normalizado = _normalizarEmpresaId(valor);
+      _empresaAtivaMemoria = normalizado;
+      return normalizado;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String> caminhoBancoAtual() async {
+    final pastaBanco = await getDatabasesPath();
+    final empresaId = await empresaAtivaId;
+
+    if (empresaId == null || empresaId.isEmpty) {
+      return join(pastaBanco, _nomeBancoLegado);
+    }
+
+    return join(pastaBanco, _nomeBancoEmpresa(empresaId));
+  }
+
+  /// Ativa um banco físico exclusivo para a empresa.
+  ///
+  /// Na primeira ativação, `adotarBancoLegado` copia o banco antigo em vez
+  /// de movê-lo. O arquivo legado permanece como rollback de segurança.
+  Future<void> ativarEmpresa(
+    String empresaId, {
+    bool adotarBancoLegado = false,
+  }) async {
+    final normalizado = _normalizarEmpresaId(empresaId);
+    final pastaBanco = await getDatabasesPath();
+    final destino = File(join(pastaBanco, _nomeBancoEmpresa(normalizado)));
+    final legado = File(join(pastaBanco, _nomeBancoLegado));
+    final atual = await empresaAtivaId;
+
+    if (atual == normalizado && await destino.exists()) {
+      _empresaAtivaMemoria = normalizado;
+      return;
+    }
+
+    await fecharBanco();
+
+    if (!await destino.exists() && adotarBancoLegado && await legado.exists()) {
+      final temporario = File('${destino.path}.adocao_tmp');
+
+      if (await temporario.exists()) {
+        await temporario.delete();
+      }
+
+      await legado.copy(temporario.path);
+
+      if (await destino.exists()) {
+        await destino.delete();
+      }
+
+      await temporario.rename(destino.path);
+    }
+
+    final marcador = File(join(pastaBanco, _nomeMarcadorTenant));
+    final marcadorTemporario = File('${marcador.path}.tmp');
+
+    if (await marcadorTemporario.exists()) {
+      await marcadorTemporario.delete();
+    }
+
+    await marcadorTemporario.writeAsString(normalizado, flush: true);
+
+    if (await marcador.exists()) {
+      await marcador.delete();
+    }
+
+    await marcadorTemporario.rename(marcador.path);
+
+    _empresaAtivaMemoria = normalizado;
+    _database = null;
+
+    // Garante que um tenant novo já nasce com o schema completo atual.
+    await database;
+  }
+
+  Future<List<String>> listarEmpresasLocais() async {
+    final pastaBanco = Directory(await getDatabasesPath());
+
+    if (!await pastaBanco.exists()) return const <String>[];
+
+    final resultado = <String>[];
+    final prefixo = 'imperium_detailing_empresa_';
+    const sufixo = '.db';
+
+    await for (final entidade in pastaBanco.list(followLinks: false)) {
+      if (entidade is! File) continue;
+
+      final nome = entidade.path.split(Platform.pathSeparator).last;
+
+      if (!nome.startsWith(prefixo) || !nome.endsWith(sufixo)) continue;
+
+      final empresa = nome.substring(
+        prefixo.length,
+        nome.length - sufixo.length,
+      );
+
+      if (empresa.isNotEmpty) resultado.add(empresa);
+    }
+
+    resultado.sort();
+    return resultado;
+  }
+
+  Future<Map<String, Object?>> diagnosticarTenantLocal() async {
+    final caminho = await caminhoBancoAtual();
+    final empresa = await empresaAtivaId;
+    final pastaBanco = await getDatabasesPath();
+    final legado = File(join(pastaBanco, _nomeBancoLegado));
+
+    return <String, Object?>{
+      'empresa_ativa_id': empresa,
+      'caminho_banco_ativo': caminho,
+      'banco_ativo_existe': await File(caminho).exists(),
+      'banco_legado_existe': await legado.exists(),
+      'empresas_locais': await listarEmpresasLocais(),
+      'schema_version': schemaVersion,
+    };
+  }
+
+  String _nomeBancoEmpresa(String empresaId) {
+    return 'imperium_detailing_empresa_$empresaId.db';
+  }
+
+  String _normalizarEmpresaId(String empresaId) {
+    final valor = empresaId.trim();
+
+    if (!RegExp(r'^[a-zA-Z0-9_-]{8,100}$').hasMatch(valor)) {
+      throw ArgumentError.value(
+        empresaId,
+        'empresaId',
+        'Identificador de empresa inválido.',
+      );
+    }
+
+    return valor;
+  }
+
+  Future<Database> _abrirBanco() async {
+    final caminho = await caminhoBancoAtual();
 
     return openDatabase(
       caminho,

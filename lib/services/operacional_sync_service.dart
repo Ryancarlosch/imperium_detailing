@@ -177,32 +177,83 @@ class OperacionalSyncService {
     }, where: 'id = 1');
   }
 
+  Future<String?> prepararTenantInicial() async {
+    return empresaAtualId();
+  }
+
   Future<String?> empresaAtualId() async {
+    final empresaMarcada = await _appDatabase.empresaAtivaId;
     final client = _client;
     final user = client?.auth.currentUser;
 
-    if (client == null || user == null) return null;
+    if (client == null || user == null) {
+      if (empresaMarcada != null && empresaMarcada.isNotEmpty) {
+        return empresaMarcada;
+      }
+
+      return _empresaCache();
+    }
+
+    String? empresaCacheAnterior;
 
     try {
-      final vinculo = await client
+      empresaCacheAnterior = await _empresaCache();
+    } catch (_) {
+      empresaCacheAnterior = null;
+    }
+
+    try {
+      final vinculos = await client
           .from('empresa_usuarios')
           .select('empresa_id')
           .eq('user_id', user.id)
-          .eq('ativo', true)
-          .limit(1)
-          .maybeSingle();
+          .eq('ativo', true);
 
-      final id = (vinculo?['empresa_id'] ?? '').toString().trim();
+      final empresas =
+          vinculos
+              .map((item) => (item['empresa_id'] ?? '').toString().trim())
+              .where((item) => item.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
 
-      if (id.isNotEmpty) {
-        await _salvarEmpresaCache(id);
-        return id;
+      if (empresas.isEmpty) {
+        return empresaMarcada ?? empresaCacheAnterior;
       }
-    } catch (_) {
-      // Offline: usa o último tenant confirmado apenas para fila/local.
-    }
 
-    return _empresaCache();
+      String escolhida;
+
+      if (empresaMarcada != null && empresas.contains(empresaMarcada)) {
+        escolhida = empresaMarcada;
+      } else if (empresaCacheAnterior != null &&
+          empresas.contains(empresaCacheAnterior)) {
+        escolhida = empresaCacheAnterior;
+      } else {
+        // Primeira ativação: determinístico e seguro. Depois disso o marcador
+        // global mantém a escolha até o usuário trocar pela Central Cloud.
+        escolhida = empresas.first;
+      }
+
+      final primeiraAtivacao =
+          empresaMarcada == null || empresaMarcada.trim().isEmpty;
+
+      await _appDatabase.ativarEmpresa(
+        escolhida,
+        adotarBancoLegado:
+            primeiraAtivacao &&
+            (empresaCacheAnterior == escolhida || empresas.length == 1),
+      );
+
+      await _salvarEmpresaCache(escolhida);
+
+      return escolhida;
+    } catch (_) {
+      if (empresaMarcada != null && empresaMarcada.isNotEmpty) {
+        return empresaMarcada;
+      }
+
+      return empresaCacheAnterior;
+    }
   }
 
   Future<void> tentarSincronizarTudo() async {

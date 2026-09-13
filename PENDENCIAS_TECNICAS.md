@@ -288,3 +288,19 @@ Próximo bloco estrutural:
 - impedir vazamento local ao alternar tenant;
 - preparar troca segura de empresa;
 - depois motor unificado de sincronização/hardening.
+
+## Depois do isolamento SQLite multiempresa
+
+Homologar:
+- empresa A com dados atuais adota o banco legado sem perda;
+- criar/usar empresa B abre banco vazio v33;
+- cadastrar dados na B e voltar para A sem mistura;
+- operar offline em A, trocar depois para B e retornar;
+- backup de A não restaura em B;
+- fotos/checklist/assinatura novos ficam no diretório do tenant.
+
+Próximo bloco:
+- motor unificado de sincronização;
+- fila/retry/telemetria por módulo;
+- painel de saúde do sync;
+- depois Web.

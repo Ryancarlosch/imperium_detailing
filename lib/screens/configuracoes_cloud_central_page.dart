@@ -7,6 +7,7 @@ import '../services/crm_orcamentos_cloud_v2_service.dart';
 import '../services/empresa_cloud_service.dart';
 import '../services/funcionario_acesso_service.dart';
 import '../services/operacional_sync_service.dart';
+import '../services/tenant_runtime_service.dart';
 import '../services/os_arquivos_cloud_v2_service.dart';
 
 class ConfiguracoesCloudCentralPage extends StatefulWidget {
@@ -26,6 +27,7 @@ class _ConfiguracoesCloudCentralPageState
 
   bool _carregando = true;
   bool _sincronizando = false;
+  bool _trocandoEmpresa = false;
   String? _empresaAtualId;
   List<Map<String, dynamic>> _empresas = const [];
   List<Map<String, Object?>> _conflitos = const [];
@@ -96,6 +98,57 @@ class _ConfiguracoesCloudCentralPageState
         'Não foi possível carregar a Central Cloud.\n$erro',
         erro: true,
       );
+    }
+  }
+
+  Future<void> _trocarEmpresa(Map<String, dynamic> empresa) async {
+    if (_trocandoEmpresa) return;
+
+    final empresaId = (empresa['empresa_id'] ?? '').toString().trim();
+    final nome = (empresa['nome'] ?? 'Empresa').toString().trim();
+
+    if (empresaId.isEmpty || empresa['atual'] == true) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Trocar de empresa?'),
+        content: Text(
+          'O Imperium vai fechar as telas atuais e abrir a base local '
+          'isolada de "$nome".\n\n'
+          'Dados ainda não sincronizados da empresa atual permanecem '
+          'salvos no banco local dela.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Trocar empresa'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() => _trocandoEmpresa = true);
+
+    try {
+      // Best-effort: tenta esvaziar a fila da empresa atual, mas a troca
+      // continua segura offline porque cada tenant possui seu próprio banco.
+      await OperacionalSyncService.instance.tentarSincronizarTudo();
+
+      await _empresaCloud.trocarEmpresa(empresaId);
+
+      TenantRuntimeService.instance.reiniciarAplicacao();
+    } catch (erro) {
+      if (mounted) {
+        setState(() => _trocandoEmpresa = false);
+        _mensagem('$erro', erro: true);
+      }
     }
   }
 
@@ -392,7 +445,13 @@ class _ConfiguracoesCloudCentralPageState
                   ),
                   trailing: empresa['atual'] == true
                       ? const Chip(label: Text('Atual'))
-                      : null,
+                      : OutlinedButton.icon(
+                          onPressed: _trocandoEmpresa
+                              ? null
+                              : () => _trocarEmpresa(empresa),
+                          icon: const Icon(Icons.swap_horiz_rounded),
+                          label: const Text('Trocar'),
+                        ),
                 ),
               ),
             if (multi) ...[

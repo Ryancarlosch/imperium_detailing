@@ -4,9 +4,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 
 import '../repositories/ordem_servico_foto_repository.dart';
+import '../services/tenant_local_storage_service.dart';
 
 class OrdemServicoFotosPage extends StatefulWidget {
   const OrdemServicoFotosPage({
@@ -246,15 +246,12 @@ class _OrdemServicoFotosPageState extends State<OrdemServicoFotosPage>
     String? caminhoSalvo;
 
     try {
-      final diretorioAplicativo = await getApplicationDocumentsDirectory();
-
-      final pasta = Directory(
-        path.join(
-          diretorioAplicativo.path,
-          'ordens_servico',
+      final pasta = await TenantLocalStorageService.instance.pasta(
+        'ordens_servico',
+        segmentos: <String>[
           widget.ordemServicoId.toString(),
           _etapaAtual.toLowerCase(),
-        ),
+        ],
       );
 
       if (!await pasta.exists()) {

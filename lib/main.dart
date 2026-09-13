@@ -6,6 +6,8 @@ import 'services/backup_automatico_service.dart';
 import 'screens/login_page.dart';
 
 import 'services/funcionario_acesso_service.dart';
+import 'services/operacional_sync_service.dart';
+import 'services/tenant_runtime_service.dart';
 import 'services/supabase_bootstrap.dart';
 import 'widgets/licenca_gate.dart';
 
@@ -13,6 +15,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await SupabaseBootstrap.inicializar();
+
+  try {
+    await OperacionalSyncService.instance.prepararTenantInicial();
+  } catch (_) {
+    // Offline ou primeiro uso: o AppDatabase usa o último tenant marcado
+    // ou o banco legado até a empresa ser confirmada.
+  }
 
   runApp(const ImperiumApp());
 }
@@ -22,18 +31,24 @@ class ImperiumApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Imperium Detailing',
-      debugShowCheckedModeBanner: false,
-      locale: const Locale('pt', 'BR'),
-      supportedLocales: const [Locale('pt', 'BR')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      theme: ThemeData(brightness: Brightness.dark, useMaterial3: true),
-      home: const _SessaoGate(),
+    return ValueListenableBuilder<int>(
+      valueListenable: TenantRuntimeService.instance.revisao,
+      builder: (context, revisao, _) {
+        return MaterialApp(
+          key: ValueKey<String>('tenant-runtime-$revisao'),
+          title: 'Imperium Detailing',
+          debugShowCheckedModeBanner: false,
+          locale: const Locale('pt', 'BR'),
+          supportedLocales: const [Locale('pt', 'BR')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          theme: ThemeData(brightness: Brightness.dark, useMaterial3: true),
+          home: const _SessaoGate(),
+        );
+      },
     );
   }
 }

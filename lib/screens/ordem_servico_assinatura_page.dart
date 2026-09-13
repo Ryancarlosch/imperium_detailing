@@ -3,10 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 import 'package:signature/signature.dart';
 
 import '../repositories/ordem_servico_repository.dart';
+import '../services/tenant_local_storage_service.dart';
 
 class OrdemServicoAssinaturaPage extends StatefulWidget {
   final int ordemServicoId;
@@ -104,17 +104,9 @@ class _OrdemServicoAssinaturaPageState
   }
 
   Future<Directory> _obterPastaAssinaturas() async {
-    final pastaDocumentos = await getApplicationDocumentsDirectory();
-
-    final pastaAssinaturas = Directory(
-      path.join(pastaDocumentos.path, 'assinaturas_ordens_servico'),
+    return TenantLocalStorageService.instance.pasta(
+      'assinaturas_ordens_servico',
     );
-
-    if (!await pastaAssinaturas.exists()) {
-      await pastaAssinaturas.create(recursive: true);
-    }
-
-    return pastaAssinaturas;
   }
 
   Future<String> _salvarArquivoAssinatura(Uint8List bytes) async {

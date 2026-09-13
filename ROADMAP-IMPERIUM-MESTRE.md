@@ -2216,3 +2216,41 @@ Central Cloud:
 
 Fotos Antes/Depois continuam no modelo append + soft delete do V1.
 SQLite de domínio permanece v33.
+
+## 2026-09-13 - Multiempresa SQLite isolado V2
+
+Status: 🟡 isolamento local implementado; homologação real com segunda empresa
+continua pendente.
+
+Arquitetura:
+- um arquivo SQLite por `empresa_id`;
+- marcador global `imperium_tenant_atual.txt`;
+- banco legado `imperium_detailing.db` é COPIADO na primeira adoção;
+- arquivo legado não é apagado nem renomeado;
+- tenant novo recebe schema completo v33;
+- troca fecha o banco anterior antes de abrir o próximo.
+
+Startup:
+- resolve tenant após Supabase bootstrap e antes da sessão SQLite;
+- prefere o tenant já marcado;
+- mantém funcionamento offline no último tenant;
+- primeiro vínculo é adotado somente quando ainda não existe marcador.
+
+Troca:
+- Central Cloud oferece botão Trocar;
+- vínculo ativo é validado no Supabase;
+- dados locais de cada empresa permanecem no respectivo banco;
+- árvore do app é reiniciada após trocar.
+
+Arquivos:
+- novos arquivos persistentes da OS usam
+  `Documentos/empresas/<empresa_id>/...`;
+- caminhos legados continuam aceitos;
+- cache Storage da OS também passa pelo diretório do tenant.
+
+Backup:
+- lê/restaura o banco físico do tenant ativo;
+- metadata passa a guardar `empresa_id`;
+- restauração de backup de outra empresa é bloqueada.
+
+SQLite schemaVersion permanece 33.
