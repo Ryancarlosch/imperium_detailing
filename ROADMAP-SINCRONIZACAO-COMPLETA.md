@@ -88,10 +88,16 @@
 - ⬜ homologação multiaparelho
 
 ### 8. Configurações e Usuários
-- ⬜ configurações compartilhadas
-- ⬜ usuários/perfis finais
-- ⬜ permissões cloud por todos os módulos
-- ⬜ segunda empresa ponta a ponta
+- 🟢 V1 configuração empresarial Cloud
+- 🟢 V1 CAS e conflito Local/Nuvem
+- 🟢 V1 Central Cloud de diagnóstico
+- 🟢 permissões reutilizam `imperium_funcionario_acessos`
+- 🟢 módulos remotos: Ponto, Clientes, Agenda, OS, Estoque, Financeiro, Configurações
+- 🟡 vínculos multiempresa visíveis
+- ⬜ isolamento SQLite por empresa
+- ⬜ troca segura de tenant
+- ⬜ CRM e Orçamentos como módulos remotos
+- ⬜ homologação segunda empresa ponta a ponta
 
 ### 9. Arquivos
 - ⬜ fotos da OS via Storage

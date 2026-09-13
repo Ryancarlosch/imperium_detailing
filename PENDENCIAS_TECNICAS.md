@@ -215,3 +215,21 @@ Homologação pendente da Precificação:
 - escolha Local e escolha Nuvem;
 - cenário criado em um aparelho aparecendo no outro;
 - aplicação de preço sugerido refletindo no catálogo e sincronização.
+
+## Próximos blocos depois de Configurações Cloud V1
+
+1. CRM + Orçamentos Cloud, para completar os módulos operacionais ainda locais.
+2. Arquivos da OS via Storage:
+   - fotos;
+   - assinatura;
+   - checklist/anexos.
+3. Isolamento local multiempresa:
+   - tenant por registro ou banco SQLite por empresa;
+   - troca segura de empresa;
+   - limpeza/seleção de cache por tenant.
+4. Motor unificado de sincronização:
+   - fila;
+   - retry;
+   - diagnóstico;
+   - observabilidade.
+5. Web e iOS.

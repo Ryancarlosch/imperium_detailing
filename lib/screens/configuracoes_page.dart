@@ -18,6 +18,7 @@ import '../widgets/backup_automatico_card.dart';
 import '../services/primeiro_uso_assistente.dart';
 
 import 'saude_sistema_page.dart';
+import 'configuracoes_cloud_central_page.dart';
 import 'supabase_conta_page.dart';
 
 class ConfiguracoesPage extends StatefulWidget {
@@ -963,6 +964,22 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
       appBar: AppBar(
         title: const Text('Configurações da Empresa'),
         actions: [
+          IconButton(
+            onPressed: _salvando
+                ? null
+                : () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ConfiguracoesCloudCentralPage(),
+                      ),
+                    );
+                    if (mounted) {
+                      await _carregarConfiguracoes();
+                    }
+                  },
+            tooltip: 'Configurações Cloud',
+            icon: const Icon(Icons.cloud_circle_outlined),
+          ),
           IconButton(
             onPressed: _salvando || _abrindoAssistentePrimeiroUso
                 ? null

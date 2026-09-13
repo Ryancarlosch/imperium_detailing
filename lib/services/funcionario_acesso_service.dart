@@ -28,6 +28,10 @@ class FuncionarioAcessoService {
     'ponto',
     'clientes',
     'agenda',
+    'ordens_servico',
+    'estoque',
+    'financeiro',
+    'configuracoes',
   };
 
   Future<void> garantirEstruturaLocal() async {

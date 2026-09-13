@@ -2057,3 +2057,39 @@ Regras preservadas:
 - simulação não altera o catálogo;
 - regra oficial de 220h;
 - SQLite v33.
+
+## 2026-09-12 - Configurações e Usuários Cloud V1
+
+Status: 🟡 configuração compartilhada e permissões remotas ampliadas; troca
+multiempresa permanece bloqueada até isolamento local.
+
+Entregue:
+- configuração empresarial portável na nuvem;
+- dados cadastrais, endereço, aparência, documentos e mensagens WhatsApp;
+- logo/assinatura/backup permanecem locais nesta etapa;
+- CAS por `atualizado_em`;
+- conflito configuração local x nuvem;
+- resolução `usar local` / `usar nuvem`;
+- Central Cloud dentro de Configurações;
+- diagnóstico das empresas vinculadas ao mesmo Auth;
+- multiempresa visível, sem troca insegura de tenant;
+- módulos remotos liberados para funcionário:
+  - Ponto;
+  - Clientes;
+  - Agenda;
+  - Ordens de Serviço;
+  - Estoque;
+  - Financeiro;
+  - Configurações.
+- CRM e Orçamentos continuam bloqueados até possuírem sync Cloud;
+- Precificação continua protegida por `financeiro` e não é permissão Cloud
+  independente nesta etapa.
+
+Segurança:
+- nenhuma senha/PIN/hash/salt local é enviado à nuvem;
+- permissões continuam usando `imperium_funcionario_acessos.permissoes`;
+- nenhum segundo sistema de autorização foi criado;
+- RLS de configurações usa `private.imperium_pode_modulo`;
+- SQLite de domínio permanece v33;
+- troca de empresa não é oferecida enquanto as tabelas locais não forem
+  isoladas por `empresa_id`.

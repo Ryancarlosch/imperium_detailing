@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
+import 'configuracao_cloud_service.dart';
 import 'estoque_cloud_conflito_service.dart';
 import 'estoque_cloud_download_service.dart';
 import 'estoque_cloud_reserva_service.dart';
@@ -224,6 +225,11 @@ class OperacionalSyncService {
       final empresaId = await empresaAtualId();
 
       if (empresaId == null || empresaId.isEmpty) return;
+
+      // configuracoes-cloud-v1-call
+      // Configuracao e independente dos dados operacionais; conflito
+      // bloqueia apenas este modulo.
+      await ConfiguracaoCloudService.instance.sincronizar(empresaId);
 
       await _processarExclusoes(empresaId);
 
