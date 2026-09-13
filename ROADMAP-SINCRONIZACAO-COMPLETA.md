@@ -210,8 +210,25 @@
 - 🟢 schema v33 reutilizado
 - 🟢 AppDatabase sem `dart:io` direto
 - 🟢 build Web release de fundação
-- ⬜ Dashboard Web
+- 🟢 Dashboard Web V1
 - ⬜ módulos operacionais
 - ⬜ arquivos via bytes/Storage
 - ⬜ PDF/download browser
 - ⬜ homologação completa
+
+### 13. Web Operacional V1
+- 🟢 Web online-first direto no Supabase
+- 🟢 Dashboard Web V1
+- 🟢 Clientes Web: cadastro, edição, arquivamento e reativação
+- 🟢 Veículos Web: cadastro, edição e exclusão lógica
+- 🟢 Agenda Web: cadastro e exclusão lógica
+- 🟢 OS Web: consulta, valor negociado e pendente
+- 🟢 troca de empresa no shell Web
+- 🟢 Android permanece offline-first com Motor Unificado
+- ⬜ OS Web completa
+- ⬜ Estoque Web
+- ⬜ Financeiro/DRE Web
+- ⬜ Precificação Web
+- ⬜ CRM/Orçamentos Web
+- ⬜ arquivos/assinatura Web
+- ⬜ PDF/download browser
