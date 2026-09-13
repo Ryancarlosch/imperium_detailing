@@ -78,9 +78,13 @@
 - 🟢 V1 catálogo + receita padrão de produtos
 - 🟢 V1 custos de mão de obra compartilhados
 - 🟢 V1 snapshots de custo/margem/preço sugerido
-- 🟡 download controlado de novos registros
-- ⬜ V2 conflitos concorrentes + CAS
-- ⬜ V2 cenários e histórico de simulações
+- 🟢 V2 CAS por atualizado_em
+- 🟢 V2 conflitos local x nuvem
+- 🟢 V2 resolução usar Local / usar Nuvem
+- 🟢 V2 exclusões sincronizadas por soft delete
+- 🟢 V2 cenários personalizados
+- 🟢 V2 histórico append-only de simulações
+- 🟡 UI gerencial de conflitos/cenários
 - ⬜ homologação multiaparelho
 
 ### 8. Configurações e Usuários

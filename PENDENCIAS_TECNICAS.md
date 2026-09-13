@@ -188,3 +188,14 @@ Próximo pacote grande:
 - histórico de simulações;
 - integração de preço sugerido com catálogo mediante confirmação do usuário;
 - homologação em dois aparelhos.
+
+
+## Precificação após V2
+
+Próximo pacote recomendado:
+- UI gerencial para listar conflitos e escolher Local/Nuvem;
+- UI de cenários e comparação de preços;
+- botão controlado para aplicar preço sugerido ao catálogo;
+- alertas de margem abaixo do mínimo;
+- indicador de serviço com prejuízo / margem crítica;
+- homologação real em dois aparelhos no lote final.

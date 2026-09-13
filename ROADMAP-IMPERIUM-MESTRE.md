@@ -2008,3 +2008,30 @@ Segurança:
 - 6 tabelas com RLS e 3 políticas cada;
 - nenhuma função SECURITY DEFINER nova;
 - SQLite permanece v33.
+
+
+## 2026-09-12 - Precificação Cloud V2
+
+Status: 🟡 núcleo concorrente e simulações implementados; UI administrativa fica para etapa seguinte.
+
+Entregue:
+- guard V2 antes do upload V1;
+- CAS por `atualizado_em` para configuração e registros mapeados;
+- conflito local x nuvem persistido no SQLite;
+- conflito de alteração concorrente;
+- conflito de exclusão local x alteração remota;
+- resolução explícita `usar local` / `usar nuvem`;
+- exclusão remota controlada por `excluido_em`;
+- proteção para não executar o upload V1 quando há conflito pendente;
+- cenários personalizados de margem, taxa, custo-hora e meta de faturamento;
+- histórico de simulações local + cloud;
+- histórico cloud append-only;
+- recuperação idempotente das simulações por dispositivo/local_id;
+- SQLite de domínio permanece v33;
+- regra oficial da empresa permanece 220h/mês.
+
+Observação:
+- o V2 usa tabela local dinâmica para conflitos e simulações, sem migration do
+  banco de domínio;
+- conflitos não são resolvidos automaticamente quando os dois lados mudaram;
+- a escolha local/nuvem fica disponível pelo service para futura UI gerencial.
