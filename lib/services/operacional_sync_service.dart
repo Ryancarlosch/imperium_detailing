@@ -24,6 +24,7 @@ import 'os_arquivos_cloud_service.dart';
 import 'os_arquivos_cloud_v2_service.dart';
 import 'ponto_nuvem_service.dart';
 import 'supabase_bootstrap.dart';
+import 'sync_motor_service.dart';
 
 class OperacionalSyncService {
   OperacionalSyncService._();
@@ -264,7 +265,10 @@ class OperacionalSyncService {
     }
   }
 
-  Future<void> sincronizarTudo() async {
+  Future<void> sincronizarTudo({
+    String origem = 'automatico',
+    bool ignorarBackoff = false,
+  }) async {
     if (_sincronizando) return;
 
     final client = _client;
@@ -278,140 +282,201 @@ class OperacionalSyncService {
       await garantirEstruturaLocal();
 
       final empresaId = await empresaAtualId();
-
       if (empresaId == null || empresaId.isEmpty) return;
 
-      // configuracoes-cloud-v1-call
-      // Configuracao e independente dos dados operacionais; conflito
-      // bloqueia apenas este modulo.
-      await ConfiguracaoCloudService.instance.sincronizar(empresaId);
+      final resultado = await SyncMotorService.instance.executar(
+        empresaId: empresaId,
+        origem: origem,
+        ignorarBackoff: ignorarBackoff,
+        etapas: <SyncMotorEtapa>[
+          SyncMotorEtapa(
+            modulo: 'configuracoes',
+            prioridade: 10,
+            executar: () => _syncConfiguracoes(empresaId),
+          ),
+          SyncMotorEtapa(
+            modulo: 'operacional',
+            prioridade: 20,
+            executar: () => _syncOperacionalBase(empresaId),
+          ),
+          SyncMotorEtapa(
+            modulo: 'ordens_servico',
+            prioridade: 30,
+            dependencias: const <String>['operacional'],
+            executar: () => _syncOrdensServico(empresaId),
+          ),
+          SyncMotorEtapa(
+            modulo: 'arquivos_os',
+            prioridade: 40,
+            dependencias: const <String>['ordens_servico'],
+            executar: () => _syncArquivosOs(empresaId),
+          ),
+          SyncMotorEtapa(
+            modulo: 'crm_orcamentos',
+            prioridade: 50,
+            dependencias: const <String>['operacional', 'ordens_servico'],
+            executar: () => _syncCrmOrcamentos(empresaId),
+          ),
+          SyncMotorEtapa(
+            modulo: 'estoque',
+            prioridade: 60,
+            dependencias: const <String>['ordens_servico'],
+            executar: () => _syncEstoque(empresaId),
+          ),
+          SyncMotorEtapa(
+            modulo: 'financeiro',
+            prioridade: 70,
+            dependencias: const <String>['estoque'],
+            executar: () => _syncFinanceiro(empresaId),
+          ),
+          SyncMotorEtapa(
+            modulo: 'precificacao',
+            prioridade: 80,
+            dependencias: const <String>['financeiro', 'estoque'],
+            executar: () => _syncPrecificacao(empresaId),
+          ),
+          SyncMotorEtapa(
+            modulo: 'ponto',
+            prioridade: 90,
+            executar: _sincronizarPontoFuncionario,
+          ),
+        ],
+      );
 
-      await _processarExclusoes(empresaId);
-
-      // Se o local mudou desde o último espelho, envia primeiro.
-      await _publicarClientesLocais(empresaId);
-      await _publicarVeiculosLocais(empresaId);
-      await _publicarAgendamentosLocais(empresaId);
-
-      // os-cloud-upload-call-v1
-      // Etapa 4 inicia upload-only para nao contaminar Financeiro/Estoque
-      // nem baixar OS antes da homologacao do nucleo.
-      await OsCloudUploadService.instance.sincronizarUpload(empresaId);
-      // os-arquivos-cloud-upload-v1
-      // A OS precisa existir remotamente antes dos arquivos.
-      // os-arquivos-cloud-v2-guard-upload
-      final osArquivosPodePublicar = await OsArquivosCloudV2Service.instance
-          .prepararSincronizacao(empresaId);
-      if (osArquivosPodePublicar) {
-        await OsArquivosCloudService.instance.sincronizarUpload(empresaId);
+      if (!resultado.temProblemas) {
+        final database = await _appDatabase.database;
+        await database.update('imperium_sync_config', {
+          'empresa_id': empresaId,
+          'ultimo_sync_em': DateTime.now().toIso8601String(),
+        }, where: 'id = 1');
       }
-      // crm-orcamentos-cloud-v2-guard
-      // Conflito bloqueia apenas CRM/Orcamentos; os demais modulos continuam.
-      final crmOrcamentosPodePublicar = await CrmOrcamentosCloudV2Service
-          .instance
-          .prepararUpload(empresaId);
-      if (crmOrcamentosPodePublicar) {
-        // crm-orcamentos-cloud-upload-v1
-        // Depende de Cliente/Veiculo/Agenda e, para cupons usados, OS.
-        await CrmOrcamentosCloudService.instance.sincronizarUpload(empresaId);
+
+      if (resultado.temProblemas) {
+        throw SyncMotorException(resultado);
       }
-
-      // estoque-cloud-reserva-call-v3
-      // Reserva/consome estoque remoto antes do upload de snapshots.
-      await EstoqueCloudReservaService.instance.sincronizarReservas(empresaId);
-
-      // estoque-cloud-upload-call-v1
-      // Etapa 5 inicia upload-only: item -> lote -> movimentacao.
-      // Nao altera saldo local nem Financeiro.
-      // estoque-cloud-conflitos-call-v2-1
-      // Reconciliacao obrigatoria antes do upload.
-      await EstoqueCloudConflitoService.instance.reconciliarAntesDoUpload(
-        empresaId,
-      );
-      await EstoqueCloudUploadService.instance.sincronizarUpload(empresaId);
-
-      // financeiro-cloud-v2-upload-guard
-      // Conflito concorrente bloqueia todo o Financeiro para nao sobrescrever caixa.
-      final financeiroPodePublicar = await FinanceiroCloudV2Service.instance
-          .prepararUpload(empresaId);
-      if (financeiroPodePublicar) {
-        // financeiro-cloud-upload-call-v1
-        // Upload base: plano -> contas -> pagamentos -> movimentos.
-        await FinanceiroCloudUploadService.instance.sincronizarUpload(
-          empresaId,
-        );
-        // Complementos: fornecedor -> regra -> transferencia -> vinculos.
-        await FinanceiroCloudV2Service.instance.completarUpload(empresaId);
-        // financeiro-cloud-v3-upload-call
-        // Custos, metas, conciliacoes e comprovantes.
-        await FinanceiroCloudV3Service.instance.sincronizarUpload(empresaId);
-        // precificacao-cloud-upload-call-v1
-        // Usa Estoque + Financeiro ja publicados como dependencias.
-        // precificacao-cloud-v2-guard-before-v1
-        final precificacaoCloudPodePublicarV2 = await PrecificacaoCloudV2Service
-            .instance
-            .reconciliarAntesDoUpload(empresaId);
-        if (precificacaoCloudPodePublicarV2) {
-          await PrecificacaoCloudService.instance.sincronizarUpload(empresaId);
-        }
-      }
-      // Depois baixa o estado compartilhado.
-      await _baixarClientes(empresaId);
-      await _baixarVeiculos(empresaId);
-      await _baixarAgendamentos(empresaId);
-      await OsCloudDownloadService.instance.sincronizarDownloadNovos(empresaId);
-      // os-arquivos-cloud-download-v1
-      // Materializa arquivos na pasta local da OS no Android.
-      // os-arquivos-cloud-v2-guard-download
-      final osArquivosPodeBaixar = await OsArquivosCloudV2Service.instance
-          .prepararSincronizacao(empresaId);
-      if (osArquivosPodeBaixar) {
-        await OsArquivosCloudService.instance.sincronizarDownload(empresaId);
-      }
-      // crm-orcamentos-cloud-download-v1
-      await CrmOrcamentosCloudService.instance.sincronizarDownloadNovos(
-        empresaId,
-      );
-      // crm-orcamentos-cloud-v2-after-download
-      // Atualiza espelhos limpos e registra conflitos concorrentes.
-      await CrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload(
-        empresaId,
-      );
-
-      // estoque-cloud-download-call-v2
-      // Importa somente registros novos; existentes ficam para conflitos V2.1.
-      await EstoqueCloudDownloadService.instance.sincronizarDownloadNovos(
-        empresaId,
-      );
-
-      // estoque-cloud-alertas-call-v3
-      // Espelha alertas compartilhados apos atualizar o estoque.
-      await EstoqueCloudReservaService.instance.sincronizarAlertas(empresaId);
-
-      // financeiro-cloud-v2-download-call
-      // Importacao direta: nao gera pagamento/movimento duplicado.
-      await FinanceiroCloudV2Service.instance.sincronizarDownload(empresaId);
-      // financeiro-cloud-v3-download-call
-      // Importa auxiliares e metadados de comprovantes.
-      await FinanceiroCloudV3Service.instance.sincronizarDownload(empresaId);
-      // precificacao-cloud-download-call-v1
-      await PrecificacaoCloudService.instance.sincronizarDownload(empresaId);
-      // precificacao-cloud-v2-after-download
-      await PrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload(
-        empresaId,
-      );
-
-      // O Ponto já possui sua própria estrutura de nuvem.
-      await _sincronizarPontoFuncionario();
-
-      final database = await _appDatabase.database;
-      await database.update('imperium_sync_config', {
-        'empresa_id': empresaId,
-        'ultimo_sync_em': DateTime.now().toIso8601String(),
-      }, where: 'id = 1');
     } finally {
       _sincronizando = false;
     }
+  }
+
+  Future<void> _syncConfiguracoes(String empresaId) async {
+    await ConfiguracaoCloudService.instance.sincronizar(empresaId);
+  }
+
+  Future<void> _syncOperacionalBase(String empresaId) async {
+    await _processarExclusoes(empresaId);
+
+    await _publicarClientesLocais(empresaId);
+    await _publicarVeiculosLocais(empresaId);
+    await _publicarAgendamentosLocais(empresaId);
+
+    await _baixarClientes(empresaId);
+    await _baixarVeiculos(empresaId);
+    await _baixarAgendamentos(empresaId);
+  }
+
+  Future<void> _syncOrdensServico(String empresaId) async {
+    await OsCloudUploadService.instance.sincronizarUpload(empresaId);
+    await OsCloudDownloadService.instance.sincronizarDownloadNovos(empresaId);
+  }
+
+  Future<void> _syncArquivosOs(String empresaId) async {
+    final podeSincronizar = await OsArquivosCloudV2Service.instance
+        .prepararSincronizacao(empresaId);
+
+    if (!podeSincronizar) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes nos arquivos da OS.',
+      );
+    }
+
+    await OsArquivosCloudService.instance.sincronizarUpload(empresaId);
+
+    final podeBaixar = await OsArquivosCloudV2Service.instance
+        .prepararSincronizacao(empresaId);
+
+    if (!podeBaixar) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes nos arquivos da OS.',
+      );
+    }
+
+    await OsArquivosCloudService.instance.sincronizarDownload(empresaId);
+  }
+
+  Future<void> _syncCrmOrcamentos(String empresaId) async {
+    final podePublicar = await CrmOrcamentosCloudV2Service.instance
+        .prepararUpload(empresaId);
+
+    if (!podePublicar) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes em CRM/Orçamentos.',
+      );
+    }
+
+    await CrmOrcamentosCloudService.instance.sincronizarUpload(empresaId);
+    await CrmOrcamentosCloudService.instance.sincronizarDownloadNovos(
+      empresaId,
+    );
+    await CrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload(
+      empresaId,
+    );
+
+    if (await CrmOrcamentosCloudV2Service.instance.possuiConflitosPendentes(
+      empresaId,
+    )) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes em CRM/Orçamentos.',
+      );
+    }
+  }
+
+  Future<void> _syncEstoque(String empresaId) async {
+    await EstoqueCloudReservaService.instance.sincronizarReservas(empresaId);
+    await EstoqueCloudConflitoService.instance.reconciliarAntesDoUpload(
+      empresaId,
+    );
+    await EstoqueCloudUploadService.instance.sincronizarUpload(empresaId);
+    await EstoqueCloudDownloadService.instance.sincronizarDownloadNovos(
+      empresaId,
+    );
+    await EstoqueCloudReservaService.instance.sincronizarAlertas(empresaId);
+  }
+
+  Future<void> _syncFinanceiro(String empresaId) async {
+    final podePublicar = await FinanceiroCloudV2Service.instance.prepararUpload(
+      empresaId,
+    );
+
+    if (!podePublicar) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes no Financeiro.',
+      );
+    }
+
+    await FinanceiroCloudUploadService.instance.sincronizarUpload(empresaId);
+    await FinanceiroCloudV2Service.instance.completarUpload(empresaId);
+    await FinanceiroCloudV3Service.instance.sincronizarUpload(empresaId);
+
+    await FinanceiroCloudV2Service.instance.sincronizarDownload(empresaId);
+    await FinanceiroCloudV3Service.instance.sincronizarDownload(empresaId);
+  }
+
+  Future<void> _syncPrecificacao(String empresaId) async {
+    final podePublicar = await PrecificacaoCloudV2Service.instance
+        .reconciliarAntesDoUpload(empresaId);
+
+    if (!podePublicar) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes na Precificação.',
+      );
+    }
+
+    await PrecificacaoCloudService.instance.sincronizarUpload(empresaId);
+    await PrecificacaoCloudService.instance.sincronizarDownload(empresaId);
+    await PrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload(
+      empresaId,
+    );
   }
 
   Future<void> registrarExclusaoVeiculo(int localId) async {

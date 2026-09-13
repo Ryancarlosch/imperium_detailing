@@ -8,6 +8,7 @@ import '../services/empresa_cloud_service.dart';
 import '../services/funcionario_acesso_service.dart';
 import '../services/operacional_sync_service.dart';
 import '../services/tenant_runtime_service.dart';
+import '../services/sync_motor_service.dart';
 import '../services/os_arquivos_cloud_v2_service.dart';
 
 class ConfiguracoesCloudCentralPage extends StatefulWidget {
@@ -37,6 +38,8 @@ class _ConfiguracoesCloudCentralPageState
   List<Map<String, Object?>> _conflitosArquivosOs = const [];
   Map<String, Object?> _diagnosticoConfig = const {};
   Map<String, Object?> _diagnosticoMultiempresa = const {};
+  Map<String, Object?> _diagnosticoSync = const {};
+  List<Map<String, Object?>> _filaSync = const [];
 
   @override
   void initState() {
@@ -60,6 +63,8 @@ class _ConfiguracoesCloudCentralPageState
       List<Map<String, Object?>> conflitosCrmOrcamentos = const [];
       Map<String, Object?> arquivosOs = const {};
       List<Map<String, Object?>> conflitosArquivosOs = const [];
+      Map<String, Object?> syncDiagnostico = const {};
+      List<Map<String, Object?>> filaSync = const [];
       if (empresaAtualId != null && empresaAtualId.isNotEmpty) {
         config = await _configCloud.diagnosticar(empresaAtualId);
         conflitos = await _configCloud.listarConflitosPendentes(
@@ -75,6 +80,10 @@ class _ConfiguracoesCloudCentralPageState
         );
         conflitosArquivosOs = await OsArquivosCloudV2Service.instance
             .listarConflitosPendentes(empresaId: empresaAtualId);
+        syncDiagnostico = await SyncMotorService.instance.diagnosticar(
+          empresaAtualId,
+        );
+        filaSync = await SyncMotorService.instance.listarFila(empresaAtualId);
       }
 
       if (!mounted) return;
@@ -89,6 +98,8 @@ class _ConfiguracoesCloudCentralPageState
         _conflitosCrmOrcamentos = conflitosCrmOrcamentos;
         _diagnosticoArquivosOs = arquivosOs;
         _conflitosArquivosOs = conflitosArquivosOs;
+        _diagnosticoSync = syncDiagnostico;
+        _filaSync = filaSync;
         _carregando = false;
       });
     } catch (erro) {
@@ -158,9 +169,20 @@ class _ConfiguracoesCloudCentralPageState
     setState(() => _sincronizando = true);
 
     try {
-      await OperacionalSyncService.instance.tentarSincronizarTudo();
+      await OperacionalSyncService.instance.sincronizarTudo(
+        origem: 'manual',
+        ignorarBackoff: true,
+      );
       await _carregar();
-      if (mounted) _mensagem('Configurações sincronizadas.');
+      if (mounted) _mensagem('Sincronização concluída.');
+    } catch (erro) {
+      await _carregar();
+      if (mounted) {
+        _mensagem(
+          'Sincronização parcial. Consulte a Saúde da sincronização.\n$erro',
+          erro: true,
+        );
+      }
     } finally {
       if (mounted) setState(() => _sincronizando = false);
     }
@@ -353,6 +375,8 @@ class _ConfiguracoesCloudCentralPageState
                 children: [
                   _statusCard(),
                   const SizedBox(height: 12),
+                  _syncSaudeCard(),
+                  const SizedBox(height: 12),
                   _empresasCard(),
                   const SizedBox(height: 12),
                   _modulosCard(),
@@ -365,6 +389,135 @@ class _ConfiguracoesCloudCentralPageState
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _syncSaudeCard() {
+    final status =
+        (_diagnosticoSync['ultimo_ciclo_status'] ?? 'Nunca executado')
+            .toString();
+    final erros = _int(_diagnosticoSync['modulos_erro']);
+    final bloqueados = _int(_diagnosticoSync['modulos_bloqueados']);
+    final aguardando = _int(_diagnosticoSync['modulos_aguardando']);
+    final ultimoSucesso = DateTime.tryParse(
+      (_diagnosticoSync['ultimo_sucesso_em'] ?? '').toString(),
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.monitor_heart_outlined),
+                SizedBox(width: 8),
+                Text(
+                  'Saúde da sincronização',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _linha('Último ciclo', status),
+            _linha('Módulos com erro', '$erros'),
+            _linha('Módulos bloqueados', '$bloqueados'),
+            _linha('Aguardando retry', '$aguardando'),
+            if (ultimoSucesso != null)
+              _linha(
+                'Último sucesso',
+                _dataHora.format(ultimoSucesso.toLocal()),
+              ),
+            const Divider(),
+            if (_filaSync.isEmpty)
+              const Text(
+                'A fila será criada na primeira sincronização com o novo motor.',
+              )
+            else
+              ..._filaSync.map(_syncModuloLinha),
+            const SizedBox(height: 8),
+            const Text(
+              'O botão de sincronizar no topo força nova tentativa imediata, '
+              'ignorando o backoff. Conflitos continuam exigindo resolução.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _syncModuloLinha(Map<String, Object?> item) {
+    final modulo = (item['modulo'] ?? '-').toString();
+    final status = (item['status'] ?? 'Pendente').toString();
+    final tentativas = _int(item['tentativas_consecutivas']);
+    final proxima = DateTime.tryParse(
+      (item['proxima_tentativa_em'] ?? '').toString(),
+    );
+    final erro = (item['ultimo_erro'] ?? '').toString().trim();
+
+    final nome =
+        <String, String>{
+          'configuracoes': 'Configurações',
+          'operacional': 'Clientes / Veículos / Agenda',
+          'ordens_servico': 'Ordens de Serviço',
+          'arquivos_os': 'Arquivos da OS',
+          'crm_orcamentos': 'CRM / Orçamentos',
+          'estoque': 'Estoque',
+          'financeiro': 'Financeiro',
+          'precificacao': 'Precificação',
+          'ponto': 'Ponto',
+        }[modulo] ??
+        modulo;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            status == 'Sucesso'
+                ? Icons.check_circle_outline_rounded
+                : status == 'Erro'
+                ? Icons.error_outline_rounded
+                : status == 'Bloqueado'
+                ? Icons.block_rounded
+                : status == 'Aguardando'
+                ? Icons.schedule_rounded
+                : Icons.sync_rounded,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$nome — $status',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                if (tentativas > 0)
+                  Text(
+                    'Tentativas consecutivas: $tentativas',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                if (proxima != null)
+                  Text(
+                    'Próximo retry: ${_dataHora.format(proxima.toLocal())}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                if (erro.isNotEmpty)
+                  Text(
+                    erro,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

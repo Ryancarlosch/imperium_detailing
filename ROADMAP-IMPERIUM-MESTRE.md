@@ -2254,3 +2254,54 @@ Backup:
 - restauração de backup de outra empresa é bloqueada.
 
 SQLite schemaVersion permanece 33.
+
+## 2026-09-13 - Motor Unificado de Sincronização V1
+
+Status: 🟡 orquestração local implementada; homologação prolongada/rede instável
+continua pendente.
+
+Motor:
+- fila persistente por empresa/módulo;
+- ciclo de sincronização com histórico;
+- eventos por módulo;
+- tentativas consecutivas;
+- retry com backoff progressivo:
+  - 15s;
+  - 30s;
+  - 1min;
+  - 2min;
+  - 5min;
+  - 10min;
+  - 20min;
+  - 30min máximo;
+- execução manual ignora backoff;
+- falha de um módulo não interrompe módulos independentes;
+- dependências críticas ficam bloqueadas quando a etapa anterior falha.
+
+Módulos orquestrados:
+1. Configurações;
+2. Operacional (Clientes/Veículos/Agenda);
+3. Ordens de Serviço;
+4. Arquivos da OS;
+5. CRM/Orçamentos;
+6. Estoque;
+7. Financeiro;
+8. Precificação;
+9. Ponto.
+
+Dependências:
+- OS depende do Operacional;
+- Arquivos dependem da OS;
+- CRM/Orçamentos dependem de Operacional + OS;
+- Estoque depende da OS;
+- Financeiro depende do Estoque;
+- Precificação depende de Financeiro + Estoque;
+- Configurações e Ponto permanecem independentes.
+
+Central Cloud:
+- saúde do último ciclo;
+- estado por módulo;
+- erros e backoff;
+- sincronização manual força retry imediato.
+
+SQLite de domínio permanece v33; as tabelas do motor são auxiliares dinâmicas.

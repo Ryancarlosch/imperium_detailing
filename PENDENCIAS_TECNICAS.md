@@ -304,3 +304,21 @@ Próximo bloco:
 - fila/retry/telemetria por módulo;
 - painel de saúde do sync;
 - depois Web.
+
+## Depois do Motor Unificado V1
+
+Homologar em rede real:
+- desligar internet durante cada módulo;
+- religar e confirmar retry/backoff;
+- conflito de Arquivos não deve impedir Ponto;
+- conflito Financeiro deve bloquear Precificação, mas não CRM;
+- trocar empresa e confirmar fila separada por tenant;
+- reiniciar aplicativo com módulos em erro;
+- confirmar que fila/histórico sobrevivem ao restart.
+
+Próximas evoluções:
+- V2: conectividade/reachability explícita;
+- compactação/limpeza do histórico de eventos;
+- botão retry por módulo;
+- telemetria de duração e volume;
+- Web: adaptar persistência da fila para ambiente sem sqflite nativo.
