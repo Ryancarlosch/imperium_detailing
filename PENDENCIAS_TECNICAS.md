@@ -176,3 +176,15 @@ Próximo pacote grande:
 - preço sugerido;
 - cenários de precificação;
 - integração com catálogo de serviços.
+
+
+## Precificação Cloud V2 — próximo passo
+
+- conflito concorrente de catálogo/config/preferências;
+- CAS por `atualizado_em`;
+- resolução local/nuvem;
+- sincronização de exclusões;
+- cenários personalizados de margem/meta;
+- histórico de simulações;
+- integração de preço sugerido com catálogo mediante confirmação do usuário;
+- homologação em dois aparelhos.

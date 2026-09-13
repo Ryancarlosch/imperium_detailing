@@ -13,6 +13,7 @@ import 'estoque_cloud_upload_service.dart';
 import 'financeiro_cloud_upload_service.dart';
 import 'financeiro_cloud_v2_service.dart';
 import 'financeiro_cloud_v3_service.dart';
+import 'precificacao_cloud_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'ponto_nuvem_service.dart';
@@ -264,6 +265,9 @@ class OperacionalSyncService {
         // financeiro-cloud-v3-upload-call
         // Custos, metas, conciliacoes e comprovantes.
         await FinanceiroCloudV3Service.instance.sincronizarUpload(empresaId);
+        // precificacao-cloud-upload-call-v1
+        // Usa Estoque + Financeiro ja publicados como dependencias.
+        await PrecificacaoCloudService.instance.sincronizarUpload(empresaId);
       }
       // Depois baixa o estado compartilhado.
       await _baixarClientes(empresaId);
@@ -287,6 +291,8 @@ class OperacionalSyncService {
       // financeiro-cloud-v3-download-call
       // Importa auxiliares e metadados de comprovantes.
       await FinanceiroCloudV3Service.instance.sincronizarDownload(empresaId);
+      // precificacao-cloud-download-call-v1
+      await PrecificacaoCloudService.instance.sincronizarDownload(empresaId);
 
       // O Ponto já possui sua própria estrutura de nuvem.
       await _sincronizarPontoFuncionario();

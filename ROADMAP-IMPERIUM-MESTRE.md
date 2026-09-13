@@ -1978,3 +1978,33 @@ Banco:
 - 3 tabelas novas com RLS;
 - bucket privado com RLS de Storage por `empresa_id`;
 - SQLite de domínio permanece v33.
+
+
+## 2026-09-12 - Precificação Cloud V1
+
+Status: 🟡 fundação cloud desenvolvida; conflitos avançados ficam para V2.
+
+Compartilhado:
+- configuração de margens e média histórica;
+- regra oficial de 220h/mês da empresa;
+- catálogo de serviços;
+- preferências de tempo/aceite de revenda;
+- receita padrão de produtos por serviço;
+- colaboradores e custos de mão de obra;
+- snapshot calculado com custo, preço de equilíbrio, mínimo seguro e sugerido;
+- faixas de revenda 1–4, 5–9 e 10+;
+- custo-hora e taxa média de cartão usados no cálculo.
+
+Regras:
+- 220h não é multiplicado pela quantidade de funcionários;
+- salário/custo do funcionário continua informação interna;
+- snapshot remoto é derivado e não substitui o cálculo local oficial;
+- em aparelho novo, configuração remota prevalece sobre defaults locais;
+- registros novos de catálogo/colaborador/receita são baixados sem gerar efeitos
+  financeiros ou movimentos de estoque.
+
+Segurança:
+- RLS usa permissão `financeiro`, pois o módulo contém salários e margens;
+- 6 tabelas com RLS e 3 políticas cada;
+- nenhuma função SECURITY DEFINER nova;
+- SQLite permanece v33.

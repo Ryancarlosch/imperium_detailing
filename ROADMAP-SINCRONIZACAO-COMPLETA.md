@@ -73,11 +73,15 @@
 - ⬜ homologação competência x caixa em dois aparelhos
 
 ### 7. Precificação
-- ⬜ custos mensais compartilhados
-- ⬜ regra de 220h da empresa preservada
-- ⬜ custos de mão de obra
-- ⬜ margem/preço sugerido
-- ⬜ cenários e metas
+- 🟢 V1 configuração de margens compartilhada
+- 🟢 V1 regra oficial de 220h preservada
+- 🟢 V1 catálogo + receita padrão de produtos
+- 🟢 V1 custos de mão de obra compartilhados
+- 🟢 V1 snapshots de custo/margem/preço sugerido
+- 🟡 download controlado de novos registros
+- ⬜ V2 conflitos concorrentes + CAS
+- ⬜ V2 cenários e histórico de simulações
+- ⬜ homologação multiaparelho
 
 ### 8. Configurações e Usuários
 - ⬜ configurações compartilhadas
