@@ -155,3 +155,24 @@ Próximos blocos:
 - UI/diagnóstico de conflitos financeiros;
 - recalcular/espelhar resumo de contas a receber da OS sem recriar movimentos;
 - homologação multiaparelho: Pix, dinheiro, cartão, parcelado, taxa, estorno e transferência.
+
+
+## Próximo foco — Precificação Cloud V1
+
+Financeiro Cloud possui agora a base necessária para alimentar Precificação:
+- plano de contas;
+- contas e movimentos;
+- custos fixos;
+- metas;
+- regras/taxas de cartão;
+- fornecedores;
+- conciliações.
+
+Próximo pacote grande:
+- custos mensais compartilhados;
+- mão de obra/custo-hora;
+- regra oficial de 220h da empresa;
+- margem/meta;
+- preço sugerido;
+- cenários de precificação;
+- integração com catálogo de serviços.

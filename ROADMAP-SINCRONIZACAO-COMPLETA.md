@@ -60,7 +60,6 @@
 
 
 ### 6. Financeiro
-
 - 🟢 Upload Cloud V1: plano de contas + contas + pagamentos + movimentos
 - 🟢 RLS multiempresa e idempotência por origem
 - 🟢 nenhuma alteração de saldo local durante upload
@@ -68,7 +67,9 @@
 - 🟡 V2 conflitos concorrentes + resolução local/nuvem
 - 🟡 fornecedores + regras de cartão + transferências Cloud
 - 🟢 proteção contra dupla contabilização no download
-- ⬜ conciliações/comprovantes e demais auxiliares
+- 🟡 V3 custos fixos + metas + conciliações Cloud
+- 🟡 V3 comprovantes em Storage privado
+- 🟡 V3 diagnóstico e conflitos CAS de auxiliares
 - ⬜ homologação competência x caixa em dois aparelhos
 
 ### 7. Precificação

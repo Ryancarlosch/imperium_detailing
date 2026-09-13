@@ -1947,3 +1947,34 @@ Banco:
 - novas tabelas têm RLS + grants explícitos;
 - nenhuma função SECURITY DEFINER nova;
 - SQLite de domínio permanece v33.
+
+
+## 2026-09-12 - Financeiro Cloud V3 — fechamento do núcleo
+
+Status: 🟡 núcleo cloud financeiro desenvolvido; homologação multiaparelho fica para o lote final.
+
+Entregue:
+- custos fixos Cloud;
+- metas financeiras Cloud;
+- conciliações por conta Cloud;
+- conflitos concorrentes de custos/metas com CAS por `atualizado_em`;
+- resolução `usar local` / `usar nuvem`;
+- conciliações vinculadas à conta e ao movimento de ajuste;
+- bucket privado `imperium-financeiro-comprovantes`;
+- upload de comprovante com SHA-256 e caminho determinístico;
+- metadados de comprovante no pagamento remoto;
+- download do arquivo sob demanda;
+- diagnóstico local com contagem de conflitos, mapas e erros de comprovante.
+
+Proteção contábil:
+- downloads continuam sendo gravados diretamente no SQLite;
+- nenhum repository financeiro é chamado durante importação Cloud;
+- comprovante não cria movimento;
+- conciliação baixada não cria ajuste automaticamente;
+- conflito V3 bloqueia o Financeiro pela mesma fila de conflitos do V2.
+
+Banco:
+- migration `20260913012841_financeiro_cloud_v3_auxiliares_comprovantes`;
+- 3 tabelas novas com RLS;
+- bucket privado com RLS de Storage por `empresa_id`;
+- SQLite de domínio permanece v33.
