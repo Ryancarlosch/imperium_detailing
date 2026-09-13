@@ -322,3 +322,23 @@ Próximas evoluções:
 - botão retry por módulo;
 - telemetria de duração e volume;
 - Web: adaptar persistência da fila para ambiente sem sqflite nativo.
+
+
+## Depois da Web Foundation V1
+
+Portabilidade Web por lotes:
+1. Dashboard + navegação;
+2. Clientes / Veículos / Agenda;
+3. OS sem arquivos locais;
+4. Estoque;
+5. Financeiro / DRE / Precificação;
+6. CRM / Orçamentos;
+7. Arquivos/assinatura usando bytes + Storage;
+8. Ponto e permissões.
+
+Pendências técnicas:
+- remover dependências diretas de `dart:io` das telas compartilhadas;
+- criar widget de imagem multiplataforma;
+- transformar PDF/compartilhamento para fluxo de bytes/download no browser;
+- backup local tradicional permanece Android/iOS;
+- testar IndexedDB no mesmo domínio/porta durante homologação.

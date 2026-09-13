@@ -2305,3 +2305,36 @@ Central Cloud:
 - sincronização manual força retry imediato.
 
 SQLite de domínio permanece v33; as tabelas do motor são auxiliares dinâmicas.
+
+
+## 2026-09-13 - Web Foundation V1
+
+Status: 🟡 target Web compilável criado; módulos de negócio completos ainda
+serão portados progressivamente.
+
+Fundação:
+- target `web/` gerado pelo Flutter;
+- entrypoint dedicado `lib/main_web.dart`;
+- Supabase Auth funcional;
+- listagem de empresas vinculadas;
+- ativação de tenant;
+- SQLite no navegador via WASM + IndexedDB;
+- schema local permanece v33;
+- tenant Web persistido em SharedPreferences;
+- Android continua com SQLite em arquivo físico.
+
+AppDatabase:
+- não importa mais `dart:io` diretamente;
+- operações de arquivo/tenant foram movidas para adapter condicional:
+  - IO → arquivo SQLite físico;
+  - Web → SQLite WASM/IndexedDB;
+- adoção do banco legado permanece somente em IO;
+- Web nunca tenta copiar o banco Android.
+
+Validação:
+- `flutter build web -t lib/main_web.dart --release`;
+- assets `sqlite3.wasm` e `sqflite_sw.js`;
+- teste de contrato Web Foundation.
+
+Esta etapa deliberadamente não importa Dashboard/telas mobile com
+`File`/`Image.file`; elas entram nos próximos lotes de portabilidade.

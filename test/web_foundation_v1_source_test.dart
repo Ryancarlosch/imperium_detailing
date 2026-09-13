@@ -1,0 +1,60 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('AppDatabase nao importa dart io diretamente', () {
+    final source = File('lib/database/app_database.dart').readAsStringSync();
+
+    expect(source, isNot(contains("import 'dart:io';")));
+    expect(source, contains("import 'tenant_database_platform.dart';"));
+    expect(source, contains('inicializarTenantDatabasePlatform'));
+    expect(source, contains('descricaoTenantDatabasePlatform'));
+    expect(source, contains('static const int schemaVersion = 33;'));
+  });
+
+  test('Web usa SQLite WASM e SharedPreferences para tenant', () {
+    final source = File(
+      'lib/database/tenant_database_platform_web.dart',
+    ).readAsStringSync();
+
+    expect(source, contains('databaseFactoryFfiWeb'));
+    expect(source, contains('SharedPreferences.getInstance'));
+    expect(source, contains('sqlite-wasm-indexeddb'));
+    expect(source, contains('imperium_detailing_empresa_'));
+  });
+
+  test('IO preserva copia do banco legado', () {
+    final source = File(
+      'lib/database/tenant_database_platform_io.dart',
+    ).readAsStringSync();
+
+    expect(source, contains('origem.copy(temporario.path)'));
+    expect(source, isNot(contains('origem.rename(')));
+    expect(source, contains('sqlite-arquivo'));
+  });
+
+  test('Entrypoint Web nao importa telas mobile', () {
+    final source = File('lib/main_web.dart').readAsStringSync();
+
+    expect(source, contains('ImperiumWebFoundationApp'));
+    expect(source, contains('signInWithPassword'));
+    expect(source, contains('EmpresaCloudService.instance'));
+    expect(source, contains('diagnosticarTenantLocal'));
+    expect(source, isNot(contains('dashboard_page.dart')));
+    expect(source, isNot(contains('backup_automatico_service.dart')));
+  });
+
+  test('Pubspec declara runtime SQLite Web', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+
+    expect(pubspec, contains('sqflite_common_ffi_web: ^1.1.3'));
+    expect(pubspec, contains('shared_preferences: ^2.5.5'));
+  });
+
+  test('Target Web e assets SQLite existem', () {
+    expect(File('web/index.html').existsSync(), isTrue);
+    expect(File('web/sqlite3.wasm').existsSync(), isTrue);
+    expect(File('web/sqflite_sw.js').existsSync(), isTrue);
+  });
+}

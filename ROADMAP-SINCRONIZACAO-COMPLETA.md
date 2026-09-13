@@ -200,3 +200,18 @@
 - ⬜ telemetria
 - ⬜ diagnóstico de pendências
 - ⬜ observabilidade e homologação
+
+### 12. Web Foundation V1
+- 🟢 target Flutter Web
+- 🟢 entrypoint Web isolado
+- 🟢 Supabase Auth
+- 🟢 seleção de empresa/tenant
+- 🟢 SQLite WASM + IndexedDB
+- 🟢 schema v33 reutilizado
+- 🟢 AppDatabase sem `dart:io` direto
+- 🟢 build Web release de fundação
+- ⬜ Dashboard Web
+- ⬜ módulos operacionais
+- ⬜ arquivos via bytes/Storage
+- ⬜ PDF/download browser
+- ⬜ homologação completa
