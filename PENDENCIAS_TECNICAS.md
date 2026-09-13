@@ -258,3 +258,17 @@ Depois disso:
 - histórico visual de resoluções.
 
 Próximo bloco: Arquivos/Storage Cloud da OS.
+
+## Arquivos/Storage da OS - próximos passos
+
+- V2 de conflito concorrente do checklist;
+- resolução visual de conflito de assinatura;
+- compactação/redimensionamento adicional antes do upload;
+- indicador visual de arquivo pendente/erro nas telas da OS;
+- suporte Web sem depender de caminho de arquivo local;
+- anexos genéricos quando existir entidade local própria para anexos;
+- homologação com dois aparelhos:
+  - foto criada no A aparece no B;
+  - foto de avaria aparece no B;
+  - assinatura criada no A abre no B;
+  - exclusão local vira soft delete remoto.

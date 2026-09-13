@@ -2150,3 +2150,39 @@ Semântica:
 
 Central Cloud passa a mostrar e resolver as pendências CRM/Orçamentos.
 SQLite de domínio permanece v33.
+
+## 2026-09-13 - Arquivos/Storage Cloud da OS V1
+
+Status: 🟡 núcleo de arquivos multiaparelho implementado; conflitos avançados
+de checklist ficam para V2.
+
+Storage:
+- bucket privado `imperium-os-arquivos`;
+- limite por arquivo: 20 MiB;
+- RLS por pasta `empresa_id` + permissão `ordens_servico`;
+- SELECT / INSERT / UPDATE;
+- sem DELETE físico no V1.
+
+Sincronizado:
+- fotos Antes/Depois da OS;
+- checklist da OS;
+- foto de avaria do checklist;
+- assinatura do cliente.
+
+Comportamento Android:
+- upload calcula SHA-256;
+- caminho remoto é determinístico por empresa/OS/tipo/hash;
+- download materializa o arquivo na pasta local da OS;
+- SQLite recebe o novo caminho local;
+- telas atuais continuam usando `Image.file`;
+- soft delete é usado para metadados removidos.
+
+Comprovantes:
+- comprovantes de pagamento continuam no Financeiro Cloud V3;
+- bucket financeiro continua separado.
+
+Proteções:
+- arquivo só sobe depois que a OS possui UUID remoto;
+- assinatura atualiza o baseline remoto da OS para evitar falso conflito;
+- conflito simples de assinatura local x nuvem é marcado no diagnóstico;
+- SQLite de domínio permanece v33.

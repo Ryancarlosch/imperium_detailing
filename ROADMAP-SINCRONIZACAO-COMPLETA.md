@@ -146,3 +146,18 @@
 - 🟢 aplicação direta ao escolher nuvem
 - 🟢 Central Cloud
 - ⬜ homologação multiaparelho
+
+### 9. Arquivos / Storage
+- 🟢 bucket privado da OS
+- 🟢 fotos Antes/Depois
+- 🟢 checklist e foto de avaria
+- 🟢 assinatura do cliente
+- 🟢 download para cache local Android
+- 🟢 SHA-256 e caminhos determinísticos
+- 🟢 soft delete de metadados
+- 🟢 comprovantes financeiros permanecem no bucket financeiro
+- 🟡 conflito simples de assinatura diagnosticado
+- ⬜ V2 conflito do checklist
+- ⬜ UI de erros/pendências
+- ⬜ suporte Web para arquivos
+- ⬜ homologação multiaparelho
