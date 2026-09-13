@@ -112,3 +112,11 @@
 - ⬜ iOS
 - ⬜ segunda empresa
 - ⬜ suíte completa de contratos e regressão
+
+### Precificação V3 — Central gerencial
+- 🟢 visão geral de saúde dos preços;
+- 🟢 alertas de margem crítica e abaixo do equilíbrio;
+- 🟢 cenários personalizados e histórico;
+- 🟢 conflitos Local x Nuvem resolvíveis pela UI;
+- 🟢 aplicação individual confirmada do preço sugerido;
+- ⬜ homologação real multiaparelho.

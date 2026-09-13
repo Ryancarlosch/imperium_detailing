@@ -2035,3 +2035,25 @@ Observação:
   banco de domínio;
 - conflitos não são resolvidos automaticamente quando os dois lados mudaram;
 - a escolha local/nuvem fica disponível pelo service para futura UI gerencial.
+
+## 2026-09-12 - Precificação V3 — Central gerencial
+
+Status: 🟢 UI gerencial implementada sobre o Precificação Cloud V1/V2.
+
+Entregue:
+- Central Cloud integrada à tela de Precificação;
+- abas Visão geral, Simulações e Conflitos;
+- indicadores de margem crítica, prejuízo e conflitos;
+- comparação preço atual, custo, equilíbrio e preço sugerido;
+- aplicação individual e confirmada do preço sugerido;
+- cenários personalizados sem alterar o catálogo;
+- histórico de cenários local + Cloud;
+- resolução visual de conflito usando Local ou Nuvem;
+- sincronização manual pela Central;
+- tenant reutiliza OperacionalSyncService.empresaAtualId().
+
+Regras preservadas:
+- nenhum preço é alterado em massa;
+- simulação não altera o catálogo;
+- regra oficial de 220h;
+- SQLite v33.

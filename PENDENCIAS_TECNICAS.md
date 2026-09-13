@@ -199,3 +199,19 @@ Próximo pacote recomendado:
 - alertas de margem abaixo do mínimo;
 - indicador de serviço com prejuízo / margem crítica;
 - homologação real em dois aparelhos no lote final.
+
+## Depois da Precificação V3
+
+Próximo bloco:
+- Configurações e Usuários Cloud;
+- preferências compartilhadas;
+- permissões finais por módulo;
+- segunda empresa ponta a ponta;
+- depois Storage/arquivos de OS e motor unificado de sincronização.
+
+Homologação pendente da Precificação:
+- dois aparelhos alterando a mesma margem;
+- dois aparelhos alterando o mesmo serviço;
+- escolha Local e escolha Nuvem;
+- cenário criado em um aparelho aparecendo no outro;
+- aplicação de preço sugerido refletindo no catálogo e sincronização.

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../config/imperium_regras_negocio.dart';
 import '../repositories/precificacao_repository.dart';
 import '../repositories/fidelidade_repository.dart';
+import 'precificacao_cloud_central_page.dart';
 
 class CustoServicosPage extends StatefulWidget {
   const CustoServicosPage({super.key});
@@ -320,6 +321,22 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
       appBar: AppBar(
         title: const Text('Precificação dos serviços'),
         actions: [
+          IconButton(
+            tooltip: 'Central Cloud',
+            onPressed: _carregando
+                ? null
+                : () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PrecificacaoCloudCentralPage(),
+                      ),
+                    );
+                    if (mounted) {
+                      await _carregar();
+                    }
+                  },
+            icon: const Icon(Icons.cloud_circle_outlined),
+          ),
           IconButton(
             tooltip: 'Atualizar',
             onPressed: _carregando ? null : _carregar,
