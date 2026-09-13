@@ -5,6 +5,7 @@ import '../domain/ordem_servico_valor.dart';
 
 import '../services/web_cloud_operacional_service.dart';
 import 'web_gestao_pages.dart';
+import 'web_expansao_pages.dart';
 
 class WebOperacionalShell extends StatefulWidget {
   const WebOperacionalShell({
@@ -26,6 +27,13 @@ class WebOperacionalShell extends StatefulWidget {
   State<WebOperacionalShell> createState() => _WebOperacionalShellState();
 }
 
+class _WebNavItem {
+  const _WebNavItem(this.label, this.icon);
+
+  final String label;
+  final IconData icon;
+}
+
 class _WebOperacionalShellState extends State<WebOperacionalShell> {
   final _service = WebCloudOperacionalService.instance;
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
@@ -33,18 +41,29 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
   int _indice = 0;
   int _revisao = 0;
 
-  static const _titulos = <String>[
-    'Dashboard',
-    'Clientes',
-    'Veículos',
-    'Agenda',
-    'Ordens de serviço',
-    'Nova OS',
-    'Estoque',
-    'Financeiro',
+  static const _navegacao = <_WebNavItem>[
+    _WebNavItem('Dashboard', Icons.dashboard_outlined),
+    _WebNavItem('Clientes', Icons.people_outline),
+    _WebNavItem('Veículos', Icons.directions_car_outlined),
+    _WebNavItem('Agenda', Icons.calendar_month_outlined),
+    _WebNavItem('Ordens de serviço', Icons.receipt_long_outlined),
+    _WebNavItem('Nova OS', Icons.add_business_outlined),
+    _WebNavItem('Estoque', Icons.inventory_2_outlined),
+    _WebNavItem('Financeiro', Icons.account_balance_wallet_outlined),
+    _WebNavItem('CRM', Icons.hub_outlined),
+    _WebNavItem('Orçamentos', Icons.request_quote_outlined),
+    _WebNavItem('Precificação', Icons.price_change_outlined),
+    _WebNavItem('Central Cloud', Icons.cloud_outlined),
   ];
 
   void _atualizar() => setState(() => _revisao++);
+
+  void _selecionar(int indice, {bool fecharDrawer = false}) {
+    setState(() => _indice = indice);
+    if (fecharDrawer && Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+  }
 
   Widget _pagina() {
     return switch (_indice) {
@@ -79,20 +98,62 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         onCreated: _atualizar,
       ),
       6 => WebEstoquePage(key: ValueKey('estoque-$_revisao')),
-      _ => WebFinanceiroPage(key: ValueKey('financeiro-$_revisao')),
+      7 => WebFinanceiroPage(key: ValueKey('financeiro-$_revisao')),
+      8 => WebCrmPage(key: ValueKey('crm-$_revisao')),
+      9 => WebOrcamentosPage(key: ValueKey('orcamentos-$_revisao')),
+      10 => WebPrecificacaoPage(key: ValueKey('precificacao-$_revisao')),
+      _ => WebCentralCloudPage(key: ValueKey('central-$_revisao')),
     };
+  }
+
+  Widget _menuLateral({required bool fecharDrawer}) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      children: [
+        for (var i = 0; i < _navegacao.length; i++)
+          ListTile(
+            selected: i == _indice,
+            leading: Icon(_navegacao[i].icon),
+            title: Text(_navegacao[i].label),
+            onTap: () => _selecionar(i, fecharDrawer: fecharDrawer),
+          ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final ampla = MediaQuery.sizeOf(context).width >= 920;
+    final ampla = MediaQuery.sizeOf(context).width >= 1050;
+    final itemAtual = _navegacao[_indice];
+
+    final drawer = ampla
+        ? null
+        : Drawer(
+            child: SafeArea(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.auto_awesome_mosaic_outlined),
+                    title: const Text(
+                      'Imperium Manager',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(widget.usuarioEmail),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(child: _menuLateral(fecharDrawer: true)),
+                ],
+              ),
+            ),
+          );
 
     return Scaffold(
+      drawer: drawer,
       appBar: AppBar(
-        title: Text('Imperium Web · ${_titulos[_indice]}'),
+        title: Text('Imperium Web · ${itemAtual.label}'),
         actions: [
           IconButton(
-            tooltip: 'Atualizar',
+            tooltip: 'Atualizar página',
             onPressed: _atualizar,
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -119,90 +180,12 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       body: ampla
           ? Row(
               children: [
-                NavigationRail(
-                  selectedIndex: _indice,
-                  onDestinationSelected: (v) => setState(() => _indice = v),
-                  labelType: NavigationRailLabelType.all,
-                  destinations: const [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.dashboard_outlined),
-                      label: Text('Dashboard'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.people_outline),
-                      label: Text('Clientes'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.directions_car_outlined),
-                      label: Text('Veículos'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.calendar_month_outlined),
-                      label: Text('Agenda'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.receipt_long_outlined),
-                      label: Text('OS'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.add_business_outlined),
-                      label: Text('Nova OS'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.inventory_2_outlined),
-                      label: Text('Estoque'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.account_balance_wallet_outlined),
-                      label: Text('Financeiro'),
-                    ),
-                  ],
-                ),
+                SizedBox(width: 250, child: _menuLateral(fecharDrawer: false)),
                 const VerticalDivider(width: 1),
                 Expanded(child: _pagina()),
               ],
             )
           : _pagina(),
-      bottomNavigationBar: ampla
-          ? null
-          : NavigationBar(
-              selectedIndex: _indice,
-              onDestinationSelected: (v) => setState(() => _indice = v),
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  label: 'Dashboard',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.people_outline),
-                  label: 'Clientes',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.directions_car_outlined),
-                  label: 'Veículos',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.calendar_month_outlined),
-                  label: 'Agenda',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  label: 'OS',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.add_business_outlined),
-                  label: 'Nova OS',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  label: 'Estoque',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  label: 'Financeiro',
-                ),
-              ],
-            ),
     );
   }
 }

@@ -247,3 +247,21 @@
 - ⬜ finalização transacional de OS no Web
 - ⬜ lançamentos financeiros pelo Web
 - ⬜ movimentações de estoque pelo Web
+### 15. Web Comercial e Gestão V3
+- 🟢 navegação Web escalável com sidebar desktop e drawer mobile
+- 🟢 origem Web persistente/idempotente
+- 🟢 CRM Web com pipeline, cadastro/edição de lead e interações
+- 🟢 edição CRM com CAS por `atualizado_em`
+- 🟢 Orçamentos Web multi-itens
+- 🟢 status de orçamento com CAS
+- 🟢 Precificação Web com regra oficial de 220h/mês da empresa
+- 🟢 edição segura de margens por CAS
+- 🟢 snapshots de preço e cenários Web
+- 🟢 Central Web por tenant com diagnóstico de módulos/permissões
+- 🟢 RLS existente continua sendo a autoridade de acesso
+- ⬜ edição concorrente de OS existente Web ↔ Android
+- ⬜ finalização transacional de OS pelo Web
+- ⬜ movimentações de estoque pelo Web
+- ⬜ lançamentos financeiros pelo Web
+- ⬜ arquivos/checklist/assinatura Web
+- ⬜ PDF/download browser

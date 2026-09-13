@@ -54,25 +54,32 @@ void main() {
     final source = File(
       'lib/services/operacional_sync_service.dart',
     ).readAsStringSync();
-    final compact = source.replaceAll(RegExp(r'\s+'), '');
 
-    final guard = compact.indexOf(
-      'PrecificacaoCloudV2Service.instance.reconciliarAntesDoUpload(empresaId)',
-    );
-    final upload = compact.indexOf(
-      'PrecificacaoCloudService.instance.sincronizarUpload(empresaId)',
-    );
-    final download = compact.indexOf(
-      'PrecificacaoCloudService.instance.sincronizarDownload(empresaId)',
-    );
-    final depois = compact.indexOf(
-      'PrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload(empresaId)',
-    );
+    final inicio = source.indexOf('Future<void> _syncPrecificacao');
+    final fim = source.indexOf('Future<void> registrarExclusaoVeiculo', inicio);
+
+    expect(inicio, greaterThanOrEqualTo(0));
+    expect(fim, greaterThan(inicio));
+
+    final bloco = source.substring(inicio, fim);
+
+    // O contrato e sobre ordem semantica dentro da etapa de precificacao.
+    // Evita acoplar o teste a quebras de linha/formatacao de chamadas Dart.
+    final guard = bloco.indexOf('reconciliarAntesDoUpload');
+    final upload = bloco.indexOf('sincronizarUpload');
+    final download = bloco.indexOf('sincronizarDownload');
+    final depois = bloco.indexOf('sincronizarDepoisDoDownload');
 
     expect(guard, greaterThanOrEqualTo(0));
     expect(upload, greaterThan(guard));
     expect(download, greaterThan(upload));
     expect(depois, greaterThan(download));
+
+    expect(
+      bloco,
+      contains('SyncMotorBloqueadoException'),
+      reason: 'Conflito pendente deve bloquear o modulo antes do upload.',
+    );
   });
 
   test('SQLite de dominio continua v33 e 220h continua oficial', () {

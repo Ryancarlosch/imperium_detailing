@@ -2338,3 +2338,17 @@ Validação:
 
 Esta etapa deliberadamente não importa Dashboard/telas mobile com
 `File`/`Image.file`; elas entram nos próximos lotes de portabilidade.
+
+## 2026-09-13 - Web Comercial e Gestão V3
+
+Concluído no lote:
+- navegação Web preparada para muitos módulos;
+- CRM operacional no navegador;
+- Orçamentos multi-itens no navegador;
+- Precificação Web preservando 220 horas produtivas da empresa;
+- origem Web persistente para idempotência;
+- CAS em edições concorrentes de CRM, Orçamentos e Precificação;
+- Central Web de diagnóstico por tenant.
+
+A edição/finalização de OS existente continua bloqueada no Web até existir
+reconciliação de conflitos de OS equivalente à já usada em CRM/Precificação.

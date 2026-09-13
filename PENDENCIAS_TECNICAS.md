@@ -342,3 +342,14 @@ Pendências técnicas:
 - transformar PDF/compartilhamento para fluxo de bytes/download no browser;
 - backup local tradicional permanece Android/iOS;
 - testar IndexedDB no mesmo domínio/porta durante homologação.
+
+## Após Web Comercial e Gestão V3
+
+Prioridade seguinte:
+1. OS Cloud V3 com reconciliação/CAS para OS e itens já mapeados;
+2. liberar edição de OS existente no Web;
+3. finalização Web transacional coordenando estoque + financeiro;
+4. arquivos/checklist/assinatura Web por bytes + Storage;
+5. PDF/download no navegador;
+6. homologação cruzada Web ↔ Android em dois dispositivos;
+7. iOS.
