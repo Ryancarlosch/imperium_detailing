@@ -37,11 +37,13 @@ void main() {
     }
   });
 
-  test('Entrypoint abre shell multiempresa', () {
+  test('Entrypoint abre shell multiempresa com Magic Link', () {
     final source = File('lib/main_web.dart').readAsStringSync();
 
     expect(source, contains('ImperiumWebApp'));
-    expect(source, contains('signInWithPassword'));
+    expect(source, contains('signInWithOtp'));
+    expect(source, contains('shouldCreateUser: false'));
+    expect(source, isNot(contains('signInWithPassword')));
     expect(source, contains('EmpresaCloudService.instance'));
     expect(source, contains('WebOperacionalShell'));
     expect(source, isNot(contains('dashboard_page.dart')));
