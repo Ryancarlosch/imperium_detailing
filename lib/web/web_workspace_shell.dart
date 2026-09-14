@@ -4,6 +4,7 @@ import 'imperium_web_theme.dart';
 import 'web_dre_page.dart';
 import 'web_operacional_shell.dart';
 import 'web_ponto_page.dart';
+import 'web_relatorios_page.dart';
 
 class WebWorkspaceShell extends StatelessWidget {
   const WebWorkspaceShell({
@@ -33,13 +34,19 @@ class WebWorkspaceShell extends StatelessWidget {
     ).push(MaterialPageRoute<void>(builder: (_) => const WebDrePage()));
   }
 
+  void _abrirRelatorios(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const WebRelatoriosPage()),
+    );
+  }
+
   void _abrirModulos(BuildContext context) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Módulos gerenciais'),
         content: SizedBox(
-          width: 560,
+          width: 620,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -62,6 +69,17 @@ class WebWorkspaceShell extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(dialogContext);
                   _abrirDre(context);
+                },
+              ),
+              const SizedBox(height: 10),
+              _ModuloTile(
+                icon: Icons.analytics_outlined,
+                titulo: 'Relatórios gerenciais',
+                subtitulo:
+                    'Vendas líquidas, recebimentos, ticket médio, executores e comparativo competência × caixa.',
+                onTap: () {
+                  Navigator.pop(dialogContext);
+                  _abrirRelatorios(context);
                 },
               ),
             ],
