@@ -29,7 +29,7 @@ class WebWorkspaceShell extends StatelessWidget {
   void _abrirModulos(BuildContext context) {
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Módulos gerenciais'),
         content: SizedBox(
           width: 520,
@@ -42,7 +42,7 @@ class WebWorkspaceShell extends StatelessWidget {
                 subtitulo:
                     'Equipe, batidas, ajustes administrativos, jornada e hora extra.',
                 onTap: () {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                   _abrirPonto(context);
                 },
               ),
@@ -51,7 +51,7 @@ class WebWorkspaceShell extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Fechar'),
           ),
         ],
