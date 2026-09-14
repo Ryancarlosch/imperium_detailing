@@ -10,9 +10,6 @@ on:
       - desenvolvimento
       - master
 
-permissions:
-  contents: write
-
 concurrency:
   group: flutter-quality-${{ github.ref }}
   cancel-in-progress: true
@@ -40,95 +37,10 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Atualizar roadmap Web controlado
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('ROADMAP-IMPERIUM-MESTRE.md')
-          text = path.read_text(encoding='utf-8')
-          text = text.replace(
-              'Última atualização: **2026-09-10**',
-              'Última atualização: **2026-09-14**',
-              1,
-          )
-
-          antigo = '''⬜ **Flutter Web**
-          - Reutilizar domínio, repositories e contratos já existentes.
-          - Criar layout responsivo para monitor/notebook.
-          - Priorizar Dashboard, Financeiro, DRE, relatórios, estoque, clientes, agenda e OS.
-          - Login deve usar a mesma conta Supabase Auth do Android/iOS.
-          - Permissões e empresa devem ser as mesmas do usuário autenticado.
-          - Validar impressão/PDF, upload/download de arquivos e navegação Web.
-          - Web será habilitado somente após a base cloud dos módulos necessários estar estável.'''.replace('          ', '')
-
-          novo = '''🟡 **Flutter Web**
-          - Reutilizar domínio, repositories e contratos já existentes.
-          - Criar layout responsivo para monitor/notebook.
-          - Priorizar Dashboard, Financeiro, DRE, relatórios, estoque, clientes, agenda e OS.
-          - Login deve usar a mesma conta Supabase Auth do Android/iOS.
-          - Permissões e empresa devem ser as mesmas do usuário autenticado.
-          - Validar impressão/PDF, upload/download de arquivos e navegação Web.
-          - Web será habilitado somente após a base cloud dos módulos necessários estar estável.
-          - 2026-09-14: Magic Link Web e seleção da empresa já usam Supabase Auth e o mesmo `empresa_id`.
-          - 2026-09-14: workspace Web reúne clientes, veículos, agenda, OS, estoque, financeiro, CRM, orçamentos, precificação e central cloud.
-          - 2026-09-14: Ponto Web e DRE cloud integrados aos módulos gerenciais.
-          - 2026-09-14: Relatórios gerenciais Web usam valor líquido da OS pelo contrato único `OrdemServicoValor` e comparam competência × caixa.
-          - 2026-09-14: Contas e Caixa Web passaram a exibir saldo consolidado, extrato mensal, comparação com mês anterior e conciliações usando o snapshot financeiro oficial.
-          - Pendente: homologar escrita financeira Web pelo fluxo sincronizado antes de liberar criação/edição/conciliação remota.
-          - Pendente: validar build/navegação Web, PDFs, arquivos, responsividade final e demais lacunas de paridade Android.'''.replace('          ', '')
-
-          if antigo in text:
-              text = text.replace(antigo, novo, 1)
-
-          marcador = '## 2026-09-14 — Web: relatórios, contas e caixa cloud'
-          if marcador not in text:
-              text += '''
-
-          ---
-
-          ## 2026-09-14 — Web: relatórios, contas e caixa cloud
-
-          Módulo: Flutter Web / Financeiro / Gestão
-          Status: 🟡 Em desenvolvimento / validação
-
-          Alterações:
-          - relatórios gerenciais cloud com vendas líquidas pós-desconto, recebido, a receber, ticket médio e ranking de executores;
-          - comparação DRE por competência × caixa usando a RPC/contrato cloud existente;
-          - Contas e Caixa Web com saldo consolidado, contas ativas/inativas, extrato mensal e comparação mês anterior × atual;
-          - conciliações financeiras existentes passam a ser visíveis na Web;
-          - saldo Web replica a regra de snapshot `data_saldo_inicial` do Android e considera apenas movimentos `Realizado`;
-          - módulos integrados ao `WebWorkspaceShell` sem criar tabelas ou migrations novas;
-          - leitura permanece isolada por `empresa_id` e RLS.
-
-          Segurança/sincronização:
-          - nenhuma alteração em licença, Auth, RLS, Ponto cloud ou acesso de funcionário;
-          - nenhuma escrita financeira Web liberada nesta etapa;
-          - criação/edição/conciliação remota só será habilitada após validar o caminho de download/conflito do Financeiro Cloud V2/V3.
-
-          Validação:
-          - testes-fonte adicionados para relatórios e contas Web;
-          - pipeline passa a validar também o build de `lib/main_web.dart`.
-          '''.replace('          ', '')
-
-          path.write_text(text, encoding='utf-8')
-          PY
-
-      - name: Aplicar Dart format
-        run: dart format lib test
-
-      - name: Commit controlado de roadmap e formato
-        run: |
-          if ! git diff --quiet -- ROADMAP-IMPERIUM-MESTRE.md lib test; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add ROADMAP-IMPERIUM-MESTRE.md lib test
-            git commit -m "style(web): formata codigo e atualiza roadmap"
-            git push
-          fi
-
       - name: Check formatting
-        run: git diff --exit-code -- lib test
+        run: |
+          dart format lib test
+          git diff --exit-code -- lib test
 
       - name: Analyze
         run: flutter analyze
