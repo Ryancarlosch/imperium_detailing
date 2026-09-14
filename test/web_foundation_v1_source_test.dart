@@ -29,8 +29,12 @@ void main() {
 
   test('Entrypoint Web continua isolado das telas mobile', () {
     final source = File('lib/main_web.dart').readAsStringSync();
+    final workspace = File(
+      'lib/web/web_workspace_shell.dart',
+    ).readAsStringSync();
     expect(source, contains('ImperiumWebApp'));
-    expect(source, contains('WebOperacionalShell'));
+    expect(source, contains('WebWorkspaceShell'));
+    expect(workspace, contains('WebOperacionalShell'));
     expect(source, isNot(contains('dashboard_page.dart')));
     expect(source, isNot(contains('backup_automatico_service.dart')));
   });
