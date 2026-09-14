@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'imperium_web_theme.dart';
 import 'web_contas_financeiras_page.dart';
+import 'web_dashboard_gerencial_page.dart';
 import 'web_dre_page.dart';
 import 'web_operacional_shell.dart';
 import 'web_ponto_page.dart';
@@ -23,96 +24,31 @@ class WebWorkspaceShell extends StatelessWidget {
   final Future<void> Function(String empresaId) onTrocarEmpresa;
   final Future<void> Function() onSair;
 
-  void _abrirPonto(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const WebPontoPage()));
+  String get _nomeEmpresaAtual {
+    for (final empresa in empresas) {
+      if ('${empresa['empresa_id']}' == empresaAtualId) {
+        final nome = (empresa['nome'] ?? '').toString().trim();
+        if (nome.isNotEmpty) return nome;
+      }
+    }
+    return 'Empresa';
   }
 
-  void _abrirDre(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const WebDrePage()));
-  }
-
-  void _abrirRelatorios(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const WebRelatoriosPage()));
-  }
-
-  void _abrirContas(BuildContext context) {
+  void _abrir(BuildContext context, Widget pagina) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const WebContasFinanceirasPage(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => pagina),
     );
   }
 
-  void _abrirModulos(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Módulos gerenciais'),
-        content: SizedBox(
-          width: 620,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _ModuloTile(
-                  icon: Icons.account_balance_wallet_outlined,
-                  titulo: 'Contas e caixa',
-                  subtitulo:
-                      'Saldos por conta, extrato mensal, comparativo e conciliações sincronizadas.',
-                  onTap: () {
-                    Navigator.pop(dialogContext);
-                    _abrirContas(context);
-                  },
-                ),
-                const SizedBox(height: 10),
-                _ModuloTile(
-                  icon: Icons.badge_outlined,
-                  titulo: 'Ponto e funcionários',
-                  subtitulo:
-                      'Equipe, batidas, ajustes administrativos, jornada e hora extra.',
-                  onTap: () {
-                    Navigator.pop(dialogContext);
-                    _abrirPonto(context);
-                  },
-                ),
-                const SizedBox(height: 10),
-                _ModuloTile(
-                  icon: Icons.query_stats_rounded,
-                  titulo: 'DRE gerencial',
-                  subtitulo:
-                      'Competência e caixa com descontos, taxas, custos FIFO e resultado gerencial.',
-                  onTap: () {
-                    Navigator.pop(dialogContext);
-                    _abrirDre(context);
-                  },
-                ),
-                const SizedBox(height: 10),
-                _ModuloTile(
-                  icon: Icons.analytics_outlined,
-                  titulo: 'Relatórios gerenciais',
-                  subtitulo:
-                      'Vendas líquidas, recebimentos, ticket médio, executores e comparativo competência × caixa.',
-                  onTap: () {
-                    Navigator.pop(dialogContext);
-                    _abrirRelatorios(context);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Fechar'),
-          ),
-        ],
+  void _abrirOperacao(BuildContext context) {
+    _abrir(
+      context,
+      WebOperacionalShell(
+        usuarioEmail: usuarioEmail,
+        empresas: empresas,
+        empresaAtualId: empresaAtualId,
+        onTrocarEmpresa: onTrocarEmpresa,
+        onSair: onSair,
       ),
     );
   }
@@ -121,96 +57,145 @@ class WebWorkspaceShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final compacto = MediaQuery.sizeOf(context).width < 760;
 
-    return Stack(
-      children: [
-        WebOperacionalShell(
-          key: ValueKey('workspace-$empresaAtualId'),
-          usuarioEmail: usuarioEmail,
-          empresas: empresas,
-          empresaAtualId: empresaAtualId,
-          onTrocarEmpresa: onTrocarEmpresa,
-          onSair: onSair,
-        ),
-        Positioned(
-          right: compacto ? 14 : 24,
-          bottom: compacto ? 14 : 24,
-          child: SafeArea(
-            child: compacto
-                ? FloatingActionButton.small(
-                    tooltip: 'Módulos gerenciais',
-                    onPressed: () => _abrirModulos(context),
-                    child: const Icon(Icons.apps_rounded),
-                  )
-                : FloatingActionButton.extended(
-                    onPressed: () => _abrirModulos(context),
-                    icon: const Icon(Icons.apps_rounded),
-                    label: const Text('Módulos'),
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ModuloTile extends StatelessWidget {
-  const _ModuloTile({
-    required this.icon,
-    required this.titulo,
-    required this.subtitulo,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String titulo;
-  final String subtitulo;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: ImperiumWebTheme.accentStrong),
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: compacto ? 62 : 68,
+        titleSpacing: compacto ? 12 : 24,
+        title: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(11),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      titulo,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+              child: const Icon(
+                Icons.auto_awesome_mosaic_outlined,
+                color: ImperiumWebTheme.accentStrong,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    compacto ? 'Imperium' : 'Imperium Manager',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
                     ),
-                    const SizedBox(height: 4),
+                  ),
+                  if (!compacto)
                     Text(
-                      subtitulo,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFFAAB3BD),
+                      _nomeEmpresaAtual,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFFAAB3BD),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (!compacto)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: FilledButton.tonalIcon(
+                onPressed: () => _abrirOperacao(context),
+                icon: const Icon(Icons.grid_view_rounded, size: 18),
+                label: const Text('Sistema completo'),
+              ),
+            ),
+          const SizedBox(width: 8),
+          PopupMenuButton<String>(
+            tooltip: 'Trocar empresa',
+            onSelected: onTrocarEmpresa,
+            itemBuilder: (context) => empresas
+                .map(
+                  (empresa) => PopupMenuItem<String>(
+                    value: (empresa['empresa_id'] ?? '').toString(),
+                    child: Row(
+                      children: [
+                        if ('${empresa['empresa_id']}' == empresaAtualId) ...[
+                          const Icon(Icons.check_rounded, size: 18),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: Text(
+                            (empresa['nome'] ?? 'Empresa').toString(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+            icon: const Icon(Icons.business_outlined),
+          ),
+          PopupMenuButton<String>(
+            tooltip: usuarioEmail,
+            onSelected: (valor) async {
+              if (valor == 'sair') await onSair();
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                enabled: false,
+                value: 'email',
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  child: Text(
+                    usuarioEmail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'sair',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout_rounded, size: 18),
+                    SizedBox(width: 10),
+                    Text('Sair'),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 16),
             ],
+            icon: const CircleAvatar(
+              radius: 16,
+              child: Icon(Icons.person_outline_rounded, size: 18),
+            ),
           ),
-        ),
+          SizedBox(width: compacto ? 4 : 14),
+        ],
       ),
+      body: WebDashboardGerencialPage(
+        key: ValueKey('dashboard-premium-$empresaAtualId'),
+        onAbrirOperacao: () => _abrirOperacao(context),
+        onAbrirContas: () =>
+            _abrir(context, const WebContasFinanceirasPage()),
+        onAbrirDre: () => _abrir(context, const WebDrePage()),
+        onAbrirRelatorios: () => _abrir(context, const WebRelatoriosPage()),
+        onAbrirPonto: () => _abrir(context, const WebPontoPage()),
+      ),
+      floatingActionButton: compacto
+          ? FloatingActionButton.extended(
+              onPressed: () => _abrirOperacao(context),
+              icon: const Icon(Icons.grid_view_rounded),
+              label: const Text('Módulos'),
+            )
+          : null,
     );
   }
 }
