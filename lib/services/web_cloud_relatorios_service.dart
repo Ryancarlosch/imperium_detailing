@@ -37,7 +37,8 @@ class WebRelatoriosResumo {
   final double aReceber;
 
   int get quantidadeOrdens => ordens.length;
-  double get ticketMedio => quantidadeOrdens == 0 ? 0 : vendas / quantidadeOrdens;
+  double get ticketMedio =>
+      quantidadeOrdens == 0 ? 0 : vendas / quantidadeOrdens;
 }
 
 class WebCloudRelatoriosService {
@@ -71,17 +72,20 @@ class WebCloudRelatoriosService {
     final inicioDia = DateTime(inicio.year, inicio.month, inicio.day);
     final fimDia = DateTime(fim.year, fim.month, fim.day, 23, 59, 59, 999);
 
-    final ordens = List<Map<String, dynamic>>.from(
-      resultados[2] as List<Map<String, dynamic>>,
-    ).where((ordem) {
-      final data = _parseData(ordem['data_finalizacao']?.toString());
-      if (data == null || data.isBefore(inicioDia) || data.isAfter(fimDia)) {
-        return false;
-      }
+    final ordens =
+        List<Map<String, dynamic>>.from(
+          resultados[2] as List<Map<String, dynamic>>,
+        ).where((ordem) {
+          final data = _parseData(ordem['data_finalizacao']?.toString());
+          if (data == null ||
+              data.isBefore(inicioDia) ||
+              data.isAfter(fimDia)) {
+            return false;
+          }
 
-      final status = (ordem['status'] ?? '').toString().toLowerCase();
-      return !status.contains('cancel') && !status.contains('estorn');
-    }).toList();
+          final status = (ordem['status'] ?? '').toString().toLowerCase();
+          return !status.contains('cancel') && !status.contains('estorn');
+        }).toList();
 
     ordens.sort((a, b) => vendaOrdem(b).compareTo(vendaOrdem(a)));
 
@@ -92,9 +96,9 @@ class WebCloudRelatoriosService {
 
     for (final ordem in ordens) {
       final venda = vendaOrdem(ordem);
-      final recebidoOs = _double(ordem['valor_recebido'])
-          .clamp(0, double.infinity)
-          .toDouble();
+      final recebidoOs = _double(
+        ordem['valor_recebido'],
+      ).clamp(0, double.infinity).toDouble();
       final pendente = (venda - recebidoOs)
           .clamp(0, double.infinity)
           .toDouble();
@@ -115,17 +119,18 @@ class WebCloudRelatoriosService {
       atual.recebido += recebidoOs;
     }
 
-    final rankingExecutores = executores.entries
-        .map(
-          (entry) => WebRelatoriosExecutor(
-            nome: entry.key,
-            quantidade: entry.value.quantidade,
-            vendas: entry.value.vendas,
-            recebido: entry.value.recebido,
-          ),
-        )
-        .toList()
-      ..sort((a, b) => b.vendas.compareTo(a.vendas));
+    final rankingExecutores =
+        executores.entries
+            .map(
+              (entry) => WebRelatoriosExecutor(
+                nome: entry.key,
+                quantidade: entry.value.quantidade,
+                vendas: entry.value.vendas,
+                recebido: entry.value.recebido,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.vendas.compareTo(a.vendas));
 
     return WebRelatoriosResumo(
       competencia: resultados[0] as WebDreResultado,

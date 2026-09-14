@@ -35,9 +35,9 @@ class WebWorkspaceShell extends StatelessWidget {
   }
 
   void _abrirRelatorios(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const WebRelatoriosPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const WebRelatoriosPage()));
   }
 
   void _abrirModulos(BuildContext context) {

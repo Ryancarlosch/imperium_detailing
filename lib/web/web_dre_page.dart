@@ -185,21 +185,11 @@ class _WebDrePageState extends State<WebDrePage> {
           if (compacto) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                regime,
-                const SizedBox(height: 12),
-                periodo,
-              ],
+              children: [regime, const SizedBox(height: 12), periodo],
             );
           }
 
-          return Row(
-            children: [
-              regime,
-              const Spacer(),
-              periodo,
-            ],
-          );
+          return Row(children: [regime, const Spacer(), periodo]);
         },
       ),
     );
@@ -258,9 +248,9 @@ class _WebDrePageState extends State<WebDrePage> {
         const SizedBox(height: 24),
         Text(
           'Composição do resultado',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 10),
         if (grupos.isEmpty)
@@ -288,7 +278,9 @@ class _WebDrePageState extends State<WebDrePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                competencia ? 'Resultado por competência' : 'Resultado por caixa',
+                competencia
+                    ? 'Resultado por competência'
+                    : 'Resultado por caixa',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w900,
                 ),
@@ -401,10 +393,7 @@ class _WebDrePageState extends State<WebDrePage> {
                     const SizedBox(width: 8),
                     Text(
                       positivo ? 'Operação positiva' : 'Operação negativa',
-                      style: TextStyle(
-                        color: cor,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: TextStyle(color: cor, fontWeight: FontWeight.w800),
                     ),
                   ],
                 ),
@@ -421,11 +410,7 @@ class _WebDrePageState extends State<WebDrePage> {
             if (compacto) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  texto,
-                  const SizedBox(height: 18),
-                  numero,
-                ],
+                children: [texto, const SizedBox(height: 18), numero],
               );
             }
 
@@ -448,10 +433,7 @@ class _WebDrePageState extends State<WebDrePage> {
       child: ExpansionTile(
         initiallyExpanded: grupo == 'Receita Bruta' || grupo == 'Deduções',
         leading: Icon(_iconeGrupo(grupo)),
-        title: Text(
-          grupo,
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
+        title: Text(grupo, style: const TextStyle(fontWeight: FontWeight.w800)),
         subtitle: Text('${detalhes.length} lançamento(s)'),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

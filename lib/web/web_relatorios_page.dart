@@ -169,9 +169,7 @@ class _WebRelatoriosPageState extends State<WebRelatoriosPage> {
                 ),
                 _MetricCard(
                   titulo: 'Resultado competência',
-                  valor: _moeda.format(
-                    resumo.competencia.resultadoGerencial,
-                  ),
+                  valor: _moeda.format(resumo.competencia.resultadoGerencial),
                   icon: Icons.query_stats_rounded,
                   alerta: resumo.competencia.resultadoGerencial < 0,
                 ),
@@ -215,9 +213,9 @@ class _WebRelatoriosPageState extends State<WebRelatoriosPage> {
             if (resumo.executores.isEmpty)
               const _EmptyState('Sem executores no período selecionado.')
             else
-              ...resumo.executores.take(10).map(
-                    (item) => _ExecutorCard(item: item, moeda: _moeda),
-                  ),
+              ...resumo.executores
+                  .take(10)
+                  .map((item) => _ExecutorCard(item: item, moeda: _moeda)),
             const SizedBox(height: 26),
             const _SectionTitle(
               titulo: 'Maiores vendas do período',
@@ -228,7 +226,9 @@ class _WebRelatoriosPageState extends State<WebRelatoriosPage> {
             if (resumo.ordens.isEmpty)
               const _EmptyState('Nenhuma OS finalizada no período.')
             else
-              ...resumo.ordens.take(10).map(
+              ...resumo.ordens
+                  .take(10)
+                  .map(
                     (ordem) => _OrderCard(
                       ordem: ordem,
                       venda: WebCloudRelatoriosService.vendaOrdem(ordem),
@@ -246,7 +246,9 @@ class _WebRelatoriosPageState extends State<WebRelatoriosPage> {
             if (detalhes.isEmpty)
               const _EmptyState('Sem categorias financeiras no período.')
             else
-              ...detalhes.take(12).map(
+              ...detalhes
+                  .take(12)
+                  .map(
                     (item) => Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
@@ -324,9 +326,9 @@ class _CabecalhoRelatorio extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 'Vendas líquidas, recebimentos e DRE usam a mesma fonte cloud do Android.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFFAAB3BD),
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: const Color(0xFFAAB3BD)),
               ),
             ],
           );
@@ -334,11 +336,7 @@ class _CabecalhoRelatorio extends StatelessWidget {
           if (constraints.maxWidth < 720) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                titulo,
-                const SizedBox(height: 12),
-                periodoButton,
-              ],
+              children: [titulo, const SizedBox(height: 12), periodoButton],
             );
           }
 
@@ -447,11 +445,7 @@ class _DreCompareCard extends StatelessWidget {
             DataColumn(label: Text('Caixa'), numeric: true),
           ],
           rows: [
-            _row(
-              'Receita bruta',
-              competencia.receitaBruta,
-              caixa.receitaBruta,
-            ),
+            _row('Receita bruta', competencia.receitaBruta, caixa.receitaBruta),
             _row('Deduções', competencia.deducoes, caixa.deducoes),
             _row(
               'Receita líquida',
@@ -506,9 +500,7 @@ class _ExecutorCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: const CircleAvatar(
-          child: Icon(Icons.person_outline_rounded),
-        ),
+        leading: const CircleAvatar(child: Icon(Icons.person_outline_rounded)),
         title: Text(
           item.nome,
           style: const TextStyle(fontWeight: FontWeight.w800),
@@ -546,9 +538,7 @@ class _OrderCard extends StatelessWidget {
     final responsavel = (ordem['funcionario_responsavel'] ?? '')
         .toString()
         .trim();
-    final statusPagamento = (ordem['status_pagamento'] ?? '')
-        .toString()
-        .trim();
+    final statusPagamento = (ordem['status_pagamento'] ?? '').toString().trim();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -592,9 +582,9 @@ class _SectionTitle extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           subtitulo,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: const Color(0xFFAAB3BD),
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: const Color(0xFFAAB3BD)),
         ),
       ],
     );

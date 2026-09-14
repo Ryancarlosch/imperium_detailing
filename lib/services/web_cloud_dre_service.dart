@@ -101,8 +101,7 @@ class WebCloudDreService {
 
     final porGrupo = <String, double>{};
     for (final detalhe in detalhes) {
-      porGrupo[detalhe.grupo] =
-          (porGrupo[detalhe.grupo] ?? 0) + detalhe.valor;
+      porGrupo[detalhe.grupo] = (porGrupo[detalhe.grupo] ?? 0) + detalhe.valor;
     }
 
     final receitaBruta = porGrupo['Receita Bruta'] ?? 0;
