@@ -8,7 +8,7 @@ import 'database/app_database.dart';
 import 'services/empresa_cloud_service.dart';
 import 'services/supabase_bootstrap.dart';
 import 'web/imperium_web_theme.dart';
-import 'web/web_operacional_shell.dart';
+import 'web/web_workspace_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -546,7 +546,7 @@ class _WebGateState extends State<_WebGate> {
     if (usuario == null) return _login();
     if (empresaAtual.isEmpty) return _seletorEmpresa();
 
-    return WebOperacionalShell(
+    return WebWorkspaceShell(
       key: ValueKey('tenant-$empresaAtual'),
       usuarioEmail: usuario?.email ?? usuario?.id ?? '',
       empresas: empresas,
