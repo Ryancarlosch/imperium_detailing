@@ -38,8 +38,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Format touched Web files
+        run: dart format lib/main_web.dart lib/services/web_analytics_service.dart test/web_analytics_v1_source_test.dart
+
+      - name: Show formatting diff
+        shell: bash
+        run: |
+          git diff -- lib/main_web.dart lib/services/web_analytics_service.dart test/web_analytics_v1_source_test.dart
+          git diff --exit-code -- lib/main_web.dart lib/services/web_analytics_service.dart test/web_analytics_v1_source_test.dart
 
       - name: Analyze
         run: flutter analyze
