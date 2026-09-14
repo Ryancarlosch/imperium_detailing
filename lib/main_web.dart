@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'database/app_database.dart';
 import 'services/empresa_cloud_service.dart';
 import 'services/supabase_bootstrap.dart';
+import 'web/imperium_web_theme.dart';
 import 'web/web_operacional_shell.dart';
 
 Future<void> main() async {
@@ -30,7 +31,7 @@ class ImperiumWebApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData(brightness: Brightness.dark, useMaterial3: true),
+      theme: ImperiumWebTheme.dark(),
       home: const _WebGate(),
     );
   }
@@ -290,166 +291,260 @@ class _WebGateState extends State<_WebGate> {
     return texto.isEmpty ? 'Falha ao acessar o Imperium.' : texto;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (carregando) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    if (usuario == null) {
-      return Scaffold(
-        body: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.cloud_done_outlined, size: 58),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Imperium Manager Web',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Entre com o mesmo e-mail da sua conta na nuvem. '
-                        'Não é necessária senha.',
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 22),
-                      TextField(
-                        controller: email,
-                        keyboardType: TextInputType.emailAddress,
-                        autocorrect: false,
-                        enableSuggestions: false,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _enviarMagicLink(),
-                        decoration: const InputDecoration(
-                          labelText: 'E-mail',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      if (mensagem != null) ...[
-                        const SizedBox(height: 14),
-                        Card(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(Icons.mark_email_read_outlined),
-                                const SizedBox(width: 10),
-                                Expanded(child: Text(mensagem!)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (erro != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          erro!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 18),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: FilledButton.icon(
-                          onPressed: enviandoLink ? null : _enviarMagicLink,
-                          icon: enviandoLink
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.mark_email_read_outlined),
-                          label: Text(
-                            enviandoLink
-                                ? 'Enviando...'
-                                : linkEnviado
-                                ? 'Enviar novo link'
-                                : 'Enviar link de acesso',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Retorno seguro: $_redirectUrl',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (empresaAtual.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Selecione a empresa'),
-          actions: [
-            TextButton.icon(
-              onPressed: _sair,
-              icon: const Icon(Icons.logout),
-              label: const Text('Sair'),
-            ),
+  Widget _carregando() {
+    return const Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _BrandMark(compacto: true),
+            SizedBox(height: 22),
+            CircularProgressIndicator(),
+            SizedBox(height: 12),
+            Text('Preparando seu ambiente...'),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(24),
+      ),
+    );
+  }
+
+  Widget _login() {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(-0.70, -0.65),
+            radius: 1.15,
+            colors: [Color(0xFF242014), ImperiumWebTheme.background],
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final desktop = constraints.maxWidth >= 900;
+
+              return Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: desktop ? 56 : 22,
+                    vertical: 30,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1180),
+                    child: desktop
+                        ? Row(
+                            children: [
+                              const Expanded(child: _LoginHero()),
+                              const SizedBox(width: 64),
+                              SizedBox(width: 430, child: _loginCard()),
+                            ],
+                          )
+                        : _loginCard(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _loginCard() {
+    return Card(
+      margin: EdgeInsets.zero,
+      color: ImperiumWebTheme.surface.withValues(alpha: 0.94),
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (erro != null)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: _BrandMark(compacto: true),
+            ),
+            const SizedBox(height: 28),
+            Text(
+              'Acesse sua operação',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Use o mesmo e-mail da sua conta Imperium. Enviaremos um link seguro, sem senha.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFFADB6C0),
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: email,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              enableSuggestions: false,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _enviarMagicLink(),
+              decoration: const InputDecoration(
+                labelText: 'E-mail',
+                hintText: 'voce@empresa.com.br',
+                prefixIcon: Icon(Icons.alternate_email_rounded),
+              ),
+            ),
+            if (mensagem != null) ...[
+              const SizedBox(height: 14),
+              _AvisoLogin(
+                icon: Icons.mark_email_read_outlined,
+                texto: mensagem!,
+                destaque: true,
+              ),
+            ],
+            if (erro != null) ...[
+              const SizedBox(height: 14),
+              _AvisoLogin(
+                icon: Icons.error_outline_rounded,
+                texto: erro!,
+                erro: true,
+              ),
+            ],
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: enviandoLink ? null : _enviarMagicLink,
+              icon: enviandoLink
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_forward_rounded),
+              label: Text(
+                enviandoLink
+                    ? 'Enviando...'
+                    : linkEnviado
+                    ? 'Enviar novo link'
+                    : 'Entrar com link seguro',
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                const Icon(Icons.shield_outlined, size: 17),
+                const SizedBox(width: 8),
+                Expanded(
                   child: Text(
-                    erro!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                    'Supabase Auth · empresa e permissões preservadas',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF8F9AA5),
                     ),
                   ),
                 ),
-              ),
-            ...empresas.map(
-              (e) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.business),
-                  title: Text('${e['nome'] ?? 'Empresa'}'),
-                  subtitle: Text('Papel: ${e['papel'] ?? '-'}'),
-                  trailing: FilledButton(
-                    onPressed: () => _trocarEmpresa('${e['empresa_id']}'),
-                    child: const Text('Abrir'),
-                  ),
-                ),
-              ),
+              ],
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
+  }
+
+  Widget _seletorEmpresa() {
+    return Scaffold(
+      appBar: AppBar(
+        title: const _BrandMark(compacto: true),
+        actions: [
+          TextButton.icon(
+            onPressed: _sair,
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text('Sair'),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 920),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 44, 24, 24),
+            children: [
+              Text(
+                'Qual empresa você quer abrir?',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Cada ambiente permanece isolado por empresa. Você pode trocar novamente pelo menu superior.',
+              ),
+              const SizedBox(height: 24),
+              if (erro != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _AvisoLogin(
+                    icon: Icons.error_outline_rounded,
+                    texto: erro!,
+                    erro: true,
+                  ),
+                ),
+              ...empresas.map((e) {
+                final nome = '${e['nome'] ?? 'Empresa'}';
+                final papel = '${e['papel'] ?? '-'}';
+                return Card(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () => _trocarEmpresa('${e['empresa_id']}'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: ImperiumWebTheme.accentStrong.withValues(
+                                alpha: 0.10,
+                              ),
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                            child: const Icon(Icons.business_rounded),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  nome,
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text('Perfil de acesso: $papel'),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 17),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (carregando) return _carregando();
+    if (usuario == null) return _login();
+    if (empresaAtual.isEmpty) return _seletorEmpresa();
 
     return WebOperacionalShell(
       key: ValueKey('tenant-$empresaAtual'),
@@ -458,6 +553,169 @@ class _WebGateState extends State<_WebGate> {
       empresaAtualId: empresaAtual,
       onTrocarEmpresa: _trocarEmpresa,
       onSair: _sair,
+    );
+  }
+}
+
+class _BrandMark extends StatelessWidget {
+  const _BrandMark({required this.compacto});
+
+  final bool compacto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: compacto ? 40 : 52,
+          height: compacto ? 40 : 52,
+          decoration: BoxDecoration(
+            color: ImperiumWebTheme.accentStrong,
+            borderRadius: BorderRadius.circular(compacto ? 12 : 16),
+          ),
+          child: Icon(
+            Icons.auto_awesome_mosaic_rounded,
+            color: const Color(0xFF241900),
+            size: compacto ? 23 : 30,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'IMPERIUM',
+              style: TextStyle(
+                fontSize: compacto ? 15 : 20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+            Text(
+              'MANAGER',
+              style: TextStyle(
+                fontSize: compacto ? 10 : 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2.2,
+                color: ImperiumWebTheme.accentStrong,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LoginHero extends StatelessWidget {
+  const _LoginHero();
+
+  @override
+  Widget build(BuildContext context) {
+    final title = Theme.of(context).textTheme.displaySmall?.copyWith(
+      fontWeight: FontWeight.w900,
+      height: 1.08,
+      letterSpacing: -1.2,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _BrandMark(compacto: false),
+          const SizedBox(height: 52),
+          Text('Sua empresa inteira,\nem um único painel.', style: title),
+          const SizedBox(height: 18),
+          Text(
+            'Operação, clientes, ordens de serviço, estoque, financeiro, CRM e gestão conectados à mesma nuvem do aplicativo.',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: const Color(0xFFB7C0CA),
+              height: 1.55,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 34),
+          const Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _FeatureChip(icon: Icons.sync_rounded, label: 'Android + Web'),
+              _FeatureChip(icon: Icons.security_rounded, label: 'Multiempresa'),
+              _FeatureChip(icon: Icons.cloud_done_rounded, label: 'Supabase Cloud'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureChip extends StatelessWidget {
+  const _FeatureChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: ImperiumWebTheme.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 17, color: ImperiumWebTheme.accentStrong),
+          const SizedBox(width: 7),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AvisoLogin extends StatelessWidget {
+  const _AvisoLogin({
+    required this.icon,
+    required this.texto,
+    this.erro = false,
+    this.destaque = false,
+  });
+
+  final IconData icon;
+  final String texto;
+  final bool erro;
+  final bool destaque;
+
+  @override
+  Widget build(BuildContext context) {
+    final cor = erro
+        ? Theme.of(context).colorScheme.error
+        : destaque
+        ? ImperiumWebTheme.accentStrong
+        : Theme.of(context).colorScheme.primary;
+
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: cor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cor.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: cor, size: 20),
+          const SizedBox(width: 10),
+          Expanded(child: Text(texto)),
+        ],
+      ),
     );
   }
 }
