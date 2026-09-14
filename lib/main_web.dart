@@ -147,11 +147,7 @@ class _WebGateState extends State<_WebGate> {
       );
     } catch (e, stack) {
       unawaited(
-        analytics.registrarErro(
-          area: 'auth_init',
-          error: e,
-          stackTrace: stack,
-        ),
+        analytics.registrarErro(area: 'auth_init', error: e, stackTrace: stack),
       );
       erro = _textoErro(e);
     } finally {
@@ -490,8 +486,8 @@ class _WebGateState extends State<_WebGate> {
                             enviandoLink
                                 ? 'Enviando...'
                                 : linkEnviado
-                                    ? 'Enviar novo link'
-                                    : 'Enviar link de acesso',
+                                ? 'Enviar novo link'
+                                : 'Enviar link de acesso',
                           ),
                         ),
                       ),

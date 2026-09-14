@@ -47,10 +47,7 @@ class WebAnalyticsService {
     if (_inicializado) return;
 
     try {
-      final config = PostHogConfig(
-        _projectToken,
-        beforeSend: [_redactEvent],
-      )
+      final config = PostHogConfig(_projectToken, beforeSend: [_redactEvent])
         ..host = 'https://us.i.posthog.com'
         ..captureApplicationLifecycleEvents = false
         ..sendFeatureFlagEvents = false
@@ -90,10 +87,7 @@ class WebAnalyticsService {
     });
   }
 
-  Future<void> evento(
-    String nome, {
-    Map<String, Object>? propriedades,
-  }) async {
+  Future<void> evento(String nome, {Map<String, Object>? propriedades}) async {
     if (!_inicializado || nome.trim().isEmpty) return;
 
     await _safe(() async {
@@ -122,11 +116,7 @@ class WebAnalyticsService {
       await Posthog().captureException(
         error: erroSeguro,
         stackTrace: stackTrace ?? StackTrace.current,
-        properties: {
-          'area': area,
-          'runtime_type': tipo,
-          'platform': 'web',
-        },
+        properties: {'area': area, 'runtime_type': tipo, 'platform': 'web'},
       );
     });
   }
