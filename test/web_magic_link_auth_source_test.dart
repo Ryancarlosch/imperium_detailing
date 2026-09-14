@@ -19,12 +19,17 @@ void main() {
     expect(source, isNot(contains("import 'dart:io';")));
   });
 
-  test('Web mantem selecao segura de empresa', () {
+  test('Web mantem selecao segura de empresa e workspace', () {
     final source = File('lib/main_web.dart').readAsStringSync();
+    final workspace = File(
+      'lib/web/web_workspace_shell.dart',
+    ).readAsStringSync();
 
     expect(source, contains('listarEmpresasVinculadas'));
     expect(source, contains('empresaAtualValida'));
     expect(source, contains('trocarEmpresa'));
-    expect(source, contains('WebOperacionalShell'));
+    expect(source, contains('WebWorkspaceShell'));
+    expect(workspace, contains('WebOperacionalShell'));
+    expect(workspace, contains('WebPontoPage'));
   });
 }
