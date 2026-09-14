@@ -21,6 +21,7 @@ import 'precificacao_cloud_v2_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'os_cloud_v3_service.dart';
+import 'os_finalizacao_cloud_v4_service.dart';
 import 'os_arquivos_cloud_service.dart';
 import 'os_arquivos_cloud_v2_service.dart';
 import 'ponto_nuvem_service.dart';
@@ -459,6 +460,15 @@ class OperacionalSyncService {
       empresaId,
     );
     await EstoqueCloudReservaService.instance.sincronizarAlertas(empresaId);
+
+    final produtosOsOk = await OsFinalizacaoCloudV4Service.instance
+        .sincronizarProdutos(empresaId);
+
+    if (!produtosOsOk) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes nos produtos das Ordens de Serviço.',
+      );
+    }
   }
 
   Future<void> _syncFinanceiro(String empresaId) async {
@@ -478,6 +488,9 @@ class OperacionalSyncService {
 
     await FinanceiroCloudV2Service.instance.sincronizarDownload(empresaId);
     await FinanceiroCloudV3Service.instance.sincronizarDownload(empresaId);
+    await OsFinalizacaoCloudV4Service.instance.sincronizarPosFinanceiro(
+      empresaId,
+    );
   }
 
   Future<void> _syncPrecificacao(String empresaId) async {

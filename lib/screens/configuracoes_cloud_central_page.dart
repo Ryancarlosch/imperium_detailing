@@ -11,6 +11,7 @@ import '../services/tenant_runtime_service.dart';
 import '../services/sync_motor_service.dart';
 import '../services/os_arquivos_cloud_v2_service.dart';
 import '../services/os_cloud_v3_service.dart';
+import '../services/os_finalizacao_cloud_v4_service.dart';
 
 class ConfiguracoesCloudCentralPage extends StatefulWidget {
   const ConfiguracoesCloudCentralPage({super.key});
@@ -39,6 +40,8 @@ class _ConfiguracoesCloudCentralPageState
   List<Map<String, Object?>> _conflitosArquivosOs = const [];
   Map<String, Object?> _diagnosticoOrdensServico = const {};
   List<Map<String, Object?>> _conflitosOrdensServico = const [];
+  Map<String, Object?> _diagnosticoFinalizacaoOs = const {};
+  List<Map<String, Object?>> _conflitosProdutosOs = const [];
   Map<String, Object?> _diagnosticoConfig = const {};
   Map<String, Object?> _diagnosticoMultiempresa = const {};
   Map<String, Object?> _diagnosticoSync = const {};
@@ -68,6 +71,8 @@ class _ConfiguracoesCloudCentralPageState
       List<Map<String, Object?>> conflitosArquivosOs = const [];
       Map<String, Object?> ordensServico = const {};
       List<Map<String, Object?>> conflitosOrdensServico = const [];
+      Map<String, Object?> finalizacaoOs = const {};
+      List<Map<String, Object?>> conflitosProdutosOs = const [];
       Map<String, Object?> syncDiagnostico = const {};
       List<Map<String, Object?>> filaSync = const [];
       if (empresaAtualId != null && empresaAtualId.isNotEmpty) {
@@ -90,6 +95,11 @@ class _ConfiguracoesCloudCentralPageState
         );
         conflitosOrdensServico = await OsCloudV3Service.instance
             .listarConflitosPendentes(empresaId: empresaAtualId);
+        finalizacaoOs = await OsFinalizacaoCloudV4Service.instance.diagnosticar(
+          empresaAtualId,
+        );
+        conflitosProdutosOs = await OsFinalizacaoCloudV4Service.instance
+            .listarConflitosProdutosPendentes(empresaId: empresaAtualId);
         syncDiagnostico = await SyncMotorService.instance.diagnosticar(
           empresaAtualId,
         );
@@ -110,6 +120,8 @@ class _ConfiguracoesCloudCentralPageState
         _conflitosArquivosOs = conflitosArquivosOs;
         _diagnosticoOrdensServico = ordensServico;
         _conflitosOrdensServico = conflitosOrdensServico;
+        _diagnosticoFinalizacaoOs = finalizacaoOs;
+        _conflitosProdutosOs = conflitosProdutosOs;
         _diagnosticoSync = syncDiagnostico;
         _filaSync = filaSync;
         _carregando = false;
@@ -388,6 +400,128 @@ class _ConfiguracoesCloudCentralPageState
     }
   }
 
+  Future<void> _resolverProdutosOs(
+    Map<String, Object?> conflito, {
+    required bool local,
+  }) async {
+    final id = _int(conflito['id']);
+    if (id <= 0) return;
+
+    final escolha = local ? 'deste aparelho' : 'da nuvem';
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Resolver conflito dos produtos da OS?'),
+        content: Text(
+          'Será mantido o contrato $escolha.\n\n'
+          'A composição de produtos/FIFO da outra versão será substituída.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      if (local) {
+        await OsFinalizacaoCloudV4Service.instance.resolverProdutosUsandoLocal(
+          id,
+        );
+      } else {
+        await OsFinalizacaoCloudV4Service.instance.resolverProdutosUsandoNuvem(
+          id,
+        );
+      }
+
+      await _sincronizar();
+    } catch (erro) {
+      if (mounted) _mensagem('$erro', erro: true);
+    }
+  }
+
+  Widget _finalizacaoOsCloudV4Card() {
+    final conflitos = _conflitosProdutosOs.length;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.task_alt_outlined),
+                SizedBox(width: 8),
+                Text(
+                  'Finalização OS Cloud V4',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _linha(
+              'Contratos de produtos',
+              '${_int(_diagnosticoFinalizacaoOs['contratos_produtos'])}',
+            ),
+            _linha(
+              'Produtos mapeados',
+              '${_int(_diagnosticoFinalizacaoOs['produtos_mapeados'])}',
+            ),
+            _linha(
+              'Mão de obra mapeada',
+              '${_int(_diagnosticoFinalizacaoOs['mao_obra_mapeada'])}',
+            ),
+            _linha(
+              'Ajustes financeiros',
+              '${_int(_diagnosticoFinalizacaoOs['ajustes_mapeados'])}',
+            ),
+            _linha('Conflitos de produtos', '$conflitos'),
+            if (_conflitosProdutosOs.isNotEmpty) ...[
+              const Divider(),
+              ..._conflitosProdutosOs.map(
+                (conflito) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.inventory_2_outlined),
+                  title: Text('OS local #${conflito['ordem_local_id']}'),
+                  subtitle: Text('${conflito['motivo']}'),
+                  trailing: Wrap(
+                    spacing: 6,
+                    children: [
+                      TextButton(
+                        onPressed: () =>
+                            _resolverProdutosOs(conflito, local: true),
+                        child: const Text('Este aparelho'),
+                      ),
+                      FilledButton.tonal(
+                        onPressed: () =>
+                            _resolverProdutosOs(conflito, local: false),
+                        child: const Text('Nuvem'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else
+              const Text(
+                'Produtos/FIFO sem conflito. Finalizações Web podem ser '
+                'reconciliadas no Android sem repetir a baixa de estoque.',
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _ordensServicoCloudCard() {
     final conflitos = _conflitosOrdensServico.length;
 
@@ -513,6 +647,8 @@ class _ConfiguracoesCloudCentralPageState
                   _arquivosOsCard(),
                   const SizedBox(height: 12),
                   _ordensServicoCloudCard(),
+                  const SizedBox(height: 12),
+                  _finalizacaoOsCloudV4Card(),
                 ],
               ),
             ),

@@ -283,3 +283,28 @@
 - ⬜ finalização Web transacional (estoque + financeiro + pagamento)
 - ⬜ cancelamento Web com efeitos de negócio
 - ⬜ arquivos/checklist/assinatura no navegador
+
+### 17. OS Cloud V4 - finalização transacional Web
+- 🟢 contrato Cloud de produtos consumidos pela OS
+- 🟢 composição FIFO por lote sincronizável Web ↔ Android
+- 🟢 conflitos de contrato de produtos com resolução local/nuvem
+- 🟢 finalização Web exige OS `Em andamento`
+- 🟢 CAS da OS e do contrato de produtos
+- 🟢 idempotência/exactly-once por OS
+- 🟢 baixa FIFO no Postgres com lock de estoque
+- 🟢 reservas de outras OS respeitadas
+- 🟢 prevenção de dupla baixa no sync Android após finalização Web
+- 🟢 snapshot de mão de obra com regra oficial de horas produtivas
+- 🟢 pagamento opcional, parcial ou total
+- 🟢 conta financeira obrigatória quando há recebimento
+- 🟢 taxa da maquininha e repasse ao cliente no mesmo commit
+- 🟢 recebimento da OS não duplica receita na DRE
+- 🟢 taxa de pagamento continua como custo variável na DRE
+- 🟢 ajustes financeiros sincronizados para suportar estorno/correção futura
+- 🟢 produtos de OS finalizada no Web tornam-se imutáveis
+- 🟢 finalização rollback total se qualquer etapa falhar
+- 🟢 Central Cloud Android mostra saúde/conflitos do V4
+- 🟢 Web ganha página dedicada `Finalizar OS`
+- ⬜ homologação real Android ↔ Web em dois dispositivos
+- ⬜ cancelamento Web transacional
+- ⬜ checklist/fotos/assinatura no navegador

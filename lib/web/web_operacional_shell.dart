@@ -6,6 +6,7 @@ import '../domain/ordem_servico_valor.dart';
 import '../services/web_cloud_operacional_service.dart';
 import 'web_gestao_pages.dart';
 import 'web_ordens_v3_page.dart';
+import 'web_os_finalizacao_v4_page.dart';
 import 'web_expansao_pages.dart';
 
 class WebOperacionalShell extends StatefulWidget {
@@ -56,6 +57,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     _WebNavItem('Precificação', Icons.price_change_outlined),
     _WebNavItem('Central Cloud', Icons.cloud_outlined),
     _WebNavItem('Editar OS', Icons.edit_note_outlined),
+    _WebNavItem('Finalizar OS', Icons.task_alt_outlined),
   ];
 
   void _atualizar() => setState(() => _revisao++);
@@ -105,7 +107,8 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       9 => WebOrcamentosPage(key: ValueKey('orcamentos-$_revisao')),
       10 => WebPrecificacaoPage(key: ValueKey('precificacao-$_revisao')),
       11 => WebCentralCloudPage(key: ValueKey('central-$_revisao')),
-      _ => WebOrdensV3Page(key: ValueKey('editar-os-$_revisao')),
+      12 => WebOrdensV3Page(key: ValueKey('editar-os-$_revisao')),
+      _ => WebOsFinalizacaoV4Page(key: ValueKey('finalizar-os-$_revisao')),
     };
   }
 

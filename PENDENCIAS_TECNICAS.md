@@ -363,3 +363,21 @@ Prioridade seguinte:
 4. PDFs e download no navegador.
 5. Homologação cruzada Android ↔ Web em dois dispositivos.
 6. Preparação iOS.
+
+## Após OS Cloud V4
+
+1. Homologar finalização Android ↔ Web com duas sessões/dispositivos:
+   - OS sem produtos;
+   - OS com múltiplos produtos e lotes;
+   - Pix;
+   - cartão com taxa absorvida;
+   - cartão com taxa repassada;
+   - pagamento parcial;
+   - sem recebimento na finalização;
+   - tentativa concorrente Web/Android;
+   - repetição da mesma chamada/idempotência.
+2. Cancelamento Web com compensações transacionais.
+3. Checklist, fotos e assinatura Web por bytes + Storage.
+4. PDF/download browser.
+5. Consolidar roadmaps duplicados.
+6. Preparação iOS.

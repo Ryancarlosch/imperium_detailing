@@ -2367,3 +2367,29 @@ O núcleo de OS multi-dispositivo passa a proteger registros já mapeados:
 A finalização Web permanece propositalmente bloqueada até existir uma RPC
 transacional que coordene OS, estoque FIFO/reservas, pagamentos, movimentos
 financeiros e saldo de conta de forma idempotente.
+
+## 2026-09-14 - OS Cloud V4 / Finalização Web transacional
+
+A finalização da OS passa a existir no navegador sem quebrar a semântica
+offline-first do Android.
+
+Contrato:
+- a OS precisa estar `Em andamento`;
+- produtos precisam estar explicitamente confirmados, inclusive contrato vazio;
+- cabeçalho e produtos são protegidos por CAS;
+- uma chave de idempotência impede efeitos duplicados;
+- estoque e lotes são bloqueados antes da baixa;
+- o FIFO é gravado como snapshot auditável;
+- reservas de outras OS reduzem o saldo disponível;
+- pagamento, entrada de caixa, taxa e ajuste são feitos no mesmo commit;
+- recebimento de OS não impacta DRE novamente;
+- mão de obra é registrada com snapshot de custo-hora;
+- Android importa os efeitos remotos sem chamar repositories com side effects;
+- sincronização posterior não repete a baixa de estoque.
+
+Migrations Supabase aplicadas:
+- 20260914025104 os_cloud_v4_finalizacao_transacional
+- 20260914025446 os_cloud_v4_fk_hardening
+- 20260914032628 os_cloud_v4_produtos_imutaveis_pos_finalizacao
+- 20260914033237 os_cloud_v4_dre_e_fifo_interop_hardening
+- 20260914033305 os_cloud_v4_fifo_produto_id_interop

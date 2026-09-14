@@ -47,24 +47,25 @@ void main() {
     ).readAsStringSync();
     final compact = source.replaceAll(RegExp(r'\s+'), '');
 
-    final preparar = compact.indexOf(
-      'awaitFinanceiroCloudV2Service.instance.prepararUpload(empresaId)',
+    int pos(String metodo) {
+      return RegExp(
+            'await$metodo\\(empresaId,?\\);',
+          ).firstMatch(compact)?.start ??
+          -1;
+    }
+
+    final preparar = pos(
+      'FinanceiroCloudV2Service\\.instance\\.prepararUpload',
     );
-    final uploadV1 = compact.indexOf(
-      'awaitFinanceiroCloudUploadService.instance.sincronizarUpload(empresaId);',
+    final uploadV1 = pos(
+      'FinanceiroCloudUploadService\\.instance\\.sincronizarUpload',
     );
-    final completar =
-        RegExp(
-          r'awaitFinanceiroCloudV2Service\.instance\.'
-          r'completarUpload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
-    final download =
-        RegExp(
-          r'awaitFinanceiroCloudV2Service\.instance\.'
-          r'sincronizarDownload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
+    final completar = pos(
+      'FinanceiroCloudV2Service\\.instance\\.completarUpload',
+    );
+    final download = pos(
+      'FinanceiroCloudV2Service\\.instance\\.sincronizarDownload',
+    );
 
     expect(preparar, greaterThanOrEqualTo(0));
     expect(uploadV1, greaterThan(preparar));
