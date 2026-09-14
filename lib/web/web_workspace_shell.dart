@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'imperium_web_theme.dart';
+import 'web_contas_financeiras_page.dart';
 import 'web_dre_page.dart';
 import 'web_operacional_shell.dart';
 import 'web_ponto_page.dart';
@@ -40,6 +41,14 @@ class WebWorkspaceShell extends StatelessWidget {
     ).push(MaterialPageRoute<void>(builder: (_) => const WebRelatoriosPage()));
   }
 
+  void _abrirContas(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const WebContasFinanceirasPage(),
+      ),
+    );
+  }
+
   void _abrirModulos(BuildContext context) {
     showDialog<void>(
       context: context,
@@ -47,42 +56,55 @@ class WebWorkspaceShell extends StatelessWidget {
         title: const Text('Módulos gerenciais'),
         content: SizedBox(
           width: 620,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _ModuloTile(
-                icon: Icons.badge_outlined,
-                titulo: 'Ponto e funcionários',
-                subtitulo:
-                    'Equipe, batidas, ajustes administrativos, jornada e hora extra.',
-                onTap: () {
-                  Navigator.pop(dialogContext);
-                  _abrirPonto(context);
-                },
-              ),
-              const SizedBox(height: 10),
-              _ModuloTile(
-                icon: Icons.query_stats_rounded,
-                titulo: 'DRE gerencial',
-                subtitulo:
-                    'Competência e caixa com descontos, taxas, custos FIFO e resultado gerencial.',
-                onTap: () {
-                  Navigator.pop(dialogContext);
-                  _abrirDre(context);
-                },
-              ),
-              const SizedBox(height: 10),
-              _ModuloTile(
-                icon: Icons.analytics_outlined,
-                titulo: 'Relatórios gerenciais',
-                subtitulo:
-                    'Vendas líquidas, recebimentos, ticket médio, executores e comparativo competência × caixa.',
-                onTap: () {
-                  Navigator.pop(dialogContext);
-                  _abrirRelatorios(context);
-                },
-              ),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ModuloTile(
+                  icon: Icons.account_balance_wallet_outlined,
+                  titulo: 'Contas e caixa',
+                  subtitulo:
+                      'Saldos por conta, extrato mensal, comparativo e conciliações sincronizadas.',
+                  onTap: () {
+                    Navigator.pop(dialogContext);
+                    _abrirContas(context);
+                  },
+                ),
+                const SizedBox(height: 10),
+                _ModuloTile(
+                  icon: Icons.badge_outlined,
+                  titulo: 'Ponto e funcionários',
+                  subtitulo:
+                      'Equipe, batidas, ajustes administrativos, jornada e hora extra.',
+                  onTap: () {
+                    Navigator.pop(dialogContext);
+                    _abrirPonto(context);
+                  },
+                ),
+                const SizedBox(height: 10),
+                _ModuloTile(
+                  icon: Icons.query_stats_rounded,
+                  titulo: 'DRE gerencial',
+                  subtitulo:
+                      'Competência e caixa com descontos, taxas, custos FIFO e resultado gerencial.',
+                  onTap: () {
+                    Navigator.pop(dialogContext);
+                    _abrirDre(context);
+                  },
+                ),
+                const SizedBox(height: 10),
+                _ModuloTile(
+                  icon: Icons.analytics_outlined,
+                  titulo: 'Relatórios gerenciais',
+                  subtitulo:
+                      'Vendas líquidas, recebimentos, ticket médio, executores e comparativo competência × caixa.',
+                  onTap: () {
+                    Navigator.pop(dialogContext);
+                    _abrirRelatorios(context);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
