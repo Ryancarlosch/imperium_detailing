@@ -99,9 +99,8 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
               _CabecalhoPainel(
                 compacto: compacto,
                 ocultarValores: _ocultarValores,
-                onAlternarValores: () => setState(
-                  () => _ocultarValores = !_ocultarValores,
-                ),
+                onAlternarValores: () =>
+                    setState(() => _ocultarValores = !_ocultarValores),
                 onAtualizar: _carregando ? null : _carregar,
               ),
               const SizedBox(height: 18),
@@ -159,8 +158,7 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
               const SizedBox(height: 30),
               const _SectionTitle(
                 titulo: 'Acesso rápido',
-                subtitulo:
-                    'Entre direto nas áreas mais importantes da gestão.',
+                subtitulo: 'Entre direto nas áreas mais importantes da gestão.',
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -234,7 +232,9 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
               if (financeiro.executores.isEmpty)
                 const _EstadoVazio('Nenhum executor encontrado no mês atual.')
               else
-                ...financeiro.executores.take(5).map(
+                ...financeiro.executores
+                    .take(5)
+                    .map(
                       (item) => _ExecutorLinha(
                         item: item,
                         valorVendas: _valor(item.vendas),
@@ -323,11 +323,7 @@ class _CabecalhoPainel extends StatelessWidget {
     if (compacto) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          titulo,
-          const SizedBox(height: 12),
-          acoes,
-        ],
+        children: [titulo, const SizedBox(height: 12), acoes],
       );
     }
 
@@ -552,7 +548,9 @@ class _QuickAction extends StatelessWidget {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                    color: ImperiumWebTheme.accentStrong.withValues(
+                      alpha: 0.10,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: ImperiumWebTheme.accentStrong),
@@ -639,10 +637,7 @@ class _ContaCard extends StatelessWidget {
                 detalhe,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xFFAAB3BD),
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Color(0xFFAAB3BD), fontSize: 12),
               ),
             ],
           ),

@@ -309,17 +309,21 @@ class _WebExtratoContaPageState extends State<WebExtratoContaPage> {
     final comparativo = _comparativo!;
     final atual = comparativo.atual;
     final anterior = comparativo.anterior;
-    final movimentos = atual.movimentos.where((item) {
-      final tipo = (item['tipo'] ?? '').toString().trim().toLowerCase();
-      switch (_filtro) {
-        case _FiltroMovimento.todos:
-          return true;
-        case _FiltroMovimento.entradas:
-          return tipo == 'entrada';
-        case _FiltroMovimento.saidas:
-          return tipo == 'saída' || tipo == 'saida';
-      }
-    }).toList().reversed.toList();
+    final movimentos = atual.movimentos
+        .where((item) {
+          final tipo = (item['tipo'] ?? '').toString().trim().toLowerCase();
+          switch (_filtro) {
+            case _FiltroMovimento.todos:
+              return true;
+            case _FiltroMovimento.entradas:
+              return tipo == 'entrada';
+            case _FiltroMovimento.saidas:
+              return tipo == 'saída' || tipo == 'saida';
+          }
+        })
+        .toList()
+        .reversed
+        .toList();
 
     return Stack(
       children: [
@@ -371,11 +375,7 @@ class _WebExtratoContaPageState extends State<WebExtratoContaPage> {
               style: const TextStyle(color: Color(0xFFAAB3BD)),
             ),
             const SizedBox(height: 10),
-            _ComparativoCard(
-              atual: atual,
-              anterior: anterior,
-              moeda: _moeda,
-            ),
+            _ComparativoCard(atual: atual, anterior: anterior, moeda: _moeda),
             const SizedBox(height: 24),
             Row(
               children: [
@@ -655,7 +655,10 @@ class _CabecalhoMes extends StatelessWidget {
               child: Text(
                 tituloMes,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             IconButton(
@@ -757,11 +760,7 @@ class _ComparativoCard extends StatelessWidget {
               anterior.movimentoLiquido,
               atual.movimentoLiquido,
             ),
-            _linha(
-              'Saldo final',
-              anterior.saldoFinalMes,
-              atual.saldoFinalMes,
-            ),
+            _linha('Saldo final', anterior.saldoFinalMes, atual.saldoFinalMes),
           ],
         ),
       ),

@@ -35,9 +35,7 @@ class WebWorkspaceShell extends StatelessWidget {
   }
 
   void _abrir(BuildContext context, Widget pagina) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => pagina),
-    );
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => pagina));
   }
 
   void _abrirOperacao(BuildContext context) {
@@ -183,8 +181,7 @@ class WebWorkspaceShell extends StatelessWidget {
       body: WebDashboardGerencialPage(
         key: ValueKey('dashboard-premium-$empresaAtualId'),
         onAbrirOperacao: () => _abrirOperacao(context),
-        onAbrirContas: () =>
-            _abrir(context, const WebContasFinanceirasPage()),
+        onAbrirContas: () => _abrir(context, const WebContasFinanceirasPage()),
         onAbrirDre: () => _abrir(context, const WebDrePage()),
         onAbrirRelatorios: () => _abrir(context, const WebRelatoriosPage()),
         onAbrirPonto: () => _abrir(context, const WebPontoPage()),

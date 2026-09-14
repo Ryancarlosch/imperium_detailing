@@ -178,20 +178,20 @@ class WebCloudContasService {
         ? dataSaldo
         : inicio;
 
-    final movimentos = todosMovimentos.where((movimento) {
-      final dataMovimento = _dataMovimento(movimento)!;
-      return !dataMovimento.isBefore(inicioMovimentos) &&
-          dataMovimento.isBefore(fimExclusivo);
-    }).toList()
-      ..sort((a, b) {
-        final dataA = _dataMovimento(a)!;
-        final dataB = _dataMovimento(b)!;
-        final porData = dataA.compareTo(dataB);
-        if (porData != 0) return porData;
-        return (a['criado_em'] ?? '')
-            .toString()
-            .compareTo((b['criado_em'] ?? '').toString());
-      });
+    final movimentos =
+        todosMovimentos.where((movimento) {
+          final dataMovimento = _dataMovimento(movimento)!;
+          return !dataMovimento.isBefore(inicioMovimentos) &&
+              dataMovimento.isBefore(fimExclusivo);
+        }).toList()..sort((a, b) {
+          final dataA = _dataMovimento(a)!;
+          final dataB = _dataMovimento(b)!;
+          final porData = dataA.compareTo(dataB);
+          if (porData != 0) return porData;
+          return (a['criado_em'] ?? '').toString().compareTo(
+            (b['criado_em'] ?? '').toString(),
+          );
+        });
 
     var entradas = 0.0;
     var saidas = 0.0;
@@ -256,15 +256,12 @@ class WebCloudContasService {
         .isFilter('excluido_em', null)
         .order('data_conciliacao', ascending: false);
 
-    return raw
-        .map((item) => Map<String, dynamic>.from(item))
-        .where((item) {
-          final data = _parseData(item['data_conciliacao']);
-          return data != null &&
-              !data.isBefore(inicio) &&
-              data.isBefore(fimExclusivo);
-        })
-        .toList();
+    return raw.map((item) => Map<String, dynamic>.from(item)).where((item) {
+      final data = _parseData(item['data_conciliacao']);
+      return data != null &&
+          !data.isBefore(inicio) &&
+          data.isBefore(fimExclusivo);
+    }).toList();
   }
 
   Future<String> _empresaId() async {
