@@ -5,7 +5,7 @@
 > **Regra principal:** nenhum item antigo deve ser apagado. Quando algo for concluído,
 > o item permanece no roadmap e muda de status, recebendo data/notas quando necessário.
 
-Última atualização: **2026-09-10**
+Última atualização: **2026-09-14**
 ## BASELINE OFICIAL — 2026-09-01
 
 - Branch oficial: `desenvolvimento`.
@@ -2393,3 +2393,33 @@ Migrations Supabase aplicadas:
 - 20260914032628 os_cloud_v4_produtos_imutaveis_pos_finalizacao
 - 20260914033237 os_cloud_v4_dre_e_fifo_interop_hardening
 - 20260914033305 os_cloud_v4_fifo_produto_id_interop
+
+
+---
+
+## 2026-09-14 — Dashboard premium Web finalizado
+
+Módulo: Flutter Web / Dashboard / Gestão
+Status: 🟡 Implementado para homologação visual e funcional
+
+Alterações:
+- Dashboard premium passa a ser a home real do Imperium Web;
+- saldo consolidado por contas ativas com opção de ocultar valores;
+- vendas líquidas, recebido, a receber, ticket médio, OS abertas e agenda aberta;
+- resultado gerencial por competência e ranking comercial da equipe;
+- cards de contas financeiras com snapshot oficial do Financeiro;
+- atalhos diretos para Sistema completo, Contas e Caixa, DRE, Relatórios e Ponto;
+- workspace mantém troca de empresa, usuário e logout;
+- layout responsivo para desktop e telas compactas;
+- Sistema completo preserva Clientes, Veículos, Agenda, OS, Estoque, Financeiro, CRM, Orçamentos, Precificação e Central Cloud.
+
+Segurança/multiempresa:
+- nenhuma alteração em Auth, licença, RLS ou regras de tenant;
+- dashboard continua usando a empresa ativa e os serviços cloud existentes.
+
+Validação:
+- dart format;
+- flutter analyze;
+- flutter test;
+- flutter build web --target lib/main_web.dart --release;
+- git diff --check.

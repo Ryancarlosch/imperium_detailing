@@ -408,7 +408,7 @@ class _HeroGestao extends StatelessWidget {
           _HeroMini(
             titulo: 'Resultado gerencial',
             valor: resultado,
-            icon: Icons.monitoring_outlined,
+            icon: Icons.insights_outlined,
             alerta: resultadoNegativo,
           ),
         ],
