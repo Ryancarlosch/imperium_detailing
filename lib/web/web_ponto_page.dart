@@ -176,17 +176,18 @@ class _WebPontoPageState extends State<WebPontoPage>
                   DropdownButtonFormField<String>(
                     initialValue: situacao,
                     decoration: const InputDecoration(labelText: 'Situação'),
-                    items: const [
-                      'Trabalhado',
-                      'Folga',
-                      'Falta',
-                      'Atestado',
-                      'Férias',
-                    ]
-                        .map(
-                          (v) => DropdownMenuItem(value: v, child: Text(v)),
-                        )
-                        .toList(),
+                    items:
+                        const [
+                              'Trabalhado',
+                              'Folga',
+                              'Falta',
+                              'Atestado',
+                              'Férias',
+                            ]
+                            .map(
+                              (v) => DropdownMenuItem(value: v, child: Text(v)),
+                            )
+                            .toList(),
                     onChanged: (v) {
                       if (v != null) setLocal(() => situacao = v);
                     },
@@ -458,10 +459,18 @@ class _WebPontoPageState extends State<WebPontoPage>
     final agora = DateTime.now();
     final hoje = _data(agora);
     final ativos = _colaboradores.where((e) => e['ativo'] != false).toList();
-    final registrosHoje = _registros.where((e) => '${e['data']}' == hoje).toList();
-    final vinculados = ativos.where((e) => '${e['auth_user_id'] ?? ''}'.isNotEmpty).length;
-    final completos = registrosHoje.where((e) => _hora(e['saida']).isNotEmpty).length;
-    final nomes = {for (final c in _colaboradores) '${c['id']}': '${c['nome']}'};
+    final registrosHoje = _registros
+        .where((e) => '${e['data']}' == hoje)
+        .toList();
+    final vinculados = ativos
+        .where((e) => '${e['auth_user_id'] ?? ''}'.isNotEmpty)
+        .length;
+    final completos = registrosHoje
+        .where((e) => _hora(e['saida']).isNotEmpty)
+        .length;
+    final nomes = {
+      for (final c in _colaboradores) '${c['id']}': '${c['nome']}',
+    };
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -475,10 +484,26 @@ class _WebPontoPageState extends State<WebPontoPage>
           spacing: 12,
           runSpacing: 12,
           children: [
-            _ResumoCard('Funcionários ativos', '${ativos.length}', Icons.groups_2_outlined),
-            _ResumoCard('Batidas hoje', '${registrosHoje.length}', Icons.fingerprint_rounded),
-            _ResumoCard('Jornada concluída', '$completos', Icons.task_alt_rounded),
-            _ResumoCard('Acessos vinculados', '$vinculados', Icons.verified_user_outlined),
+            _ResumoCard(
+              'Funcionários ativos',
+              '${ativos.length}',
+              Icons.groups_2_outlined,
+            ),
+            _ResumoCard(
+              'Batidas hoje',
+              '${registrosHoje.length}',
+              Icons.fingerprint_rounded,
+            ),
+            _ResumoCard(
+              'Jornada concluída',
+              '$completos',
+              Icons.task_alt_rounded,
+            ),
+            _ResumoCard(
+              'Acessos vinculados',
+              '$vinculados',
+              Icons.verified_user_outlined,
+            ),
           ],
         ),
         const SizedBox(height: 24),
@@ -496,9 +521,14 @@ class _WebPontoPageState extends State<WebPontoPage>
           final vinculado = '${colaborador['auth_user_id'] ?? ''}'.isNotEmpty;
           return Card(
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 8,
+              ),
               leading: CircleAvatar(
-                backgroundColor: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                backgroundColor: ImperiumWebTheme.accentStrong.withValues(
+                  alpha: 0.10,
+                ),
                 child: const Icon(Icons.person_outline_rounded),
               ),
               title: Text(
@@ -508,7 +538,9 @@ class _WebPontoPageState extends State<WebPontoPage>
               subtitle: Text(
                 [
                   '${colaborador['funcao'] ?? ''}',
-                  registro == null ? 'Sem registro hoje' : _resumoRegistro(registro),
+                  registro == null
+                      ? 'Sem registro hoje'
+                      : _resumoRegistro(registro),
                   vinculado ? 'Login vinculado' : 'Sem login vinculado',
                 ].where((e) => e.trim().isNotEmpty).join(' · '),
               ),
@@ -540,18 +572,20 @@ class _WebPontoPageState extends State<WebPontoPage>
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 8),
-        ..._registros.take(60).map(
-          (registro) => Card(
-            child: ListTile(
-              leading: const Icon(Icons.schedule_rounded),
-              title: Text(
-                '${nomes['${registro['colaborador_id']}'] ?? 'Funcionário'} · ${_dataExibicao('${registro['data']}')}',
+        ..._registros
+            .take(60)
+            .map(
+              (registro) => Card(
+                child: ListTile(
+                  leading: const Icon(Icons.schedule_rounded),
+                  title: Text(
+                    '${nomes['${registro['colaborador_id']}'] ?? 'Funcionário'} · ${_dataExibicao('${registro['data']}')}',
+                  ),
+                  subtitle: Text(_resumoRegistro(registro)),
+                  trailing: Text('${registro['situacao'] ?? ''}'),
+                ),
               ),
-              subtitle: Text(_resumoRegistro(registro)),
-              trailing: Text('${registro['situacao'] ?? ''}'),
             ),
-          ),
-        ),
       ],
     );
   }
@@ -577,7 +611,10 @@ class _WebPontoPageState extends State<WebPontoPage>
               children: [
                 Text(
                   '${adicional.toStringAsFixed(0)}%',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
@@ -593,8 +630,15 @@ class _WebPontoPageState extends State<WebPontoPage>
           final ativo = dia['ativo'] == true;
           return Card(
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-              leading: Icon(ativo ? Icons.event_available_rounded : Icons.event_busy_outlined),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 8,
+              ),
+              leading: Icon(
+                ativo
+                    ? Icons.event_available_rounded
+                    : Icons.event_busy_outlined,
+              ),
               title: Text(
                 _nomeDia(_int(dia['dia_semana'])),
                 style: const TextStyle(fontWeight: FontWeight.w700),
@@ -622,16 +666,16 @@ class _WebPontoPageState extends State<WebPontoPage>
       children: [
         Text(
           titulo,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 6),
         Text(
           subtitulo,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: const Color(0xFFAAB3BD),
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: const Color(0xFFAAB3BD)),
         ),
       ],
     );
@@ -642,14 +686,21 @@ class _WebPontoPageState extends State<WebPontoPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(texto),
-        backgroundColor: erro ? Theme.of(context).colorScheme.errorContainer : null,
+        backgroundColor: erro
+            ? Theme.of(context).colorScheme.errorContainer
+            : null,
       ),
     );
   }
 
   static String _textoErro(Object e) {
     var texto = e.toString();
-    for (final prefixo in const ['PostgrestException: ', 'StateError: ', 'Bad state: ', 'ArgumentError: ']) {
+    for (final prefixo in const [
+      'PostgrestException: ',
+      'StateError: ',
+      'Bad state: ',
+      'ArgumentError: ',
+    ]) {
       if (texto.startsWith(prefixo)) texto = texto.substring(prefixo.length);
     }
     return texto.trim();
@@ -686,7 +737,8 @@ class _WebPontoPageState extends State<WebPontoPage>
 
   static double _double(dynamic valor, [double fallback = 0]) {
     if (valor is num) return valor.toDouble();
-    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? fallback;
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ??
+        fallback;
   }
 
   static String _nomeDia(int dia) {
@@ -735,7 +787,10 @@ class _ResumoCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 valor,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ],
           ),

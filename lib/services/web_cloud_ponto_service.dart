@@ -26,7 +26,9 @@ class WebCloudPontoService {
     final empresaId = await _empresaId();
     final dados = await _client
         .from('ponto_colaboradores')
-        .select('id,nome,funcao,ativo,auth_user_id,origem_local_id,atualizado_em')
+        .select(
+          'id,nome,funcao,ativo,auth_user_id,origem_local_id,atualizado_em',
+        )
         .eq('empresa_id', empresaId)
         .order('nome');
 

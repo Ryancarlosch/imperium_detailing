@@ -367,9 +367,9 @@ class _WebGateState extends State<_WebGate> {
             const SizedBox(height: 28),
             Text(
               'Acesse sua operação',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
@@ -644,7 +644,10 @@ class _LoginHero extends StatelessWidget {
             children: [
               _FeatureChip(icon: Icons.sync_rounded, label: 'Android + Web'),
               _FeatureChip(icon: Icons.security_rounded, label: 'Multiempresa'),
-              _FeatureChip(icon: Icons.cloud_done_rounded, label: 'Supabase Cloud'),
+              _FeatureChip(
+                icon: Icons.cloud_done_rounded,
+                label: 'Supabase Cloud',
+              ),
             ],
           ),
         ],

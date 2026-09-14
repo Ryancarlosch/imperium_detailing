@@ -21,9 +21,9 @@ class WebWorkspaceShell extends StatelessWidget {
   final Future<void> Function() onSair;
 
   void _abrirPonto(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const WebPontoPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const WebPontoPage()));
   }
 
   void _abrirModulos(BuildContext context) {

@@ -11,19 +11,20 @@ class ImperiumWebTheme {
   static const Color accentStrong = Color(0xFFFFC857);
 
   static ThemeData dark() {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: accent,
-      brightness: Brightness.dark,
-      surface: surface,
-    ).copyWith(
-      primary: accentStrong,
-      onPrimary: const Color(0xFF261B00),
-      secondary: const Color(0xFF9BB7FF),
-      surface: surface,
-      onSurface: const Color(0xFFF4F6F8),
-      outline: border,
-      outlineVariant: const Color(0xFF20262E),
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: accent,
+          brightness: Brightness.dark,
+          surface: surface,
+        ).copyWith(
+          primary: accentStrong,
+          onPrimary: const Color(0xFF261B00),
+          secondary: const Color(0xFF9BB7FF),
+          surface: surface,
+          onSurface: const Color(0xFFF4F6F8),
+          outline: border,
+          outlineVariant: const Color(0xFF20262E),
+        );
 
     final base = ThemeData(
       brightness: Brightness.dark,
@@ -68,7 +69,10 @@ class ImperiumWebTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceRaised,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 15,
+        ),
         border: OutlineInputBorder(
           borderRadius: radius,
           borderSide: const BorderSide(color: border),
@@ -100,7 +104,9 @@ class ImperiumWebTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       ),
       listTileTheme: ListTileThemeData(
@@ -127,7 +133,9 @@ class ImperiumWebTheme {
         contentTextStyle: const TextStyle(color: Color(0xFFF4F6F8)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(color: accentStrong),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: accentStrong,
+      ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: accentStrong,
         selectionColor: accentStrong.withValues(alpha: 0.28),
