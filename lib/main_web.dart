@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,10 +8,44 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'database/app_database.dart';
 import 'services/empresa_cloud_service.dart';
 import 'services/supabase_bootstrap.dart';
+import 'services/web_analytics_service.dart';
 import 'web/web_operacional_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final analytics = WebAnalyticsService.instance;
+  await analytics.inicializar();
+
+  final flutterOnErrorAnterior = FlutterError.onError;
+  FlutterError.onError = (details) {
+    unawaited(
+      analytics.registrarErro(
+        area: 'flutter_framework',
+        error: details.exception,
+        stackTrace: details.stack,
+      ),
+    );
+
+    if (flutterOnErrorAnterior != null) {
+      flutterOnErrorAnterior(details);
+    } else {
+      FlutterError.presentError(details);
+    }
+  };
+
+  final platformOnErrorAnterior = PlatformDispatcher.instance.onError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    unawaited(
+      analytics.registrarErro(
+        area: 'dart_runtime',
+        error: error,
+        stackTrace: stack,
+      ),
+    );
+    return platformOnErrorAnterior?.call(error, stack) ?? false;
+  };
+
   await SupabaseBootstrap.inicializar();
   runApp(const ImperiumWebApp());
 }
@@ -46,6 +81,7 @@ class _WebGate extends StatefulWidget {
 class _WebGateState extends State<_WebGate> {
   final email = TextEditingController();
   final empresaService = EmpresaCloudService.instance;
+  final analytics = WebAnalyticsService.instance;
 
   StreamSubscription<AuthState>? _authSubscription;
 
@@ -95,6 +131,13 @@ class _WebGateState extends State<_WebGate> {
           _tratarMudancaAuth(authState);
         },
         onError: (Object e) {
+          unawaited(
+            analytics.registrarErro(
+              area: 'auth_stream',
+              error: e,
+              stackTrace: StackTrace.current,
+            ),
+          );
           if (!mounted) return;
           setState(() {
             erro = _textoErro(e);
@@ -102,7 +145,14 @@ class _WebGateState extends State<_WebGate> {
           });
         },
       );
-    } catch (e) {
+    } catch (e, stack) {
+      unawaited(
+        analytics.registrarErro(
+          area: 'auth_init',
+          error: e,
+          stackTrace: stack,
+        ),
+      );
       erro = _textoErro(e);
     } finally {
       if (mounted) setState(() => carregando = false);
@@ -133,7 +183,14 @@ class _WebGateState extends State<_WebGate> {
 
     try {
       await _carregarContexto();
-    } catch (e) {
+    } catch (e, stack) {
+      unawaited(
+        analytics.registrarErro(
+          area: 'auth_state_change',
+          error: e,
+          stackTrace: stack,
+        ),
+      );
       erro = _textoErro(e);
     } finally {
       if (mounted) setState(() => carregando = false);
@@ -168,6 +225,11 @@ class _WebGateState extends State<_WebGate> {
         shouldCreateUser: false,
       );
 
+      await analytics.evento(
+        'auth_magic_link_requested',
+        propriedades: const {'channel': 'email'},
+      );
+
       if (!mounted) return;
 
       setState(() {
@@ -177,7 +239,19 @@ class _WebGateState extends State<_WebGate> {
             'Depois da confirmação você voltará automaticamente para o '
             'Imperium Manager Web.';
       });
-    } catch (e) {
+    } catch (e, stack) {
+      await analytics.evento(
+        'auth_magic_link_failed',
+        propriedades: {'error_type': e.runtimeType.toString()},
+      );
+      unawaited(
+        analytics.registrarErro(
+          area: 'magic_link',
+          error: e,
+          stackTrace: stack,
+        ),
+      );
+
       if (!mounted) return;
       setState(() {
         erro = _textoErro(e);
@@ -227,6 +301,24 @@ class _WebGateState extends State<_WebGate> {
         'vinculada ao Imperium.',
       );
     }
+
+    await analytics.identificar(user.id);
+    await analytics.evento(
+      'auth_context_ready',
+      propriedades: {
+        'company_count': empresas.length,
+        'role': _papelEmpresaAtual(),
+      },
+    );
+  }
+
+  String _papelEmpresaAtual() {
+    for (final empresa in empresas) {
+      if ('${empresa['empresa_id']}' == empresaAtual) {
+        return '${empresa['papel'] ?? 'desconhecido'}';
+      }
+    }
+    return 'desconhecido';
   }
 
   Future<void> _trocarEmpresa(String id) async {
@@ -236,7 +328,18 @@ class _WebGateState extends State<_WebGate> {
     try {
       await empresaService.trocarEmpresa(id);
       await _carregarContexto();
-    } catch (e) {
+      await analytics.evento(
+        'company_switched',
+        propriedades: {'role': _papelEmpresaAtual()},
+      );
+    } catch (e, stack) {
+      unawaited(
+        analytics.registrarErro(
+          area: 'company_switch',
+          error: e,
+          stackTrace: stack,
+        ),
+      );
       erro = _textoErro(e);
     } finally {
       if (mounted) setState(() => carregando = false);
@@ -244,7 +347,9 @@ class _WebGateState extends State<_WebGate> {
   }
 
   Future<void> _sair() async {
+    await analytics.evento('auth_signed_out');
     await client?.auth.signOut();
+    await analytics.limparIdentidade();
     if (!mounted) return;
 
     setState(() {
@@ -385,8 +490,8 @@ class _WebGateState extends State<_WebGate> {
                             enviandoLink
                                 ? 'Enviando...'
                                 : linkEnviado
-                                ? 'Enviar novo link'
-                                : 'Enviar link de acesso',
+                                    ? 'Enviar novo link'
+                                    : 'Enviar link de acesso',
                           ),
                         ),
                       ),
