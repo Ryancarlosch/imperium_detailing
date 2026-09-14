@@ -22,6 +22,15 @@ class OsCloudUploadService {
 
   SupabaseClient? get _client => SupabaseBootstrap.client;
 
+  // os-cloud-v3-hash-contract
+  String calcularHashOrdemServico(Map<String, Object?> item) {
+    return _hashOrdemServico(item);
+  }
+
+  String calcularHashOrdemServicoItem(Map<String, Object?> item) {
+    return _hashOrdemServicoItem(item);
+  }
+
   // os-cloud-upload-service-v1
   Future<void> sincronizarUpload(String empresaId) async {
     if (empresaId.trim().isEmpty || _client == null) return;
@@ -205,13 +214,26 @@ class OsCloudUploadService {
 
       remoto = Map<String, dynamic>.from(resposta);
     } else {
-      final resposta = await client
+      final esperado = (mapa?['remoto_atualizado_em'] ?? '').toString().trim();
+
+      dynamic filtro = client
           .from('imperium_ordens_servico')
           .update(payload)
           .eq('empresa_id', empresaId)
-          .eq('id', remotoId)
-          .select('id,atualizado_em')
-          .single();
+          .eq('id', remotoId);
+
+      if (esperado.isNotEmpty) {
+        filtro = filtro.eq('atualizado_em', esperado);
+      }
+
+      final resposta = await filtro.select('id,atualizado_em').maybeSingle();
+
+      if (resposta == null) {
+        throw StateError(
+          'A OS mudou na nuvem antes do upload. Sincronize e resolva o '
+          'conflito antes de publicar a versão local.',
+        );
+      }
 
       remoto = Map<String, dynamic>.from(resposta);
     }
@@ -317,13 +339,26 @@ class OsCloudUploadService {
 
       remoto = Map<String, dynamic>.from(resposta);
     } else {
-      final resposta = await client
+      final esperado = (mapa?['remoto_atualizado_em'] ?? '').toString().trim();
+
+      dynamic filtro = client
           .from('imperium_ordem_servico_itens')
           .update(payload)
           .eq('empresa_id', empresaId)
-          .eq('id', remotoId)
-          .select('id,atualizado_em')
-          .single();
+          .eq('id', remotoId);
+
+      if (esperado.isNotEmpty) {
+        filtro = filtro.eq('atualizado_em', esperado);
+      }
+
+      final resposta = await filtro.select('id,atualizado_em').maybeSingle();
+
+      if (resposta == null) {
+        throw StateError(
+          'O item da OS mudou na nuvem antes do upload. Sincronize e '
+          'resolva o conflito antes de publicar a versão local.',
+        );
+      }
 
       remoto = Map<String, dynamic>.from(resposta);
     }
@@ -373,17 +408,34 @@ class OsCloudUploadService {
 
       if (local.isNotEmpty) continue;
 
-      final agora = DateTime.now().toIso8601String();
+      final agora = DateTime.now().toUtc().toIso8601String();
+      final esperado = (mapa['remoto_atualizado_em'] ?? '').toString().trim();
 
-      await client
+      dynamic filtro = client
           .from(tabelaRemota)
           .update({'excluido_em': agora})
           .eq('empresa_id', empresaId)
           .eq('id', remotoId);
 
+      if (esperado.isNotEmpty) {
+        filtro = filtro.eq('atualizado_em', esperado);
+      }
+
+      final resposta = await filtro.select('id,atualizado_em').maybeSingle();
+
+      if (resposta == null) {
+        throw StateError(
+          'O registro remoto mudou antes da exclusão. Sincronize e resolva '
+          'o conflito antes de excluir na nuvem.',
+        );
+      }
+
       await database.update(
         tabelaMapa,
-        {'local_hash': '__excluido__', 'remoto_atualizado_em': agora},
+        {
+          'local_hash': '__excluido__',
+          'remoto_atualizado_em': resposta['atualizado_em']?.toString(),
+        },
         where: 'empresa_id = ? AND local_id = ?',
         whereArgs: [empresaId, localId],
       );

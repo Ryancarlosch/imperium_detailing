@@ -20,6 +20,7 @@ import 'precificacao_cloud_service.dart';
 import 'precificacao_cloud_v2_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
+import 'os_cloud_v3_service.dart';
 import 'os_arquivos_cloud_service.dart';
 import 'os_arquivos_cloud_v2_service.dart';
 import 'ponto_nuvem_service.dart';
@@ -376,8 +377,25 @@ class OperacionalSyncService {
   }
 
   Future<void> _syncOrdensServico(String empresaId) async {
+    final podePublicar = await OsCloudV3Service.instance.prepararUpload(
+      empresaId,
+    );
+
+    if (!podePublicar) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes nas Ordens de Serviço.',
+      );
+    }
+
     await OsCloudUploadService.instance.sincronizarUpload(empresaId);
     await OsCloudDownloadService.instance.sincronizarDownloadNovos(empresaId);
+    await OsCloudV3Service.instance.sincronizarDepoisDoDownload(empresaId);
+
+    if (await OsCloudV3Service.instance.possuiConflitosPendentes(empresaId)) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes nas Ordens de Serviço.',
+      );
+    }
   }
 
   Future<void> _syncArquivosOs(String empresaId) async {

@@ -10,6 +10,7 @@ import '../services/operacional_sync_service.dart';
 import '../services/tenant_runtime_service.dart';
 import '../services/sync_motor_service.dart';
 import '../services/os_arquivos_cloud_v2_service.dart';
+import '../services/os_cloud_v3_service.dart';
 
 class ConfiguracoesCloudCentralPage extends StatefulWidget {
   const ConfiguracoesCloudCentralPage({super.key});
@@ -36,6 +37,8 @@ class _ConfiguracoesCloudCentralPageState
   Map<String, Object?> _diagnosticoCrmOrcamentos = const {};
   Map<String, Object?> _diagnosticoArquivosOs = const {};
   List<Map<String, Object?>> _conflitosArquivosOs = const [];
+  Map<String, Object?> _diagnosticoOrdensServico = const {};
+  List<Map<String, Object?>> _conflitosOrdensServico = const [];
   Map<String, Object?> _diagnosticoConfig = const {};
   Map<String, Object?> _diagnosticoMultiempresa = const {};
   Map<String, Object?> _diagnosticoSync = const {};
@@ -63,6 +66,8 @@ class _ConfiguracoesCloudCentralPageState
       List<Map<String, Object?>> conflitosCrmOrcamentos = const [];
       Map<String, Object?> arquivosOs = const {};
       List<Map<String, Object?>> conflitosArquivosOs = const [];
+      Map<String, Object?> ordensServico = const {};
+      List<Map<String, Object?>> conflitosOrdensServico = const [];
       Map<String, Object?> syncDiagnostico = const {};
       List<Map<String, Object?>> filaSync = const [];
       if (empresaAtualId != null && empresaAtualId.isNotEmpty) {
@@ -79,6 +84,11 @@ class _ConfiguracoesCloudCentralPageState
           empresaAtualId,
         );
         conflitosArquivosOs = await OsArquivosCloudV2Service.instance
+            .listarConflitosPendentes(empresaId: empresaAtualId);
+        ordensServico = await OsCloudV3Service.instance.diagnosticar(
+          empresaAtualId,
+        );
+        conflitosOrdensServico = await OsCloudV3Service.instance
             .listarConflitosPendentes(empresaId: empresaAtualId);
         syncDiagnostico = await SyncMotorService.instance.diagnosticar(
           empresaAtualId,
@@ -98,6 +108,8 @@ class _ConfiguracoesCloudCentralPageState
         _conflitosCrmOrcamentos = conflitosCrmOrcamentos;
         _diagnosticoArquivosOs = arquivosOs;
         _conflitosArquivosOs = conflitosArquivosOs;
+        _diagnosticoOrdensServico = ordensServico;
+        _conflitosOrdensServico = conflitosOrdensServico;
         _diagnosticoSync = syncDiagnostico;
         _filaSync = filaSync;
         _carregando = false;
@@ -330,6 +342,119 @@ class _ConfiguracoesCloudCentralPageState
     }
   }
 
+  Future<void> _resolverOsCloud(
+    Map<String, Object?> conflito, {
+    required bool local,
+  }) async {
+    final id = _int(conflito['id']);
+    if (id <= 0) return;
+
+    final escolha = local ? 'deste aparelho' : 'da nuvem';
+    final entidade = (conflito['entidade'] ?? 'registro').toString();
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Resolver conflito da OS?'),
+        content: Text(
+          'Será mantida a versão $escolha para $entidade.\n\n'
+          'A outra versão será substituída no próximo ciclo seguro.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      if (local) {
+        await OsCloudV3Service.instance.resolverUsandoLocal(id);
+      } else {
+        await OsCloudV3Service.instance.resolverUsandoNuvem(id);
+      }
+
+      await _sincronizar();
+    } catch (erro) {
+      if (mounted) _mensagem('$erro', erro: true);
+    }
+  }
+
+  Widget _ordensServicoCloudCard() {
+    final conflitos = _conflitosOrdensServico.length;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.car_repair_outlined),
+                SizedBox(width: 8),
+                Text(
+                  'Ordens de Serviço Cloud V3',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _linha(
+              'OS mapeadas',
+              '${_int(_diagnosticoOrdensServico['ordens_mapeadas'])}',
+            ),
+            _linha(
+              'Itens mapeados',
+              '${_int(_diagnosticoOrdensServico['itens_mapeados'])}',
+            ),
+            _linha('Conflitos pendentes', '$conflitos'),
+            if (_conflitosOrdensServico.isNotEmpty) ...[
+              const Divider(),
+              ..._conflitosOrdensServico.map(
+                (conflito) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.compare_arrows_rounded),
+                  title: Text(
+                    '${conflito['entidade']} #${conflito['local_id']}',
+                  ),
+                  subtitle: Text('${conflito['motivo']}'),
+                  trailing: Wrap(
+                    spacing: 6,
+                    children: [
+                      TextButton(
+                        onPressed: () =>
+                            _resolverOsCloud(conflito, local: true),
+                        child: const Text('Este aparelho'),
+                      ),
+                      FilledButton.tonal(
+                        onPressed: () =>
+                            _resolverOsCloud(conflito, local: false),
+                        child: const Text('Nuvem'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else
+              const Text(
+                'Nenhum conflito de OS. Alterações Web e Android podem ser '
+                'reconciliadas com CAS.',
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _mensagem(String texto, {bool erro = false}) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -386,6 +511,8 @@ class _ConfiguracoesCloudCentralPageState
                   _crmOrcamentosCard(),
                   const SizedBox(height: 12),
                   _arquivosOsCard(),
+                  const SizedBox(height: 12),
+                  _ordensServicoCloudCard(),
                 ],
               ),
             ),

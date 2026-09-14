@@ -2352,3 +2352,18 @@ Concluído no lote:
 
 A edição/finalização de OS existente continua bloqueada no Web até existir
 reconciliação de conflitos de OS equivalente à já usada em CRM/Precificação.
+
+## 2026-09-13 - OS Cloud V3
+
+O núcleo de OS multi-dispositivo passa a proteger registros já mapeados:
+- Android não sobrescreve mais uma OS remota alterada depois da sua base;
+- alterações somente Web são aplicadas ao SQLite;
+- alterações concorrentes viram conflito explícito;
+- Central Cloud permite escolher aparelho ou nuvem;
+- edição Web de OS aberta/em andamento usa RPC transacional;
+- itens são validados por conjunto + timestamp antes de qualquer alteração;
+- `valor_total` é recalculado pelo servidor.
+
+A finalização Web permanece propositalmente bloqueada até existir uma RPC
+transacional que coordene OS, estoque FIFO/reservas, pagamentos, movimentos
+financeiros e saldo de conta de forma idempotente.

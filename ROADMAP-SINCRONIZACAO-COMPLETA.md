@@ -265,3 +265,21 @@
 - ⬜ lançamentos financeiros pelo Web
 - ⬜ arquivos/checklist/assinatura Web
 - ⬜ PDF/download browser
+
+### 16. OS Cloud V3 + edição Web segura
+- 🟢 CAS no upload Android de OS e itens já mapeados
+- 🟢 CAS também em exclusões remotas publicadas pelo Android
+- 🟢 reconciliação de OS existente Web ↔ Android
+- 🟢 conflito quando Android e nuvem mudam a mesma OS/item
+- 🟢 aplicação automática quando apenas a nuvem mudou
+- 🟢 Central Cloud Android mostra e resolve conflitos de OS
+- 🟢 edição Web de OS Aberta/Em andamento
+- 🟢 edição Web de múltiplos serviços
+- 🟢 adição/remoção de serviços numa transação Postgres única
+- 🟢 RPC Web usa RLS/security invoker
+- 🟢 RPC trava OS/itens e valida `atualizado_em`
+- 🟢 `valor_total` recalculado no servidor
+- 🟢 assinatura existente fica desatualizada após edição
+- ⬜ finalização Web transacional (estoque + financeiro + pagamento)
+- ⬜ cancelamento Web com efeitos de negócio
+- ⬜ arquivos/checklist/assinatura no navegador

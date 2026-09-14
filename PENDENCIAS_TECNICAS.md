@@ -353,3 +353,13 @@ Prioridade seguinte:
 5. PDF/download no navegador;
 6. homologação cruzada Web ↔ Android em dois dispositivos;
 7. iOS.
+
+## Após OS Cloud V3
+
+1. Finalização Web transacional e idempotente:
+   OS + produtos/FIFO + reservas + pagamentos + financeiro + conta.
+2. Cancelamento Web com compensações seguras.
+3. Checklist, fotos e assinatura Web usando bytes/Storage.
+4. PDFs e download no navegador.
+5. Homologação cruzada Android ↔ Web em dois dispositivos.
+6. Preparação iOS.
