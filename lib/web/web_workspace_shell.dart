@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'imperium_web_theme.dart';
+import 'web_dre_page.dart';
 import 'web_operacional_shell.dart';
 import 'web_ponto_page.dart';
 
@@ -26,13 +27,19 @@ class WebWorkspaceShell extends StatelessWidget {
     ).push(MaterialPageRoute<void>(builder: (_) => const WebPontoPage()));
   }
 
+  void _abrirDre(BuildContext context) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const WebDrePage()));
+  }
+
   void _abrirModulos(BuildContext context) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Módulos gerenciais'),
         content: SizedBox(
-          width: 520,
+          width: 560,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -44,6 +51,17 @@ class WebWorkspaceShell extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(dialogContext);
                   _abrirPonto(context);
+                },
+              ),
+              const SizedBox(height: 10),
+              _ModuloTile(
+                icon: Icons.query_stats_rounded,
+                titulo: 'DRE gerencial',
+                subtitulo:
+                    'Competência e caixa com descontos, taxas, custos FIFO e resultado gerencial.',
+                onTap: () {
+                  Navigator.pop(dialogContext);
+                  _abrirDre(context);
                 },
               ),
             ],
