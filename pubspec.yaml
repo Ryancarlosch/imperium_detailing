@@ -69,7 +69,7 @@ dependencies:
   supabase_flutter: ^2.16.0
 
   # Observabilidade Web
-  posthog_flutter: ^5.41.0
+  posthog_flutter: 5.42.0
 
 dev_dependencies:
   flutter_test:
