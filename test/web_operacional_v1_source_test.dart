@@ -37,15 +37,28 @@ void main() {
     }
   });
 
-  test('Entrypoint abre shell multiempresa com Magic Link', () {
+  test('Entrypoint abre workspace premium multiempresa com Magic Link', () {
     final source = File('lib/main_web.dart').readAsStringSync();
+    final workspace = File(
+      'lib/web/web_workspace_shell.dart',
+    ).readAsStringSync();
+    final dashboard = File(
+      'lib/web/web_dashboard_gerencial_page.dart',
+    ).readAsStringSync();
 
     expect(source, contains('ImperiumWebApp'));
     expect(source, contains('signInWithOtp'));
     expect(source, contains('shouldCreateUser: false'));
     expect(source, isNot(contains('signInWithPassword')));
     expect(source, contains('EmpresaCloudService.instance'));
-    expect(source, contains('WebOperacionalShell'));
+    expect(source, contains('WebWorkspaceShell'));
+    expect(workspace, contains('WebDashboardGerencialPage'));
+    expect(workspace, contains('WebOperacionalShell'));
+    expect(workspace, contains('Sistema completo'));
+    expect(dashboard, contains('Saldo consolidado'));
+    expect(dashboard, contains('Vendas líquidas'));
+    expect(dashboard, contains('A receber'));
+    expect(dashboard, contains('Ticket médio'));
     expect(source, isNot(contains('dashboard_page.dart')));
   });
 
