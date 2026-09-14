@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../database/app_database.dart';
 import 'supabase_bootstrap.dart';
 
@@ -77,13 +79,13 @@ class WebCloudContasService {
         .eq('status', 'Realizado')
         .isFilter('excluido_em', null);
 
-    final movimentos = (movimentosRaw as List)
-        .map((item) => Map<String, dynamic>.from(item as Map))
+    final movimentos = movimentosRaw
+        .map((item) => Map<String, dynamic>.from(item))
         .toList();
 
     final contas = <WebContaFinanceiraResumo>[];
-    for (final raw in contasRaw as List) {
-      final conta = Map<String, dynamic>.from(raw as Map);
+    for (final raw in contasRaw) {
+      final conta = Map<String, dynamic>.from(raw);
       if (!incluirInativas && conta['ativo'] == false) continue;
 
       final contaId = (conta['id'] ?? '').toString();
@@ -156,8 +158,8 @@ class WebCloudContasService {
         .isFilter('excluido_em', null)
         .order('data', ascending: true);
 
-    final todosMovimentos = (movimentosRaw as List)
-        .map((item) => Map<String, dynamic>.from(item as Map))
+    final todosMovimentos = movimentosRaw
+        .map((item) => Map<String, dynamic>.from(item))
         .where((item) => _dataMovimento(item) != null)
         .toList();
 
@@ -254,8 +256,8 @@ class WebCloudContasService {
         .isFilter('excluido_em', null)
         .order('data_conciliacao', ascending: false);
 
-    return (raw as List)
-        .map((item) => Map<String, dynamic>.from(item as Map))
+    return raw
+        .map((item) => Map<String, dynamic>.from(item))
         .where((item) {
           final data = _parseData(item['data_conciliacao']);
           return data != null &&
@@ -273,7 +275,7 @@ class WebCloudContasService {
     return empresaId;
   }
 
-  dynamic _client() {
+  SupabaseClient _client() {
     final client = SupabaseBootstrap.client;
     if (client == null) {
       throw StateError('Supabase não está disponível.');
