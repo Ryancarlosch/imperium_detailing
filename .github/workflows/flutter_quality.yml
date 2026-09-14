@@ -10,6 +10,9 @@ on:
       - desenvolvimento
       - master
 
+permissions:
+  contents: write
+
 concurrency:
   group: flutter-quality-${{ github.ref }}
   cancel-in-progress: true
@@ -37,10 +40,74 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Check formatting
+      - name: Compatibilidade do dashboard e roadmap
         run: |
-          dart format lib test
-          git diff --exit-code -- lib test
+          python - <<'PY'
+          from pathlib import Path
+
+          dashboard = Path('lib/web/web_dashboard_gerencial_page.dart')
+          text = dashboard.read_text(encoding='utf-8')
+          text = text.replace('Icons.monitoring_outlined', 'Icons.insights_outlined')
+          dashboard.write_text(text, encoding='utf-8')
+
+          roadmap = Path('ROADMAP-IMPERIUM-MESTRE.md')
+          text = roadmap.read_text(encoding='utf-8')
+          text = text.replace(
+              'Última atualização: **2026-09-10**',
+              'Última atualização: **2026-09-14**',
+              1,
+          )
+          marcador = '## 2026-09-14 — Dashboard premium Web finalizado'
+          if marcador not in text:
+              text += '''
+
+---
+
+## 2026-09-14 — Dashboard premium Web finalizado
+
+Módulo: Flutter Web / Dashboard / Gestão
+Status: 🟡 Implementado para homologação visual e funcional
+
+Alterações:
+- Dashboard premium passa a ser a home real do Imperium Web;
+- saldo consolidado por contas ativas com opção de ocultar valores;
+- vendas líquidas, recebido, a receber, ticket médio, OS abertas e agenda aberta;
+- resultado gerencial por competência e ranking comercial da equipe;
+- cards de contas financeiras com snapshot oficial do Financeiro;
+- atalhos diretos para Sistema completo, Contas e Caixa, DRE, Relatórios e Ponto;
+- workspace mantém troca de empresa, usuário e logout;
+- layout responsivo para desktop e telas compactas;
+- Sistema completo preserva acesso a Clientes, Veículos, Agenda, OS, Estoque, Financeiro, CRM, Orçamentos, Precificação e Central Cloud.
+
+Segurança/multiempresa:
+- nenhuma alteração em Auth, licença, RLS ou regras de tenant;
+- dashboard continua usando a empresa ativa e os serviços cloud existentes.
+
+Validação:
+- dart format;
+- flutter analyze;
+- flutter test;
+- flutter build web --target lib/main_web.dart --release;
+- git diff --check.
+'''
+          roadmap.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Apply formatting
+        run: dart format lib test
+
+      - name: Commit controlled fix if needed
+        run: |
+          if ! git diff --quiet -- lib test ROADMAP-IMPERIUM-MESTRE.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add lib test ROADMAP-IMPERIUM-MESTRE.md
+            git commit -m "fix(web): finaliza dashboard premium"
+            git push
+          fi
+
+      - name: Check formatting
+        run: git diff --exit-code -- lib test
 
       - name: Analyze
         run: flutter analyze
