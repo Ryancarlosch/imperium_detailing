@@ -3,22 +3,27 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('servico de auth usa email e senha do Supabase', () {
+  test('servico de auth usa email senha e recuperacao do Supabase', () {
     final source = File(
       'lib/services/imperium_auth_service.dart',
     ).readAsStringSync();
 
     expect(source, contains('signInWithPassword'));
+    expect(source, contains('resetPasswordForEmail'));
+    expect(source, contains('UserAttributes(password: senha)'));
     expect(source, contains('E-mail ou senha incorretos.'));
     expect(source, isNot(contains('signInWithOtp')));
   });
 
-  test('web usa login por email e senha', () {
+  test('web usa login por email senha e permite redefinir senha', () {
     final source = File('lib/main_web.dart').readAsStringSync();
 
     expect(source, contains('entrarComEmailSenha'));
     expect(source, contains("labelText: 'Senha'"));
     expect(source, contains('mesmo e-mail e senha'));
+    expect(source, contains('Esqueci minha senha'));
+    expect(source, contains('AuthChangeEvent.passwordRecovery'));
+    expect(source, contains('Salvar nova senha'));
     expect(source, isNot(contains('signInWithOtp')));
     expect(source, isNot(contains('Magic Link')));
   });
