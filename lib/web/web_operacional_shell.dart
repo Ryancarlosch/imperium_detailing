@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../domain/ordem_servico_valor.dart';
-
 import '../services/web_cloud_operacional_service.dart';
+import 'imperium_web_theme.dart';
+import 'web_contas_financeiras_page.dart';
+import 'web_dashboard_gerencial_page.dart';
+import 'web_dre_page.dart';
+import 'web_expansao_pages.dart';
 import 'web_gestao_pages.dart';
 import 'web_ordens_v3_page.dart';
 import 'web_os_finalizacao_v4_page.dart';
-import 'web_expansao_pages.dart';
+import 'web_ponto_page.dart';
+import 'web_relatorios_page.dart';
 
 class WebOperacionalShell extends StatefulWidget {
   const WebOperacionalShell({
@@ -29,13 +34,6 @@ class WebOperacionalShell extends StatefulWidget {
   State<WebOperacionalShell> createState() => _WebOperacionalShellState();
 }
 
-class _WebNavItem {
-  const _WebNavItem(this.label, this.icon);
-
-  final String label;
-  final IconData icon;
-}
-
 class _WebOperacionalShellState extends State<WebOperacionalShell> {
   final _service = WebCloudOperacionalService.instance;
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
@@ -43,38 +41,50 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
   int _indice = 0;
   int _revisao = 0;
 
-  static const _navegacao = <_WebNavItem>[
-    _WebNavItem('Dashboard', Icons.dashboard_outlined),
-    _WebNavItem('Clientes', Icons.people_outline),
-    _WebNavItem('Veículos', Icons.directions_car_outlined),
-    _WebNavItem('Agenda', Icons.calendar_month_outlined),
-    _WebNavItem('Ordens de serviço', Icons.receipt_long_outlined),
-    _WebNavItem('Nova OS', Icons.add_business_outlined),
-    _WebNavItem('Estoque', Icons.inventory_2_outlined),
-    _WebNavItem('Financeiro', Icons.account_balance_wallet_outlined),
-    _WebNavItem('CRM', Icons.hub_outlined),
-    _WebNavItem('Orçamentos', Icons.request_quote_outlined),
-    _WebNavItem('Precificação', Icons.price_change_outlined),
-    _WebNavItem('Central Cloud', Icons.cloud_outlined),
-    _WebNavItem('Editar OS', Icons.edit_note_outlined),
-    _WebNavItem('Finalizar OS', Icons.task_alt_outlined),
-  ];
+  String get _nomeEmpresaAtual {
+    for (final empresa in widget.empresas) {
+      if ('${empresa['empresa_id']}' == widget.empresaAtualId) {
+        final nome = (empresa['nome'] ?? '').toString().trim();
+        if (nome.isNotEmpty) return nome;
+      }
+    }
+    return 'Empresa';
+  }
+
+  String get _tituloAtual => switch (_indice) {
+    0 => 'Dashboard',
+    1 => 'Clientes',
+    2 => 'Veículos',
+    3 => 'Agenda',
+    4 => 'Ordens de serviço',
+    5 => 'Nova OS',
+    6 => 'Editar OS',
+    7 => 'Finalizar OS',
+    8 => 'Estoque',
+    9 => 'Fluxo de caixa',
+    10 => 'DRE',
+    11 => 'Contas bancárias',
+    12 => 'Relatórios',
+    13 => 'CRM',
+    14 => 'Orçamentos',
+    15 => 'Precificação',
+    16 => 'Ponto e funcionários',
+    _ => 'Central Cloud',
+  };
 
   void _atualizar() => setState(() => _revisao++);
 
-  void _selecionar(int indice, {bool fecharDrawer = false}) {
+  void _selecionar(int indice, {bool fecharMenu = true}) {
     setState(() => _indice = indice);
-    if (fecharDrawer && Navigator.canPop(context)) {
+    if (fecharMenu && Navigator.canPop(context)) {
       Navigator.pop(context);
     }
   }
 
   Widget _pagina() {
     return switch (_indice) {
-      0 => _DashboardPage(
-        key: ValueKey('dashboard-$_revisao'),
-        service: _service,
-        moeda: _moeda,
+      0 => WebDashboardGerencialPage(
+        key: ValueKey('dashboard-premium-${widget.empresaAtualId}-$_revisao'),
       ),
       1 => _ClientesPage(
         key: ValueKey('clientes-$_revisao'),
@@ -101,62 +111,292 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         key: ValueKey('nova-os-$_revisao'),
         onCreated: _atualizar,
       ),
-      6 => WebEstoquePage(key: ValueKey('estoque-$_revisao')),
-      7 => WebFinanceiroPage(key: ValueKey('financeiro-$_revisao')),
-      8 => WebCrmPage(key: ValueKey('crm-$_revisao')),
-      9 => WebOrcamentosPage(key: ValueKey('orcamentos-$_revisao')),
-      10 => WebPrecificacaoPage(key: ValueKey('precificacao-$_revisao')),
-      11 => WebCentralCloudPage(key: ValueKey('central-$_revisao')),
-      12 => WebOrdensV3Page(key: ValueKey('editar-os-$_revisao')),
-      _ => WebOsFinalizacaoV4Page(key: ValueKey('finalizar-os-$_revisao')),
+      6 => WebOrdensV3Page(key: ValueKey('editar-os-$_revisao')),
+      7 => WebOsFinalizacaoV4Page(key: ValueKey('finalizar-os-$_revisao')),
+      8 => WebEstoquePage(key: ValueKey('estoque-$_revisao')),
+      9 => WebFinanceiroPage(key: ValueKey('financeiro-$_revisao')),
+      10 => WebDrePage(key: ValueKey('dre-$_revisao')),
+      11 => WebContasFinanceirasPage(key: ValueKey('contas-$_revisao')),
+      12 => WebRelatoriosPage(key: ValueKey('relatorios-$_revisao')),
+      13 => WebCrmPage(key: ValueKey('crm-$_revisao')),
+      14 => WebOrcamentosPage(key: ValueKey('orcamentos-$_revisao')),
+      15 => WebPrecificacaoPage(key: ValueKey('precificacao-$_revisao')),
+      16 => WebPontoPage(key: ValueKey('ponto-$_revisao')),
+      _ => WebCentralCloudPage(key: ValueKey('central-$_revisao')),
     };
   }
 
-  Widget _menuLateral({required bool fecharDrawer}) {
+  Widget _itemMenu({
+    required int indice,
+    required String titulo,
+    required IconData icone,
+  }) {
+    final selecionado = _indice == indice;
+    return ListTile(
+      selected: selecionado,
+      selectedTileColor: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+      selectedColor: ImperiumWebTheme.accentStrong,
+      leading: Icon(icone, size: 21),
+      title: Text(
+        titulo,
+        style: TextStyle(
+          fontWeight: selecionado ? FontWeight.w800 : FontWeight.w600,
+        ),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onTap: () => _selecionar(indice),
+    );
+  }
+
+  Widget _grupoMenu({
+    required String titulo,
+    required IconData icone,
+    required List<Widget> filhos,
+    required Set<int> indices,
+  }) {
+    return ExpansionTile(
+      initiallyExpanded: indices.contains(_indice),
+      leading: Icon(icone, size: 21),
+      title: Text(
+        titulo,
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+      childrenPadding: const EdgeInsets.only(left: 14, right: 8, bottom: 6),
+      children: filhos,
+    );
+  }
+
+  Widget _menu() {
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
       children: [
-        for (var i = 0; i < _navegacao.length; i++)
-          ListTile(
-            selected: i == _indice,
-            leading: Icon(_navegacao[i].icon),
-            title: Text(_navegacao[i].label),
-            onTap: () => _selecionar(i, fecharDrawer: fecharDrawer),
-          ),
+        _itemMenu(
+          indice: 0,
+          titulo: 'Dashboard',
+          icone: Icons.dashboard_outlined,
+        ),
+        const SizedBox(height: 4),
+        _grupoMenu(
+          titulo: 'Operação',
+          icone: Icons.car_repair_outlined,
+          indices: const {1, 2, 3, 4, 5, 6, 7},
+          filhos: [
+            _itemMenu(indice: 1, titulo: 'Clientes', icone: Icons.people_outline),
+            _itemMenu(
+              indice: 2,
+              titulo: 'Veículos',
+              icone: Icons.directions_car_outlined,
+            ),
+            _itemMenu(
+              indice: 3,
+              titulo: 'Agenda',
+              icone: Icons.calendar_month_outlined,
+            ),
+            _itemMenu(
+              indice: 4,
+              titulo: 'Ordens de serviço',
+              icone: Icons.receipt_long_outlined,
+            ),
+            _itemMenu(
+              indice: 5,
+              titulo: 'Nova OS',
+              icone: Icons.add_business_outlined,
+            ),
+            _itemMenu(
+              indice: 6,
+              titulo: 'Editar OS',
+              icone: Icons.edit_note_outlined,
+            ),
+            _itemMenu(
+              indice: 7,
+              titulo: 'Finalizar OS',
+              icone: Icons.task_alt_outlined,
+            ),
+          ],
+        ),
+        _grupoMenu(
+          titulo: 'Financeiro',
+          icone: Icons.account_balance_wallet_outlined,
+          indices: const {9, 10, 11, 12},
+          filhos: [
+            _itemMenu(
+              indice: 9,
+              titulo: 'Fluxo de caixa',
+              icone: Icons.swap_vert_circle_outlined,
+            ),
+            _itemMenu(
+              indice: 10,
+              titulo: 'DRE',
+              icone: Icons.query_stats_rounded,
+            ),
+            _itemMenu(
+              indice: 11,
+              titulo: 'Contas bancárias',
+              icone: Icons.account_balance_outlined,
+            ),
+            _itemMenu(
+              indice: 12,
+              titulo: 'Relatórios',
+              icone: Icons.analytics_outlined,
+            ),
+          ],
+        ),
+        _itemMenu(
+          indice: 8,
+          titulo: 'Estoque',
+          icone: Icons.inventory_2_outlined,
+        ),
+        _grupoMenu(
+          titulo: 'Comercial',
+          icone: Icons.storefront_outlined,
+          indices: const {13, 14, 15},
+          filhos: [
+            _itemMenu(indice: 13, titulo: 'CRM', icone: Icons.hub_outlined),
+            _itemMenu(
+              indice: 14,
+              titulo: 'Orçamentos',
+              icone: Icons.request_quote_outlined,
+            ),
+            _itemMenu(
+              indice: 15,
+              titulo: 'Precificação',
+              icone: Icons.price_change_outlined,
+            ),
+          ],
+        ),
+        _grupoMenu(
+          titulo: 'Equipe',
+          icone: Icons.groups_2_outlined,
+          indices: const {16},
+          filhos: [
+            _itemMenu(
+              indice: 16,
+              titulo: 'Ponto e funcionários',
+              icone: Icons.badge_outlined,
+            ),
+          ],
+        ),
+        _grupoMenu(
+          titulo: 'Administração',
+          icone: Icons.admin_panel_settings_outlined,
+          indices: const {17},
+          filhos: [
+            _itemMenu(
+              indice: 17,
+              titulo: 'Central Cloud',
+              icone: Icons.cloud_outlined,
+            ),
+          ],
+        ),
       ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final ampla = MediaQuery.sizeOf(context).width >= 1050;
-    final itemAtual = _navegacao[_indice];
-
-    final drawer = ampla
-        ? null
-        : Drawer(
-            child: SafeArea(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.auto_awesome_mosaic_outlined),
-                    title: const Text(
-                      'Imperium Manager',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(widget.usuarioEmail),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(child: _menuLateral(fecharDrawer: true)),
-                ],
-              ),
-            ),
-          );
+    final compacto = MediaQuery.sizeOf(context).width < 760;
 
     return Scaffold(
-      drawer: drawer,
+      drawer: Drawer(
+        width: compacto ? 310 : 340,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: ImperiumWebTheme.accentStrong.withValues(
+                          alpha: 0.12,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_mosaic_outlined,
+                        color: ImperiumWebTheme.accentStrong,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Imperium Manager',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          Text(
+                            _nomeEmpresaAtual,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFFAAB3BD),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(child: _menu()),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.logout_rounded),
+                title: const Text('Sair'),
+                subtitle: Text(
+                  widget.usuarioEmail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: widget.onSair,
+              ),
+            ],
+          ),
+        ),
+      ),
       appBar: AppBar(
-        title: Text('Imperium Web · ${itemAtual.label}'),
+        toolbarHeight: compacto ? 62 : 68,
+        leading: Builder(
+          builder: (context) => IconButton(
+            tooltip: 'Abrir menu',
+            onPressed: () => Scaffold.of(context).openDrawer(),
+            icon: const Icon(Icons.menu_rounded),
+          ),
+        ),
+        titleSpacing: 4,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              compacto ? _tituloAtual : 'Imperium Manager · $_tituloAtual',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+            ),
+            if (!compacto)
+              Text(
+                _nomeEmpresaAtual,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFAAB3BD),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Atualizar página',
@@ -168,115 +408,63 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
             onSelected: widget.onTrocarEmpresa,
             itemBuilder: (context) => widget.empresas
                 .map(
-                  (e) => PopupMenuItem<String>(
-                    value: (e['empresa_id'] ?? '').toString(),
-                    child: Text((e['nome'] ?? 'Empresa').toString()),
+                  (empresa) => PopupMenuItem<String>(
+                    value: (empresa['empresa_id'] ?? '').toString(),
+                    child: Row(
+                      children: [
+                        if ('${empresa['empresa_id']}' == widget.empresaAtualId) ...[
+                          const Icon(Icons.check_rounded, size: 18),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: Text((empresa['nome'] ?? 'Empresa').toString()),
+                        ),
+                      ],
+                    ),
                   ),
                 )
                 .toList(),
-            icon: const Icon(Icons.business_rounded),
+            icon: const Icon(Icons.business_outlined),
           ),
-          IconButton(
-            tooltip: 'Sair · ${widget.usuarioEmail}',
-            onPressed: widget.onSair,
-            icon: const Icon(Icons.logout_rounded),
+          PopupMenuButton<String>(
+            tooltip: widget.usuarioEmail,
+            onSelected: (valor) async {
+              if (valor == 'sair') await widget.onSair();
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                enabled: false,
+                value: 'email',
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  child: Text(
+                    widget.usuarioEmail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'sair',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout_rounded, size: 18),
+                    SizedBox(width: 10),
+                    Text('Sair'),
+                  ],
+                ),
+              ),
+            ],
+            icon: const CircleAvatar(
+              radius: 16,
+              child: Icon(Icons.person_outline_rounded, size: 18),
+            ),
           ),
+          SizedBox(width: compacto ? 4 : 12),
         ],
       ),
-      body: ampla
-          ? Row(
-              children: [
-                SizedBox(width: 250, child: _menuLateral(fecharDrawer: false)),
-                const VerticalDivider(width: 1),
-                Expanded(child: _pagina()),
-              ],
-            )
-          : _pagina(),
-    );
-  }
-}
-
-class _DashboardPage extends StatelessWidget {
-  const _DashboardPage({super.key, required this.service, required this.moeda});
-
-  final WebCloudOperacionalService service;
-  final NumberFormat moeda;
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, Object?>>(
-      future: service.carregarResumo(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData && !snapshot.hasError) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return _Erro(snapshot.error.toString());
-        }
-
-        final d = snapshot.data!;
-        final cards = <(String, String, IconData)>[
-          ('Clientes ativos', '${d['clientes']}', Icons.people_rounded),
-          ('Veículos', '${d['veiculos']}', Icons.directions_car_rounded),
-          ('Agenda aberta', '${d['agenda']}', Icons.calendar_month_rounded),
-          ('OS abertas', '${d['os_abertas']}', Icons.receipt_long_rounded),
-          (
-            'Faturamento do mês',
-            moeda.format(_double(d['faturamento_mes'])),
-            Icons.trending_up_rounded,
-          ),
-          (
-            'A receber em OS',
-            moeda.format(_double(d['a_receber'])),
-            Icons.account_balance_wallet_rounded,
-          ),
-        ];
-
-        return ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            const Text(
-              'Visão geral',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            const Text('Dados online do mesmo tenant usado no Android.'),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: cards
-                  .map(
-                    (c) => SizedBox(
-                      width: 245,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(c.$3),
-                              const SizedBox(height: 14),
-                              Text(c.$1),
-                              const SizedBox(height: 5),
-                              Text(
-                                c.$2,
-                                style: const TextStyle(
-                                  fontSize: 23,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-        );
-      },
+      body: _pagina(),
     );
   }
 }
