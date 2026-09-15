@@ -22,16 +22,18 @@ void main() {
     expect(auth, contains('signUp'));
   });
 
-  test('Primeiro acesso da empresa nao depende mais de magic link ou PIN', () {
+  test('Primeiro acesso ativa a assinatura sem magic link ou PIN', () {
     final source = File(
       'lib/screens/empresa_primeiro_acesso_page.dart',
     ).readAsStringSync();
 
-    expect(source, contains('Criar conta e ativar empresa'));
+    expect(source, contains('Criar senha e ativar assinatura'));
     expect(source, contains('CloudSessionService'));
     expect(source, contains('criarContaComEmailSenha'));
     expect(source, contains('entrarComEmailSenha'));
-    expect(source, contains('e-mail informado na assinatura'));
+    expect(source, contains('e-mail usado na assinatura'));
+    expect(source, contains("labelText: 'E-mail da assinatura'"));
+    expect(source, contains('vinculadas automaticamente'));
     expect(source, isNot(contains('signInWithOtp')));
     expect(source, isNot(contains('Magic Link')));
     expect(source, isNot(contains('Criar PIN')));
