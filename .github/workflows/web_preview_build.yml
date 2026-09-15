@@ -10,6 +10,11 @@ on:
       - 'pubspec.yaml'
       - 'pubspec.lock'
       - '.github/workflows/web_preview_build.yml'
+      - 'scripts/vercel_build.sh'
+      - 'vercel.json'
+
+permissions:
+  contents: write
 
 jobs:
   build-web:
@@ -42,3 +47,19 @@ jobs:
           path: build/web
           if-no-files-found: error
           retention-days: 3
+
+      - name: Publish static Web branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIST_DIR="$(mktemp -d)"
+          cp -a build/web/. "$DIST_DIR/"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan vercel-web-publish
+          git rm -rf .
+          cp -a "$DIST_DIR"/. .
+          touch .nojekyll
+          git add -A -f
+          git commit -m "deploy(web): ${GITHUB_SHA}"
+          git push --force origin HEAD:vercel-web
