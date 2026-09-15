@@ -1,0 +1,79 @@
+name: Wire Stock Web Once
+
+on:
+  push:
+    branches:
+      - desenvolvimento
+    paths:
+      - '.github/workflows/wire_stock_web_once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire-stock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Wire stock page
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('lib/web/web_operacional_shell.dart')
+          source = path.read_text(encoding='utf-8')
+
+          anchor = "import 'web_os_finalizacao_v4_page.dart';\n"
+          stock_import = "import 'web_estoque_movimentacoes_page.dart';\n"
+          if stock_import not in source:
+              if anchor not in source:
+                  raise SystemExit('stock import anchor not found')
+              source = source.replace(anchor, stock_import + anchor, 1)
+
+          old = "      8 => WebEstoquePage(key: ValueKey('estoque-$_revisao'))," 
+          new = "      8 => WebEstoqueMovimentacoesPage(key: ValueKey('estoque-$_revisao'))," 
+          if old in source:
+              source = source.replace(old, new, 1)
+          elif '8 => WebEstoqueMovimentacoesPage(' not in source:
+              raise SystemExit('stock route anchor not found')
+
+          path.write_text(source, encoding='utf-8')
+          PY
+
+      - name: Format Web stock files
+        run: >-
+          dart format
+          lib/web/web_operacional_shell.dart
+          lib/web/web_estoque_movimentacoes_page.dart
+          lib/services/web_estoque_cloud_service.dart
+          test/web_financeiro_lancamentos_source_test.dart
+
+      - name: Commit integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          if git diff --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            lib/web/web_operacional_shell.dart \
+            lib/web/web_estoque_movimentacoes_page.dart \
+            lib/services/web_estoque_cloud_service.dart \
+            test/web_financeiro_lancamentos_source_test.dart
+          git commit -m 'fix(web): formata e conecta estoque transacional'
+          git push origin HEAD:desenvolvimento
