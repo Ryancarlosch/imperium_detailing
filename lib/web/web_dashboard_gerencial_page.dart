@@ -6,20 +6,7 @@ import '../services/web_cloud_relatorios_service.dart';
 import 'imperium_web_theme.dart';
 
 class WebDashboardGerencialPage extends StatefulWidget {
-  const WebDashboardGerencialPage({
-    super.key,
-    required this.onAbrirOperacao,
-    required this.onAbrirContas,
-    required this.onAbrirDre,
-    required this.onAbrirRelatorios,
-    required this.onAbrirPonto,
-  });
-
-  final VoidCallback onAbrirOperacao;
-  final VoidCallback onAbrirContas;
-  final VoidCallback onAbrirDre;
-  final VoidCallback onAbrirRelatorios;
-  final VoidCallback onAbrirPonto;
+  const WebDashboardGerencialPage({super.key});
 
   @override
   State<WebDashboardGerencialPage> createState() =>
@@ -152,48 +139,6 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     valor: '${operacional['agenda'] ?? 0}',
                     detalhe: 'Agendamentos ainda ativos',
                     icon: Icons.calendar_month_outlined,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-              const _SectionTitle(
-                titulo: 'Acesso rápido',
-                subtitulo: 'Entre direto nas áreas mais importantes da gestão.',
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _QuickAction(
-                    icon: Icons.grid_view_rounded,
-                    titulo: 'Sistema completo',
-                    detalhe: 'Clientes, agenda, OS, estoque, CRM e mais',
-                    onTap: widget.onAbrirOperacao,
-                  ),
-                  _QuickAction(
-                    icon: Icons.account_balance_wallet_outlined,
-                    titulo: 'Contas e caixa',
-                    detalhe: 'Saldos, extrato e conciliações',
-                    onTap: widget.onAbrirContas,
-                  ),
-                  _QuickAction(
-                    icon: Icons.query_stats_rounded,
-                    titulo: 'DRE',
-                    detalhe: 'Competência e caixa',
-                    onTap: widget.onAbrirDre,
-                  ),
-                  _QuickAction(
-                    icon: Icons.analytics_outlined,
-                    titulo: 'Relatórios',
-                    detalhe: 'Vendas, executores e indicadores',
-                    onTap: widget.onAbrirRelatorios,
-                  ),
-                  _QuickAction(
-                    icon: Icons.badge_outlined,
-                    titulo: 'Ponto e equipe',
-                    detalhe: 'Funcionários, jornada e batidas',
-                    onTap: widget.onAbrirPonto,
                   ),
                 ],
               ),
@@ -511,73 +456,6 @@ class _KpiCard extends StatelessWidget {
                 style: const TextStyle(color: Color(0xFF89939E), fontSize: 12),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
-    required this.icon,
-    required this.titulo,
-    required this.detalhe,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String titulo;
-  final String detalhe;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 300,
-      child: Card(
-        margin: EdgeInsets.zero,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(17),
-            child: Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: ImperiumWebTheme.accentStrong.withValues(
-                      alpha: 0.10,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: ImperiumWebTheme.accentStrong),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        titulo,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        detalhe,
-                        style: const TextStyle(
-                          color: Color(0xFFAAB3BD),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded),
-              ],
-            ),
           ),
         ),
       ),
