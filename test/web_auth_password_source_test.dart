@@ -33,15 +33,19 @@ void main() {
     expect(login, contains('mesmo e-mail e senha'));
   });
 
-  test('web usa a mesma preparacao de sessao do mobile', () {
+  test('web centraliza a sessao no mesmo servico usado pelo mobile', () {
     final web = File('lib/main_web.dart').readAsStringSync();
     final mobile = File('lib/main.dart').readAsStringSync();
+    final login = File(
+      'lib/screens/login_email_senha_page.dart',
+    ).readAsStringSync();
 
     expect(web, contains('CloudSessionService.instance'));
     expect(mobile, contains('CloudSessionService.instance'));
+    expect(login, contains('CloudSessionService.instance'));
     expect(web, contains('_cloudSession.prepararSessao()'));
-    expect(mobile, contains('_cloudSession.prepararSessao()'));
     expect(web, contains('_cloudSession.prepararSessao(empresaId: destino)'));
+    expect(login, contains('_cloudSession.prepararSessao'));
     expect(web, isNot(contains("from('empresa_usuarios')")));
     expect(web, isNot(contains("rpc('imperium_resgatar_convite')")));
   });
