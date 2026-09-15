@@ -8,16 +8,32 @@ void main() {
       'supabase/migrations/20260915201403_onboarding_comercial_email_senha_v1.sql',
     ).readAsStringSync();
 
-    expect(source, contains('create or replace function public.imperium_resgatar_convite()'));
+    expect(
+      source,
+      contains('create or replace function public.imperium_resgatar_convite()'),
+    );
     expect(source, contains('security definer'));
     expect(source, contains("set search_path = ''"));
     expect(source, contains('lower(trim(c.email)) = v_email'));
-    expect(source, contains("lower(trim(c.papel)) in ('admin', 'proprietario')"));
+    expect(
+      source,
+      contains("lower(trim(c.papel)) in ('admin', 'proprietario')"),
+    );
     expect(source, contains('on conflict (empresa_id, user_id)'));
     expect(source, contains("onboarding_status = 'ativo'"));
     expect(source, contains('aceito_por = v_uid'));
-    expect(source, contains('revoke all on function public.imperium_resgatar_convite() from anon'));
-    expect(source, contains('grant execute on function public.imperium_resgatar_convite() to authenticated'));
+    expect(
+      source,
+      contains(
+        'revoke all on function public.imperium_resgatar_convite() from anon',
+      ),
+    );
+    expect(
+      source,
+      contains(
+        'grant execute on function public.imperium_resgatar_convite() to authenticated',
+      ),
+    );
   });
 
   test('mobile ativa assinatura automaticamente depois da autenticacao', () {

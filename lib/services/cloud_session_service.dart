@@ -43,9 +43,7 @@ class CloudSessionService {
 
     final empresas = await _empresaService.listarEmpresasVinculadas();
     if (empresas.isEmpty && erroAtivacao != null) {
-      throw StateError(
-        ImperiumAuthService.instance.textoErro(erroAtivacao),
-      );
+      throw StateError(ImperiumAuthService.instance.textoErro(erroAtivacao));
     }
 
     return empresas;
