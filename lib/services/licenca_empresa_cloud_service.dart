@@ -30,7 +30,9 @@ class LicencaEmpresaCloudService {
 
     final status = _extrairStatus(resposta);
     if (status.empresaId != id) {
-      throw StateError('A licença retornada não pertence à empresa selecionada.');
+      throw StateError(
+        'A licença retornada não pertence à empresa selecionada.',
+      );
     }
 
     return status;
