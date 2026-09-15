@@ -22,6 +22,9 @@ void main() {
     expect(source, contains('UsuariosPermissoesPage'));
     expect(source, isNot(contains('FuncionarioContaService')));
     expect(source, isNot(contains('prepararAcessoAdmin')));
-    expect(source, isNot(contains('Cada funcionário usa o próprio e-mail e senha')));
+    expect(
+      source,
+      isNot(contains('Cada funcionário usa o próprio e-mail e senha')),
+    );
   });
 }
