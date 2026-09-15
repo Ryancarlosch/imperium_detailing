@@ -1,5 +1,6 @@
 import '../database/app_database.dart';
 import 'supabase_bootstrap.dart';
+import 'web_origem_service.dart';
 
 class WebCloudGestaoService {
   WebCloudGestaoService._();
@@ -58,6 +59,10 @@ class WebCloudGestaoService {
     return _listar('imperium_financeiro_contas', orderBy: 'nome');
   }
 
+  Future<List<Map<String, dynamic>>> listarPlanoContasFinanceiro() {
+    return _listar('imperium_financeiro_plano_contas', orderBy: 'codigo');
+  }
+
   Future<List<Map<String, dynamic>>> listarMovimentosFinanceiros() {
     return _listar(
       'imperium_financeiro_movimentos',
@@ -72,6 +77,133 @@ class WebCloudGestaoService {
       orderBy: 'data_pagamento',
       ascending: false,
     );
+  }
+
+  Future<void> criarMovimentoFinanceiro({
+    required String tipo,
+    required String descricao,
+    required double valor,
+    required String status,
+    required DateTime competencia,
+    DateTime? vencimento,
+    String? contaId,
+    String? planoContaId,
+    String formaPagamento = '',
+    String numeroDocumento = '',
+    String observacoes = '',
+  }) async {
+    final client = SupabaseBootstrap.client;
+    if (client == null) {
+      throw StateError('Supabase não está disponível.');
+    }
+
+    final tipoNormalizado = _normalizarTipoFinanceiro(tipo);
+    final descricaoLimpa = descricao.trim();
+    if (descricaoLimpa.length < 3) {
+      throw ArgumentError('Informe uma descrição com pelo menos 3 caracteres.');
+    }
+    if (valor <= 0) {
+      throw ArgumentError('O valor deve ser maior que zero.');
+    }
+
+    final statusNormalizado = status.trim().toLowerCase() == 'previsto'
+        ? 'Previsto'
+        : 'Realizado';
+    final empresaId = await _empresaId();
+    final contaRemotaId = _textoNulo(contaId);
+
+    if (statusNormalizado == 'Realizado') {
+      if (contaRemotaId == null) {
+        throw StateError(
+          'Selecione a conta/caixa para um lançamento realizado.',
+        );
+      }
+
+      final conta = await client
+          .from('imperium_financeiro_contas')
+          .select('id,ativo')
+          .eq('empresa_id', empresaId)
+          .eq('id', contaRemotaId)
+          .maybeSingle();
+
+      if (conta == null || conta['ativo'] != true) {
+        throw StateError('A conta financeira selecionada não está ativa.');
+      }
+    }
+
+    Map<String, dynamic>? plano;
+    final planoSelecionado = _textoNulo(planoContaId);
+    if (planoSelecionado != null) {
+      plano = await client
+          .from('imperium_financeiro_plano_contas')
+          .select('id,natureza,grupo_dre,ativo')
+          .eq('empresa_id', empresaId)
+          .eq('id', planoSelecionado)
+          .maybeSingle();
+
+      if (plano == null || plano['ativo'] != true) {
+        throw StateError('A categoria financeira selecionada não está ativa.');
+      }
+    } else {
+      final codigoPadrao = tipoNormalizado == 'Entrada' ? '1.99.01' : '2.99.01';
+      plano = await client
+          .from('imperium_financeiro_plano_contas')
+          .select('id,natureza,grupo_dre,ativo')
+          .eq('empresa_id', empresaId)
+          .eq('codigo', codigoPadrao)
+          .eq('ativo', true)
+          .maybeSingle();
+    }
+
+    final origem = await WebOrigemService.instance.proxima();
+    final competenciaIso = competencia.toIso8601String();
+    final dataPagamento = statusNormalizado == 'Realizado'
+        ? competenciaIso
+        : null;
+    final dataVencimento = statusNormalizado == 'Previsto'
+        ? (vencimento ?? competencia).toIso8601String()
+        : vencimento?.toIso8601String();
+    final dataBase = dataPagamento ?? dataVencimento ?? competenciaIso;
+    final natureza = (plano?['natureza'] ?? 'Não classificado').toString();
+    final impactaDre = (plano?['grupo_dre'] ?? '').toString() != 'Não DRE';
+
+    await client.from('imperium_financeiro_movimentos').insert({
+      'empresa_id': empresaId,
+      'origem_dispositivo': origem.dispositivoId,
+      'origem_local_id': origem.localId,
+      'tipo': tipoNormalizado,
+      'descricao': descricaoLimpa,
+      'valor': valor,
+      'forma_pagamento': _textoNulo(formaPagamento),
+      'data': dataBase,
+      'cliente_id': null,
+      'agendamento_id': null,
+      'ordem_servico_id': null,
+      'pagamento_id': null,
+      'plano_conta_id': plano?['id'],
+      'conta_id': contaRemotaId,
+      'origem_cliente_local_id': null,
+      'origem_agendamento_local_id': null,
+      'origem_ordem_servico_local_id': null,
+      'origem_pagamento_local_id': null,
+      'origem_plano_conta_local_id': null,
+      'origem_conta_local_id': null,
+      'origem_fornecedor_local_id': null,
+      'origem_transferencia_local_id': null,
+      'origem_nota_fiscal_local_id': null,
+      'parcela_numero': null,
+      'total_parcelas': 1,
+      'natureza': natureza,
+      'origem': 'Manual',
+      'status': statusNormalizado,
+      'data_competencia': competenciaIso,
+      'data_vencimento': dataVencimento,
+      'data_pagamento': dataPagamento,
+      'numero_documento': numeroDocumento.trim(),
+      'observacoes': observacoes.trim(),
+      'impacta_dre': impactaDre,
+      'excluido_em': null,
+    });
   }
 
   Future<Map<String, Object?>> resumoEstoque() async {
@@ -310,6 +442,13 @@ class WebCloudGestaoService {
           return excluido.isEmpty;
         })
         .toList();
+  }
+
+  static String _normalizarTipoFinanceiro(String tipo) {
+    final valor = tipo.trim().toLowerCase();
+    if (valor == 'entrada') return 'Entrada';
+    if (valor == 'saída' || valor == 'saida') return 'Saída';
+    throw ArgumentError('Tipo de movimentação inválido.');
   }
 
   static String? _textoNulo(dynamic valor) {
