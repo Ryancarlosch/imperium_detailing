@@ -75,11 +75,24 @@ void main() {
     expect(shell, contains('Icons.menu_rounded'));
     expect(shell, contains('ExpansionTile'));
     expect(shell, isNot(contains('Sistema completo')));
-    expect(dashboard, contains('Saldo consolidado'));
-    expect(dashboard, contains('Vendas líquidas'));
-    expect(dashboard, contains('A receber'));
-    expect(dashboard, contains('Ticket médio'));
-    expect(dashboard, isNot(contains('Acesso rápido')));
+
+    for (final marker in [
+      'Dashboard executivo',
+      'Saldo consolidado',
+      'Vendas líquidas',
+      'A receber',
+      'Ticket médio',
+      'Clientes ativos',
+      'Veículos',
+      'Acesso rápido',
+      'Contas e caixa',
+      'DRE gerencial',
+      'Ponto e equipe',
+      'Desempenho da equipe',
+    ]) {
+      expect(dashboard, contains(marker));
+    }
+
     expect(source, isNot(contains('dashboard_page.dart')));
   });
 
