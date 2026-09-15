@@ -8,8 +8,11 @@ void main() {
       'lib/services/web_cloud_relatorios_service.dart',
     ).readAsStringSync();
     final page = File('lib/web/web_relatorios_page.dart').readAsStringSync();
-    final workspace = File(
-      'lib/web/web_workspace_shell.dart',
+    final shell = File(
+      'lib/web/web_operacional_shell.dart',
+    ).readAsStringSync();
+    final dashboard = File(
+      'lib/web/web_dashboard_gerencial_page.dart',
     ).readAsStringSync();
 
     expect(service, contains('WebCloudDreService.instance.calcular'));
@@ -26,8 +29,9 @@ void main() {
     expect(page, contains('Competência × caixa'));
     expect(page, contains('Desempenho por executor'));
 
-    expect(workspace, contains("import 'web_relatorios_page.dart';"));
-    expect(workspace, contains('Relatórios gerenciais'));
-    expect(workspace, contains('WebRelatoriosPage'));
+    expect(shell, contains("import 'web_relatorios_page.dart';"));
+    expect(shell, contains("titulo: 'Relatórios'"));
+    expect(shell, contains('WebRelatoriosPage'));
+    expect(dashboard, contains("titulo: 'Relatórios'"));
   });
 }
