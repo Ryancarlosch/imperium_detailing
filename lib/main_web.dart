@@ -5,6 +5,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'database/app_database.dart';
+import 'screens/login_email_senha_page.dart';
+import 'services/cloud_session_service.dart';
 import 'services/empresa_cloud_service.dart';
 import 'services/imperium_auth_service.dart';
 import 'services/supabase_bootstrap.dart';
@@ -33,48 +35,41 @@ class ImperiumWebApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: ImperiumWebTheme.dark(),
-      home: const _WebGate(),
+      home: const _WebSessaoGate(),
     );
   }
 }
 
-class _WebGate extends StatefulWidget {
-  const _WebGate();
+class _WebSessaoGate extends StatefulWidget {
+  const _WebSessaoGate();
 
   @override
-  State<_WebGate> createState() => _WebGateState();
+  State<_WebSessaoGate> createState() => _WebSessaoGateState();
 }
 
-class _WebGateState extends State<_WebGate> {
-  final TextEditingController email = TextEditingController();
-  final TextEditingController senha = TextEditingController();
-  final TextEditingController confirmarCadastro = TextEditingController();
-  final TextEditingController novaSenha = TextEditingController();
-  final TextEditingController confirmarNovaSenha = TextEditingController();
+class _WebSessaoGateState extends State<_WebSessaoGate> {
+  final CloudSessionService _cloudSession = CloudSessionService.instance;
+  final EmpresaCloudService _empresaService = EmpresaCloudService.instance;
+  final ImperiumAuthService _auth = ImperiumAuthService.instance;
 
-  final EmpresaCloudService empresaService = EmpresaCloudService.instance;
-  final ImperiumAuthService auth = ImperiumAuthService.instance;
+  final TextEditingController _novaSenha = TextEditingController();
+  final TextEditingController _confirmarNovaSenha = TextEditingController();
 
   StreamSubscription<AuthState>? _authSubscription;
 
-  bool carregando = true;
-  bool processando = false;
-  bool enviandoRecuperacao = false;
-  bool definindoSenha = false;
-  bool salvandoNovaSenha = false;
-  bool modoPrimeiroAcesso = false;
-  bool ocultarSenha = true;
-  bool ocultarConfirmacao = true;
-  bool ocultarNovaSenha = true;
-  bool ocultarConfirmacaoNova = true;
+  bool _carregando = true;
+  bool _definindoSenha = false;
+  bool _salvandoSenha = false;
+  bool _ocultarNovaSenha = true;
+  bool _ocultarConfirmacao = true;
 
-  String? erro;
-  String? mensagem;
-  User? usuario;
-  List<Map<String, dynamic>> empresas = const [];
-  String empresaAtual = '';
+  String? _erro;
+  String? _mensagem;
+  Map<String, dynamic>? _sessao;
+  List<Map<String, dynamic>> _empresas = const [];
+  String _empresaAtualId = '';
 
-  SupabaseClient? get client => SupabaseBootstrap.client;
+  SupabaseClient? get _client => SupabaseBootstrap.client;
 
   bool get _urlRecuperacao {
     final uri = Uri.base;
@@ -92,362 +87,222 @@ class _WebGateState extends State<_WebGate> {
   @override
   void dispose() {
     _authSubscription?.cancel();
-    email.dispose();
-    senha.dispose();
-    confirmarCadastro.dispose();
-    novaSenha.dispose();
-    confirmarNovaSenha.dispose();
+    _novaSenha.dispose();
+    _confirmarNovaSenha.dispose();
     super.dispose();
   }
 
   Future<void> _inicializar() async {
     try {
-      final c = client;
-      if (c == null) {
+      final client = _client;
+      if (client == null) {
         throw StateError(
           SupabaseBootstrap.ultimoErro ?? 'Supabase indisponível.',
         );
       }
 
-      usuario = c.auth.currentUser;
-      final emailAtual = (usuario?.email ?? '').trim().toLowerCase();
-      if (emailAtual.isNotEmpty) email.text = emailAtual;
-
-      if (usuario != null && _urlRecuperacao) {
-        definindoSenha = true;
-        mensagem = 'Crie uma nova senha para concluir o acesso.';
-      } else if (usuario != null) {
-        await _carregarContexto();
-      }
-
-      _authSubscription = c.auth.onAuthStateChange.listen(
+      _authSubscription = client.auth.onAuthStateChange.listen(
         (estado) {
           if (!mounted) return;
 
-          final novoUsuario = estado.session?.user ?? c.auth.currentUser;
-
           if (estado.event == AuthChangeEvent.passwordRecovery &&
-              novoUsuario != null) {
+              (estado.session?.user ?? client.auth.currentUser) != null) {
             setState(() {
-              usuario = novoUsuario;
-              definindoSenha = true;
-              empresas = const [];
-              empresaAtual = '';
-              erro = null;
-              mensagem = 'Crie uma nova senha para concluir o acesso.';
-              carregando = false;
+              _definindoSenha = true;
+              _sessao = null;
+              _empresas = const [];
+              _empresaAtualId = '';
+              _erro = null;
+              _mensagem = 'Crie uma nova senha para concluir o acesso.';
+              _carregando = false;
             });
             return;
           }
 
-          if (novoUsuario == null) {
+          if ((estado.session?.user ?? client.auth.currentUser) == null) {
             setState(() {
-              usuario = null;
-              empresas = const [];
-              empresaAtual = '';
-              definindoSenha = false;
-              erro = null;
-              carregando = false;
+              _sessao = null;
+              _empresas = const [];
+              _empresaAtualId = '';
+              _definindoSenha = false;
+              _erro = null;
+              _mensagem = null;
+              _carregando = false;
             });
-            return;
           }
-
-          usuario = novoUsuario;
         },
-        onError: (Object e) {
+        onError: (Object erro) {
           if (!mounted) return;
           setState(() {
-            erro = auth.textoErro(e);
-            carregando = false;
+            _erro = _auth.textoErro(erro);
+            _carregando = false;
           });
         },
       );
-    } catch (e) {
-      erro = auth.textoErro(e);
-    } finally {
-      if (mounted) setState(() => carregando = false);
-    }
-  }
 
-  Future<void> _entrar() async {
-    if (processando || enviandoRecuperacao) return;
+      final usuario = client.auth.currentUser;
+      if (usuario == null) return;
 
-    setState(() {
-      processando = true;
-      erro = null;
-      mensagem = null;
-    });
-
-    try {
-      final user = await auth.entrarComEmailSenha(
-        email: email.text,
-        senha: senha.text,
-      );
-
-      usuario = user;
-      senha.clear();
-      confirmarCadastro.clear();
-      await _carregarContexto();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => erro = auth.textoErro(e));
-    } finally {
-      if (mounted) setState(() => processando = false);
-    }
-  }
-
-  Future<void> _criarContaEmpresa() async {
-    if (processando || enviandoRecuperacao) return;
-
-    final senhaDigitada = senha.text.trim();
-    final confirmacao = confirmarCadastro.text.trim();
-
-    if (senhaDigitada.length < 8) {
-      setState(() {
-        erro = 'A senha deve ter pelo menos 8 caracteres.';
-        mensagem = null;
-      });
-      return;
-    }
-
-    if (senhaDigitada != confirmacao) {
-      setState(() {
-        erro = 'As senhas informadas são diferentes.';
-        mensagem = null;
-      });
-      return;
-    }
-
-    setState(() {
-      processando = true;
-      erro = null;
-      mensagem = null;
-    });
-
-    try {
-      final resposta = await auth.criarContaComEmailSenha(
-        email: email.text,
-        senha: senhaDigitada,
-      );
-
-      final possuiSessao = resposta.session != null || auth.autenticado;
-      if (!possuiSessao) {
-        if (!mounted) return;
-        setState(() {
-          usuario = null;
-          mensagem =
-              'Conta criada. Confirme o e-mail recebido e depois entre com '
-              'o mesmo e-mail e senha para ativar sua empresa.';
-          modoPrimeiroAcesso = false;
-          confirmarCadastro.clear();
-        });
+      if (_urlRecuperacao) {
+        _definindoSenha = true;
+        _mensagem = 'Crie uma nova senha para concluir o acesso.';
         return;
       }
 
-      usuario = resposta.user ?? client?.auth.currentUser;
-      await _carregarContexto();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => erro = auth.textoErro(e));
-    } finally {
-      if (mounted) setState(() => processando = false);
-    }
-  }
-
-  Future<void> _enviarRecuperacaoSenha() async {
-    if (processando || enviandoRecuperacao) return;
-
-    setState(() {
-      enviandoRecuperacao = true;
-      erro = null;
-      mensagem = null;
-    });
-
-    try {
-      await auth.enviarRecuperacaoSenha(
-        email: email.text,
-        redirectTo: '${Uri.base.origin}/',
-      );
-
-      if (!mounted) return;
-      setState(() {
-        mensagem =
-            'Enviamos um e-mail para você definir uma nova senha. Abra somente o link mais recente.';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => erro = auth.textoErro(e));
-    } finally {
-      if (mounted) setState(() => enviandoRecuperacao = false);
-    }
-  }
-
-  Future<void> _salvarNovaSenha() async {
-    if (salvandoNovaSenha) return;
-
-    final senhaNova = novaSenha.text.trim();
-    final confirmacao = confirmarNovaSenha.text.trim();
-
-    if (senhaNova.length < 8) {
-      setState(() {
-        erro = 'A senha deve ter pelo menos 8 caracteres.';
-        mensagem = null;
-      });
-      return;
-    }
-
-    if (senhaNova != confirmacao) {
-      setState(() {
-        erro = 'As senhas informadas são diferentes.';
-        mensagem = null;
-      });
-      return;
-    }
-
-    setState(() {
-      salvandoNovaSenha = true;
-      erro = null;
-      mensagem = null;
-    });
-
-    try {
-      final user = await auth.definirNovaSenha(senhaNova);
-
-      if (!mounted) return;
-      setState(() {
-        usuario = user;
-        definindoSenha = false;
-        novaSenha.clear();
-        confirmarNovaSenha.clear();
-        mensagem = 'Senha definida com sucesso.';
-      });
-
-      await _carregarContexto();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => erro = auth.textoErro(e));
-    } finally {
-      if (mounted) setState(() => salvandoNovaSenha = false);
-    }
-  }
-
-  Future<void> _carregarContexto() async {
-    final c = client;
-    final user = c?.auth.currentUser;
-
-    if (c == null || user == null) {
-      empresas = const [];
-      empresaAtual = '';
-      return;
-    }
-
-    Object? erroResgate;
-    try {
-      await c.rpc('imperium_resgatar_convite');
-    } catch (e) {
-      erroResgate = e;
-    }
-
-    final vinculadas = await empresaService.listarEmpresasVinculadas();
-    var atual = (await AppDatabase.instance.empresaAtivaId ?? '').trim();
-
-    final atualValida = vinculadas.any(
-      (empresa) => (empresa['empresa_id'] ?? '').toString() == atual,
-    );
-
-    if (!atualValida) atual = '';
-
-    if (vinculadas.isEmpty) {
-      if (erroResgate != null) {
-        throw StateError(
-          'Não foi possível ativar sua empresa agora. Confira se está usando '
-          'o mesmo e-mail da assinatura ou do convite e tente novamente.',
-        );
+      try {
+        final sessao = await _cloudSession.prepararSessao();
+        await _aceitarSessao(sessao);
+      } on SelecaoEmpresaNecessaria {
+        // A tela compartilhada de login detecta a sessão Supabase existente
+        // e apresenta o mesmo seletor multiempresa usado no aplicativo.
+        _sessao = null;
       }
+    } catch (erro) {
+      _erro = _auth.textoErro(erro);
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
 
+  Future<void> _aceitarSessao(Map<String, dynamic> sessao) async {
+    final vinculadas = await _empresaService.listarEmpresasVinculadas();
+    final atual = (await AppDatabase.instance.empresaAtivaId ?? '').trim();
+
+    if (atual.isEmpty ||
+        !vinculadas.any(
+          (empresa) => (empresa['empresa_id'] ?? '').toString() == atual,
+        )) {
       throw StateError(
-        'Nenhuma empresa ativa foi encontrada para este e-mail. Use o mesmo '
-        'e-mail informado na assinatura ou no convite do Imperium e confirme '
-        'se a licença da empresa está ativa.',
+        'Não foi possível identificar a empresa ativa desta sessão.',
       );
-    }
-
-    if (atual.isEmpty && vinculadas.length == 1) {
-      atual = (vinculadas.first['empresa_id'] ?? '').toString();
-      if (atual.isNotEmpty) {
-        await empresaService.trocarEmpresa(atual);
-      }
     }
 
     if (!mounted) return;
     setState(() {
-      usuario = user;
-      empresas = vinculadas;
-      empresaAtual = atual;
-      erro = null;
-      mensagem = null;
+      _sessao = Map<String, dynamic>.from(sessao);
+      _empresas = vinculadas;
+      _empresaAtualId = atual;
+      _erro = null;
+      _mensagem = null;
     });
   }
 
-  Future<void> _trocarEmpresa(String id) async {
-    if (id.isEmpty || id == empresaAtual) return;
+  void _aoEntrar(Map<String, dynamic> sessao) {
+    _concluirLogin(sessao);
+  }
 
+  Future<void> _concluirLogin(Map<String, dynamic> sessao) async {
+    if (!mounted) return;
     setState(() {
-      carregando = true;
-      erro = null;
+      _carregando = true;
+      _erro = null;
     });
 
     try {
-      await empresaService.trocarEmpresa(id);
-      await _carregarContexto();
-    } catch (e) {
+      await _aceitarSessao(sessao);
+    } catch (erro) {
       if (!mounted) return;
-      setState(() => erro = auth.textoErro(e));
+      setState(() => _erro = _auth.textoErro(erro));
     } finally {
-      if (mounted) setState(() => carregando = false);
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
+
+  Future<void> _trocarEmpresa(String empresaId) async {
+    final destino = empresaId.trim();
+    if (destino.isEmpty || destino == _empresaAtualId || _carregando) return;
+
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+
+    try {
+      final sessao = await _cloudSession.prepararSessao(empresaId: destino);
+      await _aceitarSessao(sessao);
+    } catch (erro) {
+      if (!mounted) return;
+      setState(() => _erro = _auth.textoErro(erro));
+    } finally {
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
   Future<void> _sair() async {
     try {
-      await auth.sair();
+      await _cloudSession.sair();
     } finally {
-      if (mounted) {
-        setState(() {
-          usuario = null;
-          empresas = const [];
-          empresaAtual = '';
-          erro = null;
-          mensagem = null;
-          modoPrimeiroAcesso = false;
-          senha.clear();
-          confirmarCadastro.clear();
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _sessao = null;
+        _empresas = const [];
+        _empresaAtualId = '';
+        _definindoSenha = false;
+        _erro = null;
+        _mensagem = null;
+      });
     }
   }
 
-  void _alternarPrimeiroAcesso(bool valor) {
-    if (processando || enviandoRecuperacao) return;
+  Future<void> _salvarNovaSenha() async {
+    if (_salvandoSenha) return;
+
+    final novaSenha = _novaSenha.text.trim();
+    final confirmar = _confirmarNovaSenha.text.trim();
+
+    if (novaSenha.length < 8) {
+      setState(() => _erro = 'A senha deve ter pelo menos 8 caracteres.');
+      return;
+    }
+
+    if (novaSenha != confirmar) {
+      setState(() => _erro = 'As senhas informadas são diferentes.');
+      return;
+    }
+
     setState(() {
-      modoPrimeiroAcesso = valor;
-      erro = null;
-      mensagem = null;
-      senha.clear();
-      confirmarCadastro.clear();
+      _salvandoSenha = true;
+      _erro = null;
+      _mensagem = null;
     });
+
+    try {
+      await _auth.definirNovaSenha(novaSenha);
+      _novaSenha.clear();
+      _confirmarNovaSenha.clear();
+
+      try {
+        final sessao = await _cloudSession.prepararSessao();
+        if (!mounted) return;
+        setState(() {
+          _definindoSenha = false;
+          _mensagem = 'Senha atualizada com sucesso.';
+        });
+        await _aceitarSessao(sessao);
+      } on SelecaoEmpresaNecessaria {
+        if (!mounted) return;
+        setState(() {
+          _definindoSenha = false;
+          _sessao = null;
+          _mensagem = 'Senha atualizada. Escolha a empresa para continuar.';
+        });
+      }
+    } catch (erro) {
+      if (!mounted) return;
+      setState(() => _erro = _auth.textoErro(erro));
+    } finally {
+      if (mounted) setState(() => _salvandoSenha = false);
+    }
   }
 
-  Widget _carregando() {
+  Widget _carregandoTela() {
     return const Scaffold(
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _BrandMark(compacto: true),
-            SizedBox(height: 22),
             CircularProgressIndicator(),
-            SizedBox(height: 12),
+            SizedBox(height: 14),
             Text('Preparando seu ambiente...'),
           ],
         ),
@@ -455,460 +310,176 @@ class _WebGateState extends State<_WebGate> {
     );
   }
 
-  Widget _fundoAutenticacao(Widget child) {
+  Widget _erroTela() {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(-0.72, -0.68),
-            radius: 1.18,
-            colors: [Color(0xFF242014), ImperiumWebTheme.background],
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline_rounded, size: 52),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Não foi possível abrir o Imperium',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(_erro ?? '', textAlign: TextAlign.center),
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        onPressed: _inicializar,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Tentar novamente'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: _sair,
+                        icon: const Icon(Icons.logout_rounded),
+                        label: const Text('Entrar com outra conta'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: child,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _login() {
-    return _fundoAutenticacao(
-      ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1120),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final desktop = MediaQuery.sizeOf(context).width >= 900;
-
-            if (!desktop) {
-              return ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: _loginCard(),
-              );
-            }
-
-            return Row(
-              children: [
-                const Expanded(child: _LoginHero()),
-                const SizedBox(width: 64),
-                SizedBox(width: 430, child: _loginCard()),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _loginCard() {
-    final titulo = modoPrimeiroAcesso
-        ? 'Ative sua empresa'
-        : 'Acesse sua operação';
-    final subtitulo = modoPrimeiroAcesso
-        ? 'Use o e-mail informado na assinatura ou no convite e crie a senha que será usada no Web e no aplicativo.'
-        : 'Use o mesmo e-mail e senha no Imperium Web e no aplicativo.';
-
-    return Card(
-      margin: EdgeInsets.zero,
-      color: ImperiumWebTheme.surface.withValues(alpha: 0.96),
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: _BrandMark(compacto: true),
-            ),
-            const SizedBox(height: 28),
-            Text(
-              titulo,
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitulo,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFFADB6C0),
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: email,
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              enableSuggestions: false,
-              textInputAction: TextInputAction.next,
-              enabled: !processando && !enviandoRecuperacao,
-              decoration: const InputDecoration(
-                labelText: 'E-mail da empresa',
-                hintText: 'voce@empresa.com.br',
-                prefixIcon: Icon(Icons.alternate_email_rounded),
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: senha,
-              obscureText: ocultarSenha,
-              autocorrect: false,
-              enableSuggestions: false,
-              textInputAction: modoPrimeiroAcesso
-                  ? TextInputAction.next
-                  : TextInputAction.done,
-              enabled: !processando && !enviandoRecuperacao,
-              onSubmitted: modoPrimeiroAcesso ? null : (_) => _entrar(),
-              decoration: InputDecoration(
-                labelText: modoPrimeiroAcesso ? 'Criar senha' : 'Senha',
-                helperText: modoPrimeiroAcesso
-                    ? 'Mínimo de 8 caracteres'
-                    : null,
-                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                suffixIcon: IconButton(
-                  tooltip: ocultarSenha ? 'Mostrar senha' : 'Ocultar senha',
-                  onPressed: processando
-                      ? null
-                      : () => setState(() => ocultarSenha = !ocultarSenha),
-                  icon: Icon(
-                    ocultarSenha
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                  ),
-                ),
-              ),
-            ),
-            if (modoPrimeiroAcesso) ...[
-              const SizedBox(height: 14),
-              TextField(
-                controller: confirmarCadastro,
-                obscureText: ocultarConfirmacao,
-                autocorrect: false,
-                enableSuggestions: false,
-                textInputAction: TextInputAction.done,
-                enabled: !processando,
-                onSubmitted: (_) => _criarContaEmpresa(),
-                decoration: InputDecoration(
-                  labelText: 'Confirmar senha',
-                  prefixIcon: const Icon(Icons.verified_user_outlined),
-                  suffixIcon: IconButton(
-                    tooltip: ocultarConfirmacao
-                        ? 'Mostrar confirmação'
-                        : 'Ocultar confirmação',
-                    onPressed: processando
-                        ? null
-                        : () => setState(
-                            () => ocultarConfirmacao = !ocultarConfirmacao,
-                          ),
-                    icon: Icon(
-                      ocultarConfirmacao
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                    ),
-                  ),
-                ),
-              ),
-            ] else
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: processando || enviandoRecuperacao
-                      ? null
-                      : _enviarRecuperacaoSenha,
-                  child: Text(
-                    enviandoRecuperacao ? 'Enviando...' : 'Esqueci minha senha',
-                  ),
-                ),
-              ),
-            if (mensagem != null) ...[
-              const SizedBox(height: 10),
-              _AvisoLogin(
-                icon: Icons.check_circle_outline_rounded,
-                texto: mensagem!,
-                destaque: true,
-              ),
-            ],
-            if (erro != null) ...[
-              const SizedBox(height: 10),
-              _AvisoLogin(
-                icon: Icons.error_outline_rounded,
-                texto: erro!,
-                erro: true,
-              ),
-            ],
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: processando || enviandoRecuperacao
-                  ? null
-                  : modoPrimeiroAcesso
-                  ? _criarContaEmpresa
-                  : _entrar,
-              icon: processando
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(
-                      modoPrimeiroAcesso
-                          ? Icons.business_center_outlined
-                          : Icons.login_rounded,
-                    ),
-              label: Text(
-                processando
-                    ? 'Aguarde...'
-                    : modoPrimeiroAcesso
-                    ? 'Criar conta e ativar empresa'
-                    : 'Entrar na empresa',
-              ),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: processando
-                  ? null
-                  : () => _alternarPrimeiroAcesso(!modoPrimeiroAcesso),
-              icon: Icon(
-                modoPrimeiroAcesso
-                    ? Icons.login_rounded
-                    : Icons.add_business_outlined,
-              ),
-              label: Text(
-                modoPrimeiroAcesso
-                    ? 'Já tenho acesso'
-                    : 'Primeiro acesso da empresa',
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.shield_outlined, size: 17),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Funcionários são cadastrados dentro da empresa pelo administrador; não precisam criar outra conta de empresa.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF8F9AA5),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );
   }
 
   Widget _redefinirSenha() {
-    return _fundoAutenticacao(
-      ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: Card(
-          margin: EdgeInsets.zero,
-          color: ImperiumWebTheme.surface.withValues(alpha: 0.96),
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: _BrandMark(compacto: true),
-                ),
-                const SizedBox(height: 26),
-                Text(
-                  'Defina sua senha',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Use pelo menos 8 caracteres. Essa senha será a mesma no Web e no aplicativo.',
-                ),
-                const SizedBox(height: 22),
-                TextField(
-                  controller: novaSenha,
-                  obscureText: ocultarNovaSenha,
-                  enabled: !salvandoNovaSenha,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    labelText: 'Nova senha',
-                    prefixIcon: const Icon(Icons.lock_reset_rounded),
-                    suffixIcon: IconButton(
-                      onPressed: salvandoNovaSenha
-                          ? null
-                          : () => setState(
-                              () => ocultarNovaSenha = !ocultarNovaSenha,
-                            ),
-                      icon: Icon(
-                        ocultarNovaSenha
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: confirmarNovaSenha,
-                  obscureText: ocultarConfirmacaoNova,
-                  enabled: !salvandoNovaSenha,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _salvarNovaSenha(),
-                  decoration: InputDecoration(
-                    labelText: 'Confirmar nova senha',
-                    prefixIcon: const Icon(Icons.verified_user_outlined),
-                    suffixIcon: IconButton(
-                      onPressed: salvandoNovaSenha
-                          ? null
-                          : () => setState(
-                              () => ocultarConfirmacaoNova =
-                                  !ocultarConfirmacaoNova,
-                            ),
-                      icon: Icon(
-                        ocultarConfirmacaoNova
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                    ),
-                  ),
-                ),
-                if (mensagem != null) ...[
-                  const SizedBox(height: 14),
-                  _AvisoLogin(
-                    icon: Icons.info_outline_rounded,
-                    texto: mensagem!,
-                    destaque: true,
-                  ),
-                ],
-                if (erro != null) ...[
-                  const SizedBox(height: 14),
-                  _AvisoLogin(
-                    icon: Icons.error_outline_rounded,
-                    texto: erro!,
-                    erro: true,
-                  ),
-                ],
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: salvandoNovaSenha ? null : _salvarNovaSenha,
-                  icon: salvandoNovaSenha
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_circle_outline_rounded),
-                  label: Text(
-                    salvandoNovaSenha ? 'Salvando...' : 'Salvar nova senha',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _seletorEmpresa() {
     return Scaffold(
-      appBar: AppBar(
-        title: const _BrandMark(compacto: true),
-        actions: [
-          TextButton.icon(
-            onPressed: _sair,
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('Sair'),
-          ),
-          const SizedBox(width: 12),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 920),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 44, 24, 24),
-            children: [
-              Text(
-                'Qual empresa você quer abrir?',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Cada ambiente permanece isolado por empresa. Somente empresas em que você é administrador ou proprietário aparecem aqui.',
-              ),
-              const SizedBox(height: 24),
-              if (erro != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _AvisoLogin(
-                    icon: Icons.error_outline_rounded,
-                    texto: erro!,
-                    erro: true,
-                  ),
-                ),
-              ...empresas.map((empresa) {
-                final nome = (empresa['nome'] ?? 'Empresa').toString();
-                final papel = (empresa['papel'] ?? '-').toString();
-                final id = (empresa['empresa_id'] ?? '').toString();
-
-                return Card(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: id.isEmpty ? null : () => _trocarEmpresa(id),
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: ImperiumWebTheme.accentStrong.withValues(
-                                alpha: 0.10,
-                              ),
-                              borderRadius: BorderRadius.circular(13),
-                            ),
-                            child: const Icon(Icons.business_rounded),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  nome,
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text('Perfil: $papel'),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 17),
-                        ],
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Icon(Icons.lock_reset_rounded, size: 52),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Defina sua nova senha',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Essa senha será a mesma no Imperium Web e no aplicativo.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 22),
+                      TextField(
+                        controller: _novaSenha,
+                        obscureText: _ocultarNovaSenha,
+                        enabled: !_salvandoSenha,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: 'Nova senha',
+                          helperText: 'Mínimo de 8 caracteres',
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            onPressed: _salvandoSenha
+                                ? null
+                                : () => setState(
+                                    () => _ocultarNovaSenha =
+                                        !_ocultarNovaSenha,
+                                  ),
+                            icon: Icon(
+                              _ocultarNovaSenha
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _confirmarNovaSenha,
+                        obscureText: _ocultarConfirmacao,
+                        enabled: !_salvandoSenha,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _salvarNovaSenha(),
+                        decoration: InputDecoration(
+                          labelText: 'Confirmar nova senha',
+                          prefixIcon: const Icon(Icons.verified_user_outlined),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            onPressed: _salvandoSenha
+                                ? null
+                                : () => setState(
+                                    () => _ocultarConfirmacao =
+                                        !_ocultarConfirmacao,
+                                  ),
+                            icon: Icon(
+                              _ocultarConfirmacao
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_mensagem != null) ...[
+                        const SizedBox(height: 14),
+                        Text(
+                          _mensagem!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.greenAccent),
+                        ),
+                      ],
+                      if (_erro != null) ...[
+                        const SizedBox(height: 14),
+                        Text(
+                          _erro!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 52,
+                        child: FilledButton.icon(
+                          onPressed: _salvandoSenha ? null : _salvarNovaSenha,
+                          icon: _salvandoSenha
+                              ? const SizedBox(
+                                  width: 19,
+                                  height: 19,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.check_circle_outline_rounded),
+                          label: Text(
+                            _salvandoSenha
+                                ? 'Salvando...'
+                                : 'Salvar nova senha',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              }),
-            ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -917,186 +488,23 @@ class _WebGateState extends State<_WebGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (carregando) return _carregando();
-    if (definindoSenha) return _redefinirSenha();
-    if (usuario == null) return _login();
-    if (empresaAtual.isEmpty) return _seletorEmpresa();
+    if (_carregando) return _carregandoTela();
+    if (_definindoSenha) return _redefinirSenha();
+
+    final sessao = _sessao;
+    if (sessao == null) {
+      if (_erro != null && _client?.auth.currentUser != null) {
+        return _erroTela();
+      }
+      return LoginEmailSenhaPage(onLogin: _aoEntrar);
+    }
 
     return WebWorkspaceShell(
-      usuarioEmail: (usuario?.email ?? '').trim(),
-      empresas: empresas,
-      empresaAtualId: empresaAtual,
+      usuarioEmail: (_client?.auth.currentUser?.email ?? '').trim(),
+      empresas: _empresas,
+      empresaAtualId: _empresaAtualId,
       onTrocarEmpresa: _trocarEmpresa,
       onSair: _sair,
-    );
-  }
-}
-
-class _BrandMark extends StatelessWidget {
-  const _BrandMark({this.compacto = false});
-
-  final bool compacto;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: compacto ? 38 : 48,
-          height: compacto ? 38 : 48,
-          decoration: BoxDecoration(
-            color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(compacto ? 12 : 15),
-            border: Border.all(color: ImperiumWebTheme.border),
-          ),
-          child: const Icon(
-            Icons.auto_awesome_mosaic_outlined,
-            color: ImperiumWebTheme.accentStrong,
-          ),
-        ),
-        const SizedBox(width: 11),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              compacto ? 'Imperium' : 'Imperium Manager',
-              style: TextStyle(
-                fontSize: compacto ? 16 : 20,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.3,
-              ),
-            ),
-            if (!compacto)
-              const Text(
-                'Gestão automotiva',
-                style: TextStyle(
-                  color: Color(0xFF8F9AA5),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _LoginHero extends StatelessWidget {
-  const _LoginHero();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _BrandMark(),
-          const SizedBox(height: 38),
-          Text(
-            'Sua empresa inteira,\nem um só lugar.',
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.w900,
-              height: 1.04,
-              letterSpacing: -1.2,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Operação, clientes, agenda, financeiro, equipe e indicadores conectados ao mesmo ambiente da sua empresa.',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: const Color(0xFFADB6C0),
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 28),
-          const Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _HeroChip(icon: Icons.cloud_done_outlined, texto: 'Web + App'),
-              _HeroChip(icon: Icons.business_outlined, texto: 'Multiempresa'),
-              _HeroChip(
-                icon: Icons.lock_outline_rounded,
-                texto: 'Acesso seguro',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroChip extends StatelessWidget {
-  const _HeroChip({required this.icon, required this.texto});
-
-  final IconData icon;
-  final String texto;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-      decoration: BoxDecoration(
-        color: ImperiumWebTheme.surface.withValues(alpha: 0.75),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: ImperiumWebTheme.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 17, color: ImperiumWebTheme.accentStrong),
-          const SizedBox(width: 7),
-          Text(texto, style: const TextStyle(fontWeight: FontWeight.w700)),
-        ],
-      ),
-    );
-  }
-}
-
-class _AvisoLogin extends StatelessWidget {
-  const _AvisoLogin({
-    required this.icon,
-    required this.texto,
-    this.erro = false,
-    this.destaque = false,
-  });
-
-  final IconData icon;
-  final String texto;
-  final bool erro;
-  final bool destaque;
-
-  @override
-  Widget build(BuildContext context) {
-    final cor = erro
-        ? const Color(0xFFFFB4AB)
-        : destaque
-        ? const Color(0xFFC8E6C9)
-        : const Color(0xFFADB6C0);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cor.withValues(alpha: 0.20)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: cor),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(texto, style: TextStyle(color: cor, height: 1.35)),
-          ),
-        ],
-      ),
     );
   }
 }
