@@ -1,99 +1,105 @@
-# Checkpoint Imperium — Web/Auth
+# Checkpoint Imperium — Web/Auth e onboarding comercial
 
 Data: 2026-09-15
 Branch de desenvolvimento: `desenvolvimento`
-Commit de referência antes deste checkpoint: `986f2f9ab422285f47083b86350e4cea985b7636`
 
-## Onde paramos
-
-Estamos trabalhando no fluxo de autenticação Web + Mobile do Imperium, preparando o sistema para ser vendido para outras empresas.
-
-### Decisão principal de arquitetura
+## Arquitetura definida
 
 - A empresa/administrador entra com **e-mail e senha**.
-- O mesmo login deve funcionar no **Web e no aplicativo Mobile**.
-- A conta autenticada representa o acesso da empresa.
+- O mesmo login funciona no **Web e no aplicativo Mobile** usando Supabase Auth.
+- A conta autenticada representa o acesso administrativo da empresa.
 - Funcionários ficam **dentro da empresa do administrador**; não são tratados como empresas/assinaturas SaaS independentes.
 - O cadastro e gerenciamento dos funcionários acontece dentro do Imperium da própria empresa.
 
-## O que já foi implementado
+## Fluxo comercial concluído
 
-### Login da empresa
+A etapa implementada é:
 
-- Tela de login por e-mail e senha criada/ajustada.
-- Campo passou a indicar `E-mail da empresa`.
-- Botão principal passou a indicar `Entrar na empresa`.
-- Primeiro acesso direcionado para criação/ativação da empresa.
-- Recuperação de senha mantida.
-- Seleção de empresa mantida quando um mesmo usuário administrador possui mais de uma empresa vinculada.
+1. A venda/licença é registrada no painel comercial existente do Imperium.
+2. O backend cria a empresa, a licença e um convite pendente para o e-mail informado na assinatura.
+3. O cliente abre o Imperium no Web ou Mobile usando exatamente esse e-mail.
+4. No primeiro acesso, cria e confirma uma senha com pelo menos 8 caracteres.
+5. Quando a confirmação de e-mail do Supabase estiver habilitada, o cliente confirma o endereço recebido por e-mail.
+6. No primeiro login autenticado, `imperium_resgatar_convite()` procura a assinatura pendente pelo e-mail autenticado.
+7. A RPC vincula automaticamente o usuário à empresa como administrador/proprietário, marca o convite como aceito e o onboarding como ativo.
+8. A licença existente da empresa continua sendo a fonte de verdade para liberação de acesso.
+9. Nos próximos logins o mesmo vínculo é reutilizado de forma idempotente.
+10. O mesmo e-mail e senha passam a funcionar tanto no Web quanto no aplicativo.
 
-### Sessão cloud
+Não foi criada integração fictícia com Stripe ou outro gateway. Nesta etapa, “assinatura” significa a licença/venda registrada pelo painel comercial já existente. Checkout/cobrança externa deverá ser uma etapa separada somente quando o meio de pagamento for definido.
 
-- `CloudSessionService` restringido para acesso de empresa por papéis de administrador/proprietário.
-- Login cloud de funcionário não cria uma empresa separada.
-- Funcionário permanece como registro interno pertencente ao tenant/empresa.
+## Supabase aplicado
 
-### Primeiro acesso
+Migration aplicada em produção e salva no repositório:
 
-- Fluxo passou de Magic Link/PIN local para e-mail + senha usando Supabase Auth.
-- Preparado para permitir que a empresa use as mesmas credenciais na Web e no Mobile.
+`supabase/migrations/20260915201403_onboarding_comercial_email_senha_v1.sql`
 
-### Funcionários / ponto
+Principais regras de `imperium_resgatar_convite()`:
 
-Últimos commits antes deste checkpoint:
+- exige sessão autenticada;
+- usa o e-mail do próprio usuário autenticado;
+- aceita somente vínculo administrativo (`admin` ou `proprietario`);
+- convite pendente do e-mail tem prioridade, permitindo inclusive ativar uma segunda empresa;
+- faz `upsert` em `empresa_usuarios`;
+- registra `owner_id`, `aceito_por`, `aceito_em` e onboarding ativo;
+- se a assinatura já tiver sido ativada, reutiliza o vínculo existente;
+- se não houver assinatura/vínculo para aquele e-mail, retorna erro claro;
+- `SECURITY DEFINER` com `search_path` vazio e objetos totalmente qualificados;
+- execução de `imperium_resgatar_convite()` removida de `anon/public` e concedida apenas a `authenticated`.
 
-- `a8ba1de6...` — `refactor(ponto): remove vinculo manual Supabase de funcionarios`
-- `8520cd4c...` — `refactor(ponto): ativa fluxo interno de funcionarios`
-- `986f2f9a...` — `test(ponto): protege funcionario interno sem Supabase manual`
+Também foram restringidas a usuários autenticados as RPCs comerciais `imperium_admin_criar_cliente` e `imperium_admin_criar_empresa_beta`; elas continuam fazendo a validação interna de administrador comercial.
 
-Esses ajustes reforçam que funcionário é interno à empresa e não precisa de vínculo manual separado no Supabase para funcionar como empresa SaaS.
+## Mobile
 
-## Supabase
+`lib/screens/empresa_primeiro_acesso_page.dart` agora apresenta o fluxo como **Ativar assinatura**:
 
-Na auditoria atual não foi identificada migration/SQL obrigatória pendente para o login já implementado.
+- `E-mail da assinatura`;
+- criar senha;
+- confirmar senha;
+- `Criar senha e ativar assinatura`;
+- opção `Já tenho senha • ativar minha assinatura`;
+- orientação de confirmação de e-mail quando necessário;
+- vínculo automático via `CloudSessionService.prepararSessao()`.
 
-A estrutura existente de vínculo de usuário/empresa e o fluxo `imperium_resgatar_convite` já dão base para associar o usuário autenticado à empresa.
+`lib/services/cloud_session_service.dart` chama `imperium_resgatar_convite()` antes de listar as empresas vinculadas e propaga um erro útil quando o e-mail autenticado não corresponde a uma assinatura pendente.
 
-Não aplicar migration nova apenas para repetir o fluxo atual sem antes revisar o onboarding comercial.
+## Web
 
-## Vercel / Web
+`lib/main_web.dart` já utiliza o mesmo Supabase Auth por e-mail/senha e, após autenticar, chama `imperium_resgatar_convite()` antes de carregar as empresas vinculadas. A nova RPC do Supabase faz com que o Web use o mesmo onboarding automático do Mobile sem criar um sistema paralelo.
 
-- O desenvolvimento continua na branch `desenvolvimento`.
-- A branch `vercel-web` é gerada pelo workflow de build/deploy Web.
-- Não desenvolver diretamente em `vercel-web`.
-- Antes de continuar, conferir GitHub Actions e confirmar que o último commit funcional de `desenvolvimento` chegou ao `vercel-web`.
+## Testes adicionados/ajustados
 
-## Próximo passo principal
+- `test/onboarding_comercial_email_senha_source_test.dart`
+- `test/login_email_senha_source_test.dart`
 
-Construir o onboarding comercial self-service:
+Eles protegem:
 
-1. Cliente assina um plano.
-2. Informa o e-mail da empresa.
-3. Cria/confirma a senha.
-4. O sistema cria ou identifica a empresa/tenant.
-5. Vincula automaticamente o usuário autenticado como administrador/proprietário.
-6. Ativa a licença/plano correspondente.
-7. O cliente entra no Imperium imediatamente com o mesmo e-mail e senha no Web ou Mobile.
+- segurança/idempotência da migration;
+- primeiro acesso por e-mail e senha;
+- ativação automática no Mobile;
+- reutilização da mesma RPC no Web;
+- ausência de regressão para Magic Link/PIN como login principal da empresa.
 
-## Antes de implementar o próximo passo
+## Commits desta etapa
 
-Revisar os componentes já existentes de:
+- `63ab3e0e...` — `feat(onboarding): automatiza vinculo da assinatura por email`
+- `2abbae34...` — `feat(onboarding): propaga erro de ativacao da assinatura`
+- `6f63970a...` — `ui(onboarding): conclui ativacao comercial por email e senha`
+- `945745ae...` — `test(onboarding): protege fluxo comercial por email e senha`
+- `0ffd239e...` — `test(auth): alinha primeiro acesso com ativacao da assinatura`
+- `db2d2abc...` — `style: aplica dart format`
 
-- empresa/tenant cloud;
-- convite/vínculo de empresa;
-- licença/plano;
-- RPCs do Supabase;
-- fluxo de primeiro acesso;
-- eventual integração de cobrança/assinatura.
+## Validação final desta etapa
 
-Objetivo: reaproveitar o que já existe e evitar criar dois sistemas paralelos de onboarding/licenciamento.
+O commit de autoformatação `db2d2abc...` corrigiu a única causa observada nas execuções anteriores de `Flutter Quality` e `Web Preview Build`: o passo `Check formatting`.
 
-## Regra para retomada
+Este checkpoint cria um novo push humano somente para disparar novamente os workflows sobre o código já formatado. Antes de considerar a etapa encerrada, confirmar:
 
-Ao retomar o desenvolvimento:
+1. `Flutter Quality` verde;
+2. `Web Preview Build` verde;
+3. branch `vercel-web` atualizada com o build do commit final;
+4. migration `onboarding_comercial_email_senha_v1` presente no Supabase de produção.
 
-1. Abrir este checkpoint.
-2. Confirmar HEAD atual de `desenvolvimento`.
-3. Conferir Actions (`Flutter Quality` e `Web Preview Build`).
-4. Conferir se `vercel-web` está sincronizada com o último código funcional.
-5. Continuar pelo onboarding comercial/assinatura automática da empresa.
+## Limite de escopo
+
+A próxima tarefa não deve alterar este fluxo comercial sem necessidade. Integração com checkout/gateway de pagamento, planos públicos ou cobrança recorrente automática é uma etapa posterior e separada.
