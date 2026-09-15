@@ -40,18 +40,20 @@ void main() {
     expect(source, contains('Financeiro Cloud'));
   });
 
-  test('Shell Web navega para modulos V2', () {
+  test('Shell Web navega para modulos V2 atuais', () {
     final source = File(
       'lib/web/web_operacional_shell.dart',
     ).readAsStringSync();
 
     expect(source, contains("import 'web_gestao_pages.dart';"));
+    expect(source, contains("import 'web_estoque_gestao_page.dart';"));
+    expect(source, contains("import 'web_financeiro_lancamentos_page.dart';"));
     expect(source, contains("'Nova OS'"));
     expect(source, contains("'Estoque'"));
     expect(source, contains("'Financeiro'"));
     expect(source, contains('WebNovaOrdemPage'));
-    expect(source, contains('WebEstoquePage'));
-    expect(source, contains('WebFinanceiroPage'));
+    expect(source, contains('WebEstoqueGestaoPage'));
+    expect(source, contains('WebFinanceiroLancamentosPage'));
   });
 
   test('Android e schema permanecem preservados', () {
