@@ -51,7 +51,9 @@ class CloudSessionService {
     final empresas = await listarEmpresasDoUsuario();
     if (empresas.isEmpty) {
       throw StateError(
-        'Sua conta está autenticada, mas ainda não possui uma empresa ativa vinculada ao Imperium.',
+        'Nenhuma empresa ativa foi encontrada para este e-mail. '
+        'Use o mesmo e-mail informado na assinatura ou no convite do Imperium '
+        'e confirme se a licença da empresa está ativa.',
       );
     }
 
@@ -63,15 +65,11 @@ class CloudSessionService {
       throw StateError('Empresa inválida.');
     }
 
-    if (papel == 'funcionario') {
+    if (papel != 'admin' && papel != 'proprietario') {
       throw StateError(
         'O acesso por e-mail e senha é exclusivo da empresa. '
         'Funcionários são cadastrados e gerenciados pelo administrador dentro do Imperium.',
       );
-    }
-
-    if (papel != 'admin' && papel != 'proprietario') {
-      throw StateError('Seu perfil de acesso não é reconhecido pelo Imperium.');
     }
 
     await _empresaService.trocarEmpresa(id);
