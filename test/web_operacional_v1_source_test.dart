@@ -70,7 +70,14 @@ void main() {
     expect(source, isNot(contains('signInWithPassword')));
     expect(source, contains('EmpresaCloudService.instance'));
     expect(source, contains('WebWorkspaceShell'));
+
+    expect(workspace, contains('WebDashboardGerencialPage'));
     expect(workspace, contains('WebOperacionalShell'));
+    expect(workspace, contains('Sistema completo'));
+    expect(workspace, contains("Text('Módulos')"));
+    expect(workspace, contains('dashboard-premium-'));
+    expect(workspace, contains('Trocar empresa'));
+
     expect(shell, contains('WebDashboardGerencialPage'));
     expect(shell, contains('Icons.menu_rounded'));
     expect(shell, contains('ExpansionTile'));
