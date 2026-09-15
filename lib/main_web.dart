@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'database/app_database.dart';
 import 'services/empresa_cloud_service.dart';
+import 'services/imperium_auth_service.dart';
 import 'services/supabase_bootstrap.dart';
 import 'web/imperium_web_theme.dart';
 import 'web/web_workspace_shell.dart';
@@ -45,14 +46,16 @@ class _WebGate extends StatefulWidget {
 }
 
 class _WebGateState extends State<_WebGate> {
-  final email = TextEditingController();
-  final empresaService = EmpresaCloudService.instance;
+  final TextEditingController email = TextEditingController();
+  final TextEditingController senha = TextEditingController();
+  final EmpresaCloudService empresaService = EmpresaCloudService.instance;
+  final ImperiumAuthService auth = ImperiumAuthService.instance;
 
   StreamSubscription<AuthState>? _authSubscription;
 
   bool carregando = true;
-  bool enviandoLink = false;
-  bool linkEnviado = false;
+  bool entrando = false;
+  bool ocultarSenha = true;
   String? erro;
   String? mensagem;
   User? usuario;
@@ -60,8 +63,6 @@ class _WebGateState extends State<_WebGate> {
   String empresaAtual = '';
 
   SupabaseClient? get client => SupabaseBootstrap.client;
-
-  String get _redirectUrl => '${Uri.base.origin}/';
 
   @override
   void initState() {
@@ -73,6 +74,7 @@ class _WebGateState extends State<_WebGate> {
   void dispose() {
     _authSubscription?.cancel();
     email.dispose();
+    senha.dispose();
     super.dispose();
   }
 
@@ -86,106 +88,70 @@ class _WebGateState extends State<_WebGate> {
       }
 
       usuario = c.auth.currentUser;
+      final emailAtual = (usuario?.email ?? '').trim().toLowerCase();
+      if (emailAtual.isNotEmpty) email.text = emailAtual;
 
       if (usuario != null) {
         await _carregarContexto();
       }
 
       _authSubscription = c.auth.onAuthStateChange.listen(
-        (authState) {
-          _tratarMudancaAuth(authState);
+        (estado) async {
+          if (!mounted) return;
+
+          final novoUsuario = estado.session?.user ?? c.auth.currentUser;
+          if (novoUsuario == null) {
+            setState(() {
+              usuario = null;
+              empresas = const [];
+              empresaAtual = '';
+              erro = null;
+              mensagem = null;
+              carregando = false;
+            });
+            return;
+          }
+
+          usuario = novoUsuario;
         },
         onError: (Object e) {
           if (!mounted) return;
           setState(() {
-            erro = _textoErro(e);
+            erro = auth.textoErro(e);
             carregando = false;
           });
         },
       );
     } catch (e) {
-      erro = _textoErro(e);
+      erro = auth.textoErro(e);
     } finally {
       if (mounted) setState(() => carregando = false);
     }
   }
 
-  Future<void> _tratarMudancaAuth(AuthState authState) async {
-    if (!mounted) return;
-
-    final novoUsuario = authState.session?.user ?? client?.auth.currentUser;
-
-    if (novoUsuario == null) {
-      setState(() {
-        usuario = null;
-        empresas = const [];
-        empresaAtual = '';
-        carregando = false;
-      });
-      return;
-    }
+  Future<void> _entrar() async {
+    if (entrando) return;
 
     setState(() {
-      carregando = true;
-      erro = null;
-      mensagem = null;
-      usuario = novoUsuario;
-    });
-
-    try {
-      await _carregarContexto();
-    } catch (e) {
-      erro = _textoErro(e);
-    } finally {
-      if (mounted) setState(() => carregando = false);
-    }
-  }
-
-  Future<void> _enviarMagicLink() async {
-    final c = client;
-    if (c == null || enviandoLink) return;
-
-    final destino = email.text.trim().toLowerCase();
-
-    if (destino.isEmpty || !destino.contains('@')) {
-      setState(() {
-        erro = 'Informe um e-mail válido.';
-        mensagem = null;
-      });
-      return;
-    }
-
-    setState(() {
-      enviandoLink = true;
-      linkEnviado = false;
+      entrando = true;
       erro = null;
       mensagem = null;
     });
 
     try {
-      await c.auth.signInWithOtp(
-        email: destino,
-        emailRedirectTo: _redirectUrl,
-        shouldCreateUser: false,
+      final user = await auth.entrarComEmailSenha(
+        email: email.text,
+        senha: senha.text,
       );
 
-      if (!mounted) return;
-
-      setState(() {
-        linkEnviado = true;
-        mensagem =
-            'Link enviado para $destino. Abra somente o link mais recente. '
-            'Depois da confirmação você voltará automaticamente para o '
-            'Imperium Manager Web.';
-      });
+      usuario = user;
+      senha.clear();
+      await _carregarContexto();
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        erro = _textoErro(e);
-        mensagem = null;
-      });
+      setState(() => erro = auth.textoErro(e));
     } finally {
-      if (mounted) setState(() => enviandoLink = false);
+      if (mounted) setState(() => entrando = false);
     }
   }
 
@@ -202,93 +168,82 @@ class _WebGateState extends State<_WebGate> {
     try {
       await c.rpc('imperium_resgatar_convite');
     } catch (_) {
-      // Sem convite pendente: segue usando os vínculos existentes.
+      // Sem convite pendente: usa os vínculos já existentes.
     }
 
-    empresas = await empresaService.listarEmpresasVinculadas();
-    empresaAtual = (await AppDatabase.instance.empresaAtivaId) ?? '';
+    final vinculadas = await empresaService.listarEmpresasVinculadas();
+    var atual = (await AppDatabase.instance.empresaAtivaId ?? '').trim();
 
-    final empresaAtualValida = empresas.any(
-      (empresa) => '${empresa['empresa_id']}' == empresaAtual,
+    final atualValida = vinculadas.any(
+      (empresa) => (empresa['empresa_id'] ?? '').toString() == atual,
     );
 
-    if (!empresaAtualValida) {
-      empresaAtual = '';
+    if (!atualValida) atual = '';
+
+    if (atual.isEmpty && vinculadas.length == 1) {
+      atual = (vinculadas.first['empresa_id'] ?? '').toString();
+      if (atual.isNotEmpty) {
+        await empresaService.trocarEmpresa(atual);
+      }
     }
 
-    if (empresaAtual.isEmpty && empresas.length == 1) {
-      empresaAtual = '${empresas.first['empresa_id']}';
-      await empresaService.trocarEmpresa(empresaAtual);
-      empresas = await empresaService.listarEmpresasVinculadas();
-    }
-
-    if (empresas.isEmpty) {
+    if (vinculadas.isEmpty) {
       throw StateError(
-        'Esta conta entrou no Supabase, mas não possui empresa ativa '
-        'vinculada ao Imperium.',
+        'Esta conta entrou no Imperium, mas ainda não possui uma empresa ativa vinculada.',
       );
     }
+
+    if (!mounted) return;
+    setState(() {
+      usuario = user;
+      empresas = vinculadas;
+      empresaAtual = atual;
+      erro = null;
+    });
   }
 
   Future<void> _trocarEmpresa(String id) async {
     if (id.isEmpty || id == empresaAtual) return;
 
-    setState(() => carregando = true);
+    setState(() {
+      carregando = true;
+      erro = null;
+    });
+
     try {
       await empresaService.trocarEmpresa(id);
       await _carregarContexto();
     } catch (e) {
-      erro = _textoErro(e);
+      if (!mounted) return;
+      setState(() => erro = auth.textoErro(e));
     } finally {
       if (mounted) setState(() => carregando = false);
     }
   }
 
   Future<void> _sair() async {
-    await client?.auth.signOut();
-    if (!mounted) return;
-
-    setState(() {
-      usuario = null;
-      empresas = const [];
-      empresaAtual = '';
-      linkEnviado = false;
-      mensagem = null;
-      erro = null;
-    });
+    try {
+      await auth.sair();
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        usuario = null;
+        empresas = const [];
+        empresaAtual = '';
+        erro = null;
+        mensagem = null;
+        senha.clear();
+      });
+    }
   }
 
-  String _textoErro(Object e) {
-    var texto = e.toString().trim();
-
-    for (final prefixo in const [
-      'AuthException: ',
-      'PostgrestException: ',
-      'StateError: ',
-      'Bad state: ',
-      'Exception: ',
-    ]) {
-      if (texto.startsWith(prefixo)) {
-        texto = texto.substring(prefixo.length).trim();
+  String get _papelAtual {
+    for (final empresa in empresas) {
+      if ((empresa['empresa_id'] ?? '').toString() == empresaAtual) {
+        return (empresa['papel'] ?? '').toString().trim().toLowerCase();
       }
     }
-
-    final lower = texto.toLowerCase();
-
-    if (lower.contains('email rate limit') ||
-        lower.contains('over_email_send_rate_limit') ||
-        lower.contains('429')) {
-      return 'Muitos links foram solicitados. Aguarde alguns minutos e '
-          'envie somente um novo Magic Link.';
-    }
-
-    if (lower.contains('user not found') ||
-        lower.contains('signups not allowed') ||
-        lower.contains('invalid login credentials')) {
-      return 'Este e-mail ainda não está liberado para entrar no Imperium.';
-    }
-
-    return texto.isEmpty ? 'Falha ao acessar o Imperium.' : texto;
+    return '';
   }
 
   Widget _carregando() {
@@ -330,7 +285,7 @@ class _WebGateState extends State<_WebGate> {
                     vertical: 30,
                   ),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1180),
+                    constraints: const BoxConstraints(maxWidth: 1120),
                     child: desktop
                         ? Row(
                             children: [
@@ -353,7 +308,7 @@ class _WebGateState extends State<_WebGate> {
   Widget _loginCard() {
     return Card(
       margin: EdgeInsets.zero,
-      color: ImperiumWebTheme.surface.withValues(alpha: 0.94),
+      color: ImperiumWebTheme.surface.withValues(alpha: 0.96),
       child: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(
@@ -367,17 +322,17 @@ class _WebGateState extends State<_WebGate> {
             const SizedBox(height: 28),
             Text(
               'Acesse sua operação',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Use o mesmo e-mail da sua conta Imperium. Enviaremos um link seguro, sem senha.',
+              'Use o mesmo e-mail e senha no Imperium Web e no aplicativo.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFFADB6C0),
-                height: 1.45,
-              ),
+                    color: const Color(0xFFADB6C0),
+                    height: 1.45,
+                  ),
             ),
             const SizedBox(height: 24),
             TextField(
@@ -385,18 +340,43 @@ class _WebGateState extends State<_WebGate> {
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
               enableSuggestions: false,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _enviarMagicLink(),
+              textInputAction: TextInputAction.next,
+              enabled: !entrando,
               decoration: const InputDecoration(
                 labelText: 'E-mail',
                 hintText: 'voce@empresa.com.br',
                 prefixIcon: Icon(Icons.alternate_email_rounded),
               ),
             ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: senha,
+              obscureText: ocultarSenha,
+              autocorrect: false,
+              enableSuggestions: false,
+              textInputAction: TextInputAction.done,
+              enabled: !entrando,
+              onSubmitted: (_) => _entrar(),
+              decoration: InputDecoration(
+                labelText: 'Senha',
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                suffixIcon: IconButton(
+                  tooltip: ocultarSenha ? 'Mostrar senha' : 'Ocultar senha',
+                  onPressed: entrando
+                      ? null
+                      : () => setState(() => ocultarSenha = !ocultarSenha),
+                  icon: Icon(
+                    ocultarSenha
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                  ),
+                ),
+              ),
+            ),
             if (mensagem != null) ...[
               const SizedBox(height: 14),
               _AvisoLogin(
-                icon: Icons.mark_email_read_outlined,
+                icon: Icons.check_circle_outline_rounded,
                 texto: mensagem!,
                 destaque: true,
               ),
@@ -411,21 +391,15 @@ class _WebGateState extends State<_WebGate> {
             ],
             const SizedBox(height: 20),
             FilledButton.icon(
-              onPressed: enviandoLink ? null : _enviarMagicLink,
-              icon: enviandoLink
+              onPressed: entrando ? null : _entrar,
+              icon: entrando
                   ? const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.arrow_forward_rounded),
-              label: Text(
-                enviandoLink
-                    ? 'Enviando...'
-                    : linkEnviado
-                    ? 'Enviar novo link'
-                    : 'Entrar com link seguro',
-              ),
+                  : const Icon(Icons.login_rounded),
+              label: Text(entrando ? 'Entrando...' : 'Entrar'),
             ),
             const SizedBox(height: 18),
             Row(
@@ -434,10 +408,10 @@ class _WebGateState extends State<_WebGate> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Supabase Auth · empresa e permissões preservadas',
+                    'Supabase Auth · empresa, licença e permissões preservadas',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF8F9AA5),
-                    ),
+                          color: const Color(0xFF8F9AA5),
+                        ),
                   ),
                 ),
               ],
@@ -470,12 +444,12 @@ class _WebGateState extends State<_WebGate> {
               Text(
                 'Qual empresa você quer abrir?',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                      fontWeight: FontWeight.w800,
+                    ),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Cada ambiente permanece isolado por empresa. Você pode trocar novamente pelo menu superior.',
+                'Cada ambiente permanece isolado por empresa. Seu perfil é aplicado automaticamente.',
               ),
               const SizedBox(height: 24),
               if (erro != null)
@@ -487,13 +461,15 @@ class _WebGateState extends State<_WebGate> {
                     erro: true,
                   ),
                 ),
-              ...empresas.map((e) {
-                final nome = '${e['nome'] ?? 'Empresa'}';
-                final papel = '${e['papel'] ?? '-'}';
+              ...empresas.map((empresa) {
+                final nome = (empresa['nome'] ?? 'Empresa').toString();
+                final papel = (empresa['papel'] ?? '-').toString();
+                final id = (empresa['empresa_id'] ?? '').toString();
+
                 return Card(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
-                    onTap: () => _trocarEmpresa('${e['empresa_id']}'),
+                    onTap: id.isEmpty ? null : () => _trocarEmpresa(id),
                     child: Padding(
                       padding: const EdgeInsets.all(18),
                       child: Row(
@@ -522,7 +498,7 @@ class _WebGateState extends State<_WebGate> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Text('Perfil de acesso: $papel'),
+                                Text('Perfil: $papel'),
                               ],
                             ),
                           ),
@@ -540,15 +516,69 @@ class _WebGateState extends State<_WebGate> {
     );
   }
 
+  Widget _funcionarioWebBloqueado() {
+    return Scaffold(
+      appBar: AppBar(
+        title: const _BrandMark(compacto: true),
+        actions: [
+          TextButton.icon(
+            onPressed: _sair,
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text('Sair'),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.badge_outlined, size: 54),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Acesso de funcionário',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Sua conta pertence à equipe desta empresa. Nesta etapa, o acesso operacional do funcionário continua no aplicativo móvel, com as permissões definidas pelo administrador.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    if (empresas.length > 1)
+                      OutlinedButton.icon(
+                        onPressed: () => setState(() => empresaAtual = ''),
+                        icon: const Icon(Icons.business_outlined),
+                        label: const Text('Trocar empresa'),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (carregando) return _carregando();
     if (usuario == null) return _login();
     if (empresaAtual.isEmpty) return _seletorEmpresa();
+    if (_papelAtual == 'funcionario') return _funcionarioWebBloqueado();
 
     return WebWorkspaceShell(
-      key: ValueKey('tenant-$empresaAtual'),
-      usuarioEmail: usuario?.email ?? usuario?.id ?? '',
+      usuarioEmail: (usuario?.email ?? '').trim(),
       empresas: empresas,
       empresaAtualId: empresaAtual,
       onTrocarEmpresa: _trocarEmpresa,
@@ -558,7 +588,7 @@ class _WebGateState extends State<_WebGate> {
 }
 
 class _BrandMark extends StatelessWidget {
-  const _BrandMark({required this.compacto});
+  const _BrandMark({this.compacto = false});
 
   final bool compacto;
 
@@ -568,40 +598,40 @@ class _BrandMark extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: compacto ? 40 : 52,
-          height: compacto ? 40 : 52,
+          width: compacto ? 38 : 48,
+          height: compacto ? 38 : 48,
           decoration: BoxDecoration(
-            color: ImperiumWebTheme.accentStrong,
-            borderRadius: BorderRadius.circular(compacto ? 12 : 16),
+            color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(compacto ? 12 : 15),
+            border: Border.all(color: ImperiumWebTheme.border),
           ),
-          child: Icon(
-            Icons.auto_awesome_mosaic_rounded,
-            color: const Color(0xFF241900),
-            size: compacto ? 23 : 30,
+          child: const Icon(
+            Icons.auto_awesome_mosaic_outlined,
+            color: ImperiumWebTheme.accentStrong,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 11),
         Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'IMPERIUM',
+              compacto ? 'Imperium' : 'Imperium Manager',
               style: TextStyle(
-                fontSize: compacto ? 15 : 20,
+                fontSize: compacto ? 16 : 20,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 1.5,
+                letterSpacing: -0.3,
               ),
             ),
-            Text(
-              'MANAGER',
-              style: TextStyle(
-                fontSize: compacto ? 10 : 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 2.2,
-                color: ImperiumWebTheme.accentStrong,
+            if (!compacto)
+              const Text(
+                'Gestão automotiva',
+                style: TextStyle(
+                  color: Color(0xFF8F9AA5),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
           ],
         ),
       ],
@@ -614,71 +644,33 @@ class _LoginHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = Theme.of(context).textTheme.displaySmall?.copyWith(
-      fontWeight: FontWeight.w900,
-      height: 1.08,
-      letterSpacing: -1.2,
-    );
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _BrandMark(compacto: false),
-          const SizedBox(height: 52),
-          Text('Sua empresa inteira,\nem um único painel.', style: title),
-          const SizedBox(height: 18),
-          Text(
-            'Operação, clientes, ordens de serviço, estoque, financeiro, CRM e gestão conectados à mesma nuvem do aplicativo.',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: const Color(0xFFB7C0CA),
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _BrandMark(),
+        SizedBox(height: 34),
+        Text(
+          'Sua operação inteira,\nem um único acesso.',
+          style: TextStyle(
+            fontSize: 42,
+            height: 1.08,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -1.3,
+          ),
+        ),
+        SizedBox(height: 18),
+        SizedBox(
+          width: 540,
+          child: Text(
+            'Entre com e-mail e senha no navegador ou no celular. A empresa, o plano e as permissões são resolvidos automaticamente.',
+            style: TextStyle(
+              color: Color(0xFFADB6C0),
+              fontSize: 17,
               height: 1.55,
-              fontWeight: FontWeight.w400,
             ),
           ),
-          const SizedBox(height: 34),
-          const Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _FeatureChip(icon: Icons.sync_rounded, label: 'Android + Web'),
-              _FeatureChip(icon: Icons.security_rounded, label: 'Multiempresa'),
-              _FeatureChip(
-                icon: Icons.cloud_done_rounded,
-                label: 'Supabase Cloud',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeatureChip extends StatelessWidget {
-  const _FeatureChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: ImperiumWebTheme.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 17, color: ImperiumWebTheme.accentStrong),
-          const SizedBox(width: 7),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -699,24 +691,29 @@ class _AvisoLogin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cor = erro
-        ? Theme.of(context).colorScheme.error
+        ? const Color(0xFFFF8C8C)
         : destaque
-        ? ImperiumWebTheme.accentStrong
-        : Theme.of(context).colorScheme.primary;
+            ? ImperiumWebTheme.accentStrong
+            : const Color(0xFFADB6C0);
 
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: cor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cor.withValues(alpha: 0.25)),
+        border: Border.all(color: cor.withValues(alpha: 0.24)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: cor, size: 20),
+          Icon(icon, color: cor, size: 19),
           const SizedBox(width: 10),
-          Expanded(child: Text(texto)),
+          Expanded(
+            child: Text(
+              texto,
+              style: TextStyle(color: cor, height: 1.35),
+            ),
+          ),
         ],
       ),
     );
