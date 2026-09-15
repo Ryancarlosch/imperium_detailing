@@ -56,19 +56,22 @@ void main() {
     expect(source, contains('Central Web'));
   });
 
-  test('Shell Web escala com sidebar e drawer', () {
+  test('Shell Web escala com sidebar desktop e drawer responsivo', () {
     final source = File(
       'lib/web/web_operacional_shell.dart',
     ).readAsStringSync();
 
     expect(source, contains("import 'web_expansao_pages.dart';"));
-    expect(source, contains('_WebNavItem'));
-    expect(source, contains("'CRM'"));
-    expect(source, contains("'Orçamentos'"));
-    expect(source, contains("'Precificação'"));
-    expect(source, contains("'Central Cloud'"));
+    expect(source, contains('Widget _itemMenu'));
+    expect(source, contains('Widget _grupoMenu'));
+    expect(source, contains("titulo: 'CRM'"));
+    expect(source, contains("titulo: 'Orçamentos'"));
+    expect(source, contains("titulo: 'Precificação'"));
+    expect(source, contains("titulo: 'Central Cloud'"));
     expect(source, contains('Drawer('));
-    expect(source, contains('_menuLateral'));
+    expect(source, contains('final desktop = largura >= 1180'));
+    expect(source, contains('width: 300'));
+    expect(source, contains('_conteudoMenuLateral()'));
     expect(source, isNot(contains('bottomNavigationBar:')));
   });
 
