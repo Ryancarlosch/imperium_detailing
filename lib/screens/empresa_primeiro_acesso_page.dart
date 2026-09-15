@@ -41,7 +41,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
     final confirmar = _confirmarSenha.text.trim();
 
     if (email.isEmpty || !email.contains('@')) {
-      _mostrarErro('Informe o e-mail usado na assinatura do Imperium.');
+      _mostrarErro('Informe o mesmo e-mail usado na assinatura do Imperium.');
       return;
     }
 
@@ -72,8 +72,9 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
         if (!mounted) return;
         setState(() {
           _mensagem =
-              'Conta criada. Confirme o e-mail recebido e depois toque em '
-              '“Já confirmei meu e-mail • entrar e ativar”.';
+              'Conta criada. Confirme o e-mail recebido. Depois volte e toque '
+              'em “Já tenho senha • ativar minha assinatura”. O vínculo com '
+              'a empresa será feito automaticamente.';
         });
         return;
       }
@@ -94,7 +95,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
     final senha = _senha.text.trim();
 
     if (email.isEmpty || !email.contains('@')) {
-      _mostrarErro('Informe seu e-mail.');
+      _mostrarErro('Informe o mesmo e-mail usado na assinatura do Imperium.');
       return;
     }
 
@@ -144,7 +145,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ativar empresa')),
+      appBar: AppBar(title: const Text('Ativar assinatura')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -157,19 +158,20 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.business_rounded, size: 58),
+                      const Icon(Icons.workspace_premium_rounded, size: 58),
                       const SizedBox(height: 18),
                       Text(
-                        'Ative sua empresa no Imperium',
+                        'Ative sua assinatura do Imperium',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Use o mesmo e-mail informado na assinatura ou no '
-                        'convite da empresa. A senha criada aqui será a mesma '
-                        'para entrar no aplicativo e na Web.',
+                        'Use exatamente o e-mail informado ao assinar o plano. '
+                        'Depois da autenticação, sua empresa e sua licença são '
+                        'vinculadas automaticamente. A mesma senha funciona no '
+                        'aplicativo e na Web.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
@@ -181,7 +183,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                         autocorrect: false,
                         enableSuggestions: false,
                         decoration: const InputDecoration(
-                          labelText: 'E-mail da empresa',
+                          labelText: 'E-mail da assinatura',
                           prefixIcon: Icon(Icons.alternate_email_rounded),
                           border: OutlineInputBorder(),
                         ),
@@ -280,11 +282,11 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Icon(Icons.person_add_alt_1_rounded),
+                              : const Icon(Icons.workspace_premium_rounded),
                           label: Text(
                             _carregando
-                                ? 'Aguarde...'
-                                : 'Criar conta e ativar empresa',
+                                ? 'Ativando...'
+                                : 'Criar senha e ativar assinatura',
                           ),
                         ),
                       ),
@@ -293,7 +295,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                         onPressed: _carregando ? null : _entrarEAtivar,
                         icon: const Icon(Icons.login_rounded),
                         label: const Text(
-                          'Já confirmei meu e-mail • entrar e ativar',
+                          'Já tenho senha • ativar minha assinatura',
                         ),
                       ),
                       const SizedBox(height: 20),
