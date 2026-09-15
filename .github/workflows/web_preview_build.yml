@@ -40,6 +40,50 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Patch dashboard navigation once
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('lib/web/web_dashboard_gerencial_page.dart')
+          source = path.read_text(encoding='utf-8')
+          old = """  Future<void> _abrirModulo(String titulo, Widget pagina) async {
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (context) => Scaffold(
+                  appBar: AppBar(title: Text(titulo), leading: const BackButton()),
+                  body: pagina,
+                ),
+              ),
+            );
+            if (mounted) await _carregar();
+          }
+          """
+          new = """  Future<void> _abrirModulo(String titulo, Widget pagina) async {
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                settings: RouteSettings(name: titulo),
+                builder: (context) => pagina,
+              ),
+            );
+            if (mounted) await _carregar();
+          }
+          """
+          if old not in source:
+              raise SystemExit('Trecho esperado do dashboard não foi encontrado.')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          PY
+          dart format lib/web/web_dashboard_gerencial_page.dart test/web_dashboard_navigation_source_test.dart
+          if ! git diff --quiet -- lib/web/web_dashboard_gerencial_page.dart test/web_dashboard_navigation_source_test.dart; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add lib/web/web_dashboard_gerencial_page.dart test/web_dashboard_navigation_source_test.dart
+            git commit -m "fix(web): remove appbar duplicada dos atalhos"
+            git push origin HEAD:desenvolvimento
+          fi
+
       - name: Check Web formatting
         run: dart format --output=none --set-exit-if-changed lib/main_web.dart lib/web test/web_*_source_test.dart
 
