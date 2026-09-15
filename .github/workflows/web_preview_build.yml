@@ -8,6 +8,7 @@ on:
     paths:
       - 'lib/**'
       - 'web/**'
+      - 'test/web_*_source_test.dart'
       - 'pubspec.yaml'
       - 'pubspec.lock'
       - '.github/workflows/web_preview_build.yml'
@@ -40,10 +41,13 @@ jobs:
         run: flutter pub get
 
       - name: Check Web formatting
-        run: dart format --output=none --set-exit-if-changed lib/main_web.dart lib/web
+        run: dart format --output=none --set-exit-if-changed lib/main_web.dart lib/web test/web_*_source_test.dart
 
       - name: Analyze
         run: flutter analyze
+
+      - name: Run Web source tests
+        run: flutter test test/web_*_source_test.dart
 
       - name: Build Web
         run: flutter build web --target lib/main_web.dart --release
