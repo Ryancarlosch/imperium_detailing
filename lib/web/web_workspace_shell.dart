@@ -60,7 +60,10 @@ class WebWorkspaceShell extends StatelessWidget {
     await onTrocarEmpresa(id);
   }
 
-  Widget _atalhoSistemaCompleto(BuildContext context, {required bool compacto}) {
+  Widget _atalhoSistemaCompleto(
+    BuildContext context, {
+    required bool compacto,
+  }) {
     final tamanho = compacto ? 36.0 : 40.0;
 
     return Tooltip(
