@@ -83,6 +83,27 @@ jobs:
             git push origin HEAD:desenvolvimento
           fi
 
+      - name: Format auth migration once
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUTH_FILES=(
+            lib/main.dart
+            lib/main_web.dart
+            lib/screens/login_email_senha_page.dart
+            lib/services/cloud_session_service.dart
+            lib/services/imperium_auth_service.dart
+            test/web_auth_password_source_test.dart
+          )
+          dart format "${AUTH_FILES[@]}"
+          if ! git diff --quiet -- "${AUTH_FILES[@]}"; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "${AUTH_FILES[@]}"
+            git commit -m "style(auth): aplica dart format"
+            git push origin HEAD:desenvolvimento
+          fi
+
       - name: Check Web formatting
         run: dart format --output=none --set-exit-if-changed lib/main_web.dart lib/web test/web_*_source_test.dart
 
