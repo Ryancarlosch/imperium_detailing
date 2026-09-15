@@ -38,6 +38,15 @@ void main() {
     expect(source, contains("labelText: 'E-mail da empresa'"));
   });
 
+  test('web vincula automaticamente a assinatura depois da autenticacao', () {
+    final source = File('lib/main_web.dart').readAsStringSync();
+
+    expect(source, contains("c.rpc('imperium_resgatar_convite')"));
+    expect(source, contains('listarEmpresasVinculadas'));
+    expect(source, contains('mesmo e-mail da assinatura ou do convite'));
+    expect(source, contains('licença da empresa está ativa'));
+  });
+
   test('mobile aponta para a nova tela de login da empresa', () {
     final mainSource = File('lib/main.dart').readAsStringSync();
     final loginSource = File(
