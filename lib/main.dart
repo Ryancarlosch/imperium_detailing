@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'repositories/usuario_repository.dart';
+import 'screens/login_email_senha_page.dart';
 import 'services/backup_automatico_service.dart';
-import 'screens/login_page.dart';
-
+import 'services/cloud_session_service.dart';
 import 'services/funcionario_acesso_service.dart';
 import 'services/operacional_sync_service.dart';
-import 'services/tenant_runtime_service.dart';
 import 'services/supabase_bootstrap.dart';
+import 'services/tenant_runtime_service.dart';
 import 'widgets/licenca_gate.dart';
 
 Future<void> main() async {
@@ -36,7 +36,7 @@ class ImperiumApp extends StatelessWidget {
       builder: (context, revisao, _) {
         return MaterialApp(
           key: ValueKey<String>('tenant-runtime-$revisao'),
-          title: 'Imperium Detailing',
+          title: 'Imperium Manager',
           debugShowCheckedModeBanner: false,
           locale: const Locale('pt', 'BR'),
           supportedLocales: const [Locale('pt', 'BR')],
@@ -82,7 +82,6 @@ class _SessaoGateState extends State<_SessaoGate> {
   Future<Map<String, dynamic>?> _validarFuncionarioAntesDeAbrir(
     Map<String, dynamic>? sessao,
   ) async {
-    // startup-funcionario-revogacao-v3
     if (sessao == null) return null;
 
     final perfil = (sessao['perfil'] ?? '').toString();
@@ -101,7 +100,6 @@ class _SessaoGateState extends State<_SessaoGate> {
       }
 
       final atualizada = await _usuarioRepository.restaurarSessaoPersistida();
-
       return atualizada ?? sessao;
     } catch (_) {
       return sessao;
@@ -119,25 +117,28 @@ class _SessaoGateState extends State<_SessaoGate> {
     try {
       await _usuarioRepository.garantirEstrutura();
 
-      var sessao = await _usuarioRepository.restaurarSessaoPersistida();
-      sessao = await _validarFuncionarioAntesDeAbrir(sessao);
+      Map<String, dynamic>? sessao;
+      final usuarioCloud = SupabaseBootstrap.client?.auth.currentUser;
 
-      if (!mounted) {
-        return;
+      if (usuarioCloud == null) {
+        await _usuarioRepository.sair();
+      } else {
+        sessao = await _usuarioRepository.restaurarSessaoPersistida();
+        sessao = await _validarFuncionarioAntesDeAbrir(sessao);
       }
+
+      if (!mounted) return;
 
       setState(() {
         _sessao = sessao;
         _carregando = false;
       });
-      // backup-auto: sessao-restaurada
+
       if (sessao != null) {
         _agendarBackupAutomatico();
       }
     } catch (erro) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _sessao = null;
@@ -148,21 +149,18 @@ class _SessaoGateState extends State<_SessaoGate> {
   }
 
   void _aoEntrar(Map<String, dynamic> sessao) {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _sessao = Map<String, dynamic>.from(sessao);
       _erroInicializacao = null;
     });
-    // backup-auto: login-manual
     _agendarBackupAutomatico();
   }
 
   Future<void> _sair() async {
     try {
-      await _usuarioRepository.sair();
+      await CloudSessionService.instance.sair();
     } finally {
       if (mounted) {
         setState(() {
@@ -253,7 +251,7 @@ class _SessaoGateState extends State<_SessaoGate> {
     final sessao = _sessao;
 
     if (sessao == null) {
-      return LoginPage(onLogin: _aoEntrar);
+      return LoginEmailSenhaPage(onLogin: _aoEntrar);
     }
 
     return LicencaGate(sessao: sessao, onLogout: _sair);
