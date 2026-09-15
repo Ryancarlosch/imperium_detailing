@@ -48,8 +48,9 @@ class _WebGate extends StatefulWidget {
 class _WebGateState extends State<_WebGate> {
   final TextEditingController email = TextEditingController();
   final TextEditingController senha = TextEditingController();
+  final TextEditingController confirmarCadastro = TextEditingController();
   final TextEditingController novaSenha = TextEditingController();
-  final TextEditingController confirmarSenha = TextEditingController();
+  final TextEditingController confirmarNovaSenha = TextEditingController();
 
   final EmpresaCloudService empresaService = EmpresaCloudService.instance;
   final ImperiumAuthService auth = ImperiumAuthService.instance;
@@ -57,13 +58,16 @@ class _WebGateState extends State<_WebGate> {
   StreamSubscription<AuthState>? _authSubscription;
 
   bool carregando = true;
-  bool entrando = false;
+  bool processando = false;
   bool enviandoRecuperacao = false;
   bool definindoSenha = false;
   bool salvandoNovaSenha = false;
+  bool modoPrimeiroAcesso = false;
   bool ocultarSenha = true;
-  bool ocultarNovaSenha = true;
   bool ocultarConfirmacao = true;
+  bool ocultarNovaSenha = true;
+  bool ocultarConfirmacaoNova = true;
+
   String? erro;
   String? mensagem;
   User? usuario;
@@ -90,8 +94,9 @@ class _WebGateState extends State<_WebGate> {
     _authSubscription?.cancel();
     email.dispose();
     senha.dispose();
+    confirmarCadastro.dispose();
     novaSenha.dispose();
-    confirmarSenha.dispose();
+    confirmarNovaSenha.dispose();
     super.dispose();
   }
 
@@ -166,10 +171,10 @@ class _WebGateState extends State<_WebGate> {
   }
 
   Future<void> _entrar() async {
-    if (entrando) return;
+    if (processando || enviandoRecuperacao) return;
 
     setState(() {
-      entrando = true;
+      processando = true;
       erro = null;
       mensagem = null;
     });
@@ -182,17 +187,76 @@ class _WebGateState extends State<_WebGate> {
 
       usuario = user;
       senha.clear();
+      confirmarCadastro.clear();
       await _carregarContexto();
     } catch (e) {
       if (!mounted) return;
       setState(() => erro = auth.textoErro(e));
     } finally {
-      if (mounted) setState(() => entrando = false);
+      if (mounted) setState(() => processando = false);
+    }
+  }
+
+  Future<void> _criarContaEmpresa() async {
+    if (processando || enviandoRecuperacao) return;
+
+    final senhaDigitada = senha.text.trim();
+    final confirmacao = confirmarCadastro.text.trim();
+
+    if (senhaDigitada.length < 8) {
+      setState(() {
+        erro = 'A senha deve ter pelo menos 8 caracteres.';
+        mensagem = null;
+      });
+      return;
+    }
+
+    if (senhaDigitada != confirmacao) {
+      setState(() {
+        erro = 'As senhas informadas são diferentes.';
+        mensagem = null;
+      });
+      return;
+    }
+
+    setState(() {
+      processando = true;
+      erro = null;
+      mensagem = null;
+    });
+
+    try {
+      final resposta = await auth.criarContaComEmailSenha(
+        email: email.text,
+        senha: senhaDigitada,
+      );
+
+      usuario = resposta.user ?? client?.auth.currentUser;
+      final possuiSessao = resposta.session != null || auth.autenticado;
+
+      if (!possuiSessao) {
+        if (!mounted) return;
+        setState(() {
+          mensagem =
+              'Conta criada. Confirme o e-mail recebido e depois entre com '
+              'o mesmo e-mail e senha para ativar sua empresa.';
+          modoPrimeiroAcesso = false;
+          confirmarCadastro.clear();
+        });
+        return;
+      }
+
+      await _carregarContexto();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => erro = auth.textoErro(e));
+    } finally {
+      if (mounted) setState(() => processando = false);
     }
   }
 
   Future<void> _enviarRecuperacaoSenha() async {
-    if (enviandoRecuperacao) return;
+    if (processando || enviandoRecuperacao) return;
 
     setState(() {
       enviandoRecuperacao = true;
@@ -223,7 +287,7 @@ class _WebGateState extends State<_WebGate> {
     if (salvandoNovaSenha) return;
 
     final senhaNova = novaSenha.text.trim();
-    final confirmacao = confirmarSenha.text.trim();
+    final confirmacao = confirmarNovaSenha.text.trim();
 
     if (senhaNova.length < 8) {
       setState(() {
@@ -255,7 +319,7 @@ class _WebGateState extends State<_WebGate> {
         usuario = user;
         definindoSenha = false;
         novaSenha.clear();
-        confirmarSenha.clear();
+        confirmarNovaSenha.clear();
         mensagem = 'Senha definida com sucesso.';
       });
 
@@ -278,10 +342,11 @@ class _WebGateState extends State<_WebGate> {
       return;
     }
 
+    Object? erroResgate;
     try {
       await c.rpc('imperium_resgatar_convite');
-    } catch (_) {
-      // Sem convite pendente: usa os vínculos já existentes.
+    } catch (e) {
+      erroResgate = e;
     }
 
     final vinculadas = await empresaService.listarEmpresasVinculadas();
@@ -293,17 +358,26 @@ class _WebGateState extends State<_WebGate> {
 
     if (!atualValida) atual = '';
 
+    if (vinculadas.isEmpty) {
+      if (erroResgate != null) {
+        throw StateError(
+          'Não foi possível ativar sua empresa agora. Confira se está usando '
+          'o mesmo e-mail da assinatura ou do convite e tente novamente.',
+        );
+      }
+
+      throw StateError(
+        'Nenhuma empresa ativa foi encontrada para este e-mail. Use o mesmo '
+        'e-mail informado na assinatura ou no convite do Imperium e confirme '
+        'se a licença da empresa está ativa.',
+      );
+    }
+
     if (atual.isEmpty && vinculadas.length == 1) {
       atual = (vinculadas.first['empresa_id'] ?? '').toString();
       if (atual.isNotEmpty) {
         await empresaService.trocarEmpresa(atual);
       }
-    }
-
-    if (vinculadas.isEmpty) {
-      throw StateError(
-        'Esta conta entrou no Imperium, mas ainda não possui uma empresa ativa vinculada.',
-      );
     }
 
     if (!mounted) return;
@@ -312,6 +386,7 @@ class _WebGateState extends State<_WebGate> {
       empresas = vinculadas;
       empresaAtual = atual;
       erro = null;
+      mensagem = null;
     });
   }
 
@@ -345,19 +420,23 @@ class _WebGateState extends State<_WebGate> {
           empresaAtual = '';
           erro = null;
           mensagem = null;
+          modoPrimeiroAcesso = false;
           senha.clear();
+          confirmarCadastro.clear();
         });
       }
     }
   }
 
-  String get _papelAtual {
-    for (final empresa in empresas) {
-      if ((empresa['empresa_id'] ?? '').toString() == empresaAtual) {
-        return (empresa['papel'] ?? '').toString().trim().toLowerCase();
-      }
-    }
-    return '';
+  void _alternarPrimeiroAcesso(bool valor) {
+    if (processando || enviandoRecuperacao) return;
+    setState(() {
+      modoPrimeiroAcesso = valor;
+      erro = null;
+      mensagem = null;
+      senha.clear();
+      confirmarCadastro.clear();
+    });
   }
 
   Widget _carregando() {
@@ -377,13 +456,13 @@ class _WebGateState extends State<_WebGate> {
     );
   }
 
-  Widget _fundoAutenticacao(Widget card) {
+  Widget _fundoAutenticacao(Widget child) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: RadialGradient(
-            center: Alignment(-0.70, -0.65),
-            radius: 1.15,
+            center: Alignment(-0.72, -0.68),
+            radius: 1.18,
             colors: [Color(0xFF242014), ImperiumWebTheme.background],
           ),
         ),
@@ -391,10 +470,7 @@ class _WebGateState extends State<_WebGate> {
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: card,
-              ),
+              child: child,
             ),
           ),
         ),
@@ -403,48 +479,41 @@ class _WebGateState extends State<_WebGate> {
   }
 
   Widget _login() {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(-0.70, -0.65),
-            radius: 1.15,
-            colors: [Color(0xFF242014), ImperiumWebTheme.background],
-          ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final desktop = constraints.maxWidth >= 900;
+    return _fundoAutenticacao(
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1120),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final desktop = MediaQuery.sizeOf(context).width >= 900;
 
-              return Center(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: desktop ? 56 : 22,
-                    vertical: 30,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1120),
-                    child: desktop
-                        ? Row(
-                            children: [
-                              const Expanded(child: _LoginHero()),
-                              const SizedBox(width: 64),
-                              SizedBox(width: 430, child: _loginCard()),
-                            ],
-                          )
-                        : _loginCard(),
-                  ),
-                ),
+            if (!desktop) {
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: _loginCard(),
               );
-            },
-          ),
+            }
+
+            return Row(
+              children: [
+                const Expanded(child: _LoginHero()),
+                const SizedBox(width: 64),
+                SizedBox(width: 430, child: _loginCard()),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
   Widget _loginCard() {
+    final titulo = modoPrimeiroAcesso
+        ? 'Ative sua empresa'
+        : 'Acesse sua operação';
+    final subtitulo = modoPrimeiroAcesso
+        ? 'Use o e-mail informado na assinatura ou no convite e crie a senha que será usada no Web e no aplicativo.'
+        : 'Use o mesmo e-mail e senha no Imperium Web e no aplicativo.';
+
     return Card(
       margin: EdgeInsets.zero,
       color: ImperiumWebTheme.surface.withValues(alpha: 0.96),
@@ -460,14 +529,14 @@ class _WebGateState extends State<_WebGate> {
             ),
             const SizedBox(height: 28),
             Text(
-              'Acesse sua operação',
+              titulo,
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
-              'Use o mesmo e-mail e senha no Imperium Web e no aplicativo.',
+              subtitulo,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: const Color(0xFFADB6C0),
                 height: 1.45,
@@ -480,9 +549,9 @@ class _WebGateState extends State<_WebGate> {
               autocorrect: false,
               enableSuggestions: false,
               textInputAction: TextInputAction.next,
-              enabled: !entrando && !enviandoRecuperacao,
+              enabled: !processando && !enviandoRecuperacao,
               decoration: const InputDecoration(
-                labelText: 'E-mail',
+                labelText: 'E-mail da empresa',
                 hintText: 'voce@empresa.com.br',
                 prefixIcon: Icon(Icons.alternate_email_rounded),
               ),
@@ -493,15 +562,18 @@ class _WebGateState extends State<_WebGate> {
               obscureText: ocultarSenha,
               autocorrect: false,
               enableSuggestions: false,
-              textInputAction: TextInputAction.done,
-              enabled: !entrando && !enviandoRecuperacao,
-              onSubmitted: (_) => _entrar(),
+              textInputAction: modoPrimeiroAcesso
+                  ? TextInputAction.next
+                  : TextInputAction.done,
+              enabled: !processando && !enviandoRecuperacao,
+              onSubmitted: modoPrimeiroAcesso ? null : (_) => _entrar(),
               decoration: InputDecoration(
-                labelText: 'Senha',
+                labelText: modoPrimeiroAcesso ? 'Criar senha' : 'Senha',
+                helperText: modoPrimeiroAcesso ? 'Mínimo de 8 caracteres' : null,
                 prefixIcon: const Icon(Icons.lock_outline_rounded),
                 suffixIcon: IconButton(
                   tooltip: ocultarSenha ? 'Mostrar senha' : 'Ocultar senha',
-                  onPressed: entrando
+                  onPressed: processando
                       ? null
                       : () => setState(() => ocultarSenha = !ocultarSenha),
                   icon: Icon(
@@ -512,19 +584,52 @@ class _WebGateState extends State<_WebGate> {
                 ),
               ),
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: entrando || enviandoRecuperacao
-                    ? null
-                    : _enviarRecuperacaoSenha,
-                child: Text(
-                  enviandoRecuperacao ? 'Enviando...' : 'Esqueci minha senha',
+            if (modoPrimeiroAcesso) ...[
+              const SizedBox(height: 14),
+              TextField(
+                controller: confirmarCadastro,
+                obscureText: ocultarConfirmacao,
+                autocorrect: false,
+                enableSuggestions: false,
+                textInputAction: TextInputAction.done,
+                enabled: !processando,
+                onSubmitted: (_) => _criarContaEmpresa(),
+                decoration: InputDecoration(
+                  labelText: 'Confirmar senha',
+                  prefixIcon: const Icon(Icons.verified_user_outlined),
+                  suffixIcon: IconButton(
+                    tooltip: ocultarConfirmacao
+                        ? 'Mostrar confirmação'
+                        : 'Ocultar confirmação',
+                    onPressed: processando
+                        ? null
+                        : () => setState(
+                            () => ocultarConfirmacao = !ocultarConfirmacao,
+                          ),
+                    icon: Icon(
+                      ocultarConfirmacao
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ] else
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: processando || enviandoRecuperacao
+                      ? null
+                      : _enviarRecuperacaoSenha,
+                  child: Text(
+                    enviandoRecuperacao
+                        ? 'Enviando...'
+                        : 'Esqueci minha senha',
+                  ),
+                ),
+              ),
             if (mensagem != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               _AvisoLogin(
                 icon: Icons.check_circle_outline_rounded,
                 texto: mensagem!,
@@ -532,7 +637,7 @@ class _WebGateState extends State<_WebGate> {
               ),
             ],
             if (erro != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               _AvisoLogin(
                 icon: Icons.error_outline_rounded,
                 texto: erro!,
@@ -541,24 +646,55 @@ class _WebGateState extends State<_WebGate> {
             ],
             const SizedBox(height: 20),
             FilledButton.icon(
-              onPressed: entrando || enviandoRecuperacao ? null : _entrar,
-              icon: entrando
+              onPressed: processando || enviandoRecuperacao
+                  ? null
+                  : modoPrimeiroAcesso
+                  ? _criarContaEmpresa
+                  : _entrar,
+              icon: processando
                   ? const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.login_rounded),
-              label: Text(entrando ? 'Entrando...' : 'Entrar'),
+                  : Icon(
+                      modoPrimeiroAcesso
+                          ? Icons.business_center_outlined
+                          : Icons.login_rounded,
+                    ),
+              label: Text(
+                processando
+                    ? 'Aguarde...'
+                    : modoPrimeiroAcesso
+                    ? 'Criar conta e ativar empresa'
+                    : 'Entrar na empresa',
+              ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: processando
+                  ? null
+                  : () => _alternarPrimeiroAcesso(!modoPrimeiroAcesso),
+              icon: Icon(
+                modoPrimeiroAcesso
+                    ? Icons.login_rounded
+                    : Icons.add_business_outlined,
+              ),
+              label: Text(
+                modoPrimeiroAcesso
+                    ? 'Já tenho acesso'
+                    : 'Primeiro acesso da empresa',
+              ),
             ),
             const SizedBox(height: 18),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(Icons.shield_outlined, size: 17),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Supabase Auth · empresa, licença e permissões preservadas',
+                    'Funcionários são cadastrados dentro da empresa pelo administrador; não precisam criar outra conta de empresa.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: const Color(0xFF8F9AA5),
                     ),
@@ -574,108 +710,112 @@ class _WebGateState extends State<_WebGate> {
 
   Widget _redefinirSenha() {
     return _fundoAutenticacao(
-      Card(
-        margin: EdgeInsets.zero,
-        color: ImperiumWebTheme.surface.withValues(alpha: 0.96),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: _BrandMark(compacto: true),
-              ),
-              const SizedBox(height: 26),
-              Text(
-                'Defina sua senha',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Card(
+          margin: EdgeInsets.zero,
+          color: ImperiumWebTheme.surface.withValues(alpha: 0.96),
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: _BrandMark(compacto: true),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Use pelo menos 8 caracteres. Essa senha será a mesma no Web e no aplicativo.',
-              ),
-              const SizedBox(height: 22),
-              TextField(
-                controller: novaSenha,
-                obscureText: ocultarNovaSenha,
-                enabled: !salvandoNovaSenha,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: 'Nova senha',
-                  prefixIcon: const Icon(Icons.lock_reset_rounded),
-                  suffixIcon: IconButton(
-                    onPressed: salvandoNovaSenha
-                        ? null
-                        : () => setState(
-                            () => ocultarNovaSenha = !ocultarNovaSenha,
-                          ),
-                    icon: Icon(
-                      ocultarNovaSenha
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
+                const SizedBox(height: 26),
+                Text(
+                  'Defina sua senha',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Use pelo menos 8 caracteres. Essa senha será a mesma no Web e no aplicativo.',
+                ),
+                const SizedBox(height: 22),
+                TextField(
+                  controller: novaSenha,
+                  obscureText: ocultarNovaSenha,
+                  enabled: !salvandoNovaSenha,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Nova senha',
+                    prefixIcon: const Icon(Icons.lock_reset_rounded),
+                    suffixIcon: IconButton(
+                      onPressed: salvandoNovaSenha
+                          ? null
+                          : () => setState(
+                              () => ocultarNovaSenha = !ocultarNovaSenha,
+                            ),
+                      icon: Icon(
+                        ocultarNovaSenha
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: confirmarSenha,
-                obscureText: ocultarConfirmacao,
-                enabled: !salvandoNovaSenha,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _salvarNovaSenha(),
-                decoration: InputDecoration(
-                  labelText: 'Confirmar nova senha',
-                  prefixIcon: const Icon(Icons.verified_user_outlined),
-                  suffixIcon: IconButton(
-                    onPressed: salvandoNovaSenha
-                        ? null
-                        : () => setState(
-                            () => ocultarConfirmacao = !ocultarConfirmacao,
-                          ),
-                    icon: Icon(
-                      ocultarConfirmacao
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
+                const SizedBox(height: 14),
+                TextField(
+                  controller: confirmarNovaSenha,
+                  obscureText: ocultarConfirmacaoNova,
+                  enabled: !salvandoNovaSenha,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _salvarNovaSenha(),
+                  decoration: InputDecoration(
+                    labelText: 'Confirmar nova senha',
+                    prefixIcon: const Icon(Icons.verified_user_outlined),
+                    suffixIcon: IconButton(
+                      onPressed: salvandoNovaSenha
+                          ? null
+                          : () => setState(
+                              () => ocultarConfirmacaoNova =
+                                  !ocultarConfirmacaoNova,
+                            ),
+                      icon: Icon(
+                        ocultarConfirmacaoNova
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              if (mensagem != null) ...[
-                const SizedBox(height: 14),
-                _AvisoLogin(
-                  icon: Icons.info_outline_rounded,
-                  texto: mensagem!,
-                  destaque: true,
+                if (mensagem != null) ...[
+                  const SizedBox(height: 14),
+                  _AvisoLogin(
+                    icon: Icons.info_outline_rounded,
+                    texto: mensagem!,
+                    destaque: true,
+                  ),
+                ],
+                if (erro != null) ...[
+                  const SizedBox(height: 14),
+                  _AvisoLogin(
+                    icon: Icons.error_outline_rounded,
+                    texto: erro!,
+                    erro: true,
+                  ),
+                ],
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: salvandoNovaSenha ? null : _salvarNovaSenha,
+                  icon: salvandoNovaSenha
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_circle_outline_rounded),
+                  label: Text(
+                    salvandoNovaSenha ? 'Salvando...' : 'Salvar nova senha',
+                  ),
                 ),
               ],
-              if (erro != null) ...[
-                const SizedBox(height: 14),
-                _AvisoLogin(
-                  icon: Icons.error_outline_rounded,
-                  texto: erro!,
-                  erro: true,
-                ),
-              ],
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: salvandoNovaSenha ? null : _salvarNovaSenha,
-                icon: salvandoNovaSenha
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check_circle_outline_rounded),
-                label: Text(
-                  salvandoNovaSenha ? 'Salvando...' : 'Salvar nova senha',
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -709,7 +849,7 @@ class _WebGateState extends State<_WebGate> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Cada ambiente permanece isolado por empresa. Seu perfil é aplicado automaticamente.',
+                'Cada ambiente permanece isolado por empresa. Somente empresas em que você é administrador ou proprietário aparecem aqui.',
               ),
               const SizedBox(height: 24),
               if (erro != null)
@@ -776,66 +916,12 @@ class _WebGateState extends State<_WebGate> {
     );
   }
 
-  Widget _funcionarioWebBloqueado() {
-    return Scaffold(
-      appBar: AppBar(
-        title: const _BrandMark(compacto: true),
-        actions: [
-          TextButton.icon(
-            onPressed: _sair,
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('Sair'),
-          ),
-          const SizedBox(width: 12),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.badge_outlined, size: 54),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Acesso de funcionário',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Sua conta pertence à equipe desta empresa. Nesta etapa, o acesso operacional do funcionário continua no aplicativo móvel, com as permissões definidas pelo administrador.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    if (empresas.length > 1)
-                      OutlinedButton.icon(
-                        onPressed: () => setState(() => empresaAtual = ''),
-                        icon: const Icon(Icons.business_outlined),
-                        label: const Text('Trocar empresa'),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (carregando) return _carregando();
     if (definindoSenha) return _redefinirSenha();
     if (usuario == null) return _login();
     if (empresaAtual.isEmpty) return _seletorEmpresa();
-    if (_papelAtual == 'funcionario') return _funcionarioWebBloqueado();
 
     return WebWorkspaceShell(
       usuarioEmail: (usuario?.email ?? '').trim(),
@@ -904,33 +990,75 @@ class _LoginHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _BrandMark(),
-        SizedBox(height: 34),
-        Text(
-          'Sua operação inteira,\nem um único acesso.',
-          style: TextStyle(
-            fontSize: 42,
-            height: 1.08,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -1.3,
-          ),
-        ),
-        SizedBox(height: 18),
-        SizedBox(
-          width: 540,
-          child: Text(
-            'Entre com e-mail e senha no navegador ou no celular. A empresa, o plano e as permissões são resolvidos automaticamente.',
-            style: TextStyle(
-              color: Color(0xFFADB6C0),
-              fontSize: 17,
-              height: 1.55,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _BrandMark(),
+          const SizedBox(height: 38),
+          Text(
+            'Sua empresa inteira,\nem um só lugar.',
+            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              height: 1.04,
+              letterSpacing: -1.2,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 18),
+          Text(
+            'Operação, clientes, agenda, financeiro, equipe e indicadores conectados ao mesmo ambiente da sua empresa.',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: const Color(0xFFADB6C0),
+              height: 1.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 28),
+          const Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _HeroChip(icon: Icons.cloud_done_outlined, texto: 'Web + App'),
+              _HeroChip(
+                icon: Icons.business_outlined,
+                texto: 'Multiempresa',
+              ),
+              _HeroChip(
+                icon: Icons.lock_outline_rounded,
+                texto: 'Acesso seguro',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroChip extends StatelessWidget {
+  const _HeroChip({required this.icon, required this.texto});
+
+  final IconData icon;
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+      decoration: BoxDecoration(
+        color: ImperiumWebTheme.surface.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: ImperiumWebTheme.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 17, color: ImperiumWebTheme.accentStrong),
+          const SizedBox(width: 7),
+          Text(texto, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ],
+      ),
     );
   }
 }
@@ -951,25 +1079,28 @@ class _AvisoLogin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cor = erro
-        ? const Color(0xFFFF8C8C)
+        ? const Color(0xFFFFB4AB)
         : destaque
-        ? ImperiumWebTheme.accentStrong
+        ? const Color(0xFFC8E6C9)
         : const Color(0xFFADB6C0);
 
     return Container(
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cor.withValues(alpha: 0.24)),
+        border: Border.all(color: cor.withValues(alpha: 0.20)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: cor, size: 19),
-          const SizedBox(width: 10),
+          Icon(icon, size: 18, color: cor),
+          const SizedBox(width: 9),
           Expanded(
-            child: Text(texto, style: TextStyle(color: cor, height: 1.35)),
+            child: Text(
+              texto,
+              style: TextStyle(color: cor, height: 1.35),
+            ),
           ),
         ],
       ),
