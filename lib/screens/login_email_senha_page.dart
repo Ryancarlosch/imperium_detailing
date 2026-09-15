@@ -97,7 +97,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
       if (!mounted) return;
       setState(() {
         _mensagem =
-            'Enviamos um e-mail para você definir uma nova senha. Abra o link, escolha a senha e depois volte para entrar no aplicativo.';
+            'Enviamos um e-mail para você definir uma nova senha. Abra o link, escolha a senha e depois volte para entrar no Imperium.';
       });
     } catch (erro) {
       if (!mounted) return;
@@ -180,7 +180,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Sua conta possui acesso a mais de uma empresa.',
+          'Este e-mail possui acesso administrativo a mais de uma empresa.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
@@ -242,7 +242,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         ),
         const SizedBox(height: 7),
         const Text(
-          'Use o mesmo e-mail e senha no aplicativo e na Web.',
+          'Acesse sua empresa com o mesmo e-mail e senha no aplicativo e na Web.',
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 28),
@@ -254,7 +254,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
           autocorrect: false,
           enableSuggestions: false,
           decoration: const InputDecoration(
-            labelText: 'E-mail',
+            labelText: 'E-mail da empresa',
             prefixIcon: Icon(Icons.alternate_email_rounded),
             border: OutlineInputBorder(),
           ),
@@ -324,14 +324,14 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.login_rounded),
-            label: Text(_carregando ? 'Entrando...' : 'Entrar'),
+            label: Text(_carregando ? 'Entrando...' : 'Entrar na empresa'),
           ),
         ),
         const SizedBox(height: 20),
         const Divider(),
         const SizedBox(height: 8),
         Text(
-          'Acesso da empresa',
+          'Primeiro acesso',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.labelLarge,
         ),
@@ -339,11 +339,11 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         OutlinedButton.icon(
           onPressed: _carregando ? null : _abrirPrimeiroAcessoEmpresa,
           icon: const Icon(Icons.business_outlined),
-          label: const Text('Ativar empresa existente'),
+          label: const Text('Criar ou ativar acesso da empresa'),
         ),
         const SizedBox(height: 14),
         Text(
-          'Funcionário: seu acesso é criado pelo administrador da empresa. Depois de definir sua senha pelo e-mail recebido, entre normalmente acima.',
+          'Funcionários ficam cadastrados dentro da empresa e são gerenciados pelo administrador. Eles não precisam criar uma conta de empresa separada.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
