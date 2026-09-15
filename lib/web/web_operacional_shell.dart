@@ -75,11 +75,32 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
 
   void _atualizar() => setState(() => _revisao++);
 
+  Widget? _paginaRoteada(int indice) => switch (indice) {
+    10 => WebDrePage(key: ValueKey('dre-rota-$_revisao')),
+    11 => WebContasFinanceirasPage(key: ValueKey('contas-rota-$_revisao')),
+    12 => WebRelatoriosPage(key: ValueKey('relatorios-rota-$_revisao')),
+    16 => WebPontoPage(key: ValueKey('ponto-rota-$_revisao')),
+    _ => null,
+  };
+
   void _selecionar(int indice, {bool fecharMenu = true}) {
-    setState(() => _indice = indice);
-    if (fecharMenu && Navigator.canPop(context)) {
-      Navigator.pop(context);
+    if (fecharMenu && _scaffoldKey.currentState?.isDrawerOpen == true) {
+      Navigator.of(context).pop();
     }
+
+    final paginaRoteada = _paginaRoteada(indice);
+    if (paginaRoteada != null) {
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute<void>(builder: (_) => paginaRoteada),
+          )
+          .then((_) {
+            if (mounted) _atualizar();
+          });
+      return;
+    }
+
+    setState(() => _indice = indice);
   }
 
   Widget _pagina() {
@@ -427,6 +448,12 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
           ],
         ),
         actions: [
+          if (Navigator.canPop(context))
+            IconButton(
+              tooltip: 'Voltar ao painel',
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.dashboard_outlined),
+            ),
           IconButton(
             tooltip: 'Atualizar página',
             onPressed: _atualizar,
