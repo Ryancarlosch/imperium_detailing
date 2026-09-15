@@ -15,57 +15,78 @@ void main() {
     expect(source, isNot(contains('signInWithOtp')));
   });
 
-  test('web usa login por email senha e permite redefinir senha', () {
-    final source = File('lib/main_web.dart').readAsStringSync();
-
-    expect(source, contains('entrarComEmailSenha'));
-    expect(source, contains("'Criar senha' : 'Senha'"));
-    expect(source, contains('mesmo e-mail e senha'));
-    expect(source, contains('Esqueci minha senha'));
-    expect(source, contains('AuthChangeEvent.passwordRecovery'));
-    expect(source, contains('Salvar nova senha'));
-    expect(source, isNot(contains('signInWithOtp')));
-    expect(source, isNot(contains('Magic Link')));
-  });
-
-  test('web permite primeiro acesso da empresa', () {
-    final source = File('lib/main_web.dart').readAsStringSync();
-
-    expect(source, contains('criarContaComEmailSenha'));
-    expect(source, contains('Primeiro acesso da empresa'));
-    expect(source, contains('Criar conta e ativar empresa'));
-    expect(source, contains('e-mail informado na assinatura ou no convite'));
-    expect(source, contains("labelText: 'E-mail da empresa'"));
-  });
-
-  test('web vincula automaticamente a assinatura depois da autenticacao', () {
-    final source = File('lib/main_web.dart').readAsStringSync();
-
-    expect(source, contains("c.rpc('imperium_resgatar_convite')"));
-    expect(source, contains('listarEmpresasVinculadas'));
-    expect(source, contains('mesmo e-mail da assinatura ou do convite'));
-    expect(source, contains('licença da empresa está ativa'));
-  });
-
-  test('mobile aponta para a nova tela de login da empresa', () {
-    final mainSource = File('lib/main.dart').readAsStringSync();
-    final loginSource = File(
+  test('web e mobile usam a mesma tela de login da empresa', () {
+    final web = File('lib/main_web.dart').readAsStringSync();
+    final mobile = File('lib/main.dart').readAsStringSync();
+    final login = File(
       'lib/screens/login_email_senha_page.dart',
     ).readAsStringSync();
 
     expect(
-      mainSource,
+      web,
       contains("import 'screens/login_email_senha_page.dart';"),
     );
-    expect(mainSource, contains('LoginEmailSenhaPage'));
-    expect(loginSource, contains('entrarComEmailSenha'));
-    expect(loginSource, contains('enviarRecuperacaoSenha'));
-    expect(loginSource, contains("labelText: 'E-mail da empresa'"));
-    expect(loginSource, contains("labelText: 'Senha'"));
+    expect(
+      mobile,
+      contains("import 'screens/login_email_senha_page.dart';"),
+    );
+    expect(web, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
+    expect(mobile, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
+    expect(login, contains('entrarComEmailSenha'));
+    expect(login, contains('enviarRecuperacaoSenha'));
+    expect(login, contains("labelText: 'E-mail da empresa'"));
+    expect(login, contains("labelText: 'Senha'"));
+    expect(login, contains('mesmo e-mail e senha'));
+  });
+
+  test('web preserva redefinicao de senha no navegador', () {
+    final source = File('lib/main_web.dart').readAsStringSync();
+
+    expect(source, contains('AuthChangeEvent.passwordRecovery'));
+    expect(source, contains('definirNovaSenha'));
+    expect(source, contains('Salvar nova senha'));
+    expect(source, contains('mesma no Imperium Web e no aplicativo'));
+    expect(source, isNot(contains('signInWithOtp')));
+    expect(source, isNot(contains('Magic Link')));
+  });
+
+  test('primeiro acesso e ativacao sao compartilhados entre web e mobile', () {
+    final login = File(
+      'lib/screens/login_email_senha_page.dart',
+    ).readAsStringSync();
+    final firstAccess = File(
+      'lib/screens/empresa_primeiro_acesso_page.dart',
+    ).readAsStringSync();
+    final cloudSession = File(
+      'lib/services/cloud_session_service.dart',
+    ).readAsStringSync();
+
+    expect(login, contains('EmpresaPrimeiroAcessoPage'));
+    expect(login, contains('Criar ou ativar acesso da empresa'));
+    expect(firstAccess, contains('criarContaComEmailSenha'));
+    expect(firstAccess, contains('entrarComEmailSenha'));
+    expect(firstAccess, contains('E-mail da assinatura'));
+    expect(firstAccess, contains('Criar senha e ativar assinatura'));
+    expect(cloudSession, contains("client.rpc('imperium_resgatar_convite')"));
+    expect(cloudSession, contains('prepararSessao'));
+  });
+
+  test('funcionarios continuam internos a empresa', () {
+    final loginSource = File(
+      'lib/screens/login_email_senha_page.dart',
+    ).readAsStringSync();
+    final cloudSession = File(
+      'lib/services/cloud_session_service.dart',
+    ).readAsStringSync();
+
     expect(
       loginSource,
       contains('Funcionários ficam cadastrados dentro da empresa'),
     );
     expect(loginSource, isNot(contains('FuncionarioPrimeiroAcessoPage')));
+    expect(
+      cloudSession,
+      contains('Funcionários são cadastrados e gerenciados pelo administrador'),
+    );
   });
 }
