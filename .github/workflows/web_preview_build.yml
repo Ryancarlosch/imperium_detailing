@@ -46,6 +46,7 @@ jobs:
           dart format --output=none --set-exit-if-changed
           lib/main.dart
           lib/main_web.dart
+          lib/main_web_bootstrap.dart
           lib/web
           lib/screens/login_email_senha_page.dart
           lib/screens/funcionarios_acesso_nuvem_page.dart
@@ -65,7 +66,7 @@ jobs:
           test/funcionario_conta_email_senha_source_test.dart
 
       - name: Build Web
-        run: flutter build web --target lib/main_web.dart --release
+        run: flutter build web --target lib/main_web_bootstrap.dart --release
 
       - name: Upload Web Artifact
         uses: actions/upload-artifact@v4
