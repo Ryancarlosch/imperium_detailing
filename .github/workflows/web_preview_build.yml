@@ -1,6 +1,7 @@
 name: Web Preview Build
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - desenvolvimento
@@ -15,6 +16,10 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: web-preview-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-web:
@@ -33,6 +38,9 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Check Web formatting
+        run: dart format --output=none --set-exit-if-changed lib/main_web.dart lib/web
 
       - name: Analyze
         run: flutter analyze
