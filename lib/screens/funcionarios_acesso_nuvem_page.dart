@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../repositories/usuario_repository.dart';
 import '../services/funcionario_acesso_service.dart';
+import '../services/funcionario_conta_service.dart';
 import '../services/ponto_nuvem_service.dart';
 
 class FuncionariosAcessoNuvemPage extends StatefulWidget {
@@ -17,6 +18,8 @@ class FuncionariosAcessoNuvemPage extends StatefulWidget {
 class _FuncionariosAcessoNuvemPageState
     extends State<FuncionariosAcessoNuvemPage> {
   final FuncionarioAcessoService _service = FuncionarioAcessoService.instance;
+  final FuncionarioContaService _contaService =
+      FuncionarioContaService.instance;
   final PontoNuvemService _ponto = PontoNuvemService.instance;
   final UsuarioRepository _usuariosRepository = UsuarioRepository();
 
@@ -127,17 +130,14 @@ class _FuncionariosAcessoNuvemPageState
     final email = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(
-          'Liberar celular • ${colaborador['nome'] ?? 'Funcionário'}',
-        ),
+        title: Text('Liberar acesso • ${colaborador['nome'] ?? 'Funcionário'}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Informe o e-mail que o funcionário usará no Magic Link. '
-              'Depois do primeiro acesso, ele usará o PIN criado no próprio '
-              'celular.',
+              'Informe o e-mail do funcionário. O Imperium criará ou vinculará '
+              'a conta e enviará um e-mail para ele definir a própria senha.',
             ),
             const SizedBox(height: 14),
             TextField(
@@ -188,7 +188,7 @@ class _FuncionariosAcessoNuvemPageState
     try {
       final permissoes = await _usuariosRepository.obterPermissoes(usuarioId);
 
-      final resultado = await _service.prepararAcessoAdmin(
+      final resultado = await _contaService.prepararAcessoAdmin(
         empresaId: widget.empresaId,
         colaboradorRemotoId: remotoId,
         email: email,
@@ -201,7 +201,7 @@ class _FuncionariosAcessoNuvemPageState
       if (!mounted) return;
       _mensagem(
         '${resultado['status'] ?? 'Acesso preparado'}. '
-        'O funcionário já pode usar esse e-mail no primeiro acesso.',
+        'O funcionário receberá as instruções para definir a senha e depois poderá entrar com este e-mail no Imperium.',
       );
     } catch (erro) {
       if (!mounted) return;
@@ -230,8 +230,7 @@ class _FuncionariosAcessoNuvemPageState
 
       if (!sincronizou) {
         throw StateError(
-          'O acesso remoto ainda não foi preparado. Use “Liberar celular” '
-          'primeiro.',
+          'O acesso remoto ainda não foi preparado. Use “Liberar acesso” primeiro.',
         );
       }
 
@@ -267,8 +266,7 @@ class _FuncionariosAcessoNuvemPageState
 
       _mensagem(
         ativo
-            ? 'Acesso reativado. Use “Liberar celular” para autorizar um '
-                  'aparelho novamente.'
+            ? 'Acesso reativado. Use “Liberar acesso” para atualizar a conta do funcionário.'
             : 'Acesso desativado. O app do funcionário será bloqueado quando '
                   'conseguir consultar a nuvem.',
       );
@@ -292,7 +290,7 @@ class _FuncionariosAcessoNuvemPageState
         content: Text(
           'Os aparelhos vinculados de ${colaborador['nome'] ?? 'este funcionário'} serão bloqueados. O histórico do Ponto e os dados '
           'da empresa não serão apagados. Para liberar novamente, será '
-          'necessário usar “Liberar celular”.',
+          'necessário usar “Liberar acesso”.',
         ),
         actions: [
           TextButton(
@@ -380,7 +378,7 @@ class _FuncionariosAcessoNuvemPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Acessos em outros celulares'),
+        title: const Text('Acessos de funcionários'),
         actions: [
           IconButton(
             tooltip: 'Atualizar',
@@ -403,7 +401,7 @@ class _FuncionariosAcessoNuvemPageState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Funcionários em outro aparelho',
+                      'Contas dos funcionários',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -411,10 +409,9 @@ class _FuncionariosAcessoNuvemPageState
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'O PIN continua local de cada celular. A nuvem transporta '
-                      'somente o vínculo do funcionário, permissões e os dados '
-                      'operacionais preparados neste Módulo 1: Ponto, Clientes, '
-                      'Veículos e Agenda.',
+                      'Cada funcionário usa o próprio e-mail e senha. A empresa controla '
+                      'o vínculo, as permissões e pode desativar ou revogar o acesso '
+                      'quando necessário.',
                     ),
                   ],
                 ),
@@ -547,8 +544,8 @@ class _FuncionariosAcessoNuvemPageState
                                   icon: const Icon(Icons.phone_android_rounded),
                                   label: Text(
                                     acesso == null
-                                        ? 'Liberar celular'
-                                        : 'Liberar/Atualizar celular',
+                                        ? 'Liberar acesso'
+                                        : 'Atualizar acesso',
                                   ),
                                 ),
                                 OutlinedButton.icon(
