@@ -59,9 +59,7 @@ void main() {
     final workspace = File(
       'lib/web/web_workspace_shell.dart',
     ).readAsStringSync();
-    final shell = File(
-      'lib/web/web_operacional_shell.dart',
-    ).readAsStringSync();
+    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
     final dashboard = File(
       'lib/web/web_dashboard_gerencial_page.dart',
     ).readAsStringSync();
