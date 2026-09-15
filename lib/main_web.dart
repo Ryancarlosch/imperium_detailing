@@ -225,15 +225,16 @@ class _WebGateState extends State<_WebGate> {
     try {
       await auth.sair();
     } finally {
-      if (!mounted) return;
-      setState(() {
-        usuario = null;
-        empresas = const [];
-        empresaAtual = '';
-        erro = null;
-        mensagem = null;
-        senha.clear();
-      });
+      if (mounted) {
+        setState(() {
+          usuario = null;
+          empresas = const [];
+          empresaAtual = '';
+          erro = null;
+          mensagem = null;
+          senha.clear();
+        });
+      }
     }
   }
 
