@@ -59,7 +59,9 @@ class _WebFinanceiroLancamentosPageState
 
     var tipo = 'Saída';
     var status = 'Realizado';
-    var contaId = dados.contas.isEmpty ? '' : dados.contas.first['id'].toString();
+    var contaId = dados.contas.isEmpty
+        ? ''
+        : dados.contas.first['id'].toString();
     var planoId = '';
     var competencia = DateTime.now();
     DateTime? vencimento;
@@ -106,7 +108,8 @@ class _WebFinanceiroLancamentosPageState
               final valorNumero = _double(valor.text);
               if (status == 'Realizado' && contaId.isEmpty) {
                 setModalState(() {
-                  erro = 'Cadastre ou selecione uma conta/caixa para receber o lançamento.';
+                  erro =
+                      'Cadastre ou selecione uma conta/caixa para receber o lançamento.';
                 });
                 return;
               }

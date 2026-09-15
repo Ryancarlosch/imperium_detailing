@@ -8,6 +8,7 @@ import 'web_contas_financeiras_page.dart';
 import 'web_dashboard_gerencial_page.dart';
 import 'web_dre_page.dart';
 import 'web_expansao_pages.dart';
+import 'web_financeiro_lancamentos_page.dart';
 import 'web_gestao_pages.dart';
 import 'web_ordens_v3_page.dart';
 import 'web_os_finalizacao_v4_page.dart';
@@ -134,7 +135,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       6 => WebOrdensV3Page(key: ValueKey('editar-os-$_revisao')),
       7 => WebOsFinalizacaoV4Page(key: ValueKey('finalizar-os-$_revisao')),
       8 => WebEstoquePage(key: ValueKey('estoque-$_revisao')),
-      9 => WebFinanceiroPage(key: ValueKey('financeiro-$_revisao')),
+      9 => WebFinanceiroLancamentosPage(key: ValueKey('financeiro-$_revisao')),
       10 => WebDrePage(key: ValueKey('dre-$_revisao')),
       11 => WebContasFinanceirasPage(key: ValueKey('contas-$_revisao')),
       12 => WebRelatoriosPage(key: ValueKey('relatorios-$_revisao')),
