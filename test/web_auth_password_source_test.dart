@@ -19,13 +19,23 @@ void main() {
     final source = File('lib/main_web.dart').readAsStringSync();
 
     expect(source, contains('entrarComEmailSenha'));
-    expect(source, contains("labelText: 'Senha'"));
+    expect(source, contains("'Criar senha' : 'Senha'"));
     expect(source, contains('mesmo e-mail e senha'));
     expect(source, contains('Esqueci minha senha'));
     expect(source, contains('AuthChangeEvent.passwordRecovery'));
     expect(source, contains('Salvar nova senha'));
     expect(source, isNot(contains('signInWithOtp')));
     expect(source, isNot(contains('Magic Link')));
+  });
+
+  test('web permite primeiro acesso da empresa', () {
+    final source = File('lib/main_web.dart').readAsStringSync();
+
+    expect(source, contains('criarContaComEmailSenha'));
+    expect(source, contains('Primeiro acesso da empresa'));
+    expect(source, contains('Criar conta e ativar empresa'));
+    expect(source, contains('e-mail informado na assinatura ou no convite'));
+    expect(source, contains("labelText: 'E-mail da empresa'"));
   });
 
   test('mobile aponta para a nova tela de login da empresa', () {
