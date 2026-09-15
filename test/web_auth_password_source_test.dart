@@ -28,7 +28,7 @@ void main() {
     expect(source, isNot(contains('Magic Link')));
   });
 
-  test('mobile aponta para a nova tela de login cloud', () {
+  test('mobile aponta para a nova tela de login da empresa', () {
     final mainSource = File('lib/main.dart').readAsStringSync();
     final loginSource = File(
       'lib/screens/login_email_senha_page.dart',
@@ -41,9 +41,9 @@ void main() {
     expect(mainSource, contains('LoginEmailSenhaPage'));
     expect(loginSource, contains('entrarComEmailSenha'));
     expect(loginSource, contains('enviarRecuperacaoSenha'));
-    expect(loginSource, contains("labelText: 'E-mail'"));
+    expect(loginSource, contains("labelText: 'E-mail da empresa'"));
     expect(loginSource, contains("labelText: 'Senha'"));
-    expect(loginSource, contains('Funcionário: seu acesso é criado'));
+    expect(loginSource, contains('Funcionários ficam cadastrados dentro da empresa'));
     expect(loginSource, isNot(contains('FuncionarioPrimeiroAcessoPage')));
   });
 }
