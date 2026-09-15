@@ -3,7 +3,6 @@ import 'dart:math';
 import '../database/app_database.dart';
 import '../repositories/usuario_repository.dart';
 import 'empresa_cloud_service.dart';
-import 'funcionario_acesso_service.dart';
 import 'imperium_auth_service.dart';
 import 'supabase_bootstrap.dart';
 
@@ -22,8 +21,6 @@ class CloudSessionService {
   static final CloudSessionService instance = CloudSessionService._();
 
   final EmpresaCloudService _empresaService = EmpresaCloudService.instance;
-  final FuncionarioAcessoService _funcionarioService =
-      FuncionarioAcessoService.instance;
   final UsuarioRepository _usuarios = UsuarioRepository();
 
   Future<List<Map<String, dynamic>>> listarEmpresasDoUsuario() async {
@@ -66,13 +63,10 @@ class CloudSessionService {
       throw StateError('Empresa inválida.');
     }
 
-    await _empresaService.trocarEmpresa(id);
-
     if (papel == 'funcionario') {
-      final acesso = await _funcionarioService.resgatarAcessoAtual();
-      return _funcionarioService.provisionarLocal(
-        acesso: acesso,
-        pin: _pinCompatibilidade(),
+      throw StateError(
+        'O acesso por e-mail e senha é exclusivo da empresa. '
+        'Funcionários são cadastrados e gerenciados pelo administrador dentro do Imperium.',
       );
     }
 
@@ -80,6 +74,7 @@ class CloudSessionService {
       throw StateError('Seu perfil de acesso não é reconhecido pelo Imperium.');
     }
 
+    await _empresaService.trocarEmpresa(id);
     await _usuarios.garantirEstrutura();
     final usuarios = await _usuarios.listarUsuarios(incluirInativos: false);
 
