@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  // Contrato comercial: a conta cloud pertence à empresa, não ao funcionário.
   test('conta cloud da empresa aceita somente admin ou proprietario', () {
     final source = File(
       'lib/services/empresa_cloud_service.dart',
