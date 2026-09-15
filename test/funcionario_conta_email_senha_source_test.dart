@@ -10,7 +10,10 @@ void main() {
 
     expect(source, contains("functions.invoke("));
     expect(source, contains("'imperium-funcionario-conta'"));
-    expect(source, contains("'Authorization': 'Bearer \${session.accessToken}'"));
+    expect(
+      source,
+      contains("'Authorization': 'Bearer \${session.accessToken}'"),
+    );
     expect(source, contains("'enviar_email': true"));
     expect(source, isNot(contains("'password'")));
     expect(source, isNot(contains("'senha'")));

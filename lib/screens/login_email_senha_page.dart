@@ -174,9 +174,9 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         Text(
           'Escolha a empresa',
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
@@ -202,10 +202,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
                   children: [
                     Text(nome),
                     if (papel.isNotEmpty)
-                      Text(
-                        papel,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      Text(papel, style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
               ),
@@ -239,9 +236,9 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         Text(
           'Imperium Manager',
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 7),
         const Text(
