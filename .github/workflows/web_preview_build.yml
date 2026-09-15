@@ -46,34 +46,33 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path('lib/web/web_dashboard_gerencial_page.dart')
           source = path.read_text(encoding='utf-8')
-          old = """  Future<void> _abrirModulo(String titulo, Widget pagina) async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (context) => Scaffold(
-                  appBar: AppBar(title: Text(titulo), leading: const BackButton()),
-                  body: pagina,
-                ),
-              ),
-            );
-            if (mounted) await _carregar();
-          }
-          """
-          new = """  Future<void> _abrirModulo(String titulo, Widget pagina) async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                settings: RouteSettings(name: titulo),
-                builder: (context) => pagina,
-              ),
-            );
-            if (mounted) await _carregar();
-          }
-          """
-          if old not in source:
-              raise SystemExit('Trecho esperado do dashboard não foi encontrado.')
-          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          pattern = re.compile(
+              r"  Future<void> _abrirModulo\(String titulo, Widget pagina\) async \{\n"
+              r".*?"
+              r"    if \(mounted\) await _carregar\(\);\n"
+              r"  \}\n\n  @override",
+              re.S,
+          )
+          replacement = (
+              "  Future<void> _abrirModulo(String titulo, Widget pagina) async {\n"
+              "    await Navigator.of(context).push(\n"
+              "      MaterialPageRoute<void>(\n"
+              "        settings: RouteSettings(name: titulo),\n"
+              "        builder: (context) => pagina,\n"
+              "      ),\n"
+              "    );\n"
+              "    if (mounted) await _carregar();\n"
+              "  }\n\n"
+              "  @override"
+          )
+          updated, count = pattern.subn(replacement, source, count=1)
+          if count != 1:
+              raise SystemExit(f'Esperava alterar 1 função, alterei {count}.')
+          path.write_text(updated, encoding='utf-8')
           PY
           dart format lib/web/web_dashboard_gerencial_page.dart test/web_dashboard_navigation_source_test.dart
           if ! git diff --quiet -- lib/web/web_dashboard_gerencial_page.dart test/web_dashboard_navigation_source_test.dart; then
