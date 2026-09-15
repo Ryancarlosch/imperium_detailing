@@ -85,7 +85,7 @@ void main() {
 
     expect(source, contains('ImperiumWebApp'));
     expect(source, contains('entrarComEmailSenha'));
-    expect(source, contains("labelText: 'Senha'"));
+    expect(source, contains("'Criar senha' : 'Senha'"));
     expect(source, isNot(contains('signInWithOtp')));
     expect(auth, contains('signInWithPassword'));
     expect(source, contains('EmpresaCloudService.instance'));
