@@ -45,10 +45,7 @@ void main() {
   test('Menu Web usa o fluxo de caixa sincronizado', () {
     final source = File('lib/web/web_operacional_shell.dart').readAsStringSync();
 
-    expect(
-      source,
-      contains("import 'web_financeiro_lancamentos_page.dart';"),
-    );
+    expect(source, contains("import 'web_financeiro_lancamentos_page.dart';"));
     expect(source, contains('9 => WebFinanceiroLancamentosPage('));
   });
 }
