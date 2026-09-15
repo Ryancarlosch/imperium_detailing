@@ -10,8 +10,8 @@ void main() {
     ).readAsStringSync();
 
     expect(source, contains('entrarComEmailSenha'));
-    expect(source, contains("labelText: 'E-mail'"));
-    expect(source, contains("labelText: 'Senha'"));
+    expect(source, contains("labelText: 'E-mail da empresa'"));
+    expect(source, contains("'Criar senha' : 'Senha'"));
     expect(source, contains('onAuthStateChange'));
     expect(source, contains("'imperium_resgatar_convite'"));
     expect(auth, contains('signInWithPassword'));
