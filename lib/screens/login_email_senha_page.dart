@@ -4,7 +4,6 @@ import '../services/cloud_session_service.dart';
 import '../services/imperium_auth_service.dart';
 import '../services/supabase_bootstrap.dart';
 import 'empresa_primeiro_acesso_page.dart';
-import 'funcionario_primeiro_acesso_page.dart';
 
 class LoginEmailSenhaPage extends StatefulWidget {
   const LoginEmailSenhaPage({super.key, required this.onLogin});
@@ -24,8 +23,10 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
 
   bool _carregando = false;
   bool _restaurando = true;
+  bool _enviandoRecuperacao = false;
   bool _ocultarSenha = true;
   String? _erro;
+  String? _mensagem;
   List<Map<String, dynamic>> _empresasParaEscolher = const [];
 
   @override
@@ -58,7 +59,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
   }
 
   Future<void> _entrar() async {
-    if (_carregando) return;
+    if (_carregando || _enviandoRecuperacao) return;
 
     final email = _email.text.trim().toLowerCase();
     final senha = _senha.text;
@@ -66,6 +67,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
     setState(() {
       _carregando = true;
       _erro = null;
+      _mensagem = null;
       _empresasParaEscolher = const [];
     });
 
@@ -77,6 +79,31 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
       setState(() => _erro = _auth.textoErro(erro));
     } finally {
       if (mounted) setState(() => _carregando = false);
+    }
+  }
+
+  Future<void> _recuperarSenha() async {
+    if (_carregando || _enviandoRecuperacao) return;
+
+    setState(() {
+      _enviandoRecuperacao = true;
+      _erro = null;
+      _mensagem = null;
+    });
+
+    try {
+      await _auth.enviarRecuperacaoSenha(email: _email.text);
+
+      if (!mounted) return;
+      setState(() {
+        _mensagem =
+            'Enviamos um e-mail para você definir uma nova senha. Abra o link, escolha a senha e depois volte para entrar no aplicativo.';
+      });
+    } catch (erro) {
+      if (!mounted) return;
+      setState(() => _erro = _auth.textoErro(erro));
+    } finally {
+      if (mounted) setState(() => _enviandoRecuperacao = false);
     }
   }
 
@@ -122,6 +149,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
       setState(() {
         _empresasParaEscolher = const [];
         _erro = null;
+        _mensagem = null;
         _senha.clear();
       });
     } finally {
@@ -137,14 +165,6 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
     widget.onLogin(Map<String, dynamic>.from(sessao));
   }
 
-  Future<void> _abrirPrimeiroAcessoFuncionario() async {
-    final sessao = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(builder: (_) => const FuncionarioPrimeiroAcessoPage()),
-    );
-    if (!mounted || sessao == null) return;
-    widget.onLogin(Map<String, dynamic>.from(sessao));
-  }
-
   Widget _seletorEmpresa() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -154,9 +174,9 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         Text(
           'Escolha a empresa',
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 8),
         Text(
@@ -182,7 +202,10 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
                   children: [
                     Text(nome),
                     if (papel.isNotEmpty)
-                      Text(papel, style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        papel,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                   ],
                 ),
               ),
@@ -216,9 +239,9 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         Text(
           'Imperium Manager',
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 7),
         const Text(
@@ -228,7 +251,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         const SizedBox(height: 28),
         TextField(
           controller: _email,
-          enabled: !_carregando,
+          enabled: !_carregando && !_enviandoRecuperacao,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           autocorrect: false,
@@ -242,7 +265,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         const SizedBox(height: 14),
         TextField(
           controller: _senha,
-          enabled: !_carregando,
+          enabled: !_carregando && !_enviandoRecuperacao,
           obscureText: _ocultarSenha,
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => _entrar(),
@@ -265,8 +288,27 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
             ),
           ),
         ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _carregando || _enviandoRecuperacao
+                ? null
+                : _recuperarSenha,
+            child: Text(
+              _enviandoRecuperacao ? 'Enviando...' : 'Esqueci minha senha',
+            ),
+          ),
+        ),
+        if (_mensagem != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _mensagem!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.greenAccent),
+          ),
+        ],
         if (_erro != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Text(
             _erro!,
             textAlign: TextAlign.center,
@@ -277,7 +319,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         SizedBox(
           height: 52,
           child: FilledButton.icon(
-            onPressed: _carregando ? null : _entrar,
+            onPressed: _carregando || _enviandoRecuperacao ? null : _entrar,
             icon: _carregando
                 ? const SizedBox(
                     width: 19,
@@ -292,7 +334,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         const Divider(),
         const SizedBox(height: 8),
         Text(
-          'Primeiro acesso ou convite',
+          'Acesso da empresa',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.labelLarge,
         ),
@@ -300,17 +342,11 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         OutlinedButton.icon(
           onPressed: _carregando ? null : _abrirPrimeiroAcessoEmpresa,
           icon: const Icon(Icons.business_outlined),
-          label: const Text('Primeiro acesso da empresa'),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: _carregando ? null : _abrirPrimeiroAcessoFuncionario,
-          icon: const Icon(Icons.badge_outlined),
-          label: const Text('Primeiro acesso do funcionário'),
+          label: const Text('Ativar empresa existente'),
         ),
         const SizedBox(height: 14),
         Text(
-          'Funcionários são criados e administrados pela própria empresa.',
+          'Funcionário: seu acesso é criado pelo administrador da empresa. Depois de definir sua senha pelo e-mail recebido, entre normalmente acima.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
