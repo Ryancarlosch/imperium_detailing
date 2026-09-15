@@ -568,7 +568,9 @@ class _WebGateState extends State<_WebGate> {
               onSubmitted: modoPrimeiroAcesso ? null : (_) => _entrar(),
               decoration: InputDecoration(
                 labelText: modoPrimeiroAcesso ? 'Criar senha' : 'Senha',
-                helperText: modoPrimeiroAcesso ? 'Mínimo de 8 caracteres' : null,
+                helperText: modoPrimeiroAcesso
+                    ? 'Mínimo de 8 caracteres'
+                    : null,
                 prefixIcon: const Icon(Icons.lock_outline_rounded),
                 suffixIcon: IconButton(
                   tooltip: ocultarSenha ? 'Mostrar senha' : 'Ocultar senha',
@@ -621,9 +623,7 @@ class _WebGateState extends State<_WebGate> {
                       ? null
                       : _enviarRecuperacaoSenha,
                   child: Text(
-                    enviandoRecuperacao
-                        ? 'Enviando...'
-                        : 'Esqueci minha senha',
+                    enviandoRecuperacao ? 'Enviando...' : 'Esqueci minha senha',
                   ),
                 ),
               ),
@@ -1019,10 +1019,7 @@ class _LoginHero extends StatelessWidget {
             runSpacing: 10,
             children: [
               _HeroChip(icon: Icons.cloud_done_outlined, texto: 'Web + App'),
-              _HeroChip(
-                icon: Icons.business_outlined,
-                texto: 'Multiempresa',
-              ),
+              _HeroChip(icon: Icons.business_outlined, texto: 'Multiempresa'),
               _HeroChip(
                 icon: Icons.lock_outline_rounded,
                 texto: 'Acesso seguro',
@@ -1096,10 +1093,7 @@ class _AvisoLogin extends StatelessWidget {
           Icon(icon, size: 18, color: cor),
           const SizedBox(width: 9),
           Expanded(
-            child: Text(
-              texto,
-              style: TextStyle(color: cor, height: 1.35),
-            ),
+            child: Text(texto, style: TextStyle(color: cor, height: 1.35)),
           ),
         ],
       ),

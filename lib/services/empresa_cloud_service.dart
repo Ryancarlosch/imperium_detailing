@@ -31,10 +31,7 @@ class EmpresaCloudService {
 
     for (final raw in vinculos) {
       final vinculo = Map<String, dynamic>.from(raw);
-      final papel = (vinculo['papel'] ?? '')
-          .toString()
-          .trim()
-          .toLowerCase();
+      final papel = (vinculo['papel'] ?? '').toString().trim().toLowerCase();
 
       // A conta cloud representa a empresa. Funcionários continuam como
       // usuários internos, criados e gerenciados pelo administrador.

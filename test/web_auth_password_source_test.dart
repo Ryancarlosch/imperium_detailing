@@ -53,7 +53,10 @@ void main() {
     expect(loginSource, contains('enviarRecuperacaoSenha'));
     expect(loginSource, contains("labelText: 'E-mail da empresa'"));
     expect(loginSource, contains("labelText: 'Senha'"));
-    expect(loginSource, contains('Funcionários ficam cadastrados dentro da empresa'));
+    expect(
+      loginSource,
+      contains('Funcionários ficam cadastrados dentro da empresa'),
+    );
     expect(loginSource, isNot(contains('FuncionarioPrimeiroAcessoPage')));
   });
 }
