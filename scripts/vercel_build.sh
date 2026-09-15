@@ -16,4 +16,4 @@ flutter config --no-analytics
 flutter config --enable-web
 flutter --version
 flutter pub get
-flutter build web --target lib/main_web.dart --release
+flutter build web --target lib/main_web_bootstrap.dart --release
