@@ -49,6 +49,47 @@ class ImperiumAuthService {
     return usuario;
   }
 
+  Future<void> enviarRecuperacaoSenha({
+    required String email,
+    String? redirectTo,
+  }) async {
+    final emailLimpo = email.trim().toLowerCase();
+
+    if (emailLimpo.isEmpty || !emailLimpo.contains('@')) {
+      throw ArgumentError('Informe um e-mail válido.');
+    }
+
+    await _client.auth.resetPasswordForEmail(
+      emailLimpo,
+      redirectTo: redirectTo,
+    );
+  }
+
+  Future<User> definirNovaSenha(String novaSenha) async {
+    final senha = novaSenha.trim();
+
+    if (senha.length < 8) {
+      throw ArgumentError('A senha deve ter pelo menos 8 caracteres.');
+    }
+
+    if (_client.auth.currentUser == null) {
+      throw StateError(
+        'O link de recuperação expirou. Solicite um novo e-mail.',
+      );
+    }
+
+    final resposta = await _client.auth.updateUser(
+      UserAttributes(password: senha),
+    );
+
+    final usuario = resposta.user ?? _client.auth.currentUser;
+    if (usuario == null) {
+      throw StateError('Não foi possível atualizar sua senha.');
+    }
+
+    return usuario;
+  }
+
   Future<void> sair() async {
     final client = SupabaseBootstrap.client;
     if (client == null) return;
@@ -81,6 +122,15 @@ class ImperiumAuthService {
     if (lower.contains('email not confirmed') ||
         lower.contains('email_not_confirmed')) {
       return 'Confirme seu e-mail antes de entrar.';
+    }
+
+    if (lower.contains('same password') ||
+        lower.contains('different from the old password')) {
+      return 'Escolha uma senha diferente da atual.';
+    }
+
+    if (lower.contains('expired') && lower.contains('token')) {
+      return 'Este link expirou. Solicite um novo e-mail de recuperação.';
     }
 
     if (lower.contains('too many requests') ||
