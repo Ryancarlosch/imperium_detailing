@@ -130,35 +130,33 @@ class WebWorkspaceShell extends StatelessWidget {
           PopupMenuButton<String>(
             tooltip: 'Trocar empresa',
             onSelected: _trocarEmpresa,
-            itemBuilder: (context) => empresas
-                .map((empresa) {
-                  final id = (empresa['empresa_id'] ?? '').toString();
-                  final atual = id == empresaAtualId;
-                  return PopupMenuItem<String>(
-                    value: id,
-                    enabled: id.isNotEmpty && !atual,
-                    child: Row(
-                      children: [
-                        Icon(
-                          atual
-                              ? Icons.check_circle_rounded
-                              : Icons.business_outlined,
-                          size: 18,
-                          color: atual ? ImperiumWebTheme.accentStrong : null,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            (empresa['nome'] ?? 'Empresa').toString(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+            itemBuilder: (context) => empresas.map((empresa) {
+              final id = (empresa['empresa_id'] ?? '').toString();
+              final atual = id == empresaAtualId;
+              return PopupMenuItem<String>(
+                value: id,
+                enabled: id.isNotEmpty && !atual,
+                child: Row(
+                  children: [
+                    Icon(
+                      atual
+                          ? Icons.check_circle_rounded
+                          : Icons.business_outlined,
+                      size: 18,
+                      color: atual ? ImperiumWebTheme.accentStrong : null,
                     ),
-                  );
-                })
-                .toList(),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        (empresa['nome'] ?? 'Empresa').toString(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
             icon: const Icon(Icons.domain_outlined),
           ),
           PopupMenuButton<String>(
