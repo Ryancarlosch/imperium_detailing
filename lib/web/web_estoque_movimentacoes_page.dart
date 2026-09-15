@@ -50,7 +50,9 @@ class _WebEstoqueMovimentacoesPageState
   Future<void> _abrirMovimentacao(_EstoqueDados dados) async {
     if (dados.itens.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cadastre um produto antes de movimentar.')),
+        const SnackBar(
+          content: Text('Cadastre um produto antes de movimentar.'),
+        ),
       );
       return;
     }
@@ -100,7 +102,8 @@ class _WebEstoqueMovimentacoesPageState
 
               if (tipo == 'SAIDA' && quantidadeNumero > disponivel + 0.000001) {
                 setModalState(() {
-                  erro = 'Disponível para saída: ${_numero(disponivel)} '
+                  erro =
+                      'Disponível para saída: ${_numero(disponivel)} '
                       '${item['unidade'] ?? ''}. O restante está reservado para OS.';
                 });
                 return;
@@ -108,7 +111,8 @@ class _WebEstoqueMovimentacoesPageState
 
               if (tipo == 'AJUSTE' && quantidadeNumero + 0.000001 < reservado) {
                 setModalState(() {
-                  erro = 'O ajuste não pode deixar o saldo abaixo de '
+                  erro =
+                      'O ajuste não pode deixar o saldo abaixo de '
                       '${_numero(reservado)} reservado para Ordens de Serviço.';
                 });
                 return;
@@ -161,7 +165,9 @@ class _WebEstoqueMovimentacoesPageState
                         DropdownButtonFormField<String>(
                           initialValue: itemId,
                           isExpanded: true,
-                          decoration: const InputDecoration(labelText: 'Produto'),
+                          decoration: const InputDecoration(
+                            labelText: 'Produto',
+                          ),
                           items: dados.itens
                               .map(
                                 (item) => DropdownMenuItem<String>(
@@ -179,8 +185,9 @@ class _WebEstoqueMovimentacoesPageState
                                   if (valor == null) return;
                                   setModalState(() {
                                     itemId = valor;
-                                    unidadeEntrada =
-                                        _unidadesCompativeis(itemAtual()).first;
+                                    unidadeEntrada = _unidadesCompativeis(
+                                      itemAtual(),
+                                    ).first;
                                   });
                                 },
                         ),
@@ -191,7 +198,8 @@ class _WebEstoqueMovimentacoesPageState
                           children: [
                             _InfoChip(
                               rotulo: 'Saldo',
-                              valor: '${_numero(saldo)} ${item['unidade'] ?? ''}',
+                              valor:
+                                  '${_numero(saldo)} ${item['unidade'] ?? ''}',
                             ),
                             _InfoChip(
                               rotulo: 'Reservado OS',
@@ -582,7 +590,11 @@ class _WebEstoqueMovimentacoesPageState
                         ].where((texto) => texto.trim().isNotEmpty).join(' · '),
                       ),
                       trailing: Text(
-                        '${entrada ? '+' : tipo.toUpperCase() == 'SAIDA' ? '-' : ''}'
+                        '${entrada
+                            ? '+'
+                            : tipo.toUpperCase() == 'SAIDA'
+                            ? '-'
+                            : ''}'
                         '${_numero(_double(movimento['quantidade']))} $unidade',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
@@ -708,10 +720,7 @@ String _rotuloTipo(String tipo) {
   }
 }
 
-Map<String, dynamic>? _itemPorId(
-  List<Map<String, dynamic>> itens,
-  String? id,
-) {
+Map<String, dynamic>? _itemPorId(List<Map<String, dynamic>> itens, String? id) {
   if (id == null || id.isEmpty) return null;
   for (final item in itens) {
     if (item['id']?.toString() == id) return item;
