@@ -54,6 +54,25 @@ void main() {
     }
   });
 
+  test('Sistema completo fecha somente drawer e roteia modulos com AppBar', () {
+    final source = File(
+      'lib/web/web_operacional_shell.dart',
+    ).readAsStringSync();
+
+    expect(source, contains('_paginaRoteada'));
+    expect(source, contains('isDrawerOpen == true'));
+    expect(source, contains('MaterialPageRoute<void>'));
+    expect(source, contains("tooltip: 'Voltar ao painel'"));
+    expect(source, contains("10 => WebDrePage"));
+    expect(source, contains("11 => WebContasFinanceirasPage"));
+    expect(source, contains("12 => WebRelatoriosPage"));
+    expect(source, contains("16 => WebPontoPage"));
+    expect(
+      source,
+      isNot(contains('fecharMenu && Navigator.canPop(context)')),
+    );
+  });
+
   test('Entrypoint abre workspace premium multiempresa com Magic Link', () {
     final source = File('lib/main_web.dart').readAsStringSync();
     final workspace = File(
