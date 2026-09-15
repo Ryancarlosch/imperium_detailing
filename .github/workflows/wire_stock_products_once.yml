@@ -28,30 +28,62 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Wire stock product management
+      - name: Wire and fix stock management
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path('lib/web/web_operacional_shell.dart')
-          source = path.read_text(encoding='utf-8')
+          shell_path = Path('lib/web/web_operacional_shell.dart')
+          source = shell_path.read_text(encoding='utf-8')
+          source = source.replace(
+              "import 'web_estoque_movimentacoes_page.dart';\n",
+              "import 'web_estoque_gestao_page.dart';\n",
+              1,
+          )
+          source = source.replace(
+              "      8 => WebEstoqueMovimentacoesPage(key: ValueKey('estoque-$_revisao')) ,",
+              "      8 => WebEstoqueGestaoPage(key: ValueKey('estoque-$_revisao')) ,",
+              1,
+          )
+          source = source.replace(
+              "      8 => WebEstoqueMovimentacoesPage(key: ValueKey('estoque-$_revisao')) ,".replace(') ,', '),'),
+              "      8 => WebEstoqueGestaoPage(key: ValueKey('estoque-$_revisao')) ,".replace(') ,', '),'),
+              1,
+          )
+          if "import 'web_estoque_gestao_page.dart';" not in source:
+              raise SystemExit('stock management import was not wired')
+          if '8 => WebEstoqueGestaoPage(' not in source:
+              raise SystemExit('stock management route was not wired')
+          shell_path.write_text(source, encoding='utf-8')
 
-          old_import = "import 'web_estoque_movimentacoes_page.dart';\n"
-          new_import = "import 'web_estoque_gestao_page.dart';\n"
-          if old_import in source:
-              source = source.replace(old_import, new_import, 1)
-          elif new_import not in source:
-              raise SystemExit('stock management import anchor not found')
+          movement_path = Path('lib/web/web_estoque_movimentacoes_page.dart')
+          source = movement_path.read_text(encoding='utf-8')
+          source = source.replace(
+              'String _numero(double valor) {',
+              'String _numero(num valor) {',
+          )
+          movement_path.write_text(source, encoding='utf-8')
 
-          old_route = "      8 => WebEstoqueMovimentacoesPage(key: ValueKey('estoque-$_revisao'))," 
-          new_route = "      8 => WebEstoqueGestaoPage(key: ValueKey('estoque-$_revisao'))," 
-          if old_route in source:
-              source = source.replace(old_route, new_route, 1)
-          elif '8 => WebEstoqueGestaoPage(' not in source:
-              raise SystemExit('stock management route anchor not found')
+          product_path = Path('lib/web/web_estoque_produtos_page.dart')
+          source = product_path.read_text(encoding='utf-8')
+          source = source.replace(
+              "  if (resultado.endsWith(')')) resultado = resultado.substring(0, resultado.length - 1);",
+              "  if (resultado.endsWith(')')) {\n    resultado = resultado.substring(0, resultado.length - 1);\n  }",
+          )
+          product_path.write_text(source, encoding='utf-8')
 
-          path.write_text(source, encoding='utf-8')
+          test_path = Path('test/web_estoque_movimentacoes_source_test.dart')
+          source = test_path.read_text(encoding='utf-8')
+          source = source.replace(
+              "import 'web_estoque_movimentacoes_page.dart';",
+              "import 'web_estoque_gestao_page.dart';",
+          )
+          source = source.replace(
+              '8 => WebEstoqueMovimentacoesPage(',
+              '8 => WebEstoqueGestaoPage(',
+          )
+          test_path.write_text(source, encoding='utf-8')
           PY
 
       - name: Format stock management files
@@ -59,6 +91,7 @@ jobs:
           dart format
           lib/web/web_operacional_shell.dart
           lib/web/web_estoque_gestao_page.dart
+          lib/web/web_estoque_movimentacoes_page.dart
           lib/web/web_estoque_produtos_page.dart
           lib/services/web_estoque_produtos_service.dart
           test/web_estoque_movimentacoes_source_test.dart
@@ -87,6 +120,7 @@ jobs:
           git add \
             lib/web/web_operacional_shell.dart \
             lib/web/web_estoque_gestao_page.dart \
+            lib/web/web_estoque_movimentacoes_page.dart \
             lib/web/web_estoque_produtos_page.dart \
             lib/services/web_estoque_produtos_service.dart \
             test/web_estoque_movimentacoes_source_test.dart \
