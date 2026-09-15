@@ -83,10 +83,52 @@ jobs:
             git push origin HEAD:desenvolvimento
           fi
 
-      - name: Format auth migration once
+      - name: Normalize auth migration once
         shell: bash
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('lib/main_web.dart')
+          source = path.read_text(encoding='utf-8')
+          old = """  Future<void> _sair() async {
+            try {
+              await auth.sair();
+            } finally {
+              if (!mounted) return;
+              setState(() {
+                usuario = null;
+                empresas = const [];
+                empresaAtual = '';
+                erro = null;
+                mensagem = null;
+                senha.clear();
+              });
+            }
+          }
+          """
+          new = """  Future<void> _sair() async {
+            try {
+              await auth.sair();
+            } finally {
+              if (mounted) {
+                setState(() {
+                  usuario = null;
+                  empresas = const [];
+                  empresaAtual = '';
+                  erro = null;
+                  mensagem = null;
+                  senha.clear();
+                });
+              }
+            }
+          }
+          """
+          if old in source:
+              source = source.replace(old, new, 1)
+              path.write_text(source, encoding='utf-8')
+          PY
           AUTH_FILES=(
             lib/main.dart
             lib/main_web.dart
@@ -100,7 +142,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add "${AUTH_FILES[@]}"
-            git commit -m "style(auth): aplica dart format"
+            git commit -m "fix(auth): corrige logout web e formata migracao"
             git push origin HEAD:desenvolvimento
           fi
 
