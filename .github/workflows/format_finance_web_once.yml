@@ -1,0 +1,85 @@
+name: Format Finance Web Once
+
+on:
+  push:
+    branches:
+      - desenvolvimento
+    paths:
+      - '.github/workflows/format_finance_web_once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  format-and-wire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Wire finance page
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('lib/web/web_operacional_shell.dart')
+          source = path.read_text(encoding='utf-8')
+
+          import_anchor = "import 'web_expansao_pages.dart';\n"
+          finance_import = "import 'web_financeiro_lancamentos_page.dart';\n"
+          if finance_import not in source:
+              if import_anchor not in source:
+                  raise SystemExit('import anchor not found')
+              source = source.replace(
+                  import_anchor,
+                  import_anchor + finance_import,
+                  1,
+              )
+
+          old = "      9 => WebFinanceiroPage(key: ValueKey('financeiro-$_revisao')),"
+          new = """      9 => WebFinanceiroLancamentosPage(
+        key: ValueKey('financeiro-$_revisao'),
+      ),"""
+          if old in source:
+              source = source.replace(old, new, 1)
+          elif '9 => WebFinanceiroLancamentosPage(' not in source:
+              raise SystemExit('finance route anchor not found')
+
+          path.write_text(source, encoding='utf-8')
+          PY
+
+      - name: Format finance Web files
+        run: >-
+          dart format
+          lib/web/web_financeiro_lancamentos_page.dart
+          lib/web/web_operacional_shell.dart
+          lib/services/web_cloud_gestao_service.dart
+          test/web_financeiro_lancamentos_source_test.dart
+
+      - name: Commit formatted integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          if git diff --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            lib/web/web_financeiro_lancamentos_page.dart \
+            lib/web/web_operacional_shell.dart \
+            lib/services/web_cloud_gestao_service.dart \
+            test/web_financeiro_lancamentos_source_test.dart
+          git commit -m 'fix(web): formata e conecta fluxo de caixa sincronizado'
+          git push origin HEAD:desenvolvimento
