@@ -10,8 +10,11 @@ void main() {
     final page = File(
       'lib/web/web_contas_financeiras_page.dart',
     ).readAsStringSync();
-    final workspace = File(
-      'lib/web/web_workspace_shell.dart',
+    final shell = File(
+      'lib/web/web_operacional_shell.dart',
+    ).readAsStringSync();
+    final dashboard = File(
+      'lib/web/web_dashboard_gerencial_page.dart',
     ).readAsStringSync();
 
     expect(service, contains("from('imperium_financeiro_contas')"));
@@ -30,8 +33,9 @@ void main() {
     expect(page, contains('Extrato do mês'));
     expect(page, contains('Conciliações registradas'));
 
-    expect(workspace, contains("import 'web_contas_financeiras_page.dart';"));
-    expect(workspace, contains('Contas e caixa'));
-    expect(workspace, contains('WebContasFinanceirasPage'));
+    expect(shell, contains("import 'web_contas_financeiras_page.dart';"));
+    expect(shell, contains("titulo: 'Contas bancárias'"));
+    expect(shell, contains('WebContasFinanceirasPage'));
+    expect(dashboard, contains("titulo: 'Contas e caixa'"));
   });
 }
