@@ -39,16 +39,10 @@ jobs:
           if finance_import not in source:
               if import_anchor not in source:
                   raise SystemExit('import anchor not found')
-              source = source.replace(
-                  import_anchor,
-                  import_anchor + finance_import,
-                  1,
-              )
+              source = source.replace(import_anchor, import_anchor + finance_import, 1)
 
-          old = "      9 => WebFinanceiroPage(key: ValueKey('financeiro-$_revisao')),"
-          new = """      9 => WebFinanceiroLancamentosPage(
-        key: ValueKey('financeiro-$_revisao'),
-      ),"""
+          old = "      9 => WebFinanceiroPage(key: ValueKey('financeiro-$_revisao'))," 
+          new = "      9 => WebFinanceiroLancamentosPage(\n        key: ValueKey('financeiro-$_revisao'),\n      ),"
           if old in source:
               source = source.replace(old, new, 1)
           elif '9 => WebFinanceiroLancamentosPage(' not in source:
