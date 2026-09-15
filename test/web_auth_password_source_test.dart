@@ -22,14 +22,8 @@ void main() {
       'lib/screens/login_email_senha_page.dart',
     ).readAsStringSync();
 
-    expect(
-      web,
-      contains("import 'screens/login_email_senha_page.dart';"),
-    );
-    expect(
-      mobile,
-      contains("import 'screens/login_email_senha_page.dart';"),
-    );
+    expect(web, contains("import 'screens/login_email_senha_page.dart';"));
+    expect(mobile, contains("import 'screens/login_email_senha_page.dart';"));
     expect(web, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
     expect(mobile, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
     expect(login, contains('entrarComEmailSenha'));

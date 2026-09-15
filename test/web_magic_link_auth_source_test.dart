@@ -40,7 +40,10 @@ void main() {
     final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
 
     expect(source, contains('_cloudSession.prepararSessao()'));
-    expect(source, contains('_cloudSession.prepararSessao(empresaId: destino)'));
+    expect(
+      source,
+      contains('_cloudSession.prepararSessao(empresaId: destino)'),
+    );
     expect(source, contains('listarEmpresasVinculadas'));
     expect(source, contains('WebWorkspaceShell'));
     expect(cloudSession, contains("client.rpc('imperium_resgatar_convite')"));
