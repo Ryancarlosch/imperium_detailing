@@ -147,7 +147,6 @@ class _WebGateState extends State<_WebGate> {
               empresaAtual = '';
               definindoSenha = false;
               erro = null;
-              mensagem = null;
               carregando = false;
             });
             return;
@@ -231,12 +230,11 @@ class _WebGateState extends State<_WebGate> {
         senha: senhaDigitada,
       );
 
-      usuario = resposta.user ?? client?.auth.currentUser;
       final possuiSessao = resposta.session != null || auth.autenticado;
-
       if (!possuiSessao) {
         if (!mounted) return;
         setState(() {
+          usuario = null;
           mensagem =
               'Conta criada. Confirme o e-mail recebido e depois entre com '
               'o mesmo e-mail e senha para ativar sua empresa.';
@@ -246,6 +244,7 @@ class _WebGateState extends State<_WebGate> {
         return;
       }
 
+      usuario = resposta.user ?? client?.auth.currentUser;
       await _carregarContexto();
     } catch (e) {
       if (!mounted) return;
