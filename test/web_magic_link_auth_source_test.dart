@@ -24,12 +24,17 @@ void main() {
     final workspace = File(
       'lib/web/web_workspace_shell.dart',
     ).readAsStringSync();
+    final shell = File(
+      'lib/web/web_operacional_shell.dart',
+    ).readAsStringSync();
 
     expect(source, contains('listarEmpresasVinculadas'));
     expect(source, contains('empresaAtualValida'));
     expect(source, contains('trocarEmpresa'));
     expect(source, contains('WebWorkspaceShell'));
     expect(workspace, contains('WebOperacionalShell'));
-    expect(workspace, contains('WebPontoPage'));
+    expect(shell, contains('WebDashboardGerencialPage'));
+    expect(shell, contains('WebPontoPage'));
+    expect(shell, contains("titulo: 'Ponto e funcionários'"));
   });
 }
