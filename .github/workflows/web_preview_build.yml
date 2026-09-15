@@ -9,6 +9,7 @@ on:
       - 'lib/**'
       - 'web/**'
       - 'test/web_*_source_test.dart'
+      - 'test/funcionario_conta_email_senha_source_test.dart'
       - 'pubspec.yaml'
       - 'pubspec.lock'
       - '.github/workflows/web_preview_build.yml'
@@ -29,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -40,202 +43,61 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Patch dashboard navigation once
+      - name: Format auth migration once safely
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path('lib/web/web_dashboard_gerencial_page.dart')
-          source = path.read_text(encoding='utf-8')
-          pattern = re.compile(
-              r"  Future<void> _abrirModulo\(String titulo, Widget pagina\) async \{\n"
-              r".*?"
-              r"    if \(mounted\) await _carregar\(\);\n"
-              r"  \}\n\n  @override",
-              re.S,
-          )
-          replacement = (
-              "  Future<void> _abrirModulo(String titulo, Widget pagina) async {\n"
-              "    await Navigator.of(context).push(\n"
-              "      MaterialPageRoute<void>(\n"
-              "        settings: RouteSettings(name: titulo),\n"
-              "        builder: (context) => pagina,\n"
-              "      ),\n"
-              "    );\n"
-              "    if (mounted) await _carregar();\n"
-              "  }\n\n"
-              "  @override"
-          )
-          updated, count = pattern.subn(replacement, source, count=1)
-          if count != 1:
-              raise SystemExit(f'Esperava alterar 1 função, alterei {count}.')
-          path.write_text(updated, encoding='utf-8')
-          PY
-          dart format lib/web/web_dashboard_gerencial_page.dart test/web_dashboard_navigation_source_test.dart
-          if ! git diff --quiet -- lib/web/web_dashboard_gerencial_page.dart test/web_dashboard_navigation_source_test.dart; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add lib/web/web_dashboard_gerencial_page.dart test/web_dashboard_navigation_source_test.dart
-            git commit -m "fix(web): remove appbar duplicada dos atalhos"
-            git push origin HEAD:desenvolvimento
-          fi
-
-      - name: Normalize auth migration once
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path('lib/main_web.dart')
-          source = path.read_text(encoding='utf-8')
-          pattern = re.compile(
-              r"  Future<void> _sair\(\) async \{\n.*?\n  \}\n\n  String get _papelAtual",
-              re.S,
-          )
-          replacement = """  Future<void> _sair() async {
-            try {
-              await auth.sair();
-            } finally {
-              if (mounted) {
-                setState(() {
-                  usuario = null;
-                  empresas = const [];
-                  empresaAtual = '';
-                  erro = null;
-                  mensagem = null;
-                  senha.clear();
-                });
-              }
-            }
-          }
-
-          String get _papelAtual"""
-          updated, count = pattern.subn(replacement, source, count=1)
-          if count != 1:
-              raise SystemExit(f'Esperava corrigir 1 logout web, corrigi {count}.')
-          path.write_text(updated, encoding='utf-8')
-          PY
-          AUTH_FILES=(
+          FILES=(
             lib/main.dart
             lib/main_web.dart
             lib/screens/login_email_senha_page.dart
+            lib/screens/funcionarios_acesso_nuvem_page.dart
             lib/services/cloud_session_service.dart
             lib/services/imperium_auth_service.dart
+            lib/services/funcionario_conta_service.dart
             test/web_auth_password_source_test.dart
+            test/web_magic_link_auth_source_test.dart
+            test/web_operacional_v1_source_test.dart
+            test/web_dashboard_navigation_source_test.dart
+            test/funcionario_conta_email_senha_source_test.dart
           )
-          dart format "${AUTH_FILES[@]}"
-          if ! git diff --quiet -- "${AUTH_FILES[@]}"; then
+
+          dart format "${FILES[@]}"
+
+          if ! git diff --quiet -- "${FILES[@]}"; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add "${AUTH_FILES[@]}"
-            git commit -m "fix(auth): corrige logout web e formata migracao"
+            git add "${FILES[@]}"
+            git commit -m "style(auth): formata migracao de email e senha"
+            git fetch origin desenvolvimento
+            git rebase origin/desenvolvimento
             git push origin HEAD:desenvolvimento
-          fi
-
-      - name: Migrate employee access to email and password once
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('lib/screens/funcionarios_acesso_nuvem_page.dart')
-          source = path.read_text(encoding='utf-8')
-
-          if "../services/funcionario_conta_service.dart" not in source:
-              source = source.replace(
-                  "import '../services/funcionario_acesso_service.dart';\n",
-                  "import '../services/funcionario_acesso_service.dart';\nimport '../services/funcionario_conta_service.dart';\n",
-                  1,
-              )
-
-          marker = "  final FuncionarioAcessoService _service = FuncionarioAcessoService.instance;\n"
-          if "final FuncionarioContaService _contaService" not in source:
-              source = source.replace(
-                  marker,
-                  marker + "  final FuncionarioContaService _contaService = FuncionarioContaService.instance;\n",
-                  1,
-              )
-
-          source = source.replace(
-              "final resultado = await _service.prepararAcessoAdmin(",
-              "final resultado = await _contaService.prepararAcessoAdmin(",
-              1,
-          )
-          source = source.replace(
-              "'Liberar celular • ${colaborador['nome'] ?? 'Funcionário'}'",
-              "'Liberar acesso • ${colaborador['nome'] ?? 'Funcionário'}'",
-          )
-          source = source.replace(
-              "'Informe o e-mail que o funcionário usará no Magic Link. '\n              'Depois do primeiro acesso, ele usará o PIN criado no próprio '\n              'celular.'",
-              "'Informe o e-mail do funcionário. O Imperium criará ou vinculará '\n              'a conta e enviará um e-mail para ele definir a própria senha.'",
-          )
-          source = source.replace(
-              "'O funcionário já pode usar esse e-mail no primeiro acesso.'",
-              "'O funcionário receberá as instruções para definir a senha e depois poderá entrar com este e-mail no Imperium.'",
-          )
-          source = source.replace(
-              "'O acesso remoto ainda não foi preparado. Use “Liberar celular” '\n          'primeiro.'",
-              "'O acesso remoto ainda não foi preparado. Use “Liberar acesso” primeiro.'",
-          )
-          source = source.replace(
-              "? 'Acesso reativado. Use “Liberar celular” para autorizar um '\n                  'aparelho novamente.'",
-              "? 'Acesso reativado. Use “Liberar acesso” para atualizar a conta do funcionário.'",
-          )
-          source = source.replace(
-              "'necessário usar “Liberar celular”.'",
-              "'necessário usar “Liberar acesso”.'",
-          )
-          source = source.replace(
-              "title: const Text('Acessos em outros celulares'),",
-              "title: const Text('Acessos de funcionários'),",
-          )
-          source = source.replace(
-              "'Funcionários em outro aparelho'",
-              "'Contas dos funcionários'",
-          )
-          source = source.replace(
-              "'O PIN continua local de cada celular. A nuvem transporta '\n                      'somente o vínculo do funcionário, permissões e os dados '\n                      'operacionais preparados neste Módulo 1: Ponto, Clientes, '\n                      'Veículos e Agenda.'",
-              "'Cada funcionário usa o próprio e-mail e senha. A empresa controla '\n                      'o vínculo, as permissões e pode desativar ou revogar o acesso '\n                      'quando necessário.'",
-          )
-          source = source.replace("? 'Liberar celular'", "? 'Liberar acesso'")
-          source = source.replace(
-              ": 'Liberar/Atualizar celular'",
-              ": 'Atualizar acesso'",
-          )
-
-          path.write_text(source, encoding='utf-8')
-          PY
-
-          dart format \
-            lib/screens/funcionarios_acesso_nuvem_page.dart \
-            lib/services/funcionario_conta_service.dart
-
-          EMPLOYEE_FILES=(
-            lib/screens/funcionarios_acesso_nuvem_page.dart
-            lib/services/funcionario_conta_service.dart
-          )
-          if ! git diff --quiet -- "${EMPLOYEE_FILES[@]}"; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add "${EMPLOYEE_FILES[@]}"
-            git commit -m "feat(funcionarios): migra liberacao para email e senha"
-            git push origin HEAD:desenvolvimento
+            echo "Formatação salva. Um novo workflow validará o commit formatado."
+            exit 0
           fi
 
       - name: Check Web formatting
-        run: dart format --output=none --set-exit-if-changed lib/main_web.dart lib/web test/web_*_source_test.dart
+        run: >-
+          dart format --output=none --set-exit-if-changed
+          lib/main.dart
+          lib/main_web.dart
+          lib/web
+          lib/screens/login_email_senha_page.dart
+          lib/screens/funcionarios_acesso_nuvem_page.dart
+          lib/services/cloud_session_service.dart
+          lib/services/imperium_auth_service.dart
+          lib/services/funcionario_conta_service.dart
+          test/web_*_source_test.dart
+          test/funcionario_conta_email_senha_source_test.dart
 
       - name: Analyze
         run: flutter analyze
 
-      - name: Run Web source tests
-        run: flutter test test/web_*_source_test.dart
+      - name: Run Web and auth source tests
+        run: >-
+          flutter test
+          test/web_*_source_test.dart
+          test/funcionario_conta_email_senha_source_test.dart
 
       - name: Build Web
         run: flutter build web --target lib/main_web.dart --release
