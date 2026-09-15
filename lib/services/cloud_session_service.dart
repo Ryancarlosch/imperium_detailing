@@ -106,11 +106,7 @@ class CloudSessionService {
     final pin = _pinCompatibilidade();
     await _usuarios.definirPin(usuarioId: usuarioId, pin: pin);
 
-    return _usuarios.autenticar(
-      login: login,
-      pin: pin,
-      manterConectado: true,
-    );
+    return _usuarios.autenticar(login: login, pin: pin, manterConectado: true);
   }
 
   Future<Map<String, dynamic>> _resolverEmpresa(

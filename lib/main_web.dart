@@ -322,17 +322,17 @@ class _WebGateState extends State<_WebGate> {
             const SizedBox(height: 28),
             Text(
               'Acesse sua operação',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
               'Use o mesmo e-mail e senha no Imperium Web e no aplicativo.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFFADB6C0),
-                    height: 1.45,
-                  ),
+                color: const Color(0xFFADB6C0),
+                height: 1.45,
+              ),
             ),
             const SizedBox(height: 24),
             TextField(
@@ -410,8 +410,8 @@ class _WebGateState extends State<_WebGate> {
                   child: Text(
                     'Supabase Auth · empresa, licença e permissões preservadas',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF8F9AA5),
-                        ),
+                      color: const Color(0xFF8F9AA5),
+                    ),
                   ),
                 ),
               ],
@@ -444,8 +444,8 @@ class _WebGateState extends State<_WebGate> {
               Text(
                 'Qual empresa você quer abrir?',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -544,9 +544,8 @@ class _WebGateState extends State<_WebGate> {
                     const SizedBox(height: 18),
                     Text(
                       'Acesso de funcionário',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 10),
                     const Text(
@@ -693,8 +692,8 @@ class _AvisoLogin extends StatelessWidget {
     final cor = erro
         ? const Color(0xFFFF8C8C)
         : destaque
-            ? ImperiumWebTheme.accentStrong
-            : const Color(0xFFADB6C0);
+        ? ImperiumWebTheme.accentStrong
+        : const Color(0xFFADB6C0);
 
     return Container(
       padding: const EdgeInsets.all(13),
@@ -709,10 +708,7 @@ class _AvisoLogin extends StatelessWidget {
           Icon(icon, color: cor, size: 19),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              texto,
-              style: TextStyle(color: cor, height: 1.35),
-            ),
+            child: Text(texto, style: TextStyle(color: cor, height: 1.35)),
           ),
         ],
       ),

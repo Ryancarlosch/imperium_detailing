@@ -29,7 +29,10 @@ void main() {
       'lib/screens/login_email_senha_page.dart',
     ).readAsStringSync();
 
-    expect(mainSource, contains("import 'screens/login_email_senha_page.dart';"));
+    expect(
+      mainSource,
+      contains("import 'screens/login_email_senha_page.dart';"),
+    );
     expect(mainSource, contains('LoginEmailSenhaPage'));
     expect(loginSource, contains('entrarComEmailSenha'));
     expect(loginSource, contains("labelText: 'E-mail'"));
