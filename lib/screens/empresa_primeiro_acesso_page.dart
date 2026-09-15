@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../repositories/usuario_repository.dart';
-import '../services/licenca_service.dart';
-import '../services/supabase_bootstrap.dart';
+import '../services/cloud_session_service.dart';
+import '../services/imperium_auth_service.dart';
 
 class EmpresaPrimeiroAcessoPage extends StatefulWidget {
   const EmpresaPrimeiroAcessoPage({super.key});
@@ -14,445 +12,307 @@ class EmpresaPrimeiroAcessoPage extends StatefulWidget {
 }
 
 class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
-  static const String _redirectUrl = 'imperiumdetailing://login-callback/';
-
   final TextEditingController _email = TextEditingController();
-  final TextEditingController _pin = TextEditingController();
-  final TextEditingController _confirmarPin = TextEditingController();
+  final TextEditingController _senha = TextEditingController();
+  final TextEditingController _confirmarSenha = TextEditingController();
 
-  final UsuarioRepository _usuarios = UsuarioRepository();
-  final LicencaService _licenca = const LicencaService();
+  final ImperiumAuthService _auth = ImperiumAuthService.instance;
+  final CloudSessionService _cloudSession = CloudSessionService.instance;
 
-  bool _enviando = false;
-  bool _verificando = false;
-  bool _concluindo = false;
-  bool _ocultarPin = true;
+  bool _carregando = false;
+  bool _ocultarSenha = true;
   bool _ocultarConfirmacao = true;
-
-  Map<String, dynamic>? _empresa;
-
-  SupabaseClient? get _client => SupabaseBootstrap.client;
+  String? _erro;
+  String? _mensagem;
 
   @override
   void dispose() {
     _email.dispose();
-    _pin.dispose();
-    _confirmarPin.dispose();
+    _senha.dispose();
+    _confirmarSenha.dispose();
     super.dispose();
   }
 
-  Future<void> _validarAparelhoLimpo() async {
-    await _usuarios.garantirEstrutura();
-
-    if (await _usuarios.possuiAdministradorComPin()) {
-      throw StateError(
-        'Este aparelho já possui uma empresa configurada. '
-        'No beta, use uma instalação limpa do Imperium para outra empresa.',
-      );
-    }
-
-    final vinculada = await _licenca.empresaVinculadaAoDispositivo();
-    if (vinculada != null) {
-      throw StateError('Este aparelho já está vinculado a uma empresa.');
-    }
-  }
-
-  Future<void> _enviarMagicLink() async {
-    if (_enviando) return;
+  Future<void> _criarContaEAtivar() async {
+    if (_carregando) return;
 
     final email = _email.text.trim().toLowerCase();
+    final senha = _senha.text.trim();
+    final confirmar = _confirmarSenha.text.trim();
+
     if (email.isEmpty || !email.contains('@')) {
-      _mensagem('Informe o e-mail liberado pelo Imperium.', erro: true);
+      _mostrarErro('Informe o e-mail usado na assinatura do Imperium.');
       return;
     }
 
-    final client = _client;
-    if (client == null) {
-      _mensagem('Supabase não está disponível.', erro: true);
+    if (senha.length < 8) {
+      _mostrarErro('A senha deve ter pelo menos 8 caracteres.');
       return;
     }
 
-    setState(() => _enviando = true);
-
-    try {
-      await _validarAparelhoLimpo();
-
-      final atual = client.auth.currentUser;
-      if (atual != null && (atual.email ?? '').trim().toLowerCase() != email) {
-        await client.auth.signOut();
-      }
-
-      await client.auth.signInWithOtp(
-        email: email,
-        emailRedirectTo: _redirectUrl,
-        shouldCreateUser: true,
-      );
-
-      if (!mounted) return;
-
-      _mensagem(
-        'Magic Link enviado. Abra somente o link mais recente '
-        'neste mesmo celular.',
-      );
-    } catch (erro) {
-      if (!mounted) return;
-      _mensagem(_textoErro(erro), erro: true);
-    } finally {
-      if (mounted) setState(() => _enviando = false);
-    }
-  }
-
-  Future<void> _verificarAcesso() async {
-    if (_verificando) return;
-
-    final client = _client;
-    if (client == null) {
-      _mensagem('Supabase não está disponível.', erro: true);
+    if (senha != confirmar) {
+      _mostrarErro('As senhas informadas são diferentes.');
       return;
     }
-
-    setState(() => _verificando = true);
-
-    try {
-      await _validarAparelhoLimpo();
-
-      final usuario = client.auth.currentUser;
-      if (usuario == null) {
-        throw StateError('Abra primeiro o Magic Link enviado ao e-mail.');
-      }
-
-      final emailDigitado = _email.text.trim().toLowerCase();
-      final emailAutenticado = (usuario.email ?? '').trim().toLowerCase();
-
-      if (emailDigitado.isNotEmpty && emailAutenticado != emailDigitado) {
-        throw StateError(
-          'O link foi aberto com $emailAutenticado, mas o acesso '
-          'foi solicitado para $emailDigitado. Use Trocar conta.',
-        );
-      }
-
-      final resposta = await client.rpc('imperium_resgatar_convite');
-      final mapa = _primeiroMapa(resposta);
-
-      if (mapa['resgatado'] != true) {
-        throw StateError('Não foi possível ativar o convite desta empresa.');
-      }
-
-      final empresaId = (mapa['empresa_id'] ?? '').toString().trim();
-
-      if (empresaId.isEmpty) {
-        throw StateError('Empresa não identificada.');
-      }
-
-      if (mapa['acesso_liberado'] != true) {
-        throw StateError(
-          'O convite foi encontrado, mas a licença desta empresa '
-          'não está liberada.',
-        );
-      }
-
-      await _licenca.vincularDispositivoSeNecessario(
-        empresaId: empresaId,
-        userId: usuario.id,
-        email: emailAutenticado,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _empresa = mapa;
-      });
-
-      _mensagem('Empresa validada. Agora crie o PIN do administrador.');
-    } catch (erro) {
-      if (!mounted) return;
-      _mensagem(_textoErro(erro), erro: true);
-    } finally {
-      if (mounted) setState(() => _verificando = false);
-    }
-  }
-
-  Future<void> _trocarConta() async {
-    final client = _client;
-    if (client != null) {
-      await client.auth.signOut();
-    }
-
-    if (!mounted) return;
 
     setState(() {
-      _empresa = null;
-      _pin.clear();
-      _confirmarPin.clear();
+      _carregando = true;
+      _erro = null;
+      _mensagem = null;
     });
 
-    _mensagem('Conta da nuvem desconectada. Envie um novo Magic Link.');
-  }
-
-  Future<void> _concluir() async {
-    if (_concluindo || _empresa == null) return;
-
-    final pin = _pin.text.trim();
-    final confirmar = _confirmarPin.text.trim();
-
-    if (!RegExp(r'^\d{4,8}$').hasMatch(pin)) {
-      _mensagem('O PIN deve ter entre 4 e 8 números.', erro: true);
-      return;
-    }
-
-    if (pin != confirmar) {
-      _mensagem('Os PINs informados são diferentes.', erro: true);
-      return;
-    }
-
-    setState(() => _concluindo = true);
-
     try {
-      final usuarios = await _usuarios.listarUsuarios(incluirInativos: false);
-
-      Map<String, dynamic>? administrador;
-
-      for (final item in usuarios) {
-        if ((item['perfil'] ?? '').toString() ==
-            UsuarioRepository.perfilAdministrador) {
-          administrador = item;
-          break;
-        }
-      }
-
-      if (administrador == null) {
-        throw StateError('Administrador local não encontrado.');
-      }
-
-      final id = _int(administrador['id']);
-      if (id <= 0) {
-        throw StateError('Administrador local inválido.');
-      }
-
-      await _usuarios.definirPin(usuarioId: id, pin: pin);
-
-      final sessao = await _usuarios.autenticar(
-        login: (administrador['login'] ?? 'admin').toString(),
-        pin: pin,
-        manterConectado: true,
+      final resposta = await _auth.criarContaComEmailSenha(
+        email: email,
+        senha: senha,
       );
 
-      try {
-        await _licenca.consultarComCacheOffline();
-      } catch (_) {
-        // O gate fará uma nova validação ao abrir o sistema.
+      final possuiSessao = resposta.session != null || _auth.autenticado;
+      if (!possuiSessao) {
+        if (!mounted) return;
+        setState(() {
+          _mensagem =
+              'Conta criada. Confirme o e-mail recebido e depois toque em '
+              '“Já confirmei meu e-mail • entrar e ativar”.';
+        });
+        return;
       }
 
-      if (!mounted) return;
-      Navigator.of(context).pop<Map<String, dynamic>>(sessao);
+      await _abrirEmpresa();
     } catch (erro) {
       if (!mounted) return;
-      _mensagem(_textoErro(erro), erro: true);
+      setState(() => _erro = _auth.textoErro(erro));
     } finally {
-      if (mounted) setState(() => _concluindo = false);
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
-  Map<String, dynamic> _primeiroMapa(dynamic resposta) {
-    if (resposta is List && resposta.isNotEmpty && resposta.first is Map) {
-      return Map<String, dynamic>.from(resposta.first as Map);
+  Future<void> _entrarEAtivar() async {
+    if (_carregando) return;
+
+    final email = _email.text.trim().toLowerCase();
+    final senha = _senha.text.trim();
+
+    if (email.isEmpty || !email.contains('@')) {
+      _mostrarErro('Informe seu e-mail.');
+      return;
     }
 
-    if (resposta is Map) {
-      return Map<String, dynamic>.from(resposta);
+    if (senha.isEmpty) {
+      _mostrarErro('Informe sua senha.');
+      return;
     }
 
-    throw StateError('Resposta de convite inválida.');
+    setState(() {
+      _carregando = true;
+      _erro = null;
+      _mensagem = null;
+    });
+
+    try {
+      await _auth.entrarComEmailSenha(email: email, senha: senha);
+      await _abrirEmpresa();
+    } catch (erro) {
+      if (!mounted) return;
+      setState(() => _erro = _auth.textoErro(erro));
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
   }
 
-  int _int(dynamic valor) {
-    if (valor is int) return valor;
-    if (valor is num) return valor.toInt();
-    return int.tryParse(valor?.toString() ?? '') ?? 0;
-  }
-
-  String _textoErro(Object erro) {
-    var texto = erro.toString().trim();
-
-    for (final prefixo in const [
-      'Bad state: ',
-      'StateError: ',
-      'AuthException: ',
-      'PostgrestException: ',
-      'Exception: ',
-    ]) {
-      if (texto.startsWith(prefixo)) {
-        texto = texto.substring(prefixo.length).trim();
-      }
-    }
-
-    final lower = texto.toLowerCase();
-
-    if (lower.contains('email rate limit') ||
-        lower.contains('over_email_send_rate_limit') ||
-        lower.contains('429')) {
-      return 'Muitos links foram solicitados. Aguarde alguns minutos '
-          'e tente enviar somente uma vez.';
-    }
-
-    return texto.isEmpty ? 'Falha no primeiro acesso.' : texto;
-  }
-
-  void _mensagem(String texto, {bool erro = false}) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(texto),
-          backgroundColor: erro ? Colors.red.shade700 : Colors.green.shade700,
-        ),
+  Future<void> _abrirEmpresa() async {
+    try {
+      final sessao = await _cloudSession.prepararSessao();
+      if (!mounted) return;
+      Navigator.of(context).pop<Map<String, dynamic>>(sessao);
+    } on SelecaoEmpresaNecessaria {
+      throw StateError(
+        'Sua conta possui mais de uma empresa. Volte para a tela de login e '
+        'escolha qual empresa deseja abrir.',
       );
+    }
+  }
+
+  void _mostrarErro(String texto) {
+    if (!mounted) return;
+    setState(() {
+      _erro = texto;
+      _mensagem = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final empresa = _empresa;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Primeiro acesso da empresa'),
-        actions: [
-          TextButton(
-            onPressed: _trocarConta,
-            child: const Text('Trocar conta'),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(18),
-        children: [
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Use o e-mail que foi liberado no Painel de Empresas. '
-                'Nesta fase do beta, cada instalação do Imperium pertence '
-                'a uma única empresa.',
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _email,
-            enabled: empresa == null && !_enviando && !_verificando,
-            keyboardType: TextInputType.emailAddress,
-            autocorrect: false,
-            decoration: const InputDecoration(
-              labelText: 'E-mail do proprietário',
-              prefixIcon: Icon(Icons.email_outlined),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (empresa == null) ...[
-            FilledButton.icon(
-              onPressed: _enviando ? null : _enviarMagicLink,
-              icon: _enviando
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.mark_email_read_outlined),
-              label: Text(_enviando ? 'Enviando...' : 'Enviar Magic Link'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _verificando ? null : _verificarAcesso,
-              icon: _verificando
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.verified_user_outlined),
-              label: Text(
-                _verificando ? 'Verificando...' : 'Já abri o link • verificar',
-              ),
-            ),
-          ] else ...[
-            Card(
-              child: ListTile(
-                leading: const Icon(
-                  Icons.business_outlined,
-                  color: Colors.greenAccent,
-                ),
-                title: Text((empresa['empresa_nome'] ?? 'Empresa').toString()),
-                subtitle: Text(
-                  'Plano ${empresa['plano'] ?? ''} • '
-                  '${empresa['status_efetivo'] ?? ''}',
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _pin,
-              obscureText: _ocultarPin,
-              keyboardType: TextInputType.number,
-              maxLength: 8,
-              decoration: InputDecoration(
-                labelText: 'Criar PIN do administrador',
-                counterText: '',
-                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  onPressed: () {
-                    setState(() => _ocultarPin = !_ocultarPin);
-                  },
-                  icon: Icon(
-                    _ocultarPin
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
+      appBar: AppBar(title: const Text('Ativar empresa')),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Icon(Icons.business_rounded, size: 58),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Ative sua empresa no Imperium',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Use o mesmo e-mail informado na assinatura ou no '
+                        'convite da empresa. A senha criada aqui será a mesma '
+                        'para entrar no aplicativo e na Web.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      TextField(
+                        controller: _email,
+                        enabled: !_carregando,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        decoration: const InputDecoration(
+                          labelText: 'E-mail da empresa',
+                          prefixIcon: Icon(Icons.alternate_email_rounded),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _senha,
+                        enabled: !_carregando,
+                        obscureText: _ocultarSenha,
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        decoration: InputDecoration(
+                          labelText: 'Criar senha',
+                          helperText: 'Mínimo de 8 caracteres',
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            tooltip: _ocultarSenha
+                                ? 'Mostrar senha'
+                                : 'Ocultar senha',
+                            onPressed: _carregando
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _ocultarSenha = !_ocultarSenha;
+                                    });
+                                  },
+                            icon: Icon(
+                              _ocultarSenha
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _confirmarSenha,
+                        enabled: !_carregando,
+                        obscureText: _ocultarConfirmacao,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _criarContaEAtivar(),
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        decoration: InputDecoration(
+                          labelText: 'Confirmar senha',
+                          prefixIcon: const Icon(Icons.lock_reset_rounded),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            tooltip: _ocultarConfirmacao
+                                ? 'Mostrar confirmação'
+                                : 'Ocultar confirmação',
+                            onPressed: _carregando
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _ocultarConfirmacao =
+                                          !_ocultarConfirmacao;
+                                    });
+                                  },
+                            icon: Icon(
+                              _ocultarConfirmacao
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_mensagem != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _mensagem!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.greenAccent),
+                        ),
+                      ],
+                      if (_erro != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _erro!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 52,
+                        child: FilledButton.icon(
+                          onPressed: _carregando ? null : _criarContaEAtivar,
+                          icon: _carregando
+                              ? const SizedBox(
+                                  width: 19,
+                                  height: 19,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.person_add_alt_1_rounded),
+                          label: Text(
+                            _carregando
+                                ? 'Aguarde...'
+                                : 'Criar conta e ativar empresa',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _carregando ? null : _entrarEAtivar,
+                        icon: const Icon(Icons.login_rounded),
+                        label: const Text(
+                          'Já confirmei meu e-mail • entrar e ativar',
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Funcionários não assinam um plano separado. O acesso '
+                        'deles é criado e administrado dentro da empresa pelo '
+                        'administrador.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _confirmarPin,
-              obscureText: _ocultarConfirmacao,
-              keyboardType: TextInputType.number,
-              maxLength: 8,
-              decoration: InputDecoration(
-                labelText: 'Confirmar PIN',
-                counterText: '',
-                prefixIcon: const Icon(Icons.lock_reset_rounded),
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  onPressed: () {
-                    setState(() => _ocultarConfirmacao = !_ocultarConfirmacao);
-                  },
-                  icon: Icon(
-                    _ocultarConfirmacao
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _concluindo ? null : _concluir,
-              icon: _concluindo
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check_circle_outline_rounded),
-              label: Text(
-                _concluindo ? 'Ativando...' : 'Ativar empresa e entrar',
-              ),
-            ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

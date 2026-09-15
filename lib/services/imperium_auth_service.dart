@@ -25,12 +25,8 @@ class ImperiumAuthService {
     required String email,
     required String senha,
   }) async {
-    final emailLimpo = email.trim().toLowerCase();
+    final emailLimpo = _validarEmail(email);
     final senhaLimpa = senha.trim();
-
-    if (emailLimpo.isEmpty || !emailLimpo.contains('@')) {
-      throw ArgumentError('Informe um e-mail válido.');
-    }
 
     if (senhaLimpa.isEmpty) {
       throw ArgumentError('Informe sua senha.');
@@ -49,15 +45,34 @@ class ImperiumAuthService {
     return usuario;
   }
 
+  Future<AuthResponse> criarContaComEmailSenha({
+    required String email,
+    required String senha,
+  }) async {
+    final emailLimpo = _validarEmail(email);
+    final senhaLimpa = senha.trim();
+
+    if (senhaLimpa.length < 8) {
+      throw ArgumentError('A senha deve ter pelo menos 8 caracteres.');
+    }
+
+    final resposta = await _client.auth.signUp(
+      email: emailLimpo,
+      password: senhaLimpa,
+    );
+
+    if (resposta.user == null) {
+      throw StateError('Não foi possível criar sua conta no Imperium.');
+    }
+
+    return resposta;
+  }
+
   Future<void> enviarRecuperacaoSenha({
     required String email,
     String? redirectTo,
   }) async {
-    final emailLimpo = email.trim().toLowerCase();
-
-    if (emailLimpo.isEmpty || !emailLimpo.contains('@')) {
-      throw ArgumentError('Informe um e-mail válido.');
-    }
+    final emailLimpo = _validarEmail(email);
 
     await _client.auth.resetPasswordForEmail(
       emailLimpo,
@@ -119,6 +134,16 @@ class ImperiumAuthService {
       return 'E-mail ou senha incorretos.';
     }
 
+    if (lower.contains('user already registered') ||
+        lower.contains('user_already_exists')) {
+      return 'Este e-mail já possui uma conta. Entre com sua senha para continuar.';
+    }
+
+    if (lower.contains('password should be at least') ||
+        lower.contains('weak_password')) {
+      return 'A senha deve ter pelo menos 8 caracteres.';
+    }
+
     if (lower.contains('email not confirmed') ||
         lower.contains('email_not_confirmed')) {
       return 'Confirme seu e-mail antes de entrar.';
@@ -146,5 +171,15 @@ class ImperiumAuthService {
     }
 
     return texto.isEmpty ? 'Falha ao acessar o Imperium.' : texto;
+  }
+
+  String _validarEmail(String email) {
+    final emailLimpo = email.trim().toLowerCase();
+
+    if (emailLimpo.isEmpty || !emailLimpo.contains('@')) {
+      throw ArgumentError('Informe um e-mail válido.');
+    }
+
+    return emailLimpo;
   }
 }
