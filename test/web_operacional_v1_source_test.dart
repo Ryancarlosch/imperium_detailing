@@ -93,15 +93,16 @@ void main() {
 
     expect(workspace, contains('WebDashboardGerencialPage'));
     expect(workspace, contains('WebOperacionalShell'));
-    expect(workspace, contains('Sistema completo'));
-    expect(workspace, contains("Text('Módulos')"));
+    expect(workspace, contains('_abrirSistemaCompleto'));
+    expect(workspace, contains('Abrir sistema completo'));
+    expect(workspace, contains('abrir-sistema-completo-marca'));
     expect(workspace, contains('dashboard-premium-'));
     expect(workspace, contains('Trocar empresa'));
 
     expect(shell, contains('WebDashboardGerencialPage'));
     expect(shell, contains('Icons.menu_rounded'));
     expect(shell, contains('ExpansionTile'));
-    expect(shell, isNot(contains('Sistema completo')));
+    expect(shell, isNot(contains('abrir-sistema-completo-marca')));
 
     for (final marker in [
       'Dashboard executivo',
