@@ -157,10 +157,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     return ExpansionTile(
       initiallyExpanded: indices.contains(_indice),
       leading: Icon(icone, size: 21),
-      title: Text(
-        titulo,
-        style: const TextStyle(fontWeight: FontWeight.w800),
-      ),
+      title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w800)),
       childrenPadding: const EdgeInsets.only(left: 14, right: 8, bottom: 6),
       children: filhos,
     );
@@ -181,7 +178,11 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
           icone: Icons.car_repair_outlined,
           indices: const {1, 2, 3, 4, 5, 6, 7},
           filhos: [
-            _itemMenu(indice: 1, titulo: 'Clientes', icone: Icons.people_outline),
+            _itemMenu(
+              indice: 1,
+              titulo: 'Clientes',
+              icone: Icons.people_outline,
+            ),
             _itemMenu(
               indice: 2,
               titulo: 'Veículos',
@@ -412,12 +413,15 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
                     value: (empresa['empresa_id'] ?? '').toString(),
                     child: Row(
                       children: [
-                        if ('${empresa['empresa_id']}' == widget.empresaAtualId) ...[
+                        if ('${empresa['empresa_id']}' ==
+                            widget.empresaAtualId) ...[
                           const Icon(Icons.check_rounded, size: 18),
                           const SizedBox(width: 8),
                         ],
                         Expanded(
-                          child: Text((empresa['nome'] ?? 'Empresa').toString()),
+                          child: Text(
+                            (empresa['nome'] ?? 'Empresa').toString(),
+                          ),
                         ),
                       ],
                     ),
