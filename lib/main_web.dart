@@ -101,6 +101,7 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
         );
       }
 
+      await _authSubscription?.cancel();
       _authSubscription = client.auth.onAuthStateChange.listen(
         (estado) {
           if (!mounted) return;
@@ -229,19 +230,17 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
   }
 
   Future<void> _sair() async {
-    try {
-      await _cloudSession.sair();
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _sessao = null;
-        _empresas = const [];
-        _empresaAtualId = '';
-        _definindoSenha = false;
-        _erro = null;
-        _mensagem = null;
-      });
-    }
+    await _cloudSession.sair();
+    if (!mounted) return;
+
+    setState(() {
+      _sessao = null;
+      _empresas = const [];
+      _empresaAtualId = '';
+      _definindoSenha = false;
+      _erro = null;
+      _mensagem = null;
+    });
   }
 
   Future<void> _salvarNovaSenha() async {
