@@ -1,0 +1,95 @@
+name: Wire Stock Products Once
+
+on:
+  push:
+    branches:
+      - desenvolvimento
+    paths:
+      - '.github/workflows/wire_stock_products_once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire-stock-products:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Wire stock product management
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('lib/web/web_operacional_shell.dart')
+          source = path.read_text(encoding='utf-8')
+
+          old_import = "import 'web_estoque_movimentacoes_page.dart';\n"
+          new_import = "import 'web_estoque_gestao_page.dart';\n"
+          if old_import in source:
+              source = source.replace(old_import, new_import, 1)
+          elif new_import not in source:
+              raise SystemExit('stock management import anchor not found')
+
+          old_route = "      8 => WebEstoqueMovimentacoesPage(key: ValueKey('estoque-$_revisao'))," 
+          new_route = "      8 => WebEstoqueGestaoPage(key: ValueKey('estoque-$_revisao'))," 
+          if old_route in source:
+              source = source.replace(old_route, new_route, 1)
+          elif '8 => WebEstoqueGestaoPage(' not in source:
+              raise SystemExit('stock management route anchor not found')
+
+          path.write_text(source, encoding='utf-8')
+          PY
+
+      - name: Format stock management files
+        run: >-
+          dart format
+          lib/web/web_operacional_shell.dart
+          lib/web/web_estoque_gestao_page.dart
+          lib/web/web_estoque_produtos_page.dart
+          lib/services/web_estoque_produtos_service.dart
+          test/web_estoque_movimentacoes_source_test.dart
+          test/web_estoque_produtos_source_test.dart
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run stock Web source tests
+        run: >-
+          flutter test
+          test/web_estoque_movimentacoes_source_test.dart
+          test/web_estoque_produtos_source_test.dart
+
+      - name: Commit integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          if git diff --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            lib/web/web_operacional_shell.dart \
+            lib/web/web_estoque_gestao_page.dart \
+            lib/web/web_estoque_produtos_page.dart \
+            lib/services/web_estoque_produtos_service.dart \
+            test/web_estoque_movimentacoes_source_test.dart \
+            test/web_estoque_produtos_source_test.dart
+          git commit -m 'feat(web): integra cadastro de produtos ao estoque'
+          git push origin HEAD:desenvolvimento
