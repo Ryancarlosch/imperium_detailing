@@ -70,8 +70,11 @@ void main() {
     expect(source, isNot(contains('fecharMenu && Navigator.canPop(context)')));
   });
 
-  test('Entrypoint abre workspace premium multiempresa com Magic Link', () {
+  test('Entrypoint abre workspace premium multiempresa com email e senha', () {
     final source = File('lib/main_web.dart').readAsStringSync();
+    final auth = File(
+      'lib/services/imperium_auth_service.dart',
+    ).readAsStringSync();
     final workspace = File(
       'lib/web/web_workspace_shell.dart',
     ).readAsStringSync();
@@ -81,9 +84,10 @@ void main() {
     ).readAsStringSync();
 
     expect(source, contains('ImperiumWebApp'));
-    expect(source, contains('signInWithOtp'));
-    expect(source, contains('shouldCreateUser: false'));
-    expect(source, isNot(contains('signInWithPassword')));
+    expect(source, contains('entrarComEmailSenha'));
+    expect(source, contains("labelText: 'Senha'"));
+    expect(source, isNot(contains('signInWithOtp')));
+    expect(auth, contains('signInWithPassword'));
     expect(source, contains('EmpresaCloudService.instance'));
     expect(source, contains('WebWorkspaceShell'));
 
@@ -119,7 +123,7 @@ void main() {
     expect(source, isNot(contains('dashboard_page.dart')));
   });
 
-  test('Android e schema nao foram alterados pelo lote', () {
+  test('Android e schema preservam base operacional', () {
     final main = File('lib/main.dart').readAsStringSync();
     final db = File('lib/database/app_database.dart').readAsStringSync();
 
@@ -127,6 +131,7 @@ void main() {
       main,
       contains('OperacionalSyncService.instance.prepararTenantInicial'),
     );
+    expect(main, contains('LoginEmailSenhaPage'));
     expect(db, contains('static const int schemaVersion = 33;'));
   });
 }
