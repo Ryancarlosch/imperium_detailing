@@ -55,13 +55,25 @@ void main() {
     expect(cloudSession, contains('listarEmpresasVinculadas'));
   });
 
-  test('web usa o mesmo resgate automatico depois do login ou cadastro', () {
-    final source = File('lib/main_web.dart').readAsStringSync();
+  test('web reutiliza exatamente o login e o resgate do mobile', () {
+    final web = File('lib/main_web.dart').readAsStringSync();
+    final login = File(
+      'lib/screens/login_email_senha_page.dart',
+    ).readAsStringSync();
+    final firstAccess = File(
+      'lib/screens/empresa_primeiro_acesso_page.dart',
+    ).readAsStringSync();
+    final cloudSession = File(
+      'lib/services/cloud_session_service.dart',
+    ).readAsStringSync();
 
-    expect(source, contains('criarContaComEmailSenha'));
-    expect(source, contains('entrarComEmailSenha'));
-    expect(source, contains("c.rpc('imperium_resgatar_convite')"));
-    expect(source, contains('listarEmpresasVinculadas'));
-    expect(source, contains('mesmo e-mail e senha'));
+    expect(web, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
+    expect(web, contains('CloudSessionService'));
+    expect(web, contains('_cloudSession.prepararSessao()'));
+    expect(login, contains('entrarComEmailSenha'));
+    expect(login, contains('EmpresaPrimeiroAcessoPage'));
+    expect(firstAccess, contains('criarContaComEmailSenha'));
+    expect(cloudSession, contains("client.rpc('imperium_resgatar_convite')"));
+    expect(cloudSession, contains('listarEmpresasVinculadas'));
   });
 }
