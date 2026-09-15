@@ -63,10 +63,8 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
   Future<void> _abrirModulo(String titulo, Widget pagina) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: Text(titulo), leading: const BackButton()),
-          body: pagina,
-        ),
+        settings: RouteSettings(name: titulo),
+        builder: (context) => pagina,
       ),
     );
     if (mounted) await _carregar();
