@@ -90,13 +90,11 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
 
     final paginaRoteada = _paginaRoteada(indice);
     if (paginaRoteada != null) {
-      Navigator.of(context)
-          .push(
-            MaterialPageRoute<void>(builder: (_) => paginaRoteada),
-          )
-          .then((_) {
-            if (mounted) _atualizar();
-          });
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => paginaRoteada)).then((_) {
+        if (mounted) _atualizar();
+      });
       return;
     }
 

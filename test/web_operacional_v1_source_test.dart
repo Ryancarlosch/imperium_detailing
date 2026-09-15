@@ -67,10 +67,7 @@ void main() {
     expect(source, contains("11 => WebContasFinanceirasPage"));
     expect(source, contains("12 => WebRelatoriosPage"));
     expect(source, contains("16 => WebPontoPage"));
-    expect(
-      source,
-      isNot(contains('fecharMenu && Navigator.canPop(context)')),
-    );
+    expect(source, isNot(contains('fecharMenu && Navigator.canPop(context)')));
   });
 
   test('Entrypoint abre workspace premium multiempresa com Magic Link', () {
