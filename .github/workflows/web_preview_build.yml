@@ -40,17 +40,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Format workspace once
-        run: |
-          dart format lib/web/web_workspace_shell.dart
-          if ! git diff --quiet -- lib/web/web_workspace_shell.dart; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add lib/web/web_workspace_shell.dart
-            git commit -m "style(web): aplica formatter oficial no workspace"
-            git push origin HEAD:desenvolvimento
-          fi
-
       - name: Check Web formatting
         run: dart format --output=none --set-exit-if-changed lib/main_web.dart lib/web test/web_*_source_test.dart
 
