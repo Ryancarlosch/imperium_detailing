@@ -21,8 +21,11 @@ void main() {
     expect(source, isNot(contains("import 'dart:io';")));
   });
 
-  test('Web mantem selecao segura de empresa e workspace', () {
+  test('Web mantem selecao segura de empresa e workspace administrativo', () {
     final source = File('lib/main_web.dart').readAsStringSync();
+    final empresaCloud = File(
+      'lib/services/empresa_cloud_service.dart',
+    ).readAsStringSync();
     final workspace = File(
       'lib/web/web_workspace_shell.dart',
     ).readAsStringSync();
@@ -32,7 +35,10 @@ void main() {
     expect(source, contains('atualValida'));
     expect(source, contains('trocarEmpresa'));
     expect(source, contains('WebWorkspaceShell'));
-    expect(source, contains("_papelAtual == 'funcionario'"));
+    expect(
+      empresaCloud,
+      contains("papel != 'admin' && papel != 'proprietario'"),
+    );
     expect(workspace, contains('WebOperacionalShell'));
     expect(shell, contains('WebDashboardGerencialPage'));
     expect(shell, contains('WebPontoPage'));
