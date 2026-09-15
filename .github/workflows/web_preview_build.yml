@@ -89,26 +89,15 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path('lib/main_web.dart')
           source = path.read_text(encoding='utf-8')
-          old = """  Future<void> _sair() async {
-            try {
-              await auth.sair();
-            } finally {
-              if (!mounted) return;
-              setState(() {
-                usuario = null;
-                empresas = const [];
-                empresaAtual = '';
-                erro = null;
-                mensagem = null;
-                senha.clear();
-              });
-            }
-          }
-          """
-          new = """  Future<void> _sair() async {
+          pattern = re.compile(
+              r"  Future<void> _sair\(\) async \{\n.*?\n  \}\n\n  String get _papelAtual",
+              re.S,
+          )
+          replacement = """  Future<void> _sair() async {
             try {
               await auth.sair();
             } finally {
@@ -124,10 +113,12 @@ jobs:
               }
             }
           }
-          """
-          if old in source:
-              source = source.replace(old, new, 1)
-              path.write_text(source, encoding='utf-8')
+
+          String get _papelAtual"""
+          updated, count = pattern.subn(replacement, source, count=1)
+          if count != 1:
+              raise SystemExit(f'Esperava corrigir 1 logout web, corrigi {count}.')
+          path.write_text(updated, encoding='utf-8')
           PY
           AUTH_FILES=(
             lib/main.dart
