@@ -401,8 +401,8 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
                             onPressed: _salvandoSenha
                                 ? null
                                 : () => setState(
-                                    () => _ocultarNovaSenha =
-                                        !_ocultarNovaSenha,
+                                    () =>
+                                        _ocultarNovaSenha = !_ocultarNovaSenha,
                                   ),
                             icon: Icon(
                               _ocultarNovaSenha
