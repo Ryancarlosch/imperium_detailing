@@ -70,64 +70,69 @@ void main() {
     expect(source, isNot(contains('fecharMenu && Navigator.canPop(context)')));
   });
 
-  test('Entrypoint abre workspace premium multiempresa com login compartilhado', () {
-    final source = File('lib/main_web.dart').readAsStringSync();
-    final login = File(
-      'lib/screens/login_email_senha_page.dart',
-    ).readAsStringSync();
-    final auth = File(
-      'lib/services/imperium_auth_service.dart',
-    ).readAsStringSync();
-    final workspace = File(
-      'lib/web/web_workspace_shell.dart',
-    ).readAsStringSync();
-    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
-    final dashboard = File(
-      'lib/web/web_dashboard_gerencial_page.dart',
-    ).readAsStringSync();
+  test(
+    'Entrypoint abre workspace premium multiempresa com login compartilhado',
+    () {
+      final source = File('lib/main_web.dart').readAsStringSync();
+      final login = File(
+        'lib/screens/login_email_senha_page.dart',
+      ).readAsStringSync();
+      final auth = File(
+        'lib/services/imperium_auth_service.dart',
+      ).readAsStringSync();
+      final workspace = File(
+        'lib/web/web_workspace_shell.dart',
+      ).readAsStringSync();
+      final shell = File(
+        'lib/web/web_operacional_shell.dart',
+      ).readAsStringSync();
+      final dashboard = File(
+        'lib/web/web_dashboard_gerencial_page.dart',
+      ).readAsStringSync();
 
-    expect(source, contains('ImperiumWebApp'));
-    expect(source, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
-    expect(source, contains('CloudSessionService.instance'));
-    expect(source, isNot(contains('signInWithOtp')));
-    expect(login, contains('entrarComEmailSenha'));
-    expect(login, contains("labelText: 'Senha'"));
-    expect(auth, contains('signInWithPassword'));
-    expect(source, contains('EmpresaCloudService.instance'));
-    expect(source, contains('WebWorkspaceShell'));
+      expect(source, contains('ImperiumWebApp'));
+      expect(source, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
+      expect(source, contains('CloudSessionService.instance'));
+      expect(source, isNot(contains('signInWithOtp')));
+      expect(login, contains('entrarComEmailSenha'));
+      expect(login, contains("labelText: 'Senha'"));
+      expect(auth, contains('signInWithPassword'));
+      expect(source, contains('EmpresaCloudService.instance'));
+      expect(source, contains('WebWorkspaceShell'));
 
-    expect(workspace, contains('WebDashboardGerencialPage'));
-    expect(workspace, contains('WebOperacionalShell'));
-    expect(workspace, contains('_abrirSistemaCompleto'));
-    expect(workspace, contains('Abrir sistema completo'));
-    expect(workspace, contains('abrir-sistema-completo-marca'));
-    expect(workspace, contains('dashboard-premium-'));
-    expect(workspace, contains('Trocar empresa'));
+      expect(workspace, contains('WebDashboardGerencialPage'));
+      expect(workspace, contains('WebOperacionalShell'));
+      expect(workspace, contains('_abrirSistemaCompleto'));
+      expect(workspace, contains('Abrir sistema completo'));
+      expect(workspace, contains('abrir-sistema-completo-marca'));
+      expect(workspace, contains('dashboard-premium-'));
+      expect(workspace, contains('Trocar empresa'));
 
-    expect(shell, contains('WebDashboardGerencialPage'));
-    expect(shell, contains('Icons.menu_rounded'));
-    expect(shell, contains('ExpansionTile'));
-    expect(shell, isNot(contains('abrir-sistema-completo-marca')));
+      expect(shell, contains('WebDashboardGerencialPage'));
+      expect(shell, contains('Icons.menu_rounded'));
+      expect(shell, contains('ExpansionTile'));
+      expect(shell, isNot(contains('abrir-sistema-completo-marca')));
 
-    for (final marker in [
-      'Dashboard executivo',
-      'Saldo consolidado',
-      'Vendas líquidas',
-      'A receber',
-      'Ticket médio',
-      'Clientes ativos',
-      'Veículos',
-      'Acesso rápido',
-      'Contas e caixa',
-      'DRE gerencial',
-      'Ponto e equipe',
-      'Desempenho da equipe',
-    ]) {
-      expect(dashboard, contains(marker));
-    }
+      for (final marker in [
+        'Dashboard executivo',
+        'Saldo consolidado',
+        'Vendas líquidas',
+        'A receber',
+        'Ticket médio',
+        'Clientes ativos',
+        'Veículos',
+        'Acesso rápido',
+        'Contas e caixa',
+        'DRE gerencial',
+        'Ponto e equipe',
+        'Desempenho da equipe',
+      ]) {
+        expect(dashboard, contains(marker));
+      }
 
-    expect(source, isNot(contains('dashboard_page.dart')));
-  });
+      expect(source, isNot(contains('dashboard_page.dart')));
+    },
+  );
 
   test('Android e schema preservam base operacional', () {
     final main = File('lib/main.dart').readAsStringSync();
