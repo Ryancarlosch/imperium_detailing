@@ -31,13 +31,24 @@ class CloudSessionService {
       return const [];
     }
 
+    Object? erroAtivacao;
     try {
+      // Se existir uma assinatura/convite pendente para o e-mail autenticado,
+      // a RPC converte automaticamente esse registro em vinculo da empresa.
+      // A chamada e idempotente: nos proximos logins apenas reutiliza o vinculo.
       await client.rpc('imperium_resgatar_convite');
-    } catch (_) {
-      // Sem convite pendente ou RPC indisponível: segue com vínculos existentes.
+    } catch (erro) {
+      erroAtivacao = erro;
     }
 
-    return _empresaService.listarEmpresasVinculadas();
+    final empresas = await _empresaService.listarEmpresasVinculadas();
+    if (empresas.isEmpty && erroAtivacao != null) {
+      throw StateError(
+        ImperiumAuthService.instance.textoErro(erroAtivacao),
+      );
+    }
+
+    return empresas;
   }
 
   Future<Map<String, dynamic>> prepararSessao({String? empresaId}) async {
@@ -52,8 +63,8 @@ class CloudSessionService {
     if (empresas.isEmpty) {
       throw StateError(
         'Nenhuma empresa ativa foi encontrada para este e-mail. '
-        'Use o mesmo e-mail informado na assinatura ou no convite do Imperium '
-        'e confirme se a licença da empresa está ativa.',
+        'Use o mesmo e-mail informado na assinatura do Imperium e confirme '
+        'se a licença da empresa está ativa.',
       );
     }
 
