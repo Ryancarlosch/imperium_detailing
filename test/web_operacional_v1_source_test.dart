@@ -70,8 +70,11 @@ void main() {
     expect(source, isNot(contains('fecharMenu && Navigator.canPop(context)')));
   });
 
-  test('Entrypoint abre workspace premium multiempresa com email e senha', () {
+  test('Entrypoint abre workspace premium multiempresa com login compartilhado', () {
     final source = File('lib/main_web.dart').readAsStringSync();
+    final login = File(
+      'lib/screens/login_email_senha_page.dart',
+    ).readAsStringSync();
     final auth = File(
       'lib/services/imperium_auth_service.dart',
     ).readAsStringSync();
@@ -84,9 +87,11 @@ void main() {
     ).readAsStringSync();
 
     expect(source, contains('ImperiumWebApp'));
-    expect(source, contains('entrarComEmailSenha'));
-    expect(source, contains("'Criar senha' : 'Senha'"));
+    expect(source, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
+    expect(source, contains('CloudSessionService.instance'));
     expect(source, isNot(contains('signInWithOtp')));
+    expect(login, contains('entrarComEmailSenha'));
+    expect(login, contains("labelText: 'Senha'"));
     expect(auth, contains('signInWithPassword'));
     expect(source, contains('EmpresaCloudService.instance'));
     expect(source, contains('WebWorkspaceShell'));
