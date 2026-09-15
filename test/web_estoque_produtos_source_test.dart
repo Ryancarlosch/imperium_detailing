@@ -48,4 +48,11 @@ void main() {
     expect(page, contains('Saldo e movimentações'));
     expect(page, contains('Cadastro de produtos'));
   });
+
+  test('Menu Web abre a gestao completa de estoque', () {
+    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
+
+    expect(shell, contains("import 'web_estoque_gestao_page.dart';"));
+    expect(shell, contains('8 => WebEstoqueGestaoPage('));
+  });
 }
