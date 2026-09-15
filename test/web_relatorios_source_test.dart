@@ -8,9 +8,7 @@ void main() {
       'lib/services/web_cloud_relatorios_service.dart',
     ).readAsStringSync();
     final page = File('lib/web/web_relatorios_page.dart').readAsStringSync();
-    final shell = File(
-      'lib/web/web_operacional_shell.dart',
-    ).readAsStringSync();
+    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
     final dashboard = File(
       'lib/web/web_dashboard_gerencial_page.dart',
     ).readAsStringSync();

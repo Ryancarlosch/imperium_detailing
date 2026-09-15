@@ -10,9 +10,7 @@ void main() {
     final page = File(
       'lib/web/web_contas_financeiras_page.dart',
     ).readAsStringSync();
-    final shell = File(
-      'lib/web/web_operacional_shell.dart',
-    ).readAsStringSync();
+    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
     final dashboard = File(
       'lib/web/web_dashboard_gerencial_page.dart',
     ).readAsStringSync();

@@ -24,9 +24,7 @@ void main() {
     final workspace = File(
       'lib/web/web_workspace_shell.dart',
     ).readAsStringSync();
-    final shell = File(
-      'lib/web/web_operacional_shell.dart',
-    ).readAsStringSync();
+    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
 
     expect(source, contains('listarEmpresasVinculadas'));
     expect(source, contains('empresaAtualValida'));
