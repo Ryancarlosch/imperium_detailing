@@ -335,9 +335,7 @@ class _PontoNuvemImportacaoPageState extends State<PontoNuvemImportacaoPage> {
                   leading: const CircleAvatar(
                     child: Icon(Icons.badge_outlined),
                   ),
-                  title: Text(
-                    colaborador['nome']?.toString() ?? 'Funcionário',
-                  ),
+                  title: Text(colaborador['nome']?.toString() ?? 'Funcionário'),
                   subtitle: const Text(
                     'Cadastro operacional vinculado à empresa',
                   ),
