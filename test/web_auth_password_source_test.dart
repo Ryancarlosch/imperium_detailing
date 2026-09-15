@@ -40,8 +40,10 @@ void main() {
     );
     expect(mainSource, contains('LoginEmailSenhaPage'));
     expect(loginSource, contains('entrarComEmailSenha'));
+    expect(loginSource, contains('enviarRecuperacaoSenha'));
     expect(loginSource, contains("labelText: 'E-mail'"));
     expect(loginSource, contains("labelText: 'Senha'"));
-    expect(loginSource, contains('Funcionários são criados e administrados'));
+    expect(loginSource, contains('Funcionário: seu acesso é criado'));
+    expect(loginSource, isNot(contains('FuncionarioPrimeiroAcessoPage')));
   });
 }
