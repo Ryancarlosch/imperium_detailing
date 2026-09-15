@@ -60,6 +60,36 @@ class WebWorkspaceShell extends StatelessWidget {
     await onTrocarEmpresa(id);
   }
 
+  Widget _atalhoSistemaCompleto(BuildContext context, {required bool compacto}) {
+    final tamanho = compacto ? 36.0 : 40.0;
+
+    return Tooltip(
+      message: 'Abrir sistema completo',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: const ValueKey('abrir-sistema-completo-marca'),
+          onTap: () => _abrirSistemaCompleto(context),
+          borderRadius: BorderRadius.circular(12),
+          child: Ink(
+            width: tamanho,
+            height: tamanho,
+            decoration: BoxDecoration(
+              color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: ImperiumWebTheme.border),
+            ),
+            child: const Icon(
+              Icons.auto_awesome_mosaic_outlined,
+              color: ImperiumWebTheme.accentStrong,
+              size: 21,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final largura = MediaQuery.sizeOf(context).width;
@@ -72,20 +102,7 @@ class WebWorkspaceShell extends StatelessWidget {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: compacto ? 36 : 40,
-              height: compacto ? 36 : 40,
-              decoration: BoxDecoration(
-                color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: ImperiumWebTheme.border),
-              ),
-              child: const Icon(
-                Icons.auto_awesome_mosaic_outlined,
-                color: ImperiumWebTheme.accentStrong,
-                size: 21,
-              ),
-            ),
+            _atalhoSistemaCompleto(context, compacto: compacto),
             const SizedBox(width: 11),
             Flexible(
               child: Column(
@@ -119,14 +136,6 @@ class WebWorkspaceShell extends StatelessWidget {
           ],
         ),
         actions: [
-          if (!compacto) ...[
-            FilledButton.tonalIcon(
-              onPressed: () => _abrirSistemaCompleto(context),
-              icon: const Icon(Icons.apps_rounded, size: 19),
-              label: const Text('Sistema completo'),
-            ),
-            const SizedBox(width: 8),
-          ],
           PopupMenuButton<String>(
             tooltip: 'Trocar empresa',
             onSelected: _trocarEmpresa,
@@ -210,14 +219,6 @@ class WebWorkspaceShell extends StatelessWidget {
       body: WebDashboardGerencialPage(
         key: ValueKey('dashboard-premium-$empresaAtualId'),
       ),
-      floatingActionButton: compacto
-          ? FloatingActionButton.extended(
-              tooltip: 'Abrir módulos',
-              onPressed: () => _abrirSistemaCompleto(context),
-              icon: const Icon(Icons.apps_rounded),
-              label: const Text('Módulos'),
-            )
-          : null,
     );
   }
 }
