@@ -64,10 +64,7 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: Text(titulo),
-            leading: const BackButton(),
-          ),
+          appBar: AppBar(title: Text(titulo), leading: const BackButton()),
           body: pagina,
         ),
       ),
@@ -103,15 +100,13 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
         : disponivel >= 680
         ? 2
         : 1;
-    final larguraKpi =
-        (disponivel - (12 * (colunasKpi - 1))) / colunasKpi;
+    final larguraKpi = (disponivel - (12 * (colunasKpi - 1))) / colunasKpi;
     final colunasAcoes = disponivel >= 980
         ? 4
         : disponivel >= 620
         ? 2
         : 1;
-    final larguraAcao =
-        (disponivel - (12 * (colunasAcoes - 1))) / colunasAcoes;
+    final larguraAcao = (disponivel - (12 * (colunasAcoes - 1))) / colunasAcoes;
     final maiorVendaEquipe = executores.isEmpty ? 0.0 : executores.first.vendas;
 
     return Stack(
@@ -408,10 +403,7 @@ class _CabecalhoPainel extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'Atualizado às $ultimaAtualizacao',
-                style: const TextStyle(
-                  color: Color(0xFF89939E),
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Color(0xFF89939E), fontSize: 12),
               ),
             ],
           ),
@@ -721,7 +713,9 @@ class _QuickAction extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                    color: ImperiumWebTheme.accentStrong.withValues(
+                      alpha: 0.10,
+                    ),
                     borderRadius: BorderRadius.circular(13),
                   ),
                   child: Icon(
@@ -945,17 +939,11 @@ class _SectionTitle extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(
-                subtitulo,
-                style: const TextStyle(color: Color(0xFFAAB3BD)),
-              ),
+              Text(subtitulo, style: const TextStyle(color: Color(0xFFAAB3BD))),
             ],
           ),
         ),
-        if (trailing != null) ...[
-          const SizedBox(width: 12),
-          trailing!,
-        ],
+        if (trailing != null) ...[const SizedBox(width: 12), trailing!],
       ],
     );
   }
