@@ -37,6 +37,7 @@ class WebOperacionalShell extends StatefulWidget {
 class _WebOperacionalShellState extends State<WebOperacionalShell> {
   final _service = WebCloudOperacionalService.instance;
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   int _indice = 0;
   int _revisao = 0;
@@ -155,6 +156,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     required Set<int> indices,
   }) {
     return ExpansionTile(
+      key: ValueKey('$titulo-${indices.contains(_indice)}'),
       initiallyExpanded: indices.contains(_indice),
       leading: Icon(icone, size: 21),
       title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -293,94 +295,120 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final compacto = MediaQuery.sizeOf(context).width < 760;
-
-    return Scaffold(
-      drawer: Drawer(
-        width: compacto ? 310 : 340,
-        child: SafeArea(
-          child: Column(
+  Widget _conteudoMenuLateral() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 14, 16),
+          child: Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
-                child: Row(
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_mosaic_outlined,
+                  color: ImperiumWebTheme.accentStrong,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: ImperiumWebTheme.accentStrong.withValues(
-                          alpha: 0.12,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.auto_awesome_mosaic_outlined,
-                        color: ImperiumWebTheme.accentStrong,
+                    const Text(
+                      'Imperium Manager',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Imperium Manager',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          Text(
-                            _nomeEmpresaAtual,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFFAAB3BD),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 2),
+                    Text(
+                      _nomeEmpresaAtual,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFFAAB3BD),
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1),
-              Expanded(child: _menu()),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.logout_rounded),
-                title: const Text('Sair'),
-                subtitle: Text(
-                  widget.usuarioEmail,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: widget.onSair,
-              ),
             ],
           ),
         ),
-      ),
-      appBar: AppBar(
-        toolbarHeight: compacto ? 62 : 68,
-        leading: Builder(
-          builder: (context) => IconButton(
-            tooltip: 'Abrir menu',
-            onPressed: () => Scaffold.of(context).openDrawer(),
-            icon: const Icon(Icons.menu_rounded),
+        const Divider(height: 1),
+        Expanded(child: _menu()),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+          child: ListTile(
+            leading: const CircleAvatar(
+              radius: 17,
+              child: Icon(Icons.person_outline_rounded, size: 18),
+            ),
+            title: const Text(
+              'Conta',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            subtitle: Text(
+              widget.usuarioEmail,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: IconButton(
+              tooltip: 'Sair',
+              onPressed: widget.onSair,
+              icon: const Icon(Icons.logout_rounded),
+            ),
           ),
         ),
-        titleSpacing: 4,
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final largura = MediaQuery.sizeOf(context).width;
+    final compacto = largura < 760;
+    final desktop = largura >= 1180;
+
+    return Scaffold(
+      key: _scaffoldKey,
+      drawer: desktop
+          ? null
+          : Drawer(
+              width: compacto ? 310 : 340,
+              child: SafeArea(child: _conteudoMenuLateral()),
+            ),
+      appBar: AppBar(
+        toolbarHeight: compacto ? 62 : 68,
+        automaticallyImplyLeading: false,
+        leading: desktop
+            ? null
+            : Builder(
+                builder: (context) => IconButton(
+                  tooltip: 'Abrir menu',
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  icon: const Icon(Icons.menu_rounded),
+                ),
+              ),
+        titleSpacing: desktop ? 24 : 4,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              compacto ? _tituloAtual : 'Imperium Manager · $_tituloAtual',
+              desktop
+                  ? _tituloAtual
+                  : compacto
+                  ? _tituloAtual
+                  : 'Imperium Manager · $_tituloAtual',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
@@ -468,7 +496,23 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
           SizedBox(width: compacto ? 4 : 12),
         ],
       ),
-      body: _pagina(),
+      body: desktop
+          ? Row(
+              children: [
+                Container(
+                  width: 300,
+                  decoration: const BoxDecoration(
+                    color: ImperiumWebTheme.surface,
+                    border: Border(
+                      right: BorderSide(color: ImperiumWebTheme.border),
+                    ),
+                  ),
+                  child: _conteudoMenuLateral(),
+                ),
+                Expanded(child: _pagina()),
+              ],
+            )
+          : _pagina(),
     );
   }
 }
