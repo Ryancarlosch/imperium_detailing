@@ -9,6 +9,8 @@ import 'screens/login_email_senha_page.dart';
 import 'services/cloud_session_service.dart';
 import 'services/empresa_cloud_service.dart';
 import 'services/imperium_auth_service.dart';
+import 'services/licenca_empresa_cloud_service.dart';
+import 'services/licenca_service.dart';
 import 'services/supabase_bootstrap.dart';
 import 'web/imperium_web_theme.dart';
 import 'web/web_workspace_shell.dart';
@@ -51,6 +53,8 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
   final CloudSessionService _cloudSession = CloudSessionService.instance;
   final EmpresaCloudService _empresaService = EmpresaCloudService.instance;
   final ImperiumAuthService _auth = ImperiumAuthService.instance;
+  final LicencaEmpresaCloudService _licencaService =
+      const LicencaEmpresaCloudService();
 
   final TextEditingController _novaSenha = TextEditingController();
   final TextEditingController _confirmarNovaSenha = TextEditingController();
@@ -68,6 +72,7 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
   Map<String, dynamic>? _sessao;
   List<Map<String, dynamic>> _empresas = const [];
   String _empresaAtualId = '';
+  LicencaStatus? _licenca;
 
   SupabaseClient? get _client => SupabaseBootstrap.client;
 
@@ -113,6 +118,7 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
               _sessao = null;
               _empresas = const [];
               _empresaAtualId = '';
+              _licenca = null;
               _erro = null;
               _mensagem = 'Crie uma nova senha para concluir o acesso.';
               _carregando = false;
@@ -125,6 +131,7 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
               _sessao = null;
               _empresas = const [];
               _empresaAtualId = '';
+              _licenca = null;
               _definindoSenha = false;
               _erro = null;
               _mensagem = null;
@@ -157,6 +164,7 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
         // A tela compartilhada de login detecta a sessão Supabase existente
         // e apresenta o mesmo seletor multiempresa usado no aplicativo.
         _sessao = null;
+        _licenca = null;
       }
     } catch (erro) {
       _erro = _auth.textoErro(erro);
@@ -178,11 +186,14 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
       );
     }
 
+    final licenca = await _licencaService.consultar(atual);
+
     if (!mounted) return;
     setState(() {
       _sessao = Map<String, dynamic>.from(sessao);
       _empresas = vinculadas;
       _empresaAtualId = atual;
+      _licenca = licenca;
       _erro = null;
       _mensagem = null;
     });
@@ -229,6 +240,27 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
     }
   }
 
+  Future<void> _revalidarLicenca() async {
+    final empresaId = _empresaAtualId.trim();
+    if (empresaId.isEmpty || _carregando) return;
+
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+
+    try {
+      final licenca = await _licencaService.consultar(empresaId);
+      if (!mounted) return;
+      setState(() => _licenca = licenca);
+    } catch (erro) {
+      if (!mounted) return;
+      setState(() => _erro = _auth.textoErro(erro));
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
+
   Future<void> _sair() async {
     await _cloudSession.sair();
     if (!mounted) return;
@@ -237,6 +269,7 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
       _sessao = null;
       _empresas = const [];
       _empresaAtualId = '';
+      _licenca = null;
       _definindoSenha = false;
       _erro = null;
       _mensagem = null;
@@ -283,6 +316,7 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
         setState(() {
           _definindoSenha = false;
           _sessao = null;
+          _licenca = null;
           _mensagem = 'Senha atualizada. Escolha a empresa para continuar.';
         });
       }
@@ -346,6 +380,77 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
                         onPressed: _sair,
                         icon: const Icon(Icons.logout_rounded),
                         label: const Text('Entrar com outra conta'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _licencaBloqueadaTela(LicencaStatus licenca) {
+    final motivo = licenca.motivo.trim().isEmpty
+        ? 'A licença desta empresa não está liberada.'
+        : licenca.motivo.trim();
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Icon(Icons.lock_clock_outlined, size: 58),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Acesso temporariamente indisponível',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        licenca.empresaNome.isEmpty
+                            ? 'Empresa'
+                            : licenca.empresaNome,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Plano: ${licenca.plano} • Status: ${licenca.statusEfetivo}',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(motivo, textAlign: TextAlign.center),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Web e aplicativo usam a mesma licença da empresa.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        onPressed: _revalidarLicenca,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Validar novamente'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: _sair,
+                        icon: const Icon(Icons.logout_rounded),
+                        label: const Text('Sair'),
                       ),
                     ],
                   ),
@@ -497,6 +602,10 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
       }
       return LoginEmailSenhaPage(onLogin: _aoEntrar);
     }
+
+    final licenca = _licenca;
+    if (licenca == null) return _erroTela();
+    if (!licenca.acessoLiberado) return _licencaBloqueadaTela(licenca);
 
     return WebWorkspaceShell(
       usuarioEmail: (_client?.auth.currentUser?.email ?? '').trim(),
