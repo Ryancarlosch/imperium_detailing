@@ -7,8 +7,7 @@ class WebEstoqueProdutosPage extends StatefulWidget {
   const WebEstoqueProdutosPage({super.key});
 
   @override
-  State<WebEstoqueProdutosPage> createState() =>
-      _WebEstoqueProdutosPageState();
+  State<WebEstoqueProdutosPage> createState() => _WebEstoqueProdutosPageState();
 }
 
 class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
@@ -178,8 +177,14 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                                   labelText: 'Unidade base *',
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: 'ml', child: Text('ml')),
-                                  DropdownMenuItem(value: 'g', child: Text('g')),
+                                  DropdownMenuItem(
+                                    value: 'ml',
+                                    child: Text('ml'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'g',
+                                    child: Text('g'),
+                                  ),
                                   DropdownMenuItem(
                                     value: 'metro',
                                     child: Text('metro'),
@@ -195,8 +200,9 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                                         if (valor == null) return;
                                         setModalState(() {
                                           unidadeBase = valor;
-                                          unidadeCompra =
-                                              _unidadesCompra(valor).first;
+                                          unidadeCompra = _unidadesCompra(
+                                            valor,
+                                          ).first;
                                         });
                                       },
                               ),
@@ -215,7 +221,8 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                                 ),
                                 validator: (texto) {
                                   final valor = _double(texto);
-                                  if ((texto ?? '').trim().isEmpty || valor < 0) {
+                                  if ((texto ?? '').trim().isEmpty ||
+                                      valor < 0) {
                                     return 'Informe um mínimo válido.';
                                   }
                                   return null;
@@ -502,7 +509,10 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                 children: [
                   _ProdutoResumoCard(titulo: 'Ativos', valor: '$ativos'),
                   _ProdutoResumoCard(titulo: 'Inativos', valor: '$inativos'),
-                  _ProdutoResumoCard(titulo: 'Total listado', valor: '${itens.length}'),
+                  _ProdutoResumoCard(
+                    titulo: 'Total listado',
+                    valor: '${itens.length}',
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -542,7 +552,8 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                           (item['categoria'] ?? '').toString(),
                           'Saldo ${_numero(saldo)} $unidade',
                           'Mínimo ${_numero(_double(item['quantidade_minima']))}',
-                          if (custo > 0) 'Custo ${_moeda.format(custo)} / $unidade',
+                          if (custo > 0)
+                            'Custo ${_moeda.format(custo)} / $unidade',
                           if ((item['ean'] ?? '').toString().trim().isNotEmpty)
                             'EAN ${item['ean']}',
                         ].where((texto) => texto.trim().isNotEmpty).join(' · '),
@@ -648,15 +659,19 @@ double _double(dynamic valor) {
 
 String _numero(double valor) {
   if (valor == valor.truncateToDouble()) return valor.toInt().toString();
-  return valor.toStringAsFixed(3).replaceAll(RegExp(r'0+$'), '').replaceAll(
-    RegExp(r'\.$'),
-    '',
-  );
+  return valor
+      .toStringAsFixed(3)
+      .replaceAll(RegExp(r'0+$'), '')
+      .replaceAll(RegExp(r'\.$'), '');
 }
 
 String _textoErro(Object erro) {
   final texto = erro.toString();
-  const prefixos = ['PostgrestException(message: ', 'Exception: ', 'Bad state: '];
+  const prefixos = [
+    'PostgrestException(message: ',
+    'Exception: ',
+    'Bad state: ',
+  ];
   var resultado = texto;
   for (final prefixo in prefixos) {
     if (resultado.startsWith(prefixo)) {
@@ -665,6 +680,8 @@ String _textoErro(Object erro) {
   }
   final detalhes = resultado.indexOf(', code:');
   if (detalhes > 0) resultado = resultado.substring(0, detalhes);
-  if (resultado.endsWith(')')) resultado = resultado.substring(0, resultado.length - 1);
+  if (resultado.endsWith(')')) {
+    resultado = resultado.substring(0, resultado.length - 1);
+  }
   return resultado.trim();
 }

@@ -30,10 +30,12 @@ void main() {
   });
 
   test('Menu Web aponta Estoque para pagina transacional', () {
-    final source = File('lib/web/web_operacional_shell.dart').readAsStringSync();
+    final source = File(
+      'lib/web/web_operacional_shell.dart',
+    ).readAsStringSync();
 
-    expect(source, contains("import 'web_estoque_movimentacoes_page.dart';"));
-    expect(source, contains('8 => WebEstoqueMovimentacoesPage('));
+    expect(source, contains("import 'web_estoque_gestao_page.dart';"));
+    expect(source, contains('8 => WebEstoqueGestaoPage('));
   });
 
   test('Migration de estoque protege reserva e consome lotes FIFO', () {

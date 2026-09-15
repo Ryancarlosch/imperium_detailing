@@ -734,7 +734,7 @@ double _double(dynamic valor) {
   return double.tryParse(texto) ?? 0;
 }
 
-String _numero(double valor) {
+String _numero(num valor) {
   if ((valor - valor.roundToDouble()).abs() < 0.000001) {
     return valor.toInt().toString();
   }

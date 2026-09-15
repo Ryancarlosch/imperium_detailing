@@ -39,7 +39,9 @@ void main() {
   });
 
   test('Estoque Web separa movimentacao e cadastro de produtos', () {
-    final page = File('lib/web/web_estoque_gestao_page.dart').readAsStringSync();
+    final page = File(
+      'lib/web/web_estoque_gestao_page.dart',
+    ).readAsStringSync();
 
     expect(page, contains('WebEstoqueMovimentacoesPage'));
     expect(page, contains('WebEstoqueProdutosPage'));
