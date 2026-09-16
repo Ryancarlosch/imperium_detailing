@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../services/assinatura_checkout_service.dart';
 import '../services/licenca_empresa_cloud_service.dart';
 import '../services/licenca_service.dart';
 
@@ -17,6 +19,8 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
   final LicencaService _service = const LicencaService();
   final LicencaEmpresaCloudService _empresaService =
       const LicencaEmpresaCloudService();
+  final AssinaturaCheckoutService _checkoutService =
+      const AssinaturaCheckoutService();
   final DateFormat _data = DateFormat('dd/MM/yyyy');
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
@@ -24,8 +28,10 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
   );
 
   bool _carregando = true;
+  bool _preparandoCheckout = false;
   String? _erro;
   LicencaStatus? _status;
+  List<AssinaturaPlano> _planos = const <AssinaturaPlano>[];
 
   @override
   void initState() {
@@ -45,10 +51,18 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
           ? await _service.consultar()
           : await _empresaService.consultar(empresaId);
 
+      var planos = _planos;
+      try {
+        planos = await _checkoutService.listarPlanos();
+      } catch (_) {
+        // O status da licença continua útil mesmo se os planos falharem.
+      }
+
       if (!mounted) return;
 
       setState(() {
         _status = status;
+        _planos = planos;
         _carregando = false;
       });
     } catch (erro) {
@@ -139,37 +153,146 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
           'continua disponível para você renovar e liberar novamente a empresa.';
     }
 
-    return 'Acompanhe aqui o seu plano, vencimento e futuras cobranças do Imperium.';
+    return 'Acompanhe aqui o seu plano, vencimento e pagamentos do Imperium.';
   }
 
   String _textoBotaoPagamento(LicencaStatus status) {
     if (status.statusEfetivo == 'teste') return 'Assinar antes do vencimento';
     if (!status.acessoLiberado) return 'Renovar e liberar acesso';
-    return 'Gerenciar pagamento';
+    return 'Renovar ou estender plano';
+  }
+
+  String _periodoPlano(AssinaturaPlano plano) {
+    if (plano.meses == 1) return '1 mês';
+    if (plano.meses == 12) return '12 meses';
+    return '${plano.meses} meses';
   }
 
   Future<void> _abrirPagamento() async {
+    if (_preparandoCheckout || !mounted) return;
+
+    var planos = _planos;
+    if (planos.isEmpty) {
+      try {
+        planos = await _checkoutService.listarPlanos();
+        if (!mounted) return;
+        setState(() => _planos = planos);
+      } catch (erro) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_textoErro(erro))),
+        );
+        return;
+      }
+    }
+
     if (!mounted) return;
 
-    await showDialog<void>(
+    final selecionado = await showDialog<AssinaturaPlano>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Pagamento do plano'),
-          content: const Text(
-            'A área de Plano já está preparada para receber o checkout. '
-            'A integração com a InfinitePay será conectada na próxima etapa. '
-            'Nenhuma cobrança foi realizada agora.',
+          title: const Text('Escolha o plano'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final plano in planos)
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      title: Text(
+                        plano.nome,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text(_periodoPlano(plano)),
+                      trailing: Text(
+                        _moeda.format(plano.valor),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      onTap: () => Navigator.of(dialogContext).pop(plano),
+                    ),
+                  ),
+              ],
+            ),
           ),
           actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Entendi'),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
             ),
           ],
         );
       },
     );
+
+    if (selecionado != null && mounted) {
+      await _prepararCheckout(selecionado);
+    }
+  }
+
+  Future<void> _prepararCheckout(AssinaturaPlano plano) async {
+    final status = _status;
+    if (status == null || _preparandoCheckout) return;
+
+    setState(() => _preparandoCheckout = true);
+
+    try {
+      final resultado = await _checkoutService.criarCheckout(
+        empresaId: status.empresaId,
+        planoCodigo: plano.codigo,
+      );
+
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Checkout pronto'),
+            content: Text(
+              '${plano.nome} por ${_moeda.format(plano.valor)}. '
+              'O pagamento será finalizado no ambiente seguro da InfinitePay. '
+              'Depois da aprovação, a licença é renovada automaticamente.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Agora não'),
+              ),
+              FilledButton.icon(
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+                  final abriu = await launchUrl(
+                    Uri.parse(resultado.url),
+                    mode: LaunchMode.platformDefault,
+                  );
+                  if (!abriu && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Não foi possível abrir o checkout.'),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.open_in_new_rounded),
+                label: const Text('Ir para pagamento'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (erro) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_textoErro(erro))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _preparandoCheckout = false);
+      }
+    }
   }
 
   Widget _linha(String titulo, String valor) {
@@ -179,7 +302,7 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 125,
+            width: 145,
             child: Text(titulo, style: const TextStyle(color: Colors.white60)),
           ),
           Expanded(
@@ -189,6 +312,43 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _cardPlanos() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Opções de assinatura',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Pix ou cartão pela InfinitePay. Toque em uma opção para continuar.',
+              style: TextStyle(color: Colors.white60),
+            ),
+            const SizedBox(height: 10),
+            for (final plano in _planos)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(plano.nome),
+                subtitle: Text(_periodoPlano(plano)),
+                trailing: Text(
+                  _moeda.format(plano.valor),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                onTap: _preparandoCheckout
+                    ? null
+                    : () => _prepararCheckout(plano),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -203,7 +363,7 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
         actions: [
           IconButton(
             tooltip: 'Atualizar',
-            onPressed: _carregando ? null : _carregar,
+            onPressed: _carregando || _preparandoCheckout ? null : _carregar,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -309,7 +469,7 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
                           ),
                           if (status.valorMensal != null)
                             _linha(
-                              'Mensalidade',
+                              'Valor mensal equivalente',
                               _moeda.format(status.valorMensal),
                             ),
                         ],
@@ -333,22 +493,39 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    height: 52,
-                    child: FilledButton.icon(
-                      onPressed: _abrirPagamento,
-                      icon: const Icon(Icons.payments_outlined),
-                      label: Text(_textoBotaoPagamento(status)),
+                  if (status.statusEfetivo != 'vitalicia' &&
+                      status.statusEfetivo != 'cortesia') ...[
+                    if (_planos.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      _cardPlanos(),
+                    ],
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      height: 52,
+                      child: FilledButton.icon(
+                        onPressed: _preparandoCheckout ? null : _abrirPagamento,
+                        icon: _preparandoCheckout
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.payments_outlined),
+                        label: Text(
+                          _preparandoCheckout
+                              ? 'Preparando checkout...'
+                              : _textoBotaoPagamento(status),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'O checkout será conectado à InfinitePay na próxima etapa. '
-                    'Até lá, este botão não realiza nenhuma cobrança.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
-                  ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'A InfinitePay processa o pagamento. O Imperium não recebe '
+                      'nem armazena os dados do seu cartão. Após a aprovação, a '
+                      'licença é atualizada automaticamente.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ],
                 ],
               ),
             ),
