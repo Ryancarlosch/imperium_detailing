@@ -44,44 +44,33 @@ void main() {
     expect(source, contains("'taxa_cartao_media_percentual'"));
   });
 
-  test('Sync operacional chama Precificacao apos Financeiro', () {
+  test('Sync operacional executa Precificacao apos Financeiro', () {
     final source = File(
       'lib/services/operacional_sync_service.dart',
     ).readAsStringSync();
     final compact = source.replaceAll(RegExp(r'\s+'), '');
 
-    final finUpload =
-        RegExp(
-          r'awaitFinanceiroCloudV3Service\.instance\.'
-          r'sincronizarUpload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
+    expect(compact, contains("modulo:'financeiro',prioridade:70"));
+    expect(compact, contains("modulo:'precificacao',prioridade:80"));
+    expect(
+      compact,
+      contains("dependencias:const<String>['financeiro','estoque']"),
+    );
+    expect(compact, contains('executar:()=>_syncPrecificacao(empresaId)'));
 
-    final precUpload =
-        RegExp(
-          r'awaitPrecificacaoCloudService\.instance\.'
-          r'sincronizarUpload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
+    final precUpload = compact.indexOf(
+      'awaitPrecificacaoCloudService.instance.sincronizarUpload(empresaId);',
+    );
+    final precDownload = compact.indexOf(
+      'awaitPrecificacaoCloudService.instance.sincronizarDownload(empresaId);',
+    );
+    final reconciliacao = compact.indexOf(
+      'awaitPrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload(empresaId);',
+    );
 
-    final finDownload =
-        RegExp(
-          r'awaitFinanceiroCloudV3Service\.instance\.'
-          r'sincronizarDownload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
-
-    final precDownload =
-        RegExp(
-          r'awaitPrecificacaoCloudService\.instance\.'
-          r'sincronizarDownload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
-
-    expect(finUpload, greaterThanOrEqualTo(0));
-    expect(precUpload, greaterThan(finUpload));
-    expect(finDownload, greaterThan(precUpload));
-    expect(precDownload, greaterThan(finDownload));
+    expect(precUpload, greaterThanOrEqualTo(0));
+    expect(precDownload, greaterThan(precUpload));
+    expect(reconciliacao, greaterThan(precDownload));
   });
 
   test('Migration tem seis tabelas e RLS financeiro', () {
