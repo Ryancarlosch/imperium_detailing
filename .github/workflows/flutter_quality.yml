@@ -45,6 +45,35 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      # Diagnostico temporario: o conector do GitHub informa qual etapa falhou,
+      # mas nao expoe o texto completo do log. Estes grupos deixam a regressao
+      # localizada sem remover a execucao completa da suite abaixo.
+      - name: Diagnose finance tests
+        continue-on-error: true
+        run: >-
+          flutter test
+          test/dashboard_ranking_servicos_liquido_test.dart
+          test/dashboard_saldos_contas_test.dart
+          test/financeiro_custos_v25_test.dart
+          test/financeiro_fluxo_ponta_a_ponta_test.dart
+          test/financeiro_saldo_snapshot_v1_test.dart
+          test/financeiro_v24_test.dart
+          test/fluxo_caixa_repository_test.dart
+          test/pagamento_ajustes_taxas_test.dart
+          test/pagamento_repository_test.dart
+          test/nota_fiscal_financeiro_service_test.dart
+
+      - name: Diagnose InfinitePay tests
+        continue-on-error: true
+        run: >-
+          flutter test
+          test/infinitepay_assinaturas_source_test.dart
+          test/infinitepay_planos_admin_source_test.dart
+
+      - name: Diagnose web tests
+        continue-on-error: true
+        run: flutter test test/web_*_test.dart
+
       - name: Run tests
         run: flutter test
 
