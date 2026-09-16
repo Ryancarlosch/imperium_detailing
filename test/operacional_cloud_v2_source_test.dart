@@ -30,7 +30,10 @@ void main() {
     }
 
     expect(motor, contains("etapa.modulo == 'operacional'"));
-    expect(motor, contains('OperacionalCloudV2Service.instance.prepararUpload'));
+    expect(
+      motor,
+      contains('OperacionalCloudV2Service.instance.prepararUpload'),
+    );
     expect(
       motor,
       contains('Conflitos pendentes em Clientes, Veículos ou Agenda.'),

@@ -261,9 +261,8 @@ class SyncMotorService {
         // proteção de edição concorrente. Reconciliamos antes do callback para
         // impedir que o upload V1 sobrescreva silenciosamente outra versão.
         if (etapa.modulo == 'operacional') {
-          final seguro = await OperacionalCloudV2Service.instance.prepararUpload(
-            empresaId,
-          );
+          final seguro = await OperacionalCloudV2Service.instance
+              .prepararUpload(empresaId);
           if (!seguro) {
             throw const SyncMotorBloqueadoException(
               'Conflitos pendentes em Clientes, Veículos ou Agenda.',
