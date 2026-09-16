@@ -81,7 +81,8 @@ void main() {
     expect(firstAccess, contains('entrarComEmailSenha'));
     expect(firstAccess, contains('prepararSessao'));
     expect(login, contains('Começar 30 dias grátis'));
-    expect(login, contains('sem autorização prévia'));
+    expect(login, contains('EmpresaPrimeiroAcessoPage'));
+    expect(login, contains('Criar conta'));
   });
 
   test('web reutiliza o mesmo cadastro e sessao do mobile', () {
