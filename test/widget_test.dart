@@ -77,7 +77,7 @@ void main() {
 
       final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
 
-      expect(materialApp.title, 'Imperium Detailing');
+      expect(materialApp.title, 'Imperium Manager');
 
       expect(materialApp.locale, const Locale('pt', 'BR'));
 
