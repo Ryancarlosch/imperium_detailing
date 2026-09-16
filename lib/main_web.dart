@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'database/app_database.dart';
+import 'screens/licenca_status_page.dart';
 import 'screens/login_email_senha_page.dart';
 import 'services/cloud_session_service.dart';
 import 'services/empresa_cloud_service.dart';
@@ -261,6 +262,20 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
     }
   }
 
+  Future<void> _abrirPlano() async {
+    final empresaId = _empresaAtualId.trim();
+    if (empresaId.isEmpty) return;
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => LicencaStatusPage(empresaId: empresaId),
+      ),
+    );
+
+    if (!mounted) return;
+    await _revalidarLicenca();
+  }
+
   Future<void> _sair() async {
     await _cloudSession.sair();
     if (!mounted) return;
@@ -437,11 +452,17 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
                       Text(motivo, textAlign: TextAlign.center),
                       const SizedBox(height: 8),
                       const Text(
-                        'Web e aplicativo usam a mesma licença da empresa.',
+                        'O sistema fica bloqueado, mas a área Plano continua disponível para renovação.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20),
                       FilledButton.icon(
+                        onPressed: _abrirPlano,
+                        icon: const Icon(Icons.payments_outlined),
+                        label: const Text('Plano / renovar acesso'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
                         onPressed: _revalidarLicenca,
                         icon: const Icon(Icons.refresh_rounded),
                         label: const Text('Validar novamente'),
