@@ -6,12 +6,12 @@ import 'supabase_bootstrap.dart';
 
 typedef OperacionalRealtimeAtualizar = Future<void> Function();
 
-/// Atualização reativa do núcleo operacional.
+/// Atualização reativa do núcleo compartilhado do app.
 ///
 /// O Realtime não substitui o motor de sincronização. Ele apenas dispara um
-/// ciclo normal quando outro aparelho altera Clientes, Veículos ou Agenda.
-/// Toda reconciliação, CAS, conflitos, retry e offline continuam centralizados
-/// nos serviços de sincronização existentes.
+/// ciclo normal quando outro aparelho altera Clientes, Veículos, Agenda ou os
+/// arquivos portáveis da empresa. Toda reconciliação, CAS, conflitos, retry e
+/// offline continuam centralizados nos serviços de sincronização existentes.
 class OperacionalRealtimeService {
   OperacionalRealtimeService._();
 
@@ -65,6 +65,7 @@ class OperacionalRealtimeService {
       registrar('imperium_clientes');
       registrar('imperium_veiculos');
       registrar('imperium_agendamentos');
+      registrar('imperium_configuracao_arquivos');
 
       _channel = channel;
       _empresaAssinada = id;
