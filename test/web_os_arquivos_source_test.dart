@@ -14,11 +14,15 @@ void main() {
       expect(service, contains("from('imperium_ordens_servico')"));
       expect(service, contains("from('imperium_ordem_servico_fotos')"));
       expect(service, contains("from('imperium_ordem_servico_checklist')"));
+      expect(service, contains(".eq('empresa_id', empresaId)"));
+      expect(service, contains(".eq('ordem_servico_id', id)"));
+      expect(service, contains("_texto(row['excluido_em']).isEmpty"));
       expect(service, contains("storage.from(bucket).download(path)"));
       expect(service, contains("bucketPadrao = 'imperium-os-arquivos'"));
       expect(service, contains("'tipo': 'foto'"));
       expect(service, contains("'tipo': 'avaria'"));
       expect(service, contains("'tipo': 'assinatura'"));
+      expect(service, isNot(contains('createPublicUrl')));
       expect(service, isNot(contains("import 'dart:io'")));
 
       expect(page, contains('WebOsArquivosPage'));
