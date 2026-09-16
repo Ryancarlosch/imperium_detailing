@@ -61,8 +61,8 @@ class AppDatabase {
 
   /// Ativa um banco exclusivo para a empresa.
   ///
-  /// Em IO, a primeira ativaÃ§Ã£o pode copiar o banco legado. No navegador,
-  /// cada tenant comeÃ§a no prÃ³prio SQLite WASM/IndexedDB.
+  /// Em IO, a primeira ativação pode copiar o banco legado. No navegador,
+  /// cada tenant começa no próprio SQLite WASM/IndexedDB.
   Future<void> ativarEmpresa(
     String empresaId, {
     bool adotarBancoLegado = false,
@@ -97,7 +97,7 @@ class AppDatabase {
     _empresaAtivaMemoria = normalizado;
     _database = null;
 
-    // Garante que um tenant novo jÃ¡ nasce com o schema completo atual.
+    // Garante que um tenant novo já nasce com o schema completo atual.
     await database;
   }
 
@@ -131,7 +131,7 @@ class AppDatabase {
       throw ArgumentError.value(
         empresaId,
         'empresaId',
-        'Identificador de empresa invÃ¡lido.',
+        'Identificador de empresa inválido.',
       );
     }
 
@@ -525,7 +525,7 @@ class AppDatabase {
           nome TEXT NOT NULL,
           tipo TEXT NOT NULL,
           natureza TEXT NOT NULL,
-          grupo_dre TEXT NOT NULL DEFAULT 'NÃ£o DRE',
+          grupo_dre TEXT NOT NULL DEFAULT 'Não DRE',
           parent_id INTEGER,
           ativo INTEGER NOT NULL DEFAULT 1,
           ordem INTEGER NOT NULL DEFAULT 0,
@@ -534,7 +534,7 @@ class AppDatabase {
           FOREIGN KEY (parent_id)
             REFERENCES financeiro_plano_contas (id)
             ON DELETE RESTRICT,
-          CHECK (tipo IN ('Entrada', 'SaÃ­da', 'Neutro'))
+          CHECK (tipo IN ('Entrada', 'Saída', 'Neutro'))
         )
       ''');
 
@@ -566,7 +566,7 @@ class AppDatabase {
       },
       {
         'codigo': '1.01',
-        'nome': 'ServiÃ§os',
+        'nome': 'Serviços',
         'tipo': 'Entrada',
         'natureza': 'Receita operacional',
         'grupo_dre': 'Receita Bruta',
@@ -584,7 +584,7 @@ class AppDatabase {
       },
       {
         'codigo': '1.01.02',
-        'nome': 'HigienizaÃ§Ã£o',
+        'nome': 'Higienização',
         'tipo': 'Entrada',
         'natureza': 'Receita operacional',
         'grupo_dre': 'Receita Bruta',
@@ -602,7 +602,7 @@ class AppDatabase {
       },
       {
         'codigo': '1.01.04',
-        'nome': 'VitrificaÃ§Ã£o',
+        'nome': 'Vitrificação',
         'tipo': 'Entrada',
         'natureza': 'Receita operacional',
         'grupo_dre': 'Receita Bruta',
@@ -611,7 +611,7 @@ class AppDatabase {
       },
       {
         'codigo': '1.01.05',
-        'nome': 'LavaÃ§Ã£o',
+        'nome': 'Lavação',
         'tipo': 'Entrada',
         'natureza': 'Receita operacional',
         'grupo_dre': 'Receita Bruta',
@@ -638,37 +638,37 @@ class AppDatabase {
       },
       {
         'codigo': '1.02',
-        'nome': 'DeduÃ§Ãµes da receita',
-        'tipo': 'SaÃ­da',
-        'natureza': 'DeduÃ§Ã£o de receita',
-        'grupo_dre': 'DeduÃ§Ãµes',
+        'nome': 'Deduções da receita',
+        'tipo': 'Saída',
+        'natureza': 'Dedução de receita',
+        'grupo_dre': 'Deduções',
         'parent_codigo': '1',
         'ordem': 120,
       },
       {
         'codigo': '1.02.01',
         'nome': 'Estornos e cancelamentos',
-        'tipo': 'SaÃ­da',
-        'natureza': 'DeduÃ§Ã£o de receita',
-        'grupo_dre': 'DeduÃ§Ãµes',
+        'tipo': 'Saída',
+        'natureza': 'Dedução de receita',
+        'grupo_dre': 'Deduções',
         'parent_codigo': '1.02',
         'ordem': 121,
       },
       {
         'codigo': '1.02.02',
         'nome': 'Descontos comerciais',
-        'tipo': 'SaÃ­da',
-        'natureza': 'DeduÃ§Ã£o de receita',
-        'grupo_dre': 'DeduÃ§Ãµes',
+        'tipo': 'Saída',
+        'natureza': 'Dedução de receita',
+        'grupo_dre': 'Deduções',
         'parent_codigo': '1.02',
         'ordem': 122,
       },
       {
         'codigo': '1.02.03',
         'nome': 'Impostos sobre faturamento',
-        'tipo': 'SaÃ­da',
-        'natureza': 'DeduÃ§Ã£o de receita',
-        'grupo_dre': 'DeduÃ§Ãµes',
+        'tipo': 'Saída',
+        'natureza': 'Dedução de receita',
+        'grupo_dre': 'Deduções',
         'parent_codigo': '1.02',
         'ordem': 123,
       },
@@ -693,7 +693,7 @@ class AppDatabase {
       {
         'codigo': '2',
         'nome': 'Despesas',
-        'tipo': 'SaÃ­da',
+        'tipo': 'Saída',
         'natureza': 'Despesa operacional',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': null,
@@ -702,8 +702,8 @@ class AppDatabase {
       {
         'codigo': '2.01',
         'nome': 'Colaboradores',
-        'tipo': 'SaÃ­da',
-        'natureza': 'MÃ£o de obra',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2',
         'ordem': 210,
@@ -711,26 +711,26 @@ class AppDatabase {
       {
         'codigo': '2.01.01',
         'nome': 'Folha de pagamento',
-        'tipo': 'SaÃ­da',
-        'natureza': 'MÃ£o de obra',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.01',
         'ordem': 211,
       },
       {
         'codigo': '2.01.02',
-        'nome': 'Gastos pessoais do proprietÃ¡rio',
-        'tipo': 'SaÃ­da',
-        'natureza': 'MÃ£o de obra',
+        'nome': 'Gastos pessoais do proprietário',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.01',
         'ordem': 212,
       },
       {
         'codigo': '2.01.03',
-        'nome': 'Encargos e benefÃ­cios',
-        'tipo': 'SaÃ­da',
-        'natureza': 'MÃ£o de obra',
+        'nome': 'Encargos e benefícios',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.01',
         'ordem': 213,
@@ -738,61 +738,61 @@ class AppDatabase {
       {
         'codigo': '2.02',
         'nome': 'Custo de venda',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Custo variÃ¡vel',
-        'grupo_dre': 'Custos VariÃ¡veis',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
         'parent_codigo': '2',
         'ordem': 220,
       },
       {
         'codigo': '2.02.01',
-        'nome': 'Taxas de cartÃ£o',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Custo variÃ¡vel',
-        'grupo_dre': 'Custos VariÃ¡veis',
+        'nome': 'Taxas de cartão',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
         'parent_codigo': '2.02',
         'ordem': 221,
       },
       {
         'codigo': '2.02.02',
-        'nome': 'ComissÃµes',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Custo variÃ¡vel',
-        'grupo_dre': 'Custos VariÃ¡veis',
+        'nome': 'Comissões',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
         'parent_codigo': '2.02',
         'ordem': 222,
       },
       {
         'codigo': '2.03',
         'nome': 'Materiais',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Custo variÃ¡vel',
-        'grupo_dre': 'Custos VariÃ¡veis',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
         'parent_codigo': '2',
         'ordem': 230,
       },
       {
         'codigo': '2.03.01',
-        'nome': 'Produtos consumidos em serviÃ§os',
-        'tipo': 'SaÃ­da',
+        'nome': 'Produtos consumidos em serviços',
+        'tipo': 'Saída',
         'natureza': 'Custo de produto consumido',
-        'grupo_dre': 'Custos VariÃ¡veis',
+        'grupo_dre': 'Custos Variáveis',
         'parent_codigo': '2.03',
         'ordem': 231,
       },
       {
         'codigo': '2.03.02',
         'nome': 'Materiais de consumo',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Custo variÃ¡vel',
-        'grupo_dre': 'Custos VariÃ¡veis',
+        'tipo': 'Saída',
+        'natureza': 'Custo variável',
+        'grupo_dre': 'Custos Variáveis',
         'parent_codigo': '2.03',
         'ordem': 232,
       },
       {
         'codigo': '2.04',
         'nome': 'Empresa',
-        'tipo': 'SaÃ­da',
+        'tipo': 'Saída',
         'natureza': 'Despesa fixa',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2',
@@ -801,7 +801,7 @@ class AppDatabase {
       {
         'codigo': '2.04.01',
         'nome': 'Aluguel',
-        'tipo': 'SaÃ­da',
+        'tipo': 'Saída',
         'natureza': 'Despesa fixa',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
@@ -809,8 +809,8 @@ class AppDatabase {
       },
       {
         'codigo': '2.04.02',
-        'nome': 'Energia elÃ©trica',
-        'tipo': 'SaÃ­da',
+        'nome': 'Energia elétrica',
+        'tipo': 'Saída',
         'natureza': 'Despesa fixa',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
@@ -818,8 +818,8 @@ class AppDatabase {
       },
       {
         'codigo': '2.04.03',
-        'nome': 'Ãgua',
-        'tipo': 'SaÃ­da',
+        'nome': 'Água',
+        'tipo': 'Saída',
         'natureza': 'Despesa fixa',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
@@ -828,7 +828,7 @@ class AppDatabase {
       {
         'codigo': '2.04.04',
         'nome': 'Internet e telefone',
-        'tipo': 'SaÃ­da',
+        'tipo': 'Saída',
         'natureza': 'Despesa fixa',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
@@ -837,7 +837,7 @@ class AppDatabase {
       {
         'codigo': '2.04.05',
         'nome': 'Contador',
-        'tipo': 'SaÃ­da',
+        'tipo': 'Saída',
         'natureza': 'Despesa fixa',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
@@ -846,26 +846,26 @@ class AppDatabase {
       {
         'codigo': '2.04.06',
         'nome': 'Impostos',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Despesa variÃ¡vel',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
         'ordem': 246,
       },
       {
         'codigo': '2.04.07',
-        'nome': 'CombustÃ­vel',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Despesa variÃ¡vel',
+        'nome': 'Combustível',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
         'ordem': 247,
       },
       {
         'codigo': '2.04.08',
-        'nome': 'ManutenÃ§Ã£o',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Despesa variÃ¡vel',
+        'nome': 'Manutenção',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
         'ordem': 248,
@@ -873,8 +873,8 @@ class AppDatabase {
       {
         'codigo': '2.04.09',
         'nome': 'Marketing',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Despesa variÃ¡vel',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
         'ordem': 249,
@@ -882,7 +882,7 @@ class AppDatabase {
       {
         'codigo': '2.04.10',
         'nome': 'Software e assinaturas',
-        'tipo': 'SaÃ­da',
+        'tipo': 'Saída',
         'natureza': 'Despesa fixa',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
@@ -891,8 +891,8 @@ class AppDatabase {
       {
         'codigo': '2.04.11',
         'nome': 'Limpeza',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Despesa variÃ¡vel',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
         'ordem': 251,
@@ -900,8 +900,8 @@ class AppDatabase {
       {
         'codigo': '2.04.12',
         'nome': 'Taxas e tributos operacionais',
-        'tipo': 'SaÃ­da',
-        'natureza': 'Despesa variÃ¡vel',
+        'tipo': 'Saída',
+        'natureza': 'Despesa variável',
         'grupo_dre': 'Despesas Operacionais',
         'parent_codigo': '2.04',
         'ordem': 252,
@@ -909,7 +909,7 @@ class AppDatabase {
       {
         'codigo': '2.05',
         'nome': 'Despesas financeiras',
-        'tipo': 'SaÃ­da',
+        'tipo': 'Saída',
         'natureza': 'Despesa financeira',
         'grupo_dre': 'Resultado Financeiro',
         'parent_codigo': '2',
@@ -917,8 +917,8 @@ class AppDatabase {
       },
       {
         'codigo': '2.05.01',
-        'nome': 'Juros e tarifas bancÃ¡rias',
-        'tipo': 'SaÃ­da',
+        'nome': 'Juros e tarifas bancárias',
+        'tipo': 'Saída',
         'natureza': 'Despesa financeira',
         'grupo_dre': 'Resultado Financeiro',
         'parent_codigo': '2.05',
@@ -927,7 +927,7 @@ class AppDatabase {
       {
         'codigo': '2.99',
         'nome': 'Outras despesas',
-        'tipo': 'SaÃ­da',
+        'tipo': 'Saída',
         'natureza': 'Outras despesas',
         'grupo_dre': 'Outras Despesas',
         'parent_codigo': '2',
@@ -936,7 +936,7 @@ class AppDatabase {
       {
         'codigo': '2.99.01',
         'nome': 'Outras despesas',
-        'tipo': 'SaÃ­da',
+        'tipo': 'Saída',
         'natureza': 'Outras despesas',
         'grupo_dre': 'Outras Despesas',
         'parent_codigo': '2.99',
@@ -947,25 +947,25 @@ class AppDatabase {
         'nome': 'Movimentos sem efeito na DRE',
         'tipo': 'Neutro',
         'natureza': 'Movimento patrimonial',
-        'grupo_dre': 'NÃ£o DRE',
+        'grupo_dre': 'Não DRE',
         'parent_codigo': null,
         'ordem': 900,
       },
       {
         'codigo': '9.01',
-        'nome': 'TransferÃªncia entre contas',
+        'nome': 'Transferência entre contas',
         'tipo': 'Neutro',
-        'natureza': 'TransferÃªncia',
-        'grupo_dre': 'NÃ£o DRE',
+        'natureza': 'Transferência',
+        'grupo_dre': 'Não DRE',
         'parent_codigo': '9',
         'ordem': 910,
       },
       {
         'codigo': '9.02',
-        'nome': 'EmprÃ©stimos',
+        'nome': 'Empréstimos',
         'tipo': 'Neutro',
-        'natureza': 'EmprÃ©stimo',
-        'grupo_dre': 'NÃ£o DRE',
+        'natureza': 'Empréstimo',
+        'grupo_dre': 'Não DRE',
         'parent_codigo': '9',
         'ordem': 920,
       },
@@ -974,7 +974,7 @@ class AppDatabase {
         'nome': 'Aportes',
         'tipo': 'Neutro',
         'natureza': 'Aporte',
-        'grupo_dre': 'NÃ£o DRE',
+        'grupo_dre': 'Não DRE',
         'parent_codigo': '9',
         'ordem': 930,
       },
@@ -983,25 +983,25 @@ class AppDatabase {
         'nome': 'Retiradas e gastos pessoais',
         'tipo': 'Neutro',
         'natureza': 'Retirada',
-        'grupo_dre': 'NÃ£o DRE',
+        'grupo_dre': 'Não DRE',
         'parent_codigo': '9',
         'ordem': 940,
       },
       {
         'codigo': '9.05',
-        'nome': 'CorreÃ§Ã£o de caixa',
+        'nome': 'Correção de caixa',
         'tipo': 'Neutro',
         'natureza': 'Ajuste de caixa',
-        'grupo_dre': 'NÃ£o DRE',
+        'grupo_dre': 'Não DRE',
         'parent_codigo': '9',
         'ordem': 950,
       },
       {
         'codigo': '9.06',
         'nome': 'Compra para estoque',
-        'tipo': 'SaÃ­da',
-        'natureza': 'AquisiÃ§Ã£o de estoque',
-        'grupo_dre': 'NÃ£o DRE',
+        'tipo': 'Saída',
+        'natureza': 'Aquisição de estoque',
+        'grupo_dre': 'Não DRE',
         'parent_codigo': '9',
         'ordem': 960,
       },
@@ -1035,21 +1035,21 @@ class AppDatabase {
       return;
     }
 
-    // MantÃ©m os cÃ³digos internos jÃ¡ usados por pagamentos, taxas,
-    // transferÃªncias e histÃ³rico. A simplificaÃ§Ã£o Ã© visual/operacional.
+    // Mantém os códigos internos já usados por pagamentos, taxas,
+    // transferências e histórico. A simplificação é visual/operacional.
     await _inserirPlanoContasFinanceiroPadrao(database);
 
     final agora = DateTime.now().toIso8601String();
-    // Regra gerencial do proprietÃ¡rio:
+    // Regra gerencial do proprietário:
     // 2.01.02 representa somente valores efetivamente pagos/gastos pelo
-    // proprietÃ¡rio e entra no DRE. O valor mensal cadastrado em MÃ£o de Obra
-    // continua sendo apenas referÃªncia para precificaÃ§Ã£o e nÃ£o gera lanÃ§amento.
+    // proprietário e entra no DRE. O valor mensal cadastrado em Mão de Obra
+    // continua sendo apenas referência para precificação e não gera lançamento.
     await database.update(
       'financeiro_plano_contas',
       {
-        'nome': 'Gastos pessoais do proprietÃ¡rio',
-        'tipo': 'SaÃ­da',
-        'natureza': 'MÃ£o de obra',
+        'nome': 'Gastos pessoais do proprietário',
+        'tipo': 'Saída',
+        'natureza': 'Mão de obra',
         'grupo_dre': 'Despesas Operacionais',
         'ativo': 1,
         'atualizado_em': agora,
@@ -1057,27 +1057,24 @@ class AppDatabase {
       where: '''
         codigo = '2.01.02'
         AND nome IN (
-          'PrÃ³-labore',
-          'RemuneraÃ§Ã£o dos proprietÃ¡rios',
-          'Gastos pessoais do proprietÃ¡rio'
+          'Pró-labore',
+          'Remuneração dos proprietários',
+          'Gastos pessoais do proprietário'
         )
       ''',
     );
 
-    // Mantemos tambÃ©m a retirada que NÃƒO afeta resultado, mas com um nome
-    // explÃ­cito para evitar confundir com o gasto pessoal usado no DRE.
+    // Mantemos também a retirada que NÃO afeta resultado, mas com um nome
+    // explícito para evitar confundir com o gasto pessoal usado no DRE.
     await database.update(
       'financeiro_plano_contas',
-      {
-        'nome': 'Retirada do sÃ³cio (nÃ£o entra no DRE)',
-        'atualizado_em': agora,
-      },
+      {'nome': 'Retirada do sócio (não entra no DRE)', 'atualizado_em': agora},
       where: '''
         codigo = '9.04'
         AND nome IN (
           'Retiradas e gastos pessoais',
-          'Retirada dos sÃ³cios',
-          'Retirada do sÃ³cio (nÃ£o entra no DRE)'
+          'Retirada dos sócios',
+          'Retirada do sócio (não entra no DRE)'
         )
       ''',
     );
@@ -1106,7 +1103,7 @@ class AppDatabase {
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
 
-    // Novas categorias resumidas para quem estÃ¡ comeÃ§ando.
+    // Novas categorias resumidas para quem está começando.
     await garantirConta(
       codigo: '1.03',
       nome: 'Venda de produtos',
@@ -1119,49 +1116,46 @@ class AppDatabase {
 
     await garantirConta(
       codigo: '2.04.13',
-      nome: 'Ãgua, energia e internet',
-      tipo: 'SaÃ­da',
+      nome: 'Água, energia e internet',
+      tipo: 'Saída',
       natureza: 'Despesa fixa',
       grupoDre: 'Despesas Operacionais',
       parentCodigo: '2.04',
       ordem: 253,
     );
 
-    // Os nomes canÃ´nicos do plano de contas fazem parte do contrato
-    // interno da V27 e sÃ£o preservados para schema, migraÃ§Ãµes e histÃ³rico.
+    // Os nomes canônicos do plano de contas fazem parte do contrato
+    // interno da V27 e são preservados para schema, migrações e histórico.
     //
-    // VersÃµes iniciais desta simplificaÃ§Ã£o chegaram a gravar nomes mais
-    // amigÃ¡veis diretamente no banco. Se isso ocorreu, restauramos apenas
-    // esses aliases exatos. Nomes personalizados pelo usuÃ¡rio sÃ£o preservados.
+    // Versões iniciais desta simplificação chegaram a gravar nomes mais
+    // amigáveis diretamente no banco. Se isso ocorreu, restauramos apenas
+    // esses aliases exatos. Nomes personalizados pelo usuário são preservados.
     const nomesCanonicos = <String, Map<String, String>>{
       '2.01': {'alias': 'Equipe', 'canonico': 'Colaboradores'},
-      '2.01.01': {'alias': 'FuncionÃ¡rios', 'canonico': 'Folha de pagamento'},
+      '2.01.01': {'alias': 'Funcionários', 'canonico': 'Folha de pagamento'},
       '2.02': {'alias': 'Custos das vendas', 'canonico': 'Custo de venda'},
       '2.03': {'alias': 'Produtos e materiais', 'canonico': 'Materiais'},
       '2.03.01': {
-        'alias': 'Produtos e materiais usados nos serviÃ§os',
-        'canonico': 'Produtos consumidos em serviÃ§os',
+        'alias': 'Produtos e materiais usados nos serviços',
+        'canonico': 'Produtos consumidos em serviços',
       },
       '2.04': {'alias': 'Despesas da empresa', 'canonico': 'Empresa'},
       '2.04.05': {'alias': 'Contabilidade', 'canonico': 'Contador'},
-      '2.04.07': {
-        'alias': 'CombustÃ­vel e veÃ­culos',
-        'canonico': 'CombustÃ­vel',
-      },
+      '2.04.07': {'alias': 'Combustível e veículos', 'canonico': 'Combustível'},
       '2.05.01': {
-        'alias': 'Tarifas e juros bancÃ¡rios',
-        'canonico': 'Juros e tarifas bancÃ¡rias',
+        'alias': 'Tarifas e juros bancários',
+        'canonico': 'Juros e tarifas bancárias',
       },
       '9': {
-        'alias': 'NÃ£o afeta o resultado',
+        'alias': 'Não afeta o resultado',
         'canonico': 'Movimentos sem efeito na DRE',
       },
-      '9.03': {'alias': 'Aporte dos sÃ³cios', 'canonico': 'Aportes'},
+      '9.03': {'alias': 'Aporte dos sócios', 'canonico': 'Aportes'},
       '9.04': {
-        'alias': 'Retirada dos sÃ³cios',
+        'alias': 'Retirada dos sócios',
         'canonico': 'Retiradas e gastos pessoais',
       },
-      '9.05': {'alias': 'Ajuste de saldo', 'canonico': 'CorreÃ§Ã£o de caixa'},
+      '9.05': {'alias': 'Ajuste de saldo', 'canonico': 'Correção de caixa'},
     };
 
     for (final item in nomesCanonicos.entries) {
@@ -1173,9 +1167,9 @@ class AppDatabase {
       );
     }
 
-    // ServiÃ§os especÃ­ficos jÃ¡ sÃ£o detalhados pelas prÃ³prias OS.
-    // Mantemos as contas no banco para preservar qualquer histÃ³rico antigo,
-    // mas elas deixam de aparecer na operaÃ§Ã£o diÃ¡ria.
+    // Serviços específicos já são detalhados pelas próprias OS.
+    // Mantemos as contas no banco para preservar qualquer histórico antigo,
+    // mas elas deixam de aparecer na operação diária.
     const codigosLegadosServicos = <String>[
       '1.01.01',
       '1.01.02',
@@ -1196,7 +1190,7 @@ class AppDatabase {
     }
 
     // Consolida categorias redundantes para deixar o uso inicial objetivo.
-    // Os registros antigos continuam vinculados Ã s contas histÃ³ricas.
+    // Os registros antigos continuam vinculados às contas históricas.
     const codigosConsolidados = <String>[
       '2.01.03',
       '2.03.02',
@@ -1216,7 +1210,7 @@ class AppDatabase {
       );
     }
 
-    // Garante que as categorias automÃ¡ticas essenciais nunca desapareÃ§am.
+    // Garante que as categorias automáticas essenciais nunca desapareçam.
     const codigosEssenciais = <String>[
       '1.01',
       '1.02.01',
@@ -1259,7 +1253,7 @@ class AppDatabase {
         CREATE TABLE IF NOT EXISTS financeiro_contas (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           nome TEXT NOT NULL UNIQUE,
-          tipo TEXT NOT NULL DEFAULT 'Conta bancÃ¡ria',
+          tipo TEXT NOT NULL DEFAULT 'Conta bancária',
           instituicao TEXT NOT NULL DEFAULT '',
           saldo_inicial REAL NOT NULL DEFAULT 0,
           data_saldo_inicial TEXT,
@@ -1269,7 +1263,7 @@ class AppDatabase {
           atualizado_em TEXT NOT NULL,
           CHECK (tipo IN (
             'Dinheiro',
-            'Conta bancÃ¡ria',
+            'Conta bancária',
             'Carteira digital',
             'Maquininha',
             'Outro'
@@ -1293,7 +1287,7 @@ class AppDatabase {
       'instituicao': '',
       'saldo_inicial': 0,
       'data_saldo_inicial': null,
-      'observacoes': 'Conta padrÃ£o criada pelo Imperium.',
+      'observacoes': 'Conta padrão criada pelo Imperium.',
       'ativo': 1,
       'criado_em': agora,
       'atualizado_em': agora,
@@ -1584,9 +1578,9 @@ class AppDatabase {
         CHECK (tipo IN (
           'Cadastro',
           'Reajuste salarial',
-          'AtualizaÃ§Ã£o de custos',
-          'AtivaÃ§Ã£o',
-          'InativaÃ§Ã£o'
+          'Atualização de custos',
+          'Ativação',
+          'Inativação'
         )),
         CHECK (remuneracao_anterior >= 0),
         CHECK (remuneracao_nova >= 0),
@@ -1671,7 +1665,7 @@ class AppDatabase {
           FOREIGN KEY (conta_id)
             REFERENCES financeiro_contas (id)
             ON DELETE SET NULL,
-          CHECK (forma_pagamento IN ('CartÃ£o de crÃ©dito', 'CartÃ£o de dÃ©bito')),
+          CHECK (forma_pagamento IN ('Cartão de crédito', 'Cartão de débito')),
           CHECK (parcelas >= 1 AND parcelas <= 48),
           CHECK (taxa_percentual >= 0 AND taxa_percentual <= 100),
           CHECK (taxa_fixa >= 0),
@@ -1744,7 +1738,7 @@ class AppDatabase {
           nota_fiscal_id INTEGER,
           parcela_numero INTEGER,
           total_parcelas INTEGER NOT NULL DEFAULT 1,
-          natureza TEXT NOT NULL DEFAULT 'NÃ£o classificado',
+          natureza TEXT NOT NULL DEFAULT 'Não classificado',
           origem TEXT NOT NULL DEFAULT 'Manual',
           status TEXT NOT NULL DEFAULT 'Realizado',
           data_competencia TEXT,
@@ -2104,7 +2098,7 @@ class AppDatabase {
           FOREIGN KEY (pagamento_id)
             REFERENCES ordem_servico_pagamentos (id)
             ON DELETE SET NULL,
-          CHECK (tipo IN ('Desconto', 'AcrÃ©scimo', 'Juros')),
+          CHECK (tipo IN ('Desconto', 'Acréscimo', 'Juros')),
           CHECK (status IN ('Ativo', 'Cancelado')),
           CHECK (valor > 0)
         )
@@ -2385,7 +2379,7 @@ class AppDatabase {
       ''');
 
     // Em bancos legados, a tabela pode existir sem esta coluna.
-    // Garantimos a coluna antes de criar o Ã­ndice para evitar falha de migraÃ§Ã£o.
+    // Garantimos a coluna antes de criar o índice para evitar falha de migração.
     await _adicionarColunaSeNecessario(
       database: database,
       tabela: 'itens_estoque',
@@ -3286,9 +3280,9 @@ class AppDatabase {
   }
 
   Future<void> _atualizarParaVersao22(Database database) async {
-    // A tabela de regras jÃ¡ precisa existir porque a definiÃ§Ã£o atual de
+    // A tabela de regras já precisa existir porque a definição atual de
     // pagamentos possui uma FK opcional para ela. Em bancos antigos ela fica
-    // vazia atÃ© a migraÃ§Ã£o financeira da v26.
+    // vazia até a migração financeira da v26.
     await _criarTabelaRegrasTaxaCartao(database);
 
     await _adicionarColunaSeNecessario(
@@ -3408,11 +3402,11 @@ class AppDatabase {
           MAX(COALESCE(os.valor_total, 0) - COALESCE(os.desconto, 0), 0),
           CASE
             WHEN TRIM(COALESCE(os.forma_pagamento, '')) = ''
-              THEN 'NÃ£o informado'
+              THEN 'Não informado'
             ELSE os.forma_pagamento
           END,
           COALESCE(os.data_finalizacao, os.data_inicio, os.data_abertura, '$agora'),
-          'Pagamento migrado automaticamente da versÃ£o anterior.',
+          'Pagamento migrado automaticamente da versão anterior.',
           COALESCE(os.data_finalizacao, os.data_inicio, os.data_abertura, '$agora'),
           '$agora'
         FROM ordens_servico os
@@ -3433,12 +3427,12 @@ class AppDatabase {
             SELECT os.id
             FROM ordens_servico os
             WHERE movimentos_financeiros.descricao =
-              'Ordem de ServiÃ§o finalizada: ' || os.numero
+              'Ordem de Serviço finalizada: ' || os.numero
             LIMIT 1
           )
           WHERE ordem_servico_id IS NULL
             AND LOWER(tipo) = 'entrada'
-            AND descricao LIKE 'Ordem de ServiÃ§o finalizada:%'
+            AND descricao LIKE 'Ordem de Serviço finalizada:%'
         ''');
       await database.execute('''
           UPDATE movimentos_financeiros
@@ -3537,7 +3531,7 @@ class AppDatabase {
           'INTEGER REFERENCES fornecedores (id) ON DELETE SET NULL',
       'transferencia_id':
           'INTEGER REFERENCES financeiro_transferencias (id) ON DELETE CASCADE',
-      'natureza': "TEXT NOT NULL DEFAULT 'NÃ£o classificado'",
+      'natureza': "TEXT NOT NULL DEFAULT 'Não classificado'",
       'origem': "TEXT NOT NULL DEFAULT 'Manual'",
       'status': "TEXT NOT NULL DEFAULT 'Realizado'",
       'data_competencia': 'TEXT',
@@ -3582,7 +3576,7 @@ class AppDatabase {
             WHEN pagamento_id IS NOT NULL
               THEN 'Pagamento de OS'
             WHEN ordem_servico_id IS NOT NULL
-              THEN 'Ordem de ServiÃ§o'
+              THEN 'Ordem de Serviço'
             ELSE COALESCE(NULLIF(TRIM(origem), ''), 'Manual legado')
           END,
           numero_documento = COALESCE(numero_documento, ''),
@@ -3601,7 +3595,7 @@ class AppDatabase {
           WHEN LOWER(tipo) = 'entrada'
             AND (
               LOWER(descricao) LIKE 'pagamento da os %'
-              OR LOWER(descricao) LIKE 'ordem de serviÃ§o finalizada:%'
+              OR LOWER(descricao) LIKE 'ordem de serviço finalizada:%'
             )
             THEN (SELECT id FROM financeiro_plano_contas WHERE codigo = '1.01')
           WHEN LOWER(tipo) = 'entrada'
@@ -3620,7 +3614,7 @@ class AppDatabase {
               FROM financeiro_plano_contas pc
               WHERE pc.id = movimentos_financeiros.plano_conta_id
             ),
-            COALESCE(NULLIF(TRIM(natureza), ''), 'NÃ£o classificado')
+            COALESCE(NULLIF(TRIM(natureza), ''), 'Não classificado')
           ),
           impacta_dre = CASE
             WHEN COALESCE(
@@ -3629,8 +3623,8 @@ class AppDatabase {
                 FROM financeiro_plano_contas pc
                 WHERE pc.id = movimentos_financeiros.plano_conta_id
               ),
-              'NÃ£o DRE'
-            ) = 'NÃ£o DRE'
+              'Não DRE'
+            ) = 'Não DRE'
               THEN 0
             ELSE 1
           END
@@ -3698,7 +3692,7 @@ class AppDatabase {
       await database.execute('''
         UPDATE financeiro_plano_contas
         SET
-          nome = 'Produtos consumidos em serviÃ§os',
+          nome = 'Produtos consumidos em serviços',
           natureza = 'Custo de produto consumido',
           atualizado_em = '${DateTime.now().toIso8601String()}'
         WHERE codigo = '2.03.01'
@@ -3713,7 +3707,7 @@ class AppDatabase {
         WHERE plano_conta_id IN (
           SELECT id
           FROM financeiro_plano_contas
-          WHERE grupo_dre = 'NÃ£o DRE'
+          WHERE grupo_dre = 'Não DRE'
         )
       ''');
     }
@@ -3779,7 +3773,7 @@ class AppDatabase {
           REFERENCES notas_fiscais_entrada (id)
           ON DELETE SET NULL,
         CHECK (tipo IN (
-          'Desfazer integraÃ§Ãµes',
+          'Desfazer integrações',
           'Excluir nota',
           'Estorno financeiro',
           'Estorno estoque'
@@ -3838,10 +3832,10 @@ class AppDatabase {
           ON DELETE SET NULL,
         CHECK (etapa IN (
           'Novo contato',
-          'QualificaÃ§Ã£o',
-          'OrÃ§amento',
+          'Qualificação',
+          'Orçamento',
           'Aguardando cliente',
-          'NegociaÃ§Ã£o',
+          'Negociação',
           'Agendado',
           'Ganho',
           'Perdido'
@@ -3895,8 +3889,8 @@ class AppDatabase {
         ativo INTEGER NOT NULL DEFAULT 1,
         criado_em TEXT NOT NULL,
         atualizado_em TEXT NOT NULL,
-        CHECK (tipo IN ('AniversÃ¡rio', 'ReativaÃ§Ã£o', 'IndicaÃ§Ã£o', 'Manual')),
-        CHECK (beneficio_tipo IN ('Percentual', 'Valor', 'ServiÃ§o', 'CrÃ©dito')),
+        CHECK (tipo IN ('Aniversário', 'Reativação', 'Indicação', 'Manual')),
+        CHECK (beneficio_tipo IN ('Percentual', 'Valor', 'Serviço', 'Crédito')),
         CHECK (ativo IN (0, 1))
       )
     ''');
@@ -3936,7 +3930,7 @@ class AppDatabase {
         FOREIGN KEY (ordem_servico_id)
           REFERENCES ordens_servico (id)
           ON DELETE SET NULL,
-        CHECK (beneficio_tipo IN ('Percentual', 'Valor', 'ServiÃ§o', 'CrÃ©dito')),
+        CHECK (beneficio_tipo IN ('Percentual', 'Valor', 'Serviço', 'Crédito')),
         CHECK (status IN ('Ativo', 'Usado', 'Expirado', 'Cancelado'))
       )
     ''');
@@ -3955,16 +3949,16 @@ class AppDatabase {
       'crm_campanhas',
       columns: ['id'],
       where: 'tipo = ? AND nome = ?',
-      whereArgs: ['AniversÃ¡rio', 'BenefÃ­cio de aniversÃ¡rio'],
+      whereArgs: ['Aniversário', 'Benefício de aniversário'],
       limit: 1,
     );
     if (existentes.isEmpty) {
       await database.insert('crm_campanhas', {
-        'nome': 'BenefÃ­cio de aniversÃ¡rio',
-        'tipo': 'AniversÃ¡rio',
+        'nome': 'Benefício de aniversário',
+        'tipo': 'Aniversário',
         'beneficio_tipo': 'Percentual',
         'beneficio_valor': 10,
-        'beneficio_descricao': 'BenefÃ­cio de aniversÃ¡rio',
+        'beneficio_descricao': 'Benefício de aniversário',
         'valor_minimo': 0,
         'dias_validade': 30,
         'dias_sem_retorno': 180,
@@ -3981,9 +3975,9 @@ class AppDatabase {
   }
 
   Future<void> _atualizarParaVersao32(Database database) async {
-    // Bancos reais que jÃ¡ passaram pela v25 possuem esta tabela.
-    // Alguns bancos legados/sintÃ©ticos podem nÃ£o possuÃ­-la; a v32
-    // precisa ser resiliente e garantir a dependÃªncia antes do histÃ³rico.
+    // Bancos reais que já passaram pela v25 possuem esta tabela.
+    // Alguns bancos legados/sintéticos podem não possuí-la; a v32
+    // precisa ser resiliente e garantir a dependência antes do histórico.
     if (!await _tabelaExiste(database, 'financeiro_colaboradores_custo')) {
       await _criarTabelaColaboradoresCusto(database);
     }
@@ -3991,7 +3985,7 @@ class AppDatabase {
     await _criarTabelaHistoricoColaboradores(database);
 
     // funcionarios-historico-v32
-    // Cria uma linha-base para funcionÃ¡rios que jÃ¡ existiam antes da v32.
+    // Cria uma linha-base para funcionários que já existiam antes da v32.
     await database.execute('''
       INSERT INTO financeiro_colaboradores_historico (
         colaborador_id,
@@ -4032,7 +4026,7 @@ class AppDatabase {
   }
 
   Future<void> _atualizarParaVersao33(Database database) async {
-    // fiscal-v33: reprocessamento rastreÃ¡vel sem duplicar notas.
+    // fiscal-v33: reprocessamento rastreável sem duplicar notas.
     if (!await _tabelaExiste(database, 'notas_fiscais_entrada')) {
       await _criarTabelaNotasFiscaisEntrada(database);
     }
@@ -4075,9 +4069,9 @@ class AppDatabase {
   }
 
   Future<void> _atualizarParaVersao29(Database database) async {
-    // Alguns testes/bancos legados podem nÃ£o possuir o mÃ³dulo de estoque
+    // Alguns testes/bancos legados podem não possuir o módulo de estoque
     // completo. A v29 garante primeiro a estrutura atual antes de criar
-    // colunas e Ã­ndices da integraÃ§Ã£o fiscal.
+    // colunas e índices da integração fiscal.
     if (!await _tabelaExiste(database, 'itens_estoque')) {
       await _criarTabelaItensEstoque(database);
     }
@@ -4140,10 +4134,10 @@ class AppDatabase {
       return;
     }
 
-    // Alguns bancos legados/parciais podem chegar atÃ© esta migration sem
-    // colunas introduzidas na v24. O Ã­ndice fiscal abaixo depende de
-    // `origem` e `status`, entÃ£o a v30 garante explicitamente essas duas
-    // colunas antes de criar o Ã­ndice.
+    // Alguns bancos legados/parciais podem chegar até esta migration sem
+    // colunas introduzidas na v24. O índice fiscal abaixo depende de
+    // `origem` e `status`, então a v30 garante explicitamente essas duas
+    // colunas antes de criar o índice.
     await _adicionarColunaSeNecessario(
       database: database,
       tabela: 'movimentos_financeiros',
@@ -4234,7 +4228,7 @@ class AppDatabase {
           o.id,
           CASE
             WHEN TRIM(COALESCE(o.servico, '')) = ''
-              THEN 'ServiÃ§o'
+              THEN 'Serviço'
             ELSE o.servico
           END,
           COALESCE(o.descricao, ''),
