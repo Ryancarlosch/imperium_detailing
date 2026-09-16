@@ -16,8 +16,8 @@ void main() {
     expect(web, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
     expect(web, contains('CloudSessionService'));
     expect(login, contains('entrarComEmailSenha'));
-    expect(login, contains("labelText: 'E-mail da empresa'"));
-    expect(login, contains("labelText: 'Senha'"));
+    expect(login, contains("label: 'E-mail'"));
+    expect(login, contains("label: 'Senha'"));
     expect(auth, contains('signInWithPassword'));
 
     expect(web, isNot(contains('signInWithOtp')));
