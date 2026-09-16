@@ -1,14 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.CAMERA" />
-
     <uses-permission android:name="android.permission.INTERNET" />
-
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
-        android:label="Imperium Detailing"
+        android:label="Imperium Manager"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
@@ -30,8 +28,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        
-            <!-- Supabase Auth: retorno de convites, magic links e recuperaÃ§Ã£o -->
+
+            <!-- Supabase Auth: confirmação de e-mail e recuperação de senha. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -39,6 +37,16 @@
                 <data
                     android:scheme="imperiumdetailing"
                     android:host="login-callback" />
+            </intent-filter>
+
+            <!-- InfinitePay: volta do navegador para o app após o pagamento. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="imperiumdetailing"
+                    android:host="payment-return" />
             </intent-filter>
         </activity>
 
@@ -49,7 +57,6 @@
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
             android:exported="false">
-
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
@@ -61,7 +68,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-
     </application>
 
     <queries>
@@ -70,5 +76,4 @@
             <data android:mimeType="text/plain" />
         </intent>
     </queries>
-
 </manifest>
