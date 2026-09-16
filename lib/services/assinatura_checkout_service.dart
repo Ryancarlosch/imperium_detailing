@@ -103,10 +103,7 @@ class AssinaturaCheckoutService {
 
     final response = await client.functions.invoke(
       'imperium-infinitepay-checkout',
-      body: <String, dynamic>{
-        'empresa_id': empresa,
-        'plano_codigo': plano,
-      },
+      body: <String, dynamic>{'empresa_id': empresa, 'plano_codigo': plano},
     );
 
     dynamic raw = response.data;
