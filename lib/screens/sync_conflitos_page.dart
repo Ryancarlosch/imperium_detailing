@@ -82,14 +82,19 @@ class _SyncConflitosPageState extends State<SyncConflitosPage> {
     }
   }
 
-  Future<void> _resolver(_ConflitoUi conflito, {required bool usarLocal}) async {
+  Future<void> _resolver(
+    _ConflitoUi conflito, {
+    required bool usarLocal,
+  }) async {
     if (_resolvendoId != null) return;
 
     final escolha = usarLocal ? 'este aparelho' : 'a nuvem';
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(usarLocal ? 'Manter este aparelho?' : 'Usar versão da nuvem?'),
+        title: Text(
+          usarLocal ? 'Manter este aparelho?' : 'Usar versão da nuvem?',
+        ),
         content: Text(
           'Você escolheu $escolha para “${conflito.titulo}”. '
           'A decisão será registrada e a sincronização continuará a partir dessa versão.',
