@@ -48,9 +48,9 @@ class WebWorkspaceShell extends StatelessWidget {
   Future<void> _abrirGerenciarPlanos(BuildContext context) async {
     if (!_empresaImperium) return;
 
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const ImperiumPlanosPage()),
-    );
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => const ImperiumPlanosPage()));
   }
 
   Future<void> _abrirSistemaCompleto(BuildContext context) async {
