@@ -57,44 +57,33 @@ void main() {
     expect(bloco, contains("'orcamentos'"));
   });
 
-  test('Sync operacional publica e baixa CRM Orcamentos', () {
+  test('Sync operacional orquestra CRM Orcamentos apos OS', () {
     final source = File(
       'lib/services/operacional_sync_service.dart',
     ).readAsStringSync();
     final compact = source.replaceAll(RegExp(r'\s+'), '');
 
-    final osUpload =
-        RegExp(
-          r'awaitOsCloudUploadService\.instance\.'
-          r'sincronizarUpload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
+    expect(compact, contains("modulo:'ordens_servico',prioridade:30"));
+    expect(compact, contains("modulo:'crm_orcamentos',prioridade:50"));
+    expect(
+      compact,
+      contains("dependencias:const<String>['operacional','ordens_servico']"),
+    );
+    expect(compact, contains('executar:()=>_syncCrmOrcamentos(empresaId)'));
 
-    final crmUpload =
-        RegExp(
-          r'awaitCrmOrcamentosCloudService\.instance\.'
-          r'sincronizarUpload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
+    final crmUpload = compact.indexOf(
+      'awaitCrmOrcamentosCloudService.instance.sincronizarUpload(empresaId);',
+    );
+    final crmDownload = compact.indexOf(
+      'awaitCrmOrcamentosCloudService.instance.sincronizarDownloadNovos(empresaId);',
+    );
+    final reconciliacao = compact.indexOf(
+      'awaitCrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload(empresaId);',
+    );
 
-    final osDownload =
-        RegExp(
-          r'awaitOsCloudDownloadService\.instance\.'
-          r'sincronizarDownloadNovos\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
-
-    final crmDownload =
-        RegExp(
-          r'awaitCrmOrcamentosCloudService\.instance\.'
-          r'sincronizarDownloadNovos\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
-
-    expect(osUpload, greaterThanOrEqualTo(0));
-    expect(crmUpload, greaterThan(osUpload));
-    expect(osDownload, greaterThan(crmUpload));
-    expect(crmDownload, greaterThan(osDownload));
+    expect(crmUpload, greaterThanOrEqualTo(0));
+    expect(crmDownload, greaterThan(crmUpload));
+    expect(reconciliacao, greaterThan(crmDownload));
   });
 
   test('Migration RLS separa CRM de Orcamentos', () {
