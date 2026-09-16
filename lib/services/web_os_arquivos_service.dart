@@ -17,7 +17,9 @@ class WebOsArquivosService {
   Future<String> _empresaId() async {
     final empresa = (await AppDatabase.instance.empresaAtivaId)?.trim() ?? '';
     if (empresa.isEmpty) {
-      throw StateError('Selecione uma empresa antes de abrir os arquivos da OS.');
+      throw StateError(
+        'Selecione uma empresa antes de abrir os arquivos da OS.',
+      );
     }
     return empresa;
   }
@@ -53,15 +55,16 @@ class WebOsArquivosService {
     final ordem = Map<String, dynamic>.from(ordemRaw);
     final arquivos = <Map<String, dynamic>>[];
 
-    final fotos = (fotosRaw as List)
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .where(_ativo)
-        .toList()
-      ..sort((a, b) {
-        final etapa = _texto(a['etapa']).compareTo(_texto(b['etapa']));
-        if (etapa != 0) return etapa;
-        return _inteiro(a['ordem']).compareTo(_inteiro(b['ordem']));
-      });
+    final fotos =
+        (fotosRaw as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .where(_ativo)
+            .toList()
+          ..sort((a, b) {
+            final etapa = _texto(a['etapa']).compareTo(_texto(b['etapa']));
+            if (etapa != 0) return etapa;
+            return _inteiro(a['ordem']).compareTo(_inteiro(b['ordem']));
+          });
 
     for (final foto in fotos) {
       final path = _texto(foto['storage_path']);

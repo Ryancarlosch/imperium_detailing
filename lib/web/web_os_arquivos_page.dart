@@ -322,10 +322,7 @@ class _ArquivoCard extends StatelessWidget {
 }
 
 class _ErroArquivos extends StatelessWidget {
-  const _ErroArquivos({
-    required this.erro,
-    required this.onTentarNovamente,
-  });
+  const _ErroArquivos({required this.erro, required this.onTentarNovamente});
 
   final String erro;
   final Future<void> Function() onTentarNovamente;
