@@ -58,7 +58,9 @@ class ImperiumPlanosAdminService {
 
     final map = _mapResponse(response.data);
     if (response.status < 200 || response.status >= 300) {
-      throw StateError(_mensagemErro(map, 'Não foi possível carregar os planos.'));
+      throw StateError(
+        _mensagemErro(map, 'Não foi possível carregar os planos.'),
+      );
     }
 
     final raw = map['planos'];
@@ -68,7 +70,9 @@ class ImperiumPlanosAdminService {
 
     return raw
         .whereType<Map>()
-        .map((item) => ImperiumPlanoAdmin.fromMap(Map<String, dynamic>.from(item)))
+        .map(
+          (item) => ImperiumPlanoAdmin.fromMap(Map<String, dynamic>.from(item)),
+        )
         .where((plano) => plano.codigo.isNotEmpty && plano.nome.isNotEmpty)
         .toList(growable: false);
   }
