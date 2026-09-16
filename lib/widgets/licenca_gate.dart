@@ -8,6 +8,7 @@ import '../screens/dashboard_page.dart';
 import '../screens/licenca_status_page.dart';
 import '../screens/supabase_conta_page.dart';
 import '../screens/usuario_inicio_page.dart';
+import '../services/configuracao_arquivos_cloud_service.dart';
 import '../services/licenca_service.dart';
 import '../services/operacional_realtime_service.dart';
 import '../services/operacional_sync_service.dart';
@@ -26,6 +27,8 @@ class _LicencaGateState extends State<LicencaGate> {
   final LicencaService _service = const LicencaService();
   final OperacionalRealtimeService _realtime =
       OperacionalRealtimeService.instance;
+  final ConfiguracaoArquivosCloudService _configArquivos =
+      ConfiguracaoArquivosCloudService.instance;
   final DateFormat _data = DateFormat('dd/MM/yyyy');
 
   bool _carregando = true;
@@ -84,10 +87,16 @@ class _LicencaGateState extends State<LicencaGate> {
   }
 
   Future<void> _iniciarRealtime(String empresaId) async {
+    // Logo/assinatura são arquivos tenant-safe e administrados fora do payload
+    // textual da configuração. Fazemos uma reconciliação ao abrir a empresa e
+    // novamente sempre que o Realtime indicar mudança compartilhada.
+    await _configArquivos.sincronizar(empresaId);
+
     await _realtime.assinarEmpresa(
       empresaId: empresaId,
       onAtualizar: () async {
         await OperacionalSyncService.instance.tentarSincronizarTudo();
+        await _configArquivos.sincronizar(empresaId);
       },
     );
   }
