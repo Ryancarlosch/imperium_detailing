@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const INFINITEPAY_HANDLE = "imperium_detailing";
+const MOBILE_RETURN_URL = "imperiumdetailing://payment-return/";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -16,6 +17,46 @@ function json(body: unknown, status = 200) {
       "Content-Type": "application/json; charset=utf-8",
     },
   });
+}
+
+function normalizarReturnUrl(raw: unknown, req: Request): string | null {
+  const candidatos = [
+    String(raw ?? "").trim(),
+    req.headers.get("origin") ?? "",
+    req.headers.get("referer") ?? "",
+  ];
+
+  for (const candidato of candidatos) {
+    if (!candidato.trim()) continue;
+
+    try {
+      const url = new URL(candidato);
+      const host = url.hostname.toLowerCase();
+
+      if (
+        url.protocol === "imperiumdetailing:" &&
+        host === "payment-return"
+      ) {
+        return MOBILE_RETURN_URL;
+      }
+
+      const local = host === "localhost" || host === "127.0.0.1";
+      const vercelImperium =
+        host === "imperium-manager-web-vercel.vercel.app" ||
+        (host.startsWith("imperium-manager-web-vercel") &&
+          host.endsWith(".vercel.app"));
+
+      if (!vercelImperium && !local) continue;
+      if (local && url.protocol !== "http:" && url.protocol !== "https:") continue;
+      if (!local && url.protocol !== "https:") continue;
+
+      return `${url.protocol}//${url.host}/`;
+    } catch (_) {
+      // ignora origem inválida
+    }
+  }
+
+  return null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -62,9 +103,8 @@ Deno.serve(async (req: Request) => {
   }
 
   const empresaId = String(body.empresa_id ?? "").trim();
-  const planoCodigo = String(body.plano_codigo ?? "")
-    .trim()
-    .toLowerCase();
+  const planoCodigo = String(body.plano_codigo ?? "").trim().toLowerCase();
+  const returnUrl = normalizarReturnUrl(body.return_url, req);
 
   if (!empresaId || !planoCodigo) {
     return json({ error: "Empresa e plano são obrigatórios." }, 400);
@@ -111,7 +151,7 @@ Deno.serve(async (req: Request) => {
 
   if (planoError) {
     console.error("infinitepay_plano_error", planoError);
-    return json({ error: "Não foi possível consultar os planos." }, 500);
+    return json({ error: "Não foi possível consultar os planos. " }, 500);
   }
 
   if (!plano) {
@@ -132,6 +172,7 @@ Deno.serve(async (req: Request) => {
       moeda: plano.moeda,
       order_nsu: orderNsu,
       status: "pendente",
+      return_url: returnUrl,
     });
 
   if (insertError) {
@@ -141,10 +182,7 @@ Deno.serve(async (req: Request) => {
 
   const functionBase = `${supabaseUrl}/functions/v1`;
   const customerName = String(
-    user.user_metadata?.full_name ??
-      user.user_metadata?.name ??
-      empresa.nome ??
-      "",
+    user.user_metadata?.full_name ?? user.user_metadata?.name ?? empresa.nome ?? "",
   ).trim();
 
   const payload: Record<string, unknown> = {
@@ -197,10 +235,7 @@ Deno.serve(async (req: Request) => {
       })
       .eq("order_nsu", orderNsu);
 
-    return json(
-      { error: "Não foi possível conectar à InfinitePay. Tente novamente." },
-      502,
-    );
+    return json({ error: "Não foi possível conectar à InfinitePay. Tente novamente." }, 502);
   }
 
   const checkoutUrl = String(providerBody.url ?? "").trim();
