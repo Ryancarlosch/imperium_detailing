@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/supabase_bootstrap.dart';
+import 'imperium_clientes_page.dart';
+import 'imperium_empresas_page.dart';
 import 'licenca_status_page.dart';
 import 'ponto_nuvem_importacao_page.dart';
-import 'imperium_empresas_page.dart';
-import 'imperium_clientes_page.dart';
 
 class SupabaseContaPage extends StatefulWidget {
   const SupabaseContaPage({super.key, this.emailInicial});
@@ -19,14 +19,9 @@ class SupabaseContaPage extends StatefulWidget {
 }
 
 class _SupabaseContaPageState extends State<SupabaseContaPage> {
-  static const String _redirectUrl = 'imperiumdetailing://login-callback/';
-
-  final TextEditingController _emailController = TextEditingController();
-
   StreamSubscription<dynamic>? _authSubscription;
 
   bool _carregando = true;
-  bool _enviandoLink = false;
   bool _saindo = false;
 
   String? _erro;
@@ -51,8 +46,6 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
   void initState() {
     super.initState();
 
-    _emailController.text = widget.emailInicial?.trim() ?? '';
-
     final client = _client;
     if (client != null) {
       _authSubscription = client.auth.onAuthStateChange.listen(
@@ -62,7 +55,7 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
         onError: (Object erro) {
           if (!mounted) return;
           setState(() {
-            _erro = 'Falha ao atualizar a sessão: $erro';
+            _erro = 'Falha ao atualizar a sessão: ${_textoErro(erro)}';
           });
         },
       );
@@ -74,7 +67,6 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
   @override
   void dispose() {
     _authSubscription?.cancel();
-    _emailController.dispose();
     super.dispose();
   }
 
@@ -114,14 +106,15 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
     }
 
     try {
-      // Se este e-mail foi pre-cadastrado no painel comercial,
-      // o servidor vincula o usuario somente ao convite do proprio e-mail.
+      // Compatibilidade com clientes antigos que foram criados pelo painel
+      // comercial antes do autocadastro livre.
       try {
         await client.rpc('imperium_resgatar_convite');
       } catch (_) {
-        // Sem convite pendente: segue para a validacao normal do vinculo.
+        // Sem convite pendente: continua normalmente.
       }
-      final vinculo = await client
+
+      var vinculo = await client
           .from('empresa_usuarios')
           .select('empresa_id,papel,ativo')
           .eq('user_id', usuario.id)
@@ -129,11 +122,32 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
           .limit(1)
           .maybeSingle();
 
+      if (vinculo == null) {
+        // Cadastro livre: se o e-mail já estiver confirmado, a primeira
+        // empresa e o teste de 30 dias são criados automaticamente.
+        try {
+          await client.rpc('imperium_autocadastro_empresa');
+        } catch (_) {
+          // O erro amigável é produzido abaixo caso o vínculo siga ausente.
+        }
+
+        vinculo = await client
+            .from('empresa_usuarios')
+            .select('empresa_id,papel,ativo')
+            .eq('user_id', usuario.id)
+            .eq('ativo', true)
+            .limit(1)
+            .maybeSingle();
+      }
+
       final empresaId = vinculo?['empresa_id']?.toString().trim() ?? '';
       final papel = vinculo?['papel']?.toString().trim() ?? '';
 
       if (empresaId.isEmpty) {
-        throw StateError('Esta conta não possui empresa ativa autorizada.');
+        throw StateError(
+          'Não foi possível localizar sua empresa. Confirme seu e-mail e '
+          'entre novamente para liberar os 30 dias grátis.',
+        );
       }
 
       final empresa = await client
@@ -175,42 +189,6 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
     _empresaAtiva = false;
   }
 
-  Future<void> _enviarMagicLink() async {
-    final client = _client;
-    final email = _emailController.text.trim();
-
-    if (client == null) {
-      _mensagem('O Supabase não está disponível neste momento.', erro: true);
-      return;
-    }
-
-    if (email.isEmpty || !email.contains('@')) {
-      _mensagem('Informe um e-mail válido.', erro: true);
-      return;
-    }
-
-    setState(() => _enviandoLink = true);
-
-    try {
-      await client.auth.signInWithOtp(
-        email: email,
-        emailRedirectTo: _redirectUrl,
-        shouldCreateUser: true,
-      );
-
-      if (!mounted) return;
-
-      _mensagem('Link enviado. Abra o e-mail neste aparelho e toque no link.');
-    } catch (erro) {
-      if (!mounted) return;
-      _mensagem(_textoErro(erro), erro: true);
-    } finally {
-      if (mounted) {
-        setState(() => _enviandoLink = false);
-      }
-    }
-  }
-
   Future<void> _abrirPainelEmpresas() async {
     if (!_adminComercial) {
       _mensagem(
@@ -239,7 +217,7 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
       await _carregarEstado();
 
       if (!mounted) return;
-      _mensagem('Conta da nuvem desconectada.');
+      _mensagem('Conta desconectada. Use a tela principal para entrar novamente.');
     } catch (erro) {
       if (!mounted) return;
       _mensagem(_textoErro(erro), erro: true);
@@ -256,9 +234,11 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
       return;
     }
 
-    await Navigator.of(
-      context,
-    ).push<void>(MaterialPageRoute(builder: (_) => const LicencaStatusPage()));
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => LicencaStatusPage(empresaId: _empresaId),
+      ),
+    );
   }
 
   bool get _adminComercial {
@@ -396,10 +376,8 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
                   Expanded(
                     child: Text(
                       _rlsValidado
-                          ? 'Conta conectada. A empresa e as permissões '
-                                'foram validadas pelo RLS do Supabase.'
-                          : 'Conecte uma conta autorizada do Supabase para '
-                                'usar a sincronização entre aparelhos.',
+                          ? 'Conta conectada. A empresa e as permissões estão sincronizadas com a nuvem.'
+                          : 'A sessão da empresa não está conectada. Use o login principal do Imperium com e-mail e senha.',
                     ),
                   ),
                 ],
@@ -407,7 +385,6 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
             ),
           ),
           const SizedBox(height: 14),
-
           if (_carregando)
             const Center(
               child: Padding(
@@ -416,32 +393,26 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
               ),
             )
           else if (usuario == null) ...[
-            const Text(
-              'Conectar conta',
-              style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                labelText: 'E-mail',
-                prefixIcon: Icon(Icons.email_outlined),
-                border: OutlineInputBorder(),
+            const Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: EdgeInsets.all(18),
+                child: Column(
+                  children: [
+                    Icon(Icons.login_rounded, size: 42),
+                    SizedBox(height: 12),
+                    Text(
+                      'Conta desconectada',
+                      style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Volte para a tela principal e entre com o mesmo e-mail e senha usados no Imperium Web. Não usamos mais Magic Link para o login da empresa.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _enviandoLink ? null : _enviarMagicLink,
-              icon: _enviandoLink
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.mark_email_read_outlined),
-              label: Text(_enviandoLink ? 'Enviando...' : 'Enviar Magic Link'),
             ),
           ] else ...[
             if (_rlsValidado)
@@ -461,7 +432,7 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'RLS validado com sucesso',
+                              'Conta da empresa validada',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -476,17 +447,15 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
                       _linha(titulo: 'Papel', valor: _papel ?? ''),
                       _linha(titulo: 'Empresa ID', valor: _empresaId ?? ''),
                       const SizedBox(height: 14),
-
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
                           onPressed: _abrirLicenca,
-                          icon: const Icon(Icons.verified_user_outlined),
-                          label: const Text('Ver licença / mensalidade'),
+                          icon: const Icon(Icons.payments_outlined),
+                          label: const Text('Plano e assinatura'),
                         ),
                       ),
                       const SizedBox(height: 10),
-
                       if (_adminComercial) ...[
                         SizedBox(
                           width: double.infinity,
@@ -500,7 +469,6 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
                         ),
                         const SizedBox(height: 12),
                       ],
-                      // Entrada que estava faltando no APK.
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
@@ -511,8 +479,7 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Aqui você importa os funcionários, migra o '
-                        'histórico e ativa o Ponto compartilhado.',
+                        'Aqui você importa os funcionários, migra o histórico e ativa o Ponto compartilhado.',
                         style: TextStyle(color: Colors.white60, fontSize: 12),
                       ),
                     ],
@@ -526,8 +493,7 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
                   padding: const EdgeInsets.all(16),
                   child: Text(
                     _erro ??
-                        'A sessão existe, mas a empresa ainda não '
-                            'foi validada pelo RLS.',
+                        'A sessão existe, mas a empresa ainda não foi validada.',
                   ),
                 ),
               ),
@@ -535,19 +501,16 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
             OutlinedButton.icon(
               onPressed: _saindo ? null : _sair,
               icon: const Icon(Icons.logout),
-              label: Text(_saindo ? 'Desconectando...' : 'Desconectar'),
+              label: Text(_saindo ? 'Saindo...' : 'Sair da conta'),
             ),
           ],
-
           if (_erro != null && usuario == null) ...[
             const SizedBox(height: 14),
             Text(_erro!, style: const TextStyle(color: Colors.redAccent)),
           ],
           const SizedBox(height: 18),
           const Text(
-            'O login local do Imperium continua separado. '
-            'A conta Supabase identifica o usuário na nuvem e permite '
-            'aplicar as políticas de acesso da empresa.',
+            'A mesma conta de e-mail e senha identifica a empresa no aplicativo e na Web. O cadastro de empresa é automático após a confirmação do e-mail.',
             style: TextStyle(color: Colors.white54, fontSize: 12),
           ),
         ],
