@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../services/cloud_session_service.dart';
 import '../services/imperium_auth_service.dart';
 import '../services/supabase_bootstrap.dart';
+import '../web/imperium_web_theme.dart';
 import 'empresa_primeiro_acesso_page.dart';
 
 class LoginEmailSenhaPage extends StatefulWidget {
@@ -184,7 +185,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
     widget.onLogin(Map<String, dynamic>.from(sessao));
   }
 
-  Widget _seletorEmpresa() {
+  Widget _seletorEmpresa(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -246,7 +247,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
     );
   }
 
-  Widget _formularioLogin() {
+  Widget _formularioLogin(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -377,8 +378,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _conteudo(BuildContext context) {
     if (_restaurando) {
       return const Scaffold(
         body: Center(
@@ -405,14 +405,22 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: _empresasParaEscolher.isNotEmpty
-                      ? _seletorEmpresa()
-                      : _formularioLogin(),
+                      ? _seletorEmpresa(context)
+                      : _formularioLogin(context),
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: ImperiumWebTheme.dark(),
+      child: Builder(builder: _conteudo),
     );
   }
 }
