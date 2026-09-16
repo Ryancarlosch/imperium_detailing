@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../services/licenca_empresa_cloud_service.dart';
 import '../services/licenca_service.dart';
 
 class LicencaStatusPage extends StatefulWidget {
-  const LicencaStatusPage({super.key});
+  const LicencaStatusPage({super.key, this.empresaId});
+
+  final String? empresaId;
 
   @override
   State<LicencaStatusPage> createState() => _LicencaStatusPageState();
@@ -12,6 +15,8 @@ class LicencaStatusPage extends StatefulWidget {
 
 class _LicencaStatusPageState extends State<LicencaStatusPage> {
   final LicencaService _service = const LicencaService();
+  final LicencaEmpresaCloudService _empresaService =
+      const LicencaEmpresaCloudService();
   final DateFormat _data = DateFormat('dd/MM/yyyy');
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
@@ -35,7 +40,10 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
     });
 
     try {
-      final status = await _service.consultar();
+      final empresaId = widget.empresaId?.trim() ?? '';
+      final status = empresaId.isEmpty
+          ? await _service.consultar()
+          : await _empresaService.consultar(empresaId);
 
       if (!mounted) return;
 
@@ -61,6 +69,7 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
       'Bad state: ',
       'StateError: ',
       'PostgrestException: ',
+      'AuthException: ',
       'Exception: ',
     ]) {
       if (texto.startsWith(prefixo)) {
@@ -68,29 +77,29 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
       }
     }
 
-    return texto;
+    return texto.isEmpty ? 'Não foi possível consultar seu plano.' : texto;
   }
 
   String _tituloStatus(LicencaStatus status) {
     switch (status.statusEfetivo) {
       case 'vitalicia':
-        return 'Licença vitalícia';
+        return 'Plano vitalício';
       case 'cortesia':
-        return 'Licença interna';
+        return 'Plano interno';
       case 'teste':
-        return 'Período de teste';
+        return 'Teste grátis';
       case 'ativa':
-        return 'Mensalidade ativa';
+        return 'Plano ativo';
       case 'tolerancia':
-        return 'Período de tolerância';
+        return 'Pagamento em tolerância';
       case 'suspensa':
-        return 'Licença suspensa';
+        return 'Plano suspenso';
       case 'cancelada':
-        return 'Licença cancelada';
+        return 'Plano cancelado';
       case 'vencida':
-        return 'Mensalidade vencida';
+        return 'Plano vencido';
       default:
-        return 'Licença não cadastrada';
+        return 'Plano não cadastrado';
     }
   }
 
@@ -112,6 +121,55 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
     }
 
     return Theme.of(context).colorScheme.error;
+  }
+
+  String _textoPlano(LicencaStatus status) {
+    if (status.statusEfetivo == 'teste') {
+      final dias = status.diasRestantes;
+      if (dias != null && dias >= 0) {
+        return 'Você está nos 30 dias grátis. Restam $dias dia(s). '
+            'Você pode assinar antes do fim do teste para continuar sem interrupção.';
+      }
+      return 'Você está usando o período grátis do Imperium. '
+          'Pode assinar antes do vencimento para continuar sem interrupção.';
+    }
+
+    if (!status.acessoLiberado) {
+      return 'O acesso ao sistema está bloqueado, mas esta área de Plano '
+          'continua disponível para você renovar e liberar novamente a empresa.';
+    }
+
+    return 'Acompanhe aqui o seu plano, vencimento e futuras cobranças do Imperium.';
+  }
+
+  String _textoBotaoPagamento(LicencaStatus status) {
+    if (status.statusEfetivo == 'teste') return 'Assinar antes do vencimento';
+    if (!status.acessoLiberado) return 'Renovar e liberar acesso';
+    return 'Gerenciar pagamento';
+  }
+
+  Future<void> _abrirPagamento() async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Pagamento do plano'),
+          content: const Text(
+            'A área de Plano já está preparada para receber o checkout. '
+            'A integração com a InfinitePay será conectada na próxima etapa. '
+            'Nenhuma cobrança foi realizada agora.',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Entendi'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _linha(String titulo, String valor) {
@@ -141,7 +199,7 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Licença do Imperium'),
+        title: const Text('Plano do Imperium'),
         actions: [
           IconButton(
             tooltip: 'Atualizar',
@@ -173,7 +231,7 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
               ),
             )
           : status == null
-          ? const Center(child: Text('Licença não encontrada.'))
+          ? const Center(child: Text('Plano não encontrado.'))
           : RefreshIndicator(
               onRefresh: _carregar,
               child: ListView(
@@ -203,11 +261,16 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
                           Text(
                             status.acessoLiberado
                                 ? 'Acesso liberado'
-                                : 'Acesso bloqueado',
+                                : 'Acesso ao sistema bloqueado',
                             style: TextStyle(
                               color: _corStatus(context, status),
                               fontWeight: FontWeight.w600,
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _textoPlano(status),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -270,12 +333,20 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: _abrirPagamento,
+                      icon: const Icon(Icons.payments_outlined),
+                      label: Text(_textoBotaoPagamento(status)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   const Text(
-                    'Nesta primeira etapa a tela apenas consulta a '
-                    'licença no servidor. O bloqueio automático do '
-                    'aplicativo será ativado na próxima etapa, depois '
-                    'que esta consulta estiver validada no APK.',
+                    'O checkout será conectado à InfinitePay na próxima etapa. '
+                    'Até lá, este botão não realiza nenhuma cobrança.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                 ],
