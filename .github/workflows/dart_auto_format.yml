@@ -62,12 +62,16 @@ jobs:
               'Conta bancária',
           ]
           missing = [value for value in required if value not in repaired]
-          suspicious = [value for value in ('Ã', 'Â', 'â€', 'ðŸ', '�') if value in repaired]
+          bad_sequences = (
+              'Ã£', 'Ã§', 'Ã­', 'Ã©', 'Ã³', 'Ãµ', 'Ãª', 'Ãº', 'Ã¡',
+              'Ã', 'Ãƒ', 'Â', 'â€', 'ðŸ', '�',
+          )
+          suspicious = [value for value in bad_sequences if value in repaired]
 
           if missing:
               raise SystemExit(f'Termos UTF-8 esperados ausentes após reparo: {missing}')
           if suspicious:
-              raise SystemExit(f'Marcadores de mojibake ainda presentes: {suspicious}')
+              raise SystemExit(f'Sequências de mojibake ainda presentes: {suspicious}')
           if repaired == original:
               raise SystemExit('Nenhuma alteração de encoding foi detectada; reparo não aplicado.')
 
