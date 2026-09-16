@@ -15,25 +15,27 @@ void main() {
     expect(main, contains('LoginEmailSenhaPage'));
     expect(login, contains('Acesse sua empresa com o mesmo e-mail e senha'));
     expect(login, contains("labelText: 'E-mail da empresa'"));
-    expect(login, contains('Criar ou ativar acesso da empresa'));
+    expect(login, contains('Começar 30 dias grátis'));
     expect(login, contains('Funcionários ficam cadastrados dentro da empresa'));
     expect(auth, contains('signInWithPassword'));
     expect(auth, contains('criarContaComEmailSenha'));
     expect(auth, contains('signUp'));
   });
 
-  test('Primeiro acesso ativa a assinatura sem magic link ou PIN', () {
+  test('Primeiro acesso cria conta gratis sem magic link ou PIN', () {
     final source = File(
       'lib/screens/empresa_primeiro_acesso_page.dart',
     ).readAsStringSync();
 
-    expect(source, contains('Criar senha e ativar assinatura'));
+    expect(source, contains('Criar conta grátis'));
+    expect(source, contains('Teste o Imperium grátis por 30 dias'));
     expect(source, contains('CloudSessionService'));
     expect(source, contains('criarContaComEmailSenha'));
     expect(source, contains('entrarComEmailSenha'));
-    expect(source, contains('e-mail usado na assinatura'));
-    expect(source, contains("labelText: 'E-mail da assinatura'"));
-    expect(source, contains('vinculadas automaticamente'));
+    expect(source, contains("labelText: 'Seu e-mail'"));
+    expect(source, contains('Confirme o e-mail'));
+    expect(source, contains('30 dias grátis'));
+    expect(source, contains('Não é necessária autorização prévia'));
     expect(source, isNot(contains('signInWithOtp')));
     expect(source, isNot(contains('Magic Link')));
     expect(source, isNot(contains('Criar PIN')));
