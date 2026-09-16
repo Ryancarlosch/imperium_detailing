@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../repositories/usuario_repository.dart';
 import '../screens/dashboard_page.dart';
+import '../screens/licenca_status_page.dart';
 import '../screens/supabase_conta_page.dart';
 import '../screens/usuario_inicio_page.dart';
 import '../services/licenca_service.dart';
@@ -60,6 +61,21 @@ class _LicencaGateState extends State<LicencaGate> {
         _carregando = false;
       });
     }
+  }
+
+  Future<void> _abrirPlano() async {
+    final empresaId = _status?.empresaId.trim() ?? '';
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => LicencaStatusPage(
+          empresaId: empresaId.isEmpty ? null : empresaId,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    await _verificar();
   }
 
   Future<void> _abrirContaNuvem() async {
@@ -190,6 +206,12 @@ class _LicencaGateState extends State<LicencaGate> {
           if (status != null) _cartaoStatus(status),
           const SizedBox(height: 14),
           FilledButton.icon(
+            onPressed: _abrirPlano,
+            icon: const Icon(Icons.payments_outlined),
+            label: const Text('Plano / renovar acesso'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
             onPressed: _verificar,
             icon: const Icon(Icons.refresh_rounded),
             label: const Text('Validar novamente'),
