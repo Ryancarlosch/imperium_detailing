@@ -22,10 +22,7 @@ void main() {
       service,
       isNot(contains('EstoqueRepository().registrarMovimentacao')),
     );
-    expect(
-      compact,
-      contains('nãoalteranovamenteitens_estoque.quantidade'),
-    );
+    expect(compact, contains('nãoalteranovamenteitens_estoque.quantidade'));
   });
 
   test('Estoque Cloud V2 nao sobrescreve registros ja mapeados', () {
@@ -49,10 +46,7 @@ void main() {
     expect(sync, contains("import 'estoque_cloud_download_service.dart';"));
     expect(compact, contains("modulo:'ordens_servico',prioridade:30"));
     expect(compact, contains("modulo:'estoque',prioridade:60"));
-    expect(
-      compact,
-      contains("dependencias:const<String>['ordens_servico']"),
-    );
+    expect(compact, contains("dependencias:const<String>['ordens_servico']"));
     expect(compact, contains('executar:()=>_syncEstoque(empresaId)'));
     expect(
       compact,

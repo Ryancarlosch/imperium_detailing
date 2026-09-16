@@ -41,7 +41,10 @@ void main() {
       sync,
       contains('OsCloudDownloadService.instance.sincronizarDownloadNovos'),
     );
-    expect(sync, contains('OsCloudV3Service.instance.sincronizarDepoisDoDownload'));
+    expect(
+      sync,
+      contains('OsCloudV3Service.instance.sincronizarDepoisDoDownload'),
+    );
     expect(repo, contains('os-cloud-upload-trigger-v1'));
   });
 }

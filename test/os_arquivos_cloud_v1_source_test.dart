@@ -33,10 +33,7 @@ void main() {
 
     expect(compact, contains("modulo:'ordens_servico',prioridade:30"));
     expect(compact, contains("modulo:'arquivos_os',prioridade:40"));
-    expect(
-      compact,
-      contains("dependencias:const<String>['ordens_servico']"),
-    );
+    expect(compact, contains("dependencias:const<String>['ordens_servico']"));
     expect(compact, contains('executar:()=>_syncArquivosOs(empresaId)'));
 
     final upload = compact.indexOf(
