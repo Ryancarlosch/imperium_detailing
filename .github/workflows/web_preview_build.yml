@@ -1,5 +1,6 @@
 name: Web Preview Build
 
+# Publica o build Web validado na branch consumida pelo Vercel.
 on:
   workflow_dispatch:
   push:
