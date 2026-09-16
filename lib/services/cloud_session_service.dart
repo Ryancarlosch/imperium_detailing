@@ -31,22 +31,37 @@ class CloudSessionService {
       return const [];
     }
 
-    Object? erroAtivacao;
+    Object? erroConvite;
     try {
-      // Se existir uma assinatura/convite pendente para o e-mail autenticado,
-      // a RPC converte automaticamente esse registro em vinculo da empresa.
-      // A chamada e idempotente: nos proximos logins apenas reutiliza o vinculo.
+      // Compatibilidade com clientes que já foram pré-cadastrados no painel
+      // comercial antes do autocadastro de 30 dias existir.
       await client.rpc('imperium_resgatar_convite');
     } catch (erro) {
-      erroAtivacao = erro;
+      erroConvite = erro;
     }
 
-    final empresas = await _empresaService.listarEmpresasVinculadas();
-    if (empresas.isEmpty && erroAtivacao != null) {
-      throw StateError(ImperiumAuthService.instance.textoErro(erroAtivacao));
+    var empresas = await _empresaService.listarEmpresasVinculadas();
+    if (empresas.isNotEmpty) return empresas;
+
+    Object? erroAutocadastro;
+    try {
+      // Cadastro livre: depois que o e-mail é confirmado, o servidor cria a
+      // primeira empresa do usuário e concede 30 dias grátis. A RPC é
+      // idempotente e possui trava contra criação duplicada entre Web/Mobile.
+      await client.rpc('imperium_autocadastro_empresa');
+    } catch (erro) {
+      erroAutocadastro = erro;
     }
 
-    return empresas;
+    empresas = await _empresaService.listarEmpresasVinculadas();
+    if (empresas.isNotEmpty) return empresas;
+
+    final erro = erroAutocadastro ?? erroConvite;
+    if (erro != null) {
+      throw StateError(ImperiumAuthService.instance.textoErro(erro));
+    }
+
+    return const [];
   }
 
   Future<Map<String, dynamic>> prepararSessao({String? empresaId}) async {
@@ -60,9 +75,8 @@ class CloudSessionService {
     final empresas = await listarEmpresasDoUsuario();
     if (empresas.isEmpty) {
       throw StateError(
-        'Nenhuma empresa ativa foi encontrada para este e-mail. '
-        'Use o mesmo e-mail informado na assinatura do Imperium e confirme '
-        'se a licença da empresa está ativa.',
+        'Não foi possível criar ou localizar sua empresa. '
+        'Confirme seu e-mail e entre novamente para liberar os 30 dias grátis.',
       );
     }
 
