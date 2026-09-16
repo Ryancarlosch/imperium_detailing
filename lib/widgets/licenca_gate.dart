@@ -7,9 +7,11 @@ import '../repositories/usuario_repository.dart';
 import '../screens/dashboard_page.dart';
 import '../screens/licenca_status_page.dart';
 import '../screens/supabase_conta_page.dart';
+import '../screens/sync_conflitos_page.dart';
 import '../screens/usuario_inicio_page.dart';
 import '../services/configuracao_arquivos_cloud_service.dart';
 import '../services/licenca_service.dart';
+import '../services/operacional_cloud_v2_service.dart';
 import '../services/operacional_realtime_service.dart';
 import '../services/operacional_sync_service.dart';
 
@@ -27,12 +29,15 @@ class _LicencaGateState extends State<LicencaGate> {
   final LicencaService _service = const LicencaService();
   final OperacionalRealtimeService _realtime =
       OperacionalRealtimeService.instance;
+  final OperacionalCloudV2Service _operacionalV2 =
+      OperacionalCloudV2Service.instance;
   final ConfiguracaoArquivosCloudService _configArquivos =
       ConfiguracaoArquivosCloudService.instance;
   final DateFormat _data = DateFormat('dd/MM/yyyy');
 
   bool _carregando = true;
   bool _usouCacheOffline = false;
+  bool _avisandoConflito = false;
   LicencaStatus? _status;
   String? _erro;
 
@@ -87,18 +92,72 @@ class _LicencaGateState extends State<LicencaGate> {
   }
 
   Future<void> _iniciarRealtime(String empresaId) async {
-    // Logo/assinatura são arquivos tenant-safe e administrados fora do payload
-    // textual da configuração. Fazemos uma reconciliação ao abrir a empresa e
-    // novamente sempre que o Realtime indicar mudança compartilhada.
+    // Faz uma reconciliação inicial antes de assinar eventos. O motor
+    // Operacional possui retry/offline e o serviço de arquivos preserva logo e
+    // assinatura com cache por empresa.
+    await OperacionalSyncService.instance.tentarSincronizarTudo();
     await _configArquivos.sincronizar(empresaId);
+    await _verificarConflitos(empresaId);
 
     await _realtime.assinarEmpresa(
       empresaId: empresaId,
       onAtualizar: () async {
         await OperacionalSyncService.instance.tentarSincronizarTudo();
         await _configArquivos.sincronizar(empresaId);
+        await _verificarConflitos(empresaId);
       },
     );
+  }
+
+  Future<void> _verificarConflitos(String empresaId) async {
+    if (_avisandoConflito || !mounted) return;
+
+    final operacional = await _operacionalV2.listarConflitosPendentes(
+      empresaId: empresaId,
+    );
+    final arquivos = await _configArquivos.listarConflitosPendentes(
+      empresaId: empresaId,
+    );
+    final total = operacional.length + arquivos.length;
+    if (total == 0 || !mounted) return;
+
+    _avisandoConflito = true;
+    try {
+      final abrir = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Revisão necessária'),
+          content: Text(
+            total == 1
+                ? 'O Imperium protegeu 1 alteração feita em versões diferentes. '
+                      'Escolha qual versão deve prevalecer antes de continuar a sincronização.'
+                : 'O Imperium protegeu $total alterações feitas em versões diferentes. '
+                      'Escolha qual versão deve prevalecer antes de continuar a sincronização.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Depois'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.compare_arrows_rounded),
+              label: const Text('Revisar agora'),
+            ),
+          ],
+        ),
+      );
+
+      if (abrir == true && mounted) {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => SyncConflitosPage(empresaId: empresaId),
+          ),
+        );
+      }
+    } finally {
+      _avisandoConflito = false;
+    }
   }
 
   Future<void> _abrirPlano() async {
