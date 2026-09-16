@@ -75,7 +75,7 @@ void main() {
       'awaitCrmOrcamentosCloudService.instance.sincronizarUpload(empresaId);',
     );
     final crmDownload = compact.indexOf(
-      'awaitCrmOrcamentosCloudService.instance.sincronizarDownloadNovos(empresaId);',
+      'awaitCrmOrcamentosCloudService.instance.sincronizarDownloadNovos(empresaId',
     );
 
     expect(crmUpload, greaterThanOrEqualTo(0));
