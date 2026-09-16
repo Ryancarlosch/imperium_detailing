@@ -32,7 +32,11 @@ void main() {
     expect(motor, contains("etapa.modulo == 'operacional'"));
     expect(
       motor,
-      contains('OperacionalCloudV2Service.instance.prepararUpload'),
+      contains(
+        RegExp(
+          r'OperacionalCloudV2Service\.instance\s*\.prepararUpload\(empresaId\)',
+        ),
+      ),
     );
     expect(
       motor,
