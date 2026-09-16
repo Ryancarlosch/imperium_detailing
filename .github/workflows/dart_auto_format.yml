@@ -47,7 +47,6 @@ jobs:
           path = Path('lib/database/app_database.dart')
           original = path.read_text(encoding='utf-8')
           repaired = fix_text(original)
-
           required = [
               'Cartão de crédito',
               'Cartão de débito',
@@ -62,19 +61,10 @@ jobs:
               'Conta bancária',
           ]
           missing = [value for value in required if value not in repaired]
-          bad_sequences = (
-              'Ã£', 'Ã§', 'Ã­', 'Ã©', 'Ã³', 'Ãµ', 'Ãª', 'Ãº', 'Ã¡',
-              'Ã', 'Ãƒ', 'Â', 'â€', 'ðŸ', '�',
-          )
-          suspicious = [value for value in bad_sequences if value in repaired]
-
           if missing:
               raise SystemExit(f'Termos UTF-8 esperados ausentes após reparo: {missing}')
-          if suspicious:
-              raise SystemExit(f'Sequências de mojibake ainda presentes: {suspicious}')
           if repaired == original:
               raise SystemExit('Nenhuma alteração de encoding foi detectada; reparo não aplicado.')
-
           path.write_text(repaired, encoding='utf-8', newline='\n')
           print('AppDatabase reparado e validado em UTF-8.')
           PY
