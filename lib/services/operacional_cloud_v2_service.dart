@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -196,9 +197,7 @@ class OperacionalCloudV2Service {
         .maybeSingle();
 
     if (remotoRaw == null) {
-      throw StateError(
-        'O registro remoto não existe mais. Sincronize novamente.',
-      );
+      throw StateError('O registro remoto não existe mais. Sincronize novamente.');
     }
 
     await _aplicarRemoto(
@@ -440,7 +439,9 @@ class OperacionalCloudV2Service {
       empresaId: empresaId,
       localId: localId,
       remotoId: remotoId,
-      localHash: spec.hashLocal(Map<String, Object?>.from(atualizados.first)),
+      localHash: spec.hashLocal(
+        Map<String, Object?>.from(atualizados.first),
+      ),
       remotoAtualizadoEm: remoto['atualizado_em']?.toString(),
     );
   }
@@ -713,13 +714,17 @@ class OperacionalCloudV2Service {
     required String? remotoAtualizadoEm,
   }) async {
     final database = await _appDatabase.database;
-    await database.insert(tabelaMapa, {
-      'empresa_id': empresaId,
-      'local_id': localId,
-      'remoto_id': remotoId,
-      'local_hash': localHash,
-      'remoto_atualizado_em': remotoAtualizadoEm,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await database.insert(
+      tabelaMapa,
+      {
+        'empresa_id': empresaId,
+        'local_id': localId,
+        'remoto_id': remotoId,
+        'local_hash': localHash,
+        'remoto_atualizado_em': remotoAtualizadoEm,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<int?> _localPorRemoto({
@@ -762,31 +767,34 @@ class OperacionalCloudV2Service {
   _OperacionalSpec _spec(String entidade) {
     return switch (entidade) {
       'cliente' => _OperacionalSpec(
-        entidade: entidade,
-        tabelaLocal: 'clientes',
-        tabelaMapa: 'imperium_sync_clientes',
-        tabelaRemota: 'imperium_clientes',
-        hashLocal: _hashCliente,
-      ),
+          entidade: entidade,
+          tabelaLocal: 'clientes',
+          tabelaMapa: 'imperium_sync_clientes',
+          tabelaRemota: 'imperium_clientes',
+          hashLocal: _hashCliente,
+        ),
       'veiculo' => _OperacionalSpec(
-        entidade: entidade,
-        tabelaLocal: 'veiculos',
-        tabelaMapa: 'imperium_sync_veiculos',
-        tabelaRemota: 'imperium_veiculos',
-        hashLocal: _hashVeiculo,
-      ),
+          entidade: entidade,
+          tabelaLocal: 'veiculos',
+          tabelaMapa: 'imperium_sync_veiculos',
+          tabelaRemota: 'imperium_veiculos',
+          hashLocal: _hashVeiculo,
+        ),
       'agendamento' => _OperacionalSpec(
-        entidade: entidade,
-        tabelaLocal: 'agendamentos',
-        tabelaMapa: 'imperium_sync_agendamentos',
-        tabelaRemota: 'imperium_agendamentos',
-        hashLocal: _hashAgendamento,
-      ),
+          entidade: entidade,
+          tabelaLocal: 'agendamentos',
+          tabelaMapa: 'imperium_sync_agendamentos',
+          tabelaRemota: 'imperium_agendamentos',
+          hashLocal: _hashAgendamento,
+        ),
       _ => throw ArgumentError('Entidade operacional inválida: $entidade'),
     };
   }
 
-  static int _totalEntidade(List<Map<String, Object?>> rows, String entidade) {
+  static int _totalEntidade(
+    List<Map<String, Object?>> rows,
+    String entidade,
+  ) {
     for (final row in rows) {
       if (_texto(row['entidade']) == entidade) return _int(row['total']);
     }
