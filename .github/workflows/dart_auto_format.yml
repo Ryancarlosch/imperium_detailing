@@ -35,6 +35,46 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Repair AppDatabase UTF-8 mojibake
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check 'ftfy==6.3.1'
+          python3 - <<'PY'
+          from pathlib import Path
+          from ftfy import fix_text
+
+          path = Path('lib/database/app_database.dart')
+          original = path.read_text(encoding='utf-8')
+          repaired = fix_text(original)
+
+          required = [
+              'Cartão de crédito',
+              'Cartão de débito',
+              "'Saída'",
+              "'Não DRE'",
+              "'Acréscimo'",
+              "'Aniversário'",
+              "'Qualificação'",
+              "'Desfazer integrações'",
+              "'Atualização de custos'",
+              'Produtos consumidos em serviços',
+              'Conta bancária',
+          ]
+          missing = [value for value in required if value not in repaired]
+          suspicious = [value for value in ('Ã', 'Â', 'â€', 'ðŸ', '�') if value in repaired]
+
+          if missing:
+              raise SystemExit(f'Termos UTF-8 esperados ausentes após reparo: {missing}')
+          if suspicious:
+              raise SystemExit(f'Marcadores de mojibake ainda presentes: {suspicious}')
+          if repaired == original:
+              raise SystemExit('Nenhuma alteração de encoding foi detectada; reparo não aplicado.')
+
+          path.write_text(repaired, encoding='utf-8', newline='\n')
+          print('AppDatabase reparado e validado em UTF-8.')
+          PY
+
       - name: Format Dart sources
         run: dart format lib test
 
@@ -50,5 +90,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add lib test
-          git commit -m "style: aplica dart format"
+          git commit -m "fix: repara encoding UTF-8 do AppDatabase"
           git push origin HEAD:desenvolvimento
