@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/cloud_session_service.dart';
@@ -24,6 +25,14 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
   bool _ocultarConfirmacao = true;
   String? _erro;
   String? _mensagem;
+
+  String get _redirectConfirmacao {
+    if (kIsWeb) {
+      final origem = Uri.base.origin;
+      return origem.endsWith('/') ? origem : '$origem/';
+    }
+    return 'imperiumdetailing://login-callback/';
+  }
 
   @override
   void dispose() {
@@ -65,17 +74,16 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
       final resposta = await _auth.criarContaComEmailSenha(
         email: email,
         senha: senha,
+        redirectTo: _redirectConfirmacao,
       );
 
       final possuiSessao = resposta.session != null || _auth.autenticado;
       if (!possuiSessao) {
         if (!mounted) return;
         setState(() {
-          _mensagem =
-              'Conta criada. Confirme o e-mail que enviamos para você. '
-              'Depois volte ao Imperium e entre com o mesmo e-mail e senha. '
-              'Sua empresa será criada automaticamente e seus 30 dias grátis '
-              'serão liberados no primeiro acesso confirmado.';
+          _mensagem = kIsWeb
+              ? 'Conta criada. Confirme o e-mail que enviamos para você. Depois volte ao Imperium e entre com o mesmo e-mail e senha. Sua empresa e os 30 dias grátis serão liberados no primeiro acesso confirmado.'
+              : 'Conta criada. Confirme o e-mail neste celular. O link poderá abrir o Imperium novamente; depois toque em “Já confirmei o e-mail • entrar”. Sua empresa e os 30 dias grátis serão liberados no primeiro acesso confirmado.';
         });
         return;
       }
@@ -182,6 +190,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
                         enableSuggestions: false,
+                        autofillHints: const [AutofillHints.email],
                         decoration: const InputDecoration(
                           labelText: 'Seu e-mail',
                           prefixIcon: Icon(Icons.alternate_email_rounded),
@@ -196,6 +205,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
                         enableSuggestions: false,
+                        autofillHints: const [AutofillHints.newPassword],
                         decoration: InputDecoration(
                           labelText: 'Criar senha',
                           helperText: 'Mínimo de 8 caracteres',
@@ -229,6 +239,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                         onSubmitted: (_) => _criarContaGratis(),
                         autocorrect: false,
                         enableSuggestions: false,
+                        autofillHints: const [AutofillHints.newPassword],
                         decoration: InputDecoration(
                           labelText: 'Confirmar senha',
                           prefixIcon: const Icon(Icons.lock_reset_rounded),
