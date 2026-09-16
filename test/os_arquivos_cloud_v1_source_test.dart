@@ -14,7 +14,7 @@ void main() {
     expect(source, contains('assinatura_cliente'));
     expect(source, contains('imperium-os-arquivos'));
     expect(source, contains('uploadBinary'));
-    expect(source, contains('getApplicationDocumentsDirectory'));
+    expect(source, contains('TenantLocalStorageService.instance.pasta'));
   });
 
   test('Comprovante financeiro continua em bucket separado', () {
@@ -25,44 +25,29 @@ void main() {
     expect(source, contains('imperium-financeiro-comprovantes'));
   });
 
-  test('Sync operacional chama arquivos depois da OS', () {
+  test('Sync operacional executa arquivos depois da OS', () {
     final source = File(
       'lib/services/operacional_sync_service.dart',
     ).readAsStringSync();
     final compact = source.replaceAll(RegExp(r'\s+'), '');
 
-    final osUpload =
-        RegExp(
-          r'awaitOsCloudUploadService\.instance\.'
-          r'sincronizarUpload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
+    expect(compact, contains("modulo:'ordens_servico',prioridade:30"));
+    expect(compact, contains("modulo:'arquivos_os',prioridade:40"));
+    expect(
+      compact,
+      contains("dependencias:const<String>['ordens_servico']"),
+    );
+    expect(compact, contains('executar:()=>_syncArquivosOs(empresaId)'));
 
-    final arquivosUpload =
-        RegExp(
-          r'awaitOsArquivosCloudService\.instance\.'
-          r'sincronizarUpload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
+    final upload = compact.indexOf(
+      'awaitOsArquivosCloudService.instance.sincronizarUpload(empresaId);',
+    );
+    final download = compact.indexOf(
+      'awaitOsArquivosCloudService.instance.sincronizarDownload(empresaId);',
+    );
 
-    final osDownload =
-        RegExp(
-          r'awaitOsCloudDownloadService\.instance\.'
-          r'sincronizarDownloadNovos\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
-
-    final arquivosDownload =
-        RegExp(
-          r'awaitOsArquivosCloudService\.instance\.'
-          r'sincronizarDownload\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
-
-    expect(osUpload, greaterThanOrEqualTo(0));
-    expect(arquivosUpload, greaterThan(osUpload));
-    expect(osDownload, greaterThan(arquivosUpload));
-    expect(arquivosDownload, greaterThan(osDownload));
+    expect(upload, greaterThanOrEqualTo(0));
+    expect(download, greaterThan(upload));
   });
 
   test('Migration cria bucket privado e RLS de fotos', () {
