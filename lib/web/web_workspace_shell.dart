@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../screens/licenca_status_page.dart';
 import 'imperium_web_theme.dart';
 import 'web_dashboard_gerencial_page.dart';
 import 'web_operacional_shell.dart';
@@ -28,6 +29,14 @@ class WebWorkspaceShell extends StatelessWidget {
       }
     }
     return 'Empresa';
+  }
+
+  Future<void> _abrirPlano(BuildContext context) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => LicencaStatusPage(empresaId: empresaAtualId),
+      ),
+    );
   }
 
   Future<void> _abrirSistemaCompleto(BuildContext context) async {
@@ -174,7 +183,11 @@ class WebWorkspaceShell extends StatelessWidget {
           PopupMenuButton<String>(
             tooltip: usuarioEmail,
             onSelected: (valor) async {
-              if (valor == 'sair') await onSair();
+              if (valor == 'plano') {
+                await _abrirPlano(context);
+              } else if (valor == 'sair') {
+                await onSair();
+              }
             },
             itemBuilder: (context) => [
               PopupMenuItem<String>(
@@ -200,6 +213,16 @@ class WebWorkspaceShell extends StatelessWidget {
                 ),
               ),
               const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'plano',
+                child: Row(
+                  children: [
+                    Icon(Icons.payments_outlined, size: 18),
+                    SizedBox(width: 10),
+                    Text('Plano e assinatura'),
+                  ],
+                ),
+              ),
               const PopupMenuItem<String>(
                 value: 'sair',
                 child: Row(
