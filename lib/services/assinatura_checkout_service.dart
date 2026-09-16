@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'supabase_bootstrap.dart';
 
 class AssinaturaPlano {
@@ -62,6 +64,15 @@ class AssinaturaCheckoutResultado {
 class AssinaturaCheckoutService {
   const AssinaturaCheckoutService();
 
+  String _returnUrl() {
+    if (kIsWeb) {
+      final origem = Uri.base.origin;
+      return origem.endsWith('/') ? origem : '$origem/';
+    }
+
+    return 'imperiumdetailing://payment-return/';
+  }
+
   Future<List<AssinaturaPlano>> listarPlanos() async {
     final client = SupabaseBootstrap.client;
     if (client == null || client.auth.currentUser == null) {
@@ -103,7 +114,11 @@ class AssinaturaCheckoutService {
 
     final response = await client.functions.invoke(
       'imperium-infinitepay-checkout',
-      body: <String, dynamic>{'empresa_id': empresa, 'plano_codigo': plano},
+      body: <String, dynamic>{
+        'empresa_id': empresa,
+        'plano_codigo': plano,
+        'return_url': _returnUrl(),
+      },
     );
 
     dynamic raw = response.data;
