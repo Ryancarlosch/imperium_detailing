@@ -807,10 +807,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
             children: [
               CircularProgressIndicator(color: _gold),
               SizedBox(height: 14),
-              Text(
-                'Verificando sua conta...',
-                style: TextStyle(color: _muted),
-              ),
+              Text('Verificando sua conta...', style: TextStyle(color: _muted)),
             ],
           ),
         ),
