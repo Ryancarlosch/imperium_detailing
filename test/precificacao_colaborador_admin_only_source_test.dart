@@ -10,7 +10,10 @@ void main() {
 
     expect(sql, contains('imperium_precificacao_colaboradores_custo'));
     expect(sql, contains('private.imperium_eh_admin_empresa(empresa_id)'));
-    expect(sql, isNot(contains("imperium_pode_modulo(empresa_id, 'financeiro')")));
+    expect(
+      sql,
+      isNot(contains("imperium_pode_modulo(empresa_id, 'financeiro')")),
+    );
     expect(sql, contains('for select'));
     expect(sql, contains('for insert'));
     expect(sql, contains('for update'));
