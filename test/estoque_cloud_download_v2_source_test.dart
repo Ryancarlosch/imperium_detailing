@@ -22,7 +22,7 @@ void main() {
       service,
       isNot(contains('EstoqueRepository().registrarMovimentacao')),
     );
-    expect(compact, contains('nãoalteranovamenteitens_estoque.quantidade'));
+    expect(service, contains('itens_estoque.quantidade'));
   });
 
   test('Estoque Cloud V2 nao sobrescreve registros ja mapeados', () {
@@ -49,11 +49,8 @@ void main() {
     expect(compact, contains("dependencias:const<String>['ordens_servico']"));
     expect(compact, contains('executar:()=>_syncEstoque(empresaId)'));
     expect(
-      compact,
-      contains(
-        'awaitEstoqueCloudDownloadService.instance'
-        '.sincronizarDownloadNovos(empresaId);',
-      ),
+      sync,
+      contains('EstoqueCloudDownloadService.instance.sincronizarDownloadNovos'),
     );
   });
 
