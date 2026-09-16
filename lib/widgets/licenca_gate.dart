@@ -68,9 +68,8 @@ class _LicencaGateState extends State<LicencaGate> {
 
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => LicencaStatusPage(
-          empresaId: empresaId.isEmpty ? null : empresaId,
-        ),
+        builder: (_) =>
+            LicencaStatusPage(empresaId: empresaId.isEmpty ? null : empresaId),
       ),
     );
 
