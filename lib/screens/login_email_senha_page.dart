@@ -331,15 +331,20 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
         const Divider(),
         const SizedBox(height: 8),
         Text(
-          'Primeiro acesso',
+          'Ainda não tem conta?',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.labelLarge,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
+        const Text(
+          'Cadastre-se sem autorização prévia, confirme seu e-mail e ganhe 30 dias grátis para testar o Imperium.',
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
         OutlinedButton.icon(
           onPressed: _carregando ? null : _abrirPrimeiroAcessoEmpresa,
-          icon: const Icon(Icons.business_outlined),
-          label: const Text('Criar ou ativar acesso da empresa'),
+          icon: const Icon(Icons.rocket_launch_outlined),
+          label: const Text('Começar 30 dias grátis'),
         ),
         const SizedBox(height: 14),
         Text(
