@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'repositories/usuario_repository.dart';
 import 'screens/login_email_senha_page.dart';
+import 'screens/nova_senha_page.dart';
 import 'services/backup_automatico_service.dart';
 import 'services/cloud_session_service.dart';
 import 'services/funcionario_acesso_service.dart';
@@ -60,23 +64,90 @@ class _SessaoGate extends StatefulWidget {
   State<_SessaoGate> createState() => _SessaoGateState();
 }
 
-class _SessaoGateState extends State<_SessaoGate> {
+class _SessaoGateState extends State<_SessaoGate> with WidgetsBindingObserver {
   final UsuarioRepository _usuarioRepository = UsuarioRepository();
 
+  StreamSubscription<AuthState>? _authSubscription;
   bool _carregando = true;
+  bool _definindoSenha = false;
   Map<String, dynamic>? _sessao;
   String? _erroInicializacao;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _ouvirAutenticacao();
     _inicializar();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _sessao != null) {
+      unawaited(_sincronizarSessao('mobile_resume'));
+    }
+  }
+
+  void _ouvirAutenticacao() {
+    final client = SupabaseBootstrap.client;
+    if (client == null) return;
+
+    _authSubscription?.cancel();
+    _authSubscription = client.auth.onAuthStateChange.listen((estado) {
+      if (!mounted) return;
+
+      if (estado.event == AuthChangeEvent.passwordRecovery &&
+          (estado.session?.user ?? client.auth.currentUser) != null) {
+        setState(() {
+          _definindoSenha = true;
+          _sessao = null;
+          _carregando = false;
+          _erroInicializacao = null;
+        });
+        return;
+      }
+
+      if (estado.event == AuthChangeEvent.signedOut ||
+          (estado.session?.user ?? client.auth.currentUser) == null) {
+        setState(() {
+          _definindoSenha = false;
+          _sessao = null;
+          _carregando = false;
+        });
+      }
+    });
   }
 
   void _agendarBackupAutomatico() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       BackupAutomaticoService.instance.verificarEExecutar();
     });
+  }
+
+  Future<void> _sincronizarSessao(
+    String origem, {
+    bool ignorarBackoff = false,
+  }) async {
+    if (_sessao == null || SupabaseBootstrap.client?.auth.currentUser == null) {
+      return;
+    }
+
+    try {
+      await OperacionalSyncService.instance.sincronizarTudo(
+        origem: origem,
+        ignorarBackoff: ignorarBackoff,
+      );
+    } catch (_) {
+      // O mobile continua offline-first. Uma falha de rede nunca impede o uso
+      // da sessão já autorizada; a próxima retomada tentará novamente.
+    }
   }
 
   Future<Map<String, dynamic>?> _validarFuncionarioAntesDeAbrir(
@@ -136,6 +207,7 @@ class _SessaoGateState extends State<_SessaoGate> {
 
       if (sessao != null) {
         _agendarBackupAutomatico();
+        unawaited(_sincronizarSessao('mobile_startup'));
       }
     } catch (erro) {
       if (!mounted) return;
@@ -154,8 +226,22 @@ class _SessaoGateState extends State<_SessaoGate> {
     setState(() {
       _sessao = Map<String, dynamic>.from(sessao);
       _erroInicializacao = null;
+      _definindoSenha = false;
     });
     _agendarBackupAutomatico();
+    unawaited(
+      _sincronizarSessao('mobile_login', ignorarBackoff: true),
+    );
+  }
+
+  Future<void> _concluirRecuperacaoSenha() async {
+    if (!mounted) return;
+    setState(() {
+      _definindoSenha = false;
+      _carregando = true;
+      _erroInicializacao = null;
+    });
+    await _inicializar();
   }
 
   Future<void> _sair() async {
@@ -165,6 +251,7 @@ class _SessaoGateState extends State<_SessaoGate> {
       if (mounted) {
         setState(() {
           _sessao = null;
+          _definindoSenha = false;
         });
       }
     }
@@ -190,6 +277,10 @@ class _SessaoGateState extends State<_SessaoGate> {
 
   @override
   Widget build(BuildContext context) {
+    if (_definindoSenha) {
+      return NovaSenhaPage(onConcluido: _concluirRecuperacaoSenha);
+    }
+
     if (_carregando) {
       return const Scaffold(
         body: Center(
