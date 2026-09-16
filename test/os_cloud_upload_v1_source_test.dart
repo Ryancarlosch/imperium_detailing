@@ -35,8 +35,13 @@ void main() {
     expect(service, isNot(contains("local['assinatura_cliente']")));
     expect(service, isNot(contains('baixarOrdensServico')));
 
-    expect(sync, contains('os-cloud-upload-call-v1'));
+    expect(sync, contains('Future<void> _syncOrdensServico(String empresaId)'));
     expect(sync, contains('OsCloudUploadService.instance.sincronizarUpload'));
+    expect(
+      sync,
+      contains('OsCloudDownloadService.instance.sincronizarDownloadNovos'),
+    );
+    expect(sync, contains('OsCloudV3Service.instance.sincronizarDepoisDoDownload'));
     expect(repo, contains('os-cloud-upload-trigger-v1'));
   });
 }
