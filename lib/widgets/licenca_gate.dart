@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -7,6 +9,8 @@ import '../screens/licenca_status_page.dart';
 import '../screens/supabase_conta_page.dart';
 import '../screens/usuario_inicio_page.dart';
 import '../services/licenca_service.dart';
+import '../services/operacional_realtime_service.dart';
+import '../services/operacional_sync_service.dart';
 
 class LicencaGate extends StatefulWidget {
   const LicencaGate({super.key, required this.sessao, required this.onLogout});
@@ -20,6 +24,7 @@ class LicencaGate extends StatefulWidget {
 
 class _LicencaGateState extends State<LicencaGate> {
   final LicencaService _service = const LicencaService();
+  final OperacionalRealtimeService _realtime = OperacionalRealtimeService.instance;
   final DateFormat _data = DateFormat('dd/MM/yyyy');
 
   bool _carregando = true;
@@ -31,6 +36,12 @@ class _LicencaGateState extends State<LicencaGate> {
   void initState() {
     super.initState();
     _verificar();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_realtime.cancelar());
+    super.dispose();
   }
 
   Future<void> _verificar() async {
@@ -51,9 +62,17 @@ class _LicencaGateState extends State<LicencaGate> {
         _usouCacheOffline = resultado.usouCacheOffline;
         _carregando = false;
       });
+
+      final status = resultado.status;
+      if (status.acessoLiberado && status.empresaId.trim().isNotEmpty) {
+        unawaited(_iniciarRealtime(status.empresaId));
+      } else {
+        unawaited(_realtime.cancelar());
+      }
     } catch (erro) {
       if (!mounted) return;
 
+      unawaited(_realtime.cancelar());
       setState(() {
         _status = null;
         _usouCacheOffline = false;
@@ -61,6 +80,15 @@ class _LicencaGateState extends State<LicencaGate> {
         _carregando = false;
       });
     }
+  }
+
+  Future<void> _iniciarRealtime(String empresaId) async {
+    await _realtime.assinarEmpresa(
+      empresaId: empresaId,
+      onAtualizar: () async {
+        await OperacionalSyncService.instance.tentarSincronizarTudo();
+      },
+    );
   }
 
   Future<void> _abrirPlano() async {
