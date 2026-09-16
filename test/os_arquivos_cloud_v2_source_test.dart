@@ -26,7 +26,7 @@ void main() {
     expect(source, contains('A nuvem mudou novamente'));
   });
 
-  test('Sync guarda V1 antes de upload e download de arquivos', () {
+  test('Sync protege upload e download com reconciliacao V2', () {
     final source = File(
       'lib/services/operacional_sync_service.dart',
     ).readAsStringSync();
@@ -35,7 +35,7 @@ void main() {
     expect(
       compact,
       contains(
-        'finalosArquivosPodePublicar='
+        'finalpodeSincronizar='
         'awaitOsArquivosCloudV2Service.instance'
         '.prepararSincronizacao(empresaId);',
       ),
@@ -43,19 +43,26 @@ void main() {
     expect(
       compact,
       contains(
-        'if(osArquivosPodePublicar){'
         'awaitOsArquivosCloudService.instance'
-        '.sincronizarUpload(empresaId);}',
+        '.sincronizarUpload(empresaId);',
       ),
     );
     expect(
       compact,
       contains(
-        'finalosArquivosPodeBaixar='
+        'finalpodeBaixar='
         'awaitOsArquivosCloudV2Service.instance'
         '.prepararSincronizacao(empresaId);',
       ),
     );
+    expect(
+      compact,
+      contains(
+        'awaitOsArquivosCloudService.instance'
+        '.sincronizarDownload(empresaId);',
+      ),
+    );
+    expect(compact, contains("modulo:'arquivos_os',prioridade:40"));
   });
 
   test('Central Cloud exibe e resolve conflitos de arquivos', () {
