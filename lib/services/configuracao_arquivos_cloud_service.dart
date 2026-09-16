@@ -28,7 +28,8 @@ class ConfiguracaoArquivosCloudService {
 
   final AppDatabase _appDatabase = AppDatabase.instance;
   final ConfiguracaoRepository _repository = ConfiguracaoRepository();
-  final TenantLocalStorageService _localStorage = TenantLocalStorageService.instance;
+  final TenantLocalStorageService _localStorage =
+      TenantLocalStorageService.instance;
 
   SupabaseClient? get _client => SupabaseBootstrap.client;
 
@@ -317,7 +318,8 @@ class ConfiguracaoArquivosCloudService {
     }
 
     final remotoTs = _texto(remoto['atualizado_em']);
-    final remotoMudou = baseTs.isEmpty || remotoTs.isEmpty || remotoTs != baseTs;
+    final remotoMudou =
+        baseTs.isEmpty || remotoTs.isEmpty || remotoTs != baseTs;
 
     if (localMudou && remotoMudou) {
       await _registrarConflito(
@@ -388,7 +390,9 @@ class ConfiguracaoArquivosCloudService {
     final mime = _mime(arquivo.path);
 
     try {
-      await client.storage.from(bucket).uploadBinary(
+      await client.storage
+          .from(bucket)
+          .uploadBinary(
             storagePath,
             Uint8List.fromList(bytes),
             fileOptions: FileOptions(
@@ -609,7 +613,10 @@ class ConfiguracaoArquivosCloudService {
     };
 
     if (existentes.isEmpty) {
-      await database.insert('imperium_sync_configuracao_arquivos_conflitos', dados);
+      await database.insert(
+        'imperium_sync_configuracao_arquivos_conflitos',
+        dados,
+      );
     } else {
       await database.update(
         'imperium_sync_configuracao_arquivos_conflitos',
