@@ -10,7 +10,9 @@ void main() {
 
     expect(
       source,
-      contains('create or replace function public.imperium_autocadastro_empresa()'),
+      contains(
+        'create or replace function public.imperium_autocadastro_empresa()',
+      ),
     );
     expect(source, contains('security definer'));
     expect(source, contains("set search_path = ''"));
@@ -47,16 +49,22 @@ void main() {
     expect(source, contains("onboarding_status = 'ativo'"));
   });
 
-  test('sessao tenta convite legado e depois autocadastro quando necessario', () {
-    final cloudSession = File(
-      'lib/services/cloud_session_service.dart',
-    ).readAsStringSync();
+  test(
+    'sessao tenta convite legado e depois autocadastro quando necessario',
+    () {
+      final cloudSession = File(
+        'lib/services/cloud_session_service.dart',
+      ).readAsStringSync();
 
-    expect(cloudSession, contains("client.rpc('imperium_resgatar_convite')"));
-    expect(cloudSession, contains("client.rpc('imperium_autocadastro_empresa')"));
-    expect(cloudSession, contains('listarEmpresasVinculadas'));
-    expect(cloudSession, contains('30 dias grátis'));
-  });
+      expect(cloudSession, contains("client.rpc('imperium_resgatar_convite')"));
+      expect(
+        cloudSession,
+        contains("client.rpc('imperium_autocadastro_empresa')"),
+      );
+      expect(cloudSession, contains('listarEmpresasVinculadas'));
+      expect(cloudSession, contains('30 dias grátis'));
+    },
+  );
 
   test('mobile oferece cadastro livre com confirmacao de email', () {
     final firstAccess = File(
@@ -89,6 +97,9 @@ void main() {
     expect(web, contains('CloudSessionService'));
     expect(web, contains('_cloudSession.prepararSessao()'));
     expect(login, contains('EmpresaPrimeiroAcessoPage'));
-    expect(cloudSession, contains("client.rpc('imperium_autocadastro_empresa')"));
+    expect(
+      cloudSession,
+      contains("client.rpc('imperium_autocadastro_empresa')"),
+    );
   });
 }

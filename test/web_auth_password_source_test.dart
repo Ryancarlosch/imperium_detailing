@@ -61,43 +61,57 @@ void main() {
     expect(source, isNot(contains('Magic Link')));
   });
 
-  test('primeiro acesso e autocadastro sao compartilhados entre web e mobile', () {
-    final login = File(
-      'lib/screens/login_email_senha_page.dart',
-    ).readAsStringSync();
-    final firstAccess = File(
-      'lib/screens/empresa_primeiro_acesso_page.dart',
-    ).readAsStringSync();
-    final cloudSession = File(
-      'lib/services/cloud_session_service.dart',
-    ).readAsStringSync();
+  test(
+    'primeiro acesso e autocadastro sao compartilhados entre web e mobile',
+    () {
+      final login = File(
+        'lib/screens/login_email_senha_page.dart',
+      ).readAsStringSync();
+      final firstAccess = File(
+        'lib/screens/empresa_primeiro_acesso_page.dart',
+      ).readAsStringSync();
+      final cloudSession = File(
+        'lib/services/cloud_session_service.dart',
+      ).readAsStringSync();
 
-    expect(login, contains('EmpresaPrimeiroAcessoPage'));
-    expect(login, contains('Começar 30 dias grátis'));
-    expect(firstAccess, contains('criarContaComEmailSenha'));
-    expect(firstAccess, contains('entrarComEmailSenha'));
-    expect(firstAccess, contains('Criar conta grátis'));
-    expect(firstAccess, contains('30 dias grátis'));
-    expect(cloudSession, contains("client.rpc('imperium_resgatar_convite')"));
-    expect(cloudSession, contains("client.rpc('imperium_autocadastro_empresa')"));
-    expect(cloudSession, contains('prepararSessao'));
-  });
+      expect(login, contains('EmpresaPrimeiroAcessoPage'));
+      expect(login, contains('Começar 30 dias grátis'));
+      expect(firstAccess, contains('criarContaComEmailSenha'));
+      expect(firstAccess, contains('entrarComEmailSenha'));
+      expect(firstAccess, contains('Criar conta grátis'));
+      expect(firstAccess, contains('30 dias grátis'));
+      expect(cloudSession, contains("client.rpc('imperium_resgatar_convite')"));
+      expect(
+        cloudSession,
+        contains("client.rpc('imperium_autocadastro_empresa')"),
+      );
+      expect(cloudSession, contains('prepararSessao'));
+    },
+  );
 
-  test('plano fica acessivel no web inclusive quando a licenca esta bloqueada', () {
-    final web = File('lib/main_web.dart').readAsStringSync();
-    final workspace = File(
-      'lib/web/web_workspace_shell.dart',
-    ).readAsStringSync();
-    final plano = File('lib/screens/licenca_status_page.dart').readAsStringSync();
+  test(
+    'plano fica acessivel no web inclusive quando a licenca esta bloqueada',
+    () {
+      final web = File('lib/main_web.dart').readAsStringSync();
+      final workspace = File(
+        'lib/web/web_workspace_shell.dart',
+      ).readAsStringSync();
+      final plano = File(
+        'lib/screens/licenca_status_page.dart',
+      ).readAsStringSync();
 
-    expect(web, contains('Plano / renovar acesso'));
-    expect(web, contains('LicencaStatusPage(empresaId: empresaId)'));
-    expect(workspace, contains('Plano e assinatura'));
-    expect(workspace, contains('LicencaStatusPage(empresaId: empresaAtualId)'));
-    expect(plano, contains('Plano do Imperium'));
-    expect(plano, contains('Assinar antes do vencimento'));
-    expect(plano, contains('InfinitePay'));
-  });
+      expect(web, contains('Plano / renovar acesso'));
+      expect(web, contains('LicencaStatusPage(empresaId: empresaId)'));
+      expect(workspace, contains('Plano e assinatura'));
+      expect(
+        workspace,
+        contains('LicencaStatusPage(empresaId: empresaAtualId)'),
+      );
+      expect(plano, contains('Plano do Imperium'));
+      expect(plano, contains('Assinar antes do vencimento'));
+      expect(plano, contains('InfinitePay'));
+    },
+  );
 
   test('funcionarios continuam internos a empresa', () {
     final loginSource = File(
