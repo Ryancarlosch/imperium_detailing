@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../screens/imperium_planos_page.dart';
 import '../screens/licenca_status_page.dart';
 import 'imperium_web_theme.dart';
 import 'web_dashboard_gerencial_page.dart';
@@ -15,11 +16,16 @@ class WebWorkspaceShell extends StatelessWidget {
     required this.onSair,
   });
 
+  static const String _empresaImperiumId =
+      'dbbf4114-06fa-46b8-a2f6-50b3f3ead436';
+
   final String usuarioEmail;
   final List<Map<String, dynamic>> empresas;
   final String empresaAtualId;
   final Future<void> Function(String empresaId) onTrocarEmpresa;
   final Future<void> Function() onSair;
+
+  bool get _empresaImperium => empresaAtualId == _empresaImperiumId;
 
   String get _nomeEmpresaAtual {
     for (final empresa in empresas) {
@@ -36,6 +42,14 @@ class WebWorkspaceShell extends StatelessWidget {
       MaterialPageRoute(
         builder: (_) => LicencaStatusPage(empresaId: empresaAtualId),
       ),
+    );
+  }
+
+  Future<void> _abrirGerenciarPlanos(BuildContext context) async {
+    if (!_empresaImperium) return;
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const ImperiumPlanosPage()),
     );
   }
 
@@ -185,6 +199,8 @@ class WebWorkspaceShell extends StatelessWidget {
             onSelected: (valor) async {
               if (valor == 'plano') {
                 await _abrirPlano(context);
+              } else if (valor == 'planos_admin') {
+                await _abrirGerenciarPlanos(context);
               } else if (valor == 'sair') {
                 await onSair();
               }
@@ -223,6 +239,17 @@ class WebWorkspaceShell extends StatelessWidget {
                   ],
                 ),
               ),
+              if (_empresaImperium)
+                const PopupMenuItem<String>(
+                  value: 'planos_admin',
+                  child: Row(
+                    children: [
+                      Icon(Icons.sell_outlined, size: 18),
+                      SizedBox(width: 10),
+                      Text('Gerenciar planos'),
+                    ],
+                  ),
+                ),
               const PopupMenuItem<String>(
                 value: 'sair',
                 child: Row(
