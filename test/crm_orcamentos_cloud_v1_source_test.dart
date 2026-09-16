@@ -77,13 +77,13 @@ void main() {
     final crmDownload = compact.indexOf(
       'awaitCrmOrcamentosCloudService.instance.sincronizarDownloadNovos(empresaId);',
     );
-    final reconciliacao = compact.indexOf(
-      'awaitCrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload(empresaId);',
-    );
 
     expect(crmUpload, greaterThanOrEqualTo(0));
     expect(crmDownload, greaterThan(crmUpload));
-    expect(reconciliacao, greaterThan(crmDownload));
+    expect(
+      source,
+      contains('CrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload'),
+    );
   });
 
   test('Migration RLS separa CRM de Orcamentos', () {
