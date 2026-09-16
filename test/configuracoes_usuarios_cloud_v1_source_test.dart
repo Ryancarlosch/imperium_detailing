@@ -19,20 +19,22 @@ void main() {
     expect(source, isNot(contains("'ultimo_backup_caminho'")));
   });
 
-  test('Multiempresa V1 lista vinculos sem trocar tenant', () {
+  test('Multiempresa V2 lista vinculos e permite troca segura de tenant', () {
     final source = File(
       'lib/services/empresa_cloud_service.dart',
     ).readAsStringSync();
 
-    expect(source, contains('empresa-cloud-multiempresa-foundation-v1'));
+    expect(source, contains('empresa-cloud-multiempresa-v2'));
     expect(source, contains('listarEmpresasVinculadas'));
     expect(source, contains('multiempresa_detectada'));
     expect(source, contains('troca_segura_disponivel'));
-    expect(source, isNot(contains('trocarEmpresa(')));
-    expect(source, isNot(contains('selecionarEmpresa(')));
+    expect(source, contains('Future<void> trocarEmpresa(String empresaId)'));
+    expect(source, contains('_appDatabase.ativarEmpresa'));
+    expect(source, contains('adotarBancoLegado:'));
+    expect(source, contains("papel != 'admin' && papel != 'proprietario'"));
   });
 
-  test('Permissoes remotas liberam apenas modulos cloud coerentes', () {
+  test('Permissoes remotas liberam modulos cloud ja integrados', () {
     final source = File(
       'lib/services/funcionario_acesso_service.dart',
     ).readAsStringSync();
@@ -40,7 +42,9 @@ void main() {
     for (final modulo in <String>[
       'ponto',
       'clientes',
+      'crm',
       'agenda',
+      'orcamentos',
       'ordens_servico',
       'estoque',
       'financeiro',
@@ -56,8 +60,8 @@ void main() {
         ).firstMatch(source)?.group(1) ??
         '';
 
-    expect(bloco, isNot(contains("'crm'")));
-    expect(bloco, isNot(contains("'orcamentos'")));
+    expect(bloco, contains("'crm'"));
+    expect(bloco, contains("'orcamentos'"));
     expect(bloco, isNot(contains("'precificacao'")));
   });
 
@@ -67,13 +71,14 @@ void main() {
     ).readAsStringSync();
     final compact = source.replaceAll(RegExp(r'\s+'), '');
 
-    final config =
-        RegExp(
-          r'awaitConfiguracaoCloudService\.instance\.'
-          r'sincronizar\(empresaId,?\);',
-        ).firstMatch(compact)?.start ??
-        -1;
+    expect(compact, contains("modulo:'configuracoes',prioridade:10"));
+    expect(compact, contains("modulo:'operacional',prioridade:20"));
+    expect(compact, contains('executar:()=>_syncConfiguracoes(empresaId)'));
+    expect(compact, contains('executar:()=>_syncOperacionalBase(empresaId)'));
 
+    final config = compact.indexOf(
+      'awaitConfiguracaoCloudService.instance.sincronizar(empresaId);',
+    );
     final exclusoes = compact.indexOf('await_processarExclusoes(empresaId);');
 
     expect(config, greaterThanOrEqualTo(0));
