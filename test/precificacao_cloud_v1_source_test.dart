@@ -69,7 +69,9 @@ void main() {
     expect(precDownload, greaterThan(precUpload));
     expect(
       source,
-      contains('PrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload'),
+      contains(
+        'PrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload',
+      ),
     );
   });
 

@@ -82,7 +82,9 @@ void main() {
     expect(crmDownload, greaterThan(crmUpload));
     expect(
       source,
-      contains('CrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload'),
+      contains(
+        'CrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload',
+      ),
     );
   });
 
