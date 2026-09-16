@@ -7,26 +7,24 @@ void main() {
     final service = File(
       'lib/services/estoque_cloud_download_service.dart',
     ).readAsStringSync();
+    final compact = service.replaceAll(RegExp(r'\s+'), '');
 
     expect(service, contains('estoque-cloud-download-v2'));
-    expect(service, contains("_baixarItensNovos"));
-    expect(service, contains("_baixarLotesNovos"));
-    expect(service, contains("_baixarMovimentacoesNovas"));
+    expect(service, contains('_baixarItensNovos'));
+    expect(service, contains('_baixarLotesNovos'));
+    expect(service, contains('_baixarMovimentacoesNovas'));
 
-    expect(service, contains("database.insert(\n        'itens_estoque'"));
-    expect(service, contains("database.insert(\n        'estoque_lotes'"));
-    expect(
-      service,
-      contains("database.insert(\n        'movimentacoes_estoque'"),
-    );
+    expect(compact, contains("database.insert('itens_estoque',{"));
+    expect(compact, contains("database.insert('estoque_lotes',{"));
+    expect(compact, contains("database.insert('movimentacoes_estoque',{"));
 
     expect(
       service,
       isNot(contains('EstoqueRepository().registrarMovimentacao')),
     );
     expect(
-      service,
-      contains('não altera\n      // novamente itens_estoque.quantidade'),
+      compact,
+      contains('nãoalteranovamenteitens_estoque.quantidade'),
     );
   });
 
@@ -34,43 +32,35 @@ void main() {
     final service = File(
       'lib/services/estoque_cloud_download_service.dart',
     ).readAsStringSync();
+    final compact = service.replaceAll(RegExp(r'\s+'), '');
 
     expect(service, contains('_mapaPorRemoto'));
     expect(service, contains('continue;'));
-    expect(
-      service,
-      isNot(contains("database.update(\n        'itens_estoque'")),
-    );
-    expect(
-      service,
-      isNot(contains("database.update(\n        'estoque_lotes'")),
-    );
+    expect(compact, isNot(contains("database.update('itens_estoque'")));
+    expect(compact, isNot(contains("database.update('estoque_lotes'")));
   });
 
-  test('Sync operacional baixa Estoque depois de OS Cloud', () {
+  test('Sync operacional executa Estoque depois de OS Cloud', () {
     final sync = File(
       'lib/services/operacional_sync_service.dart',
     ).readAsStringSync();
+    final compact = sync.replaceAll(RegExp(r'\s+'), '');
 
     expect(sync, contains("import 'estoque_cloud_download_service.dart';"));
+    expect(compact, contains("modulo:'ordens_servico',prioridade:30"));
+    expect(compact, contains("modulo:'estoque',prioridade:60"));
     expect(
-      sync,
+      compact,
+      contains("dependencias:const<String>['ordens_servico']"),
+    );
+    expect(compact, contains('executar:()=>_syncEstoque(empresaId)'));
+    expect(
+      compact,
       contains(
-        'await EstoqueCloudDownloadService.instance.'
-        'sincronizarDownloadNovos(empresaId);',
+        'awaitEstoqueCloudDownloadService.instance'
+        '.sincronizarDownloadNovos(empresaId);',
       ),
     );
-
-    final osDownload = sync.indexOf(
-      'await OsCloudDownloadService.instance.sincronizarDownloadNovos(empresaId);',
-    );
-    final estoqueDownload = sync.indexOf(
-      'await EstoqueCloudDownloadService.instance.'
-      'sincronizarDownloadNovos(empresaId);',
-    );
-
-    expect(osDownload, greaterThanOrEqualTo(0));
-    expect(estoqueDownload, greaterThan(osDownload));
   });
 
   test('SQLite permanece v33', () {
