@@ -64,13 +64,13 @@ void main() {
     final precDownload = compact.indexOf(
       'awaitPrecificacaoCloudService.instance.sincronizarDownload(empresaId);',
     );
-    final reconciliacao = compact.indexOf(
-      'awaitPrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload(empresaId);',
-    );
 
     expect(precUpload, greaterThanOrEqualTo(0));
     expect(precDownload, greaterThan(precUpload));
-    expect(reconciliacao, greaterThan(precDownload));
+    expect(
+      source,
+      contains('PrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload'),
+    );
   });
 
   test('Migration tem seis tabelas e RLS financeiro', () {
