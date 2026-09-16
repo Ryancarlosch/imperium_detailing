@@ -28,9 +28,9 @@ void main() {
     expect(mobile, contains('LoginEmailSenhaPage(onLogin: _aoEntrar)'));
     expect(login, contains('entrarComEmailSenha'));
     expect(login, contains('enviarRecuperacaoSenha'));
-    expect(login, contains("labelText: 'E-mail da empresa'"));
-    expect(login, contains("labelText: 'Senha'"));
-    expect(login, contains('mesmo e-mail e senha'));
+    expect(login, contains("label: 'E-mail'"));
+    expect(login, contains("label: 'Senha'"));
+    expect(login, contains('Acesse sua empresa com seu e-mail e senha'));
   });
 
   test('web centraliza a sessao no mesmo servico usado pelo mobile', () {
@@ -121,10 +121,7 @@ void main() {
       'lib/services/cloud_session_service.dart',
     ).readAsStringSync();
 
-    expect(
-      loginSource,
-      contains('Funcionários ficam cadastrados dentro da empresa'),
-    );
+    expect(loginSource, contains('EmpresaPrimeiroAcessoPage'));
     expect(loginSource, isNot(contains('FuncionarioPrimeiroAcessoPage')));
     expect(
       cloudSession,
