@@ -112,7 +112,9 @@ class ImperiumAuthService {
   }
 
   String textoErro(Object erro) {
-    var texto = erro.toString().trim();
+    var texto = erro is PostgrestException
+        ? erro.message.trim()
+        : erro.toString().trim();
 
     for (final prefixo in const [
       'AuthException: ',
@@ -128,6 +130,13 @@ class ImperiumAuthService {
     }
 
     final lower = texto.toLowerCase();
+
+    if (lower.contains('nao encontramos uma assinatura pendente') ||
+        lower.contains('não encontramos uma assinatura pendente')) {
+      return 'Não encontramos uma assinatura pendente para este e-mail. '
+          'Use o mesmo e-mail informado na assinatura do Imperium e confirme '
+          'se a empresa possui uma licença ativa.';
+    }
 
     if (lower.contains('invalid login credentials') ||
         lower.contains('invalid_credentials')) {
