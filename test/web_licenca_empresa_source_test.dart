@@ -14,8 +14,11 @@ void main() {
     expect(web, contains('if (!licenca.acessoLiberado)'));
     expect(web, contains('_licencaBloqueadaTela'));
     expect(web, contains('Web e aplicativo usam a mesma licença da empresa.'));
-    expect(service, contains("rpc(\n      'imperium_status_licenca_empresa'"));
-    expect(service, contains("'p_empresa_id': id"));
+
+    // Verifica os elementos funcionais da chamada sem depender da indentação
+    // aplicada pelo dart format.
+    expect(service, contains("'imperium_status_licenca_empresa'"));
+    expect(service, contains("params: {'p_empresa_id': id}"));
     expect(service, contains('LicencaStatus.fromMap'));
   });
 
