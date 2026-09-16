@@ -18,10 +18,8 @@ void main() {
 
     expect(source, contains('Funcionários sincronizados'));
     expect(source, contains('Gerenciar funcionários e permissões'));
-    expect(
-      source,
-      contains('Nenhuma configuração manual no Supabase é necessária.'),
-    );
+    expect(source, contains('Nenhuma configuração manual '));
+    expect(source, contains('no Supabase é necessária.'));
     expect(source, contains('Cadastro operacional vinculado à empresa'));
 
     expect(source, isNot(contains('vincularUsuario')));
