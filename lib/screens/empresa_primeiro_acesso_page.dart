@@ -33,7 +33,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
     super.dispose();
   }
 
-  Future<void> _criarContaEAtivar() async {
+  Future<void> _criarContaGratis() async {
     if (_carregando) return;
 
     final email = _email.text.trim().toLowerCase();
@@ -41,7 +41,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
     final confirmar = _confirmarSenha.text.trim();
 
     if (email.isEmpty || !email.contains('@')) {
-      _mostrarErro('Informe o mesmo e-mail usado na assinatura do Imperium.');
+      _mostrarErro('Informe um e-mail válido.');
       return;
     }
 
@@ -72,9 +72,10 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
         if (!mounted) return;
         setState(() {
           _mensagem =
-              'Conta criada. Confirme o e-mail recebido. Depois volte e toque '
-              'em “Já tenho senha • ativar minha assinatura”. O vínculo com '
-              'a empresa será feito automaticamente.';
+              'Conta criada. Confirme o e-mail que enviamos para você. '
+              'Depois volte ao Imperium e entre com o mesmo e-mail e senha. '
+              'Sua empresa será criada automaticamente e seus 30 dias grátis '
+              'serão liberados no primeiro acesso confirmado.';
         });
         return;
       }
@@ -88,14 +89,14 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
     }
   }
 
-  Future<void> _entrarEAtivar() async {
+  Future<void> _entrarAposConfirmar() async {
     if (_carregando) return;
 
     final email = _email.text.trim().toLowerCase();
     final senha = _senha.text.trim();
 
     if (email.isEmpty || !email.contains('@')) {
-      _mostrarErro('Informe o mesmo e-mail usado na assinatura do Imperium.');
+      _mostrarErro('Informe seu e-mail.');
       return;
     }
 
@@ -145,7 +146,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ativar assinatura')),
+      appBar: AppBar(title: const Text('Criar conta grátis')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -158,20 +159,19 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.workspace_premium_rounded, size: 58),
+                      const Icon(Icons.rocket_launch_outlined, size: 58),
                       const SizedBox(height: 18),
                       Text(
-                        'Ative sua assinatura do Imperium',
+                        'Teste o Imperium grátis por 30 dias',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Use exatamente o e-mail informado ao assinar o plano. '
-                        'Depois da autenticação, sua empresa e sua licença são '
-                        'vinculadas automaticamente. A mesma senha funciona no '
-                        'aplicativo e na Web.',
+                        'Crie sua conta com e-mail e senha. Depois de confirmar '
+                        'o e-mail, sua empresa será criada automaticamente com '
+                        '30 dias grátis. Não é necessária autorização prévia.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
@@ -183,7 +183,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                         autocorrect: false,
                         enableSuggestions: false,
                         decoration: const InputDecoration(
-                          labelText: 'E-mail da assinatura',
+                          labelText: 'Seu e-mail',
                           prefixIcon: Icon(Icons.alternate_email_rounded),
                           border: OutlineInputBorder(),
                         ),
@@ -226,7 +226,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                         enabled: !_carregando,
                         obscureText: _ocultarConfirmacao,
                         textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _criarContaEAtivar(),
+                        onSubmitted: (_) => _criarContaGratis(),
                         autocorrect: false,
                         enableSuggestions: false,
                         decoration: InputDecoration(
@@ -273,7 +273,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                       SizedBox(
                         height: 52,
                         child: FilledButton.icon(
-                          onPressed: _carregando ? null : _criarContaEAtivar,
+                          onPressed: _carregando ? null : _criarContaGratis,
                           icon: _carregando
                               ? const SizedBox(
                                   width: 19,
@@ -282,27 +282,33 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Icon(Icons.workspace_premium_rounded),
+                              : const Icon(Icons.rocket_launch_outlined),
                           label: Text(
                             _carregando
-                                ? 'Ativando...'
-                                : 'Criar senha e ativar assinatura',
+                                ? 'Criando conta...'
+                                : 'Criar conta grátis',
                           ),
                         ),
                       ),
                       const SizedBox(height: 10),
                       OutlinedButton.icon(
-                        onPressed: _carregando ? null : _entrarEAtivar,
-                        icon: const Icon(Icons.login_rounded),
-                        label: const Text(
-                          'Já tenho senha • ativar minha assinatura',
-                        ),
+                        onPressed: _carregando ? null : _entrarAposConfirmar,
+                        icon: const Icon(Icons.mark_email_read_outlined),
+                        label: const Text('Já confirmei o e-mail • entrar'),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Você pode assinar o plano a qualquer momento durante '
+                        'o teste. Se os 30 dias terminarem sem pagamento, o '
+                        'sistema é bloqueado e a área Plano continua disponível '
+                        'para renovação.',
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20),
                       const Divider(),
                       const SizedBox(height: 12),
                       Text(
-                        'Funcionários não assinam um plano separado. O acesso '
+                        'Funcionários não criam uma empresa separada. O acesso '
                         'deles é criado e administrado dentro da empresa pelo '
                         'administrador.',
                         textAlign: TextAlign.center,
