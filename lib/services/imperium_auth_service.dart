@@ -48,6 +48,7 @@ class ImperiumAuthService {
   Future<AuthResponse> criarContaComEmailSenha({
     required String email,
     required String senha,
+    String? redirectTo,
   }) async {
     final emailLimpo = _validarEmail(email);
     final senhaLimpa = senha.trim();
@@ -59,6 +60,7 @@ class ImperiumAuthService {
     final resposta = await _client.auth.signUp(
       email: emailLimpo,
       password: senhaLimpa,
+      emailRedirectTo: redirectTo,
     );
 
     if (resposta.user == null) {
