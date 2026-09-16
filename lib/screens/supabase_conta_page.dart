@@ -217,7 +217,9 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
       await _carregarEstado();
 
       if (!mounted) return;
-      _mensagem('Conta desconectada. Use a tela principal para entrar novamente.');
+      _mensagem(
+        'Conta desconectada. Use a tela principal para entrar novamente.',
+      );
     } catch (erro) {
       if (!mounted) return;
       _mensagem(_textoErro(erro), erro: true);
@@ -403,7 +405,10 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
                     SizedBox(height: 12),
                     Text(
                       'Conta desconectada',
-                      style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     SizedBox(height: 8),
                     Text(
