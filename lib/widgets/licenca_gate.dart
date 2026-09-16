@@ -24,7 +24,8 @@ class LicencaGate extends StatefulWidget {
 
 class _LicencaGateState extends State<LicencaGate> {
   final LicencaService _service = const LicencaService();
-  final OperacionalRealtimeService _realtime = OperacionalRealtimeService.instance;
+  final OperacionalRealtimeService _realtime =
+      OperacionalRealtimeService.instance;
   final DateFormat _data = DateFormat('dd/MM/yyyy');
 
   bool _carregando = true;
