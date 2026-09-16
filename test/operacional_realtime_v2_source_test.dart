@@ -12,9 +12,15 @@ void main() {
       'supabase/migrations/20260916234000_operacional_realtime_v2.sql',
     ).readAsStringSync();
 
-    expect(realtime, contains("table: 'imperium_clientes'"));
-    expect(realtime, contains("table: 'imperium_veiculos'"));
-    expect(realtime, contains("table: 'imperium_agendamentos'"));
+    expect(realtime, contains('table: tabela'));
+    for (final tabela in <String>[
+      'imperium_clientes',
+      'imperium_veiculos',
+      'imperium_agendamentos',
+      'imperium_configuracao_arquivos',
+    ]) {
+      expect(realtime, contains("registrar('$tabela')"));
+    }
     expect(realtime, contains("column: 'empresa_id'"));
     expect(realtime, contains('Duration(milliseconds: 650)'));
     expect(realtime, contains('unawaited(_executarAtualizacao(onAtualizar))'));
