@@ -13,7 +13,8 @@ void main() {
     expect(web, contains('_licencaService.consultar(atual)'));
     expect(web, contains('if (!licenca.acessoLiberado)'));
     expect(web, contains('_licencaBloqueadaTela'));
-    expect(web, contains('Web e aplicativo usam a mesma licença da empresa.'));
+    expect(web, contains('Plano / renovar acesso'));
+    expect(web, contains('área Plano continua disponível para renovação'));
 
     // Verifica os elementos funcionais da chamada sem depender da indentação
     // aplicada pelo dart format.
