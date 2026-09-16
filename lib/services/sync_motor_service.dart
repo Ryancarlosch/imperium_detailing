@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
+import 'operacional_cloud_v2_service.dart';
 
 typedef SyncMotorCallback = Future<void> Function();
 
@@ -255,6 +256,21 @@ class SyncMotorService {
       );
 
       try {
+        // operacional-cloud-conflitos-v2
+        // Clientes, veículos e agenda eram os últimos módulos-base sem
+        // proteção de edição concorrente. Reconciliamos antes do callback para
+        // impedir que o upload V1 sobrescreva silenciosamente outra versão.
+        if (etapa.modulo == 'operacional') {
+          final seguro = await OperacionalCloudV2Service.instance.prepararUpload(
+            empresaId,
+          );
+          if (!seguro) {
+            throw const SyncMotorBloqueadoException(
+              'Conflitos pendentes em Clientes, Veículos ou Agenda.',
+            );
+          }
+        }
+
         await etapa.executar();
         relogio.stop();
 
