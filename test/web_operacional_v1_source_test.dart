@@ -95,7 +95,7 @@ void main() {
       expect(source, contains('CloudSessionService.instance'));
       expect(source, isNot(contains('signInWithOtp')));
       expect(login, contains('entrarComEmailSenha'));
-      expect(login, contains("labelText: 'Senha'"));
+      expect(login, contains("label: 'Senha'"));
       expect(auth, contains('signInWithPassword'));
       expect(source, contains('EmpresaCloudService.instance'));
       expect(source, contains('WebWorkspaceShell'));
