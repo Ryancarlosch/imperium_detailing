@@ -40,4 +40,16 @@ void main() {
     expect(source, isNot(contains('Magic Link')));
     expect(source, isNot(contains('Criar PIN')));
   });
+
+  test('Conta na nuvem nao oferece segundo login por magic link', () {
+    final source = File(
+      'lib/screens/supabase_conta_page.dart',
+    ).readAsStringSync();
+
+    expect(source, isNot(contains('signInWithOtp')));
+    expect(source, isNot(contains('Enviar Magic Link')));
+    expect(source, contains('login principal do Imperium com e-mail e senha'));
+    expect(source, contains('Plano e assinatura'));
+    expect(source, contains("client.rpc('imperium_autocadastro_empresa')"));
+  });
 }
