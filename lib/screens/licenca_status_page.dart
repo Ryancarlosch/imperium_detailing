@@ -179,9 +179,9 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
         setState(() => _planos = planos);
       } catch (erro) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_textoErro(erro))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_textoErro(erro))));
         return;
       }
     }
@@ -285,9 +285,9 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
       );
     } catch (erro) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_textoErro(erro))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_textoErro(erro))));
     } finally {
       if (mounted) {
         setState(() => _preparandoCheckout = false);
@@ -507,7 +507,9 @@ class _LicencaStatusPageState extends State<LicencaStatusPage> {
                         icon: _preparandoCheckout
                             ? const SizedBox.square(
                                 dimension: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.payments_outlined),
                         label: Text(

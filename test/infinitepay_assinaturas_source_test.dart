@@ -27,17 +27,29 @@ void main() {
     expect(service, contains("'imperium-infinitepay-checkout'"));
     expect(tela, contains('Opções de assinatura'));
     expect(tela, contains('A InfinitePay processa o pagamento'));
-    expect(tela, isNot(contains('será conectada à InfinitePay na próxima etapa')));
+    expect(
+      tela,
+      isNot(contains('será conectada à InfinitePay na próxima etapa')),
+    );
 
-    expect(checkout, contains('const INFINITEPAY_HANDLE = "imperium_detailing"'));
+    expect(
+      checkout,
+      contains('const INFINITEPAY_HANDLE = "imperium_detailing"'),
+    );
     expect(checkout, contains('https://api.checkout.infinitepay.io/links'));
     expect(checkout, contains('imperium-infinitepay-webhook'));
     expect(checkout, contains('imperium-infinitepay-retorno'));
 
-    expect(webhook, contains('https://api.checkout.infinitepay.io/payment_check'));
+    expect(
+      webhook,
+      contains('https://api.checkout.infinitepay.io/payment_check'),
+    );
     expect(webhook, contains('amount !== cobranca.valor_centavos'));
     expect(webhook, contains('imperium_confirmar_pagamento_infinitepay'));
-    expect(retorno, contains('https://api.checkout.infinitepay.io/payment_check'));
+    expect(
+      retorno,
+      contains('https://api.checkout.infinitepay.io/payment_check'),
+    );
 
     expect(migration, contains("('mensal', 'Mensal', 1, 2000"));
     expect(migration, contains("('trimestral', 'Trimestral', 3, 5000"));
