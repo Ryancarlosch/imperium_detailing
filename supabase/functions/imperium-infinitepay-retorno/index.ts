@@ -2,13 +2,64 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const INFINITEPAY_HANDLE = "imperium_detailing";
+const DEFAULT_WEB_URL =
+  "https://imperium-manager-web-vercel-git-vercel-web-ryancarlos148-2812.vercel.app/";
+const MOBILE_RETURN_URL = "imperiumdetailing://payment-return/";
 
-function htmlPage(title: string, message: string, ok: boolean) {
-  const accent = ok ? "#22c55e" : "#f59e0b";
-  return new Response(
-    `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;background:#070b14;color:#f8fafc;font-family:Arial,sans-serif;display:grid;place-items:center;min-height:100vh;padding:24px;box-sizing:border-box}.card{max-width:520px;background:#111827;border:1px solid #263244;border-radius:18px;padding:28px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.35)}.icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;background:${accent}22;color:${accent};font-size:30px;font-weight:bold}h1{font-size:24px;margin:0 0 12px}p{color:#cbd5e1;line-height:1.55;margin:0}.brand{margin-top:22px;color:#64748b;font-size:13px}</style></head><body><div class="card"><div class="icon">${ok ? "✓" : "…"}</div><h1>${title}</h1><p>${message}</p><div class="brand">Imperium Manager</div></div></body></html>`,
-    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } },
-  );
+function normalizarReturnUrl(raw: unknown): string {
+  const valor = String(raw ?? "").trim();
+  const candidatos = valor ? [valor, DEFAULT_WEB_URL] : [DEFAULT_WEB_URL];
+
+  for (const candidato of candidatos) {
+    try {
+      const url = new URL(candidato);
+      const host = url.hostname.toLowerCase();
+
+      if (
+        url.protocol === "imperiumdetailing:" &&
+        host === "payment-return"
+      ) {
+        return MOBILE_RETURN_URL;
+      }
+
+      const local = host === "localhost" || host === "127.0.0.1";
+      const vercelImperium =
+        host === "imperium-manager-web-vercel.vercel.app" ||
+        (host.startsWith("imperium-manager-web-vercel") &&
+          host.endsWith(".vercel.app"));
+
+      if (!vercelImperium && !local) continue;
+      if (local && url.protocol !== "http:" && url.protocol !== "https:") continue;
+      if (!local && url.protocol !== "https:") continue;
+
+      return `${url.protocol}//${url.host}/`;
+    } catch (_) {
+      // tenta próximo candidato
+    }
+  }
+
+  return DEFAULT_WEB_URL;
+}
+
+function redirectToApp(
+  returnUrl: unknown,
+  status: "confirmado" | "processando" | "erro",
+  orderNsu = "",
+) {
+  const target = new URL(normalizarReturnUrl(returnUrl));
+  target.searchParams.set("imperium_pagamento", status);
+  if (orderNsu.trim()) {
+    target.searchParams.set("order_nsu", orderNsu.trim());
+  }
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: target.toString(),
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      Pragma: "no-cache",
+    },
+  });
 }
 
 Deno.serve(async (req: Request) => {
@@ -18,14 +69,6 @@ Deno.serve(async (req: Request) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (!supabaseUrl || !serviceRoleKey) {
-    return htmlPage(
-      "Pagamento recebido",
-      "Volte ao Imperium em alguns instantes e atualize a tela do plano.",
-      false,
-    );
-  }
-
   const url = new URL(req.url);
   const orderNsu = (url.searchParams.get("order_nsu") ?? "").trim();
   const transactionNsu = (url.searchParams.get("transaction_nsu") ?? "").trim();
@@ -33,43 +76,33 @@ Deno.serve(async (req: Request) => {
   const receiptUrl = (url.searchParams.get("receipt_url") ?? "").trim();
   const captureMethod = (url.searchParams.get("capture_method") ?? "").trim();
 
+  if (!supabaseUrl || !serviceRoleKey) {
+    return redirectToApp(null, "processando", orderNsu);
+  }
+
   if (!orderNsu) {
-    return htmlPage(
-      "Pagamento em processamento",
-      "A confirmação está sendo processada. Volte ao Imperium e atualize a tela do plano.",
-      false,
-    );
+    return redirectToApp(null, "processando");
   }
 
   const service = createClient(supabaseUrl, serviceRoleKey);
   const { data: cobranca } = await service
     .from("imperium_assinatura_cobrancas")
-    .select("order_nsu,status,valor_centavos,plano_nome,transaction_nsu")
+    .select(
+      "order_nsu,status,valor_centavos,plano_nome,transaction_nsu,return_url",
+    )
     .eq("order_nsu", orderNsu)
     .maybeSingle();
 
   if (!cobranca) {
-    return htmlPage(
-      "Pedido não localizado",
-      "Volte ao Imperium e tente abrir o checkout novamente.",
-      false,
-    );
+    return redirectToApp(null, "erro", orderNsu);
   }
 
   if (cobranca.status === "pago") {
-    return htmlPage(
-      "Pagamento confirmado",
-      "Seu plano já foi liberado. Você pode fechar esta aba, voltar ao Imperium e atualizar a tela do plano.",
-      true,
-    );
+    return redirectToApp(cobranca.return_url, "confirmado", orderNsu);
   }
 
   if (!transactionNsu || !slug) {
-    return htmlPage(
-      "Pagamento em processamento",
-      "Recebemos o retorno da InfinitePay. A confirmação automática continuará pelo webhook. Volte ao Imperium em alguns instantes.",
-      false,
-    );
+    return redirectToApp(cobranca.return_url, "processando", orderNsu);
   }
 
   try {
@@ -116,11 +149,7 @@ Deno.serve(async (req: Request) => {
       );
 
       if (!error) {
-        return htmlPage(
-          "Pagamento confirmado",
-          "Seu plano foi liberado. Feche esta aba, volte ao Imperium e atualize a tela do plano.",
-          true,
-        );
+        return redirectToApp(cobranca.return_url, "confirmado", orderNsu);
       }
 
       console.error("infinitepay_return_confirm_error", error);
@@ -129,9 +158,5 @@ Deno.serve(async (req: Request) => {
     console.error("infinitepay_return_payment_check_error", error);
   }
 
-  return htmlPage(
-    "Pagamento em processamento",
-    "Ainda estamos aguardando a confirmação final da InfinitePay. Volte ao Imperium em alguns instantes e atualize a tela do plano.",
-    false,
-  );
+  return redirectToApp(cobranca.return_url, "processando", orderNsu);
 });
