@@ -127,6 +127,7 @@ Deno.serve(async (req: Request) => {
       user_id: user.id,
       plano_codigo: plano.codigo,
       plano_nome: plano.nome,
+      plano_meses: plano.meses,
       valor_centavos: plano.valor_centavos,
       moeda: plano.moeda,
       order_nsu: orderNsu,
