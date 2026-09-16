@@ -28,7 +28,10 @@ void main() {
 
     expect(adminService, contains("'imperium-admin-planos'"));
     expect(adminPage, contains('Novo plano'));
-    expect(adminPage, contains('Somente planos ativos aparecem para o cliente.'));
+    expect(
+      adminPage,
+      contains('Somente planos ativos aparecem para o cliente.'),
+    );
     expect(contaPage, contains('Planos de assinatura'));
     expect(contaPage, contains('ImperiumPlanosPage'));
 
@@ -39,10 +42,7 @@ void main() {
 
     // O app do cliente manda apenas empresa e codigo do plano. Valor e duracao
     // sao obtidos novamente pelo servidor antes de criar o checkout.
-    expect(
-      checkoutService,
-      contains("'plano_codigo': plano"),
-    );
+    expect(checkoutService, contains("'plano_codigo': plano"));
     expect(checkoutService, isNot(contains("'valor_centavos':")));
     expect(
       checkoutEdge,

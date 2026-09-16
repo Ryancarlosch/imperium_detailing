@@ -276,9 +276,9 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
       return;
     }
 
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const ImperiumPlanosPage()),
-    );
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => const ImperiumPlanosPage()));
 
     if (!mounted) return;
     await _carregarEstado();
