@@ -1,0 +1,57 @@
+name: Mobile APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - desenvolvimento
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'test/mobile_*_test.dart'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'ATUALIZAR_APP_MOBILE.ps1'
+      - '.github/workflows/mobile_apk_build.yml'
+
+concurrency:
+  group: mobile-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Mobile auth and sync tests
+        run: flutter test test/mobile_login_sync_source_test.dart
+
+      - name: Build APK release
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: imperium-manager-mobile-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
