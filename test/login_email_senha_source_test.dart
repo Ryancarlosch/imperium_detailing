@@ -13,10 +13,12 @@ void main() {
     ).readAsStringSync();
 
     expect(main, contains('LoginEmailSenhaPage'));
-    expect(login, contains('Acesse sua empresa com o mesmo e-mail e senha'));
-    expect(login, contains("labelText: 'E-mail da empresa'"));
+    expect(login, contains('Acesse sua empresa com seu e-mail e senha'));
+    expect(login, contains("label: 'E-mail'"));
+    expect(login, contains("label: 'Senha'"));
     expect(login, contains('Começar 30 dias grátis'));
-    expect(login, contains('Funcionários ficam cadastrados dentro da empresa'));
+    expect(login, contains('EmpresaPrimeiroAcessoPage'));
+    expect(login, isNot(contains('FuncionarioPrimeiroAcessoPage')));
     expect(auth, contains('signInWithPassword'));
     expect(auth, contains('criarContaComEmailSenha'));
     expect(auth, contains('signUp'));
