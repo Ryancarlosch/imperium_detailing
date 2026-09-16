@@ -229,9 +229,7 @@ class _SessaoGateState extends State<_SessaoGate> with WidgetsBindingObserver {
       _definindoSenha = false;
     });
     _agendarBackupAutomatico();
-    unawaited(
-      _sincronizarSessao('mobile_login', ignorarBackoff: true),
-    );
+    unawaited(_sincronizarSessao('mobile_login', ignorarBackoff: true));
   }
 
   Future<void> _concluirRecuperacaoSenha() async {

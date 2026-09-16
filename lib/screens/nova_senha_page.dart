@@ -35,7 +35,9 @@ class _NovaSenhaPageState extends State<NovaSenhaPage> {
     final confirmacao = _confirmacao.text;
 
     if (senha.length < 8) {
-      setState(() => _erro = 'A nova senha precisa ter pelo menos 8 caracteres.');
+      setState(
+        () => _erro = 'A nova senha precisa ter pelo menos 8 caracteres.',
+      );
       return;
     }
 
@@ -81,7 +83,10 @@ class _NovaSenhaPageState extends State<NovaSenhaPage> {
                       const Text(
                         'Crie uma nova senha',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       const Text(
@@ -99,9 +104,8 @@ class _NovaSenhaPageState extends State<NovaSenhaPage> {
                           labelText: 'Nova senha',
                           prefixIcon: const Icon(Icons.lock_outline_rounded),
                           suffixIcon: IconButton(
-                            onPressed: () => setState(
-                              () => _ocultarSenha = !_ocultarSenha,
-                            ),
+                            onPressed: () =>
+                                setState(() => _ocultarSenha = !_ocultarSenha),
                             icon: Icon(
                               _ocultarSenha
                                   ? Icons.visibility_outlined
@@ -137,7 +141,9 @@ class _NovaSenhaPageState extends State<NovaSenhaPage> {
                         Text(
                           _erro!,
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Theme.of(context).colorScheme.error),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
                       ],
                       const SizedBox(height: 22),
@@ -148,7 +154,9 @@ class _NovaSenhaPageState extends State<NovaSenhaPage> {
                           icon: _salvando
                               ? const SizedBox.square(
                                   dimension: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Icon(Icons.check_rounded),
                           label: Text(
