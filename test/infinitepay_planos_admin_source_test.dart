@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  // Garante o contrato comercial: somente o administrador define precos.
   test('admin controla planos e cliente apenas seleciona opcao do servidor', () {
     final adminService = File(
       'lib/services/imperium_planos_admin_service.dart',
