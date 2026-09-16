@@ -11,7 +11,8 @@ class ImperiumPlanosPage extends StatefulWidget {
 }
 
 class _ImperiumPlanosPageState extends State<ImperiumPlanosPage> {
-  final ImperiumPlanosAdminService _service = const ImperiumPlanosAdminService();
+  final ImperiumPlanosAdminService _service =
+      const ImperiumPlanosAdminService();
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: r'R$',
@@ -194,9 +195,7 @@ class _ImperiumPlanosPageState extends State<ImperiumPlanosPage> {
                   child: Text(
                     plano.ativo ? 'ATIVO' : 'INATIVO',
                     style: TextStyle(
-                      color: plano.ativo
-                          ? Colors.greenAccent
-                          : Colors.white60,
+                      color: plano.ativo ? Colors.greenAccent : Colors.white60,
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
@@ -293,9 +292,7 @@ class _ImperiumPlanosPageState extends State<ImperiumPlanosPage> {
                   if (_planos.isEmpty)
                     const Padding(
                       padding: EdgeInsets.all(32),
-                      child: Center(
-                        child: Text('Nenhum plano cadastrado.'),
-                      ),
+                      child: Center(child: Text('Nenhum plano cadastrado.')),
                     )
                   else
                     ..._planos.map(_planoCard),
@@ -472,10 +469,7 @@ class _PlanoEditorDialogState extends State<_PlanoEditorDialog> {
               ),
               if (_erro != null) ...[
                 const SizedBox(height: 8),
-                Text(
-                  _erro!,
-                  style: const TextStyle(color: Colors.redAccent),
-                ),
+                Text(_erro!, style: const TextStyle(color: Colors.redAccent)),
               ],
             ],
           ),
