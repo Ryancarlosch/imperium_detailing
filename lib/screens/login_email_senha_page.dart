@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/cloud_session_service.dart';
@@ -82,6 +83,20 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
     }
   }
 
+  String get _redirectRecuperacaoSenha {
+    if (kIsWeb) {
+      final base = Uri.base;
+      return Uri(
+        scheme: base.scheme,
+        host: base.host,
+        port: base.hasPort ? base.port : null,
+        path: '/',
+      ).toString();
+    }
+
+    return 'imperiumdetailing://login-callback/';
+  }
+
   Future<void> _recuperarSenha() async {
     if (_carregando || _enviandoRecuperacao) return;
 
@@ -92,12 +107,16 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
     });
 
     try {
-      await _auth.enviarRecuperacaoSenha(email: _email.text);
+      await _auth.enviarRecuperacaoSenha(
+        email: _email.text,
+        redirectTo: _redirectRecuperacaoSenha,
+      );
 
       if (!mounted) return;
       setState(() {
-        _mensagem =
-            'Enviamos um e-mail para você definir uma nova senha. Abra o link, escolha a senha e depois volte para entrar no Imperium.';
+        _mensagem = kIsWeb
+            ? 'Enviamos um e-mail para você definir uma nova senha. Abra o link e conclua a troca no Imperium.'
+            : 'Enviamos um e-mail para você definir uma nova senha. Abra o link neste celular; o Imperium será aberto para concluir a troca.';
       });
     } catch (erro) {
       if (!mounted) return;
@@ -253,6 +272,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
           textInputAction: TextInputAction.next,
           autocorrect: false,
           enableSuggestions: false,
+          autofillHints: const [AutofillHints.email],
           decoration: const InputDecoration(
             labelText: 'E-mail da empresa',
             prefixIcon: Icon(Icons.alternate_email_rounded),
@@ -268,6 +288,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
           onSubmitted: (_) => _entrar(),
           autocorrect: false,
           enableSuggestions: false,
+          autofillHints: const [AutofillHints.password],
           decoration: InputDecoration(
             labelText: 'Senha',
             prefixIcon: const Icon(Icons.lock_outline_rounded),
