@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_bootstrap.dart';
 import 'imperium_clientes_page.dart';
 import 'imperium_empresas_page.dart';
+import 'imperium_planos_page.dart';
 import 'licenca_status_page.dart';
 import 'ponto_nuvem_importacao_page.dart';
 
@@ -266,6 +267,23 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
     await _carregarEstado();
   }
 
+  Future<void> _abrirPainelPlanos() async {
+    if (!_adminComercial) {
+      _mensagem(
+        'Painel restrito à empresa proprietária do Imperium.',
+        erro: true,
+      );
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const ImperiumPlanosPage()),
+    );
+
+    if (!mounted) return;
+    await _carregarEstado();
+  }
+
   Future<void> _abrirPontoNuvem() async {
     final empresaId = _empresaId;
 
@@ -470,6 +488,15 @@ class _SupabaseContaPageState extends State<SupabaseContaPage> {
                               Icons.admin_panel_settings_outlined,
                             ),
                             label: const Text('Painel de clientes'),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _abrirPainelPlanos,
+                            icon: const Icon(Icons.sell_outlined),
+                            label: const Text('Planos de assinatura'),
                           ),
                         ),
                         const SizedBox(height: 12),
