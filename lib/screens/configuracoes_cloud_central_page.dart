@@ -12,6 +12,7 @@ import '../services/sync_motor_service.dart';
 import '../services/os_arquivos_cloud_v2_service.dart';
 import '../services/os_cloud_v3_service.dart';
 import '../services/os_finalizacao_cloud_v4_service.dart';
+import '../widgets/operacional_conflitos_card.dart';
 
 class ConfiguracoesCloudCentralPage extends StatefulWidget {
   const ConfiguracoesCloudCentralPage({super.key});
@@ -641,6 +642,8 @@ class _ConfiguracoesCloudCentralPageState
                   _modulosCard(),
                   const SizedBox(height: 12),
                   _conflitosCard(),
+                  const SizedBox(height: 12),
+                  OperacionalConflitosCard(onSincronizar: _sincronizar),
                   const SizedBox(height: 12),
                   _crmOrcamentosCard(),
                   const SizedBox(height: 12),
