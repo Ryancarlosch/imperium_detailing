@@ -199,8 +199,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
       final reserva = reservaRaw is Map
           ? Map<String, dynamic>.from(reservaRaw)
           : <String, dynamic>{};
-      final reservasLiberadas =
-          (reserva['quantidade'] as num?)?.toInt() ?? 0;
+      final reservasLiberadas = (reserva['quantidade'] as num?)?.toInt() ?? 0;
       final pagamentosCancelados =
           (resultado['pagamentos_cancelados'] as num?)?.toInt() ?? 0;
 
