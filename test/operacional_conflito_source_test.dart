@@ -19,7 +19,11 @@ void main() {
     expect(facade, contains('_delegate.resolverUsandoNuvem'));
     expect(
       facade,
-      isNot(contains('CREATE TABLE IF NOT EXISTS imperium_sync_operacional_conflitos')),
+      isNot(
+        contains(
+          'CREATE TABLE IF NOT EXISTS imperium_sync_operacional_conflitos',
+        ),
+      ),
     );
 
     expect(motor, contains("import 'operacional_cloud_v2_service.dart';"));
