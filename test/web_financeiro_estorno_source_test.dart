@@ -16,7 +16,10 @@ void main() {
       service,
       contains("'imperium_financeiro_estornar_pagamento_web_v1'"),
     );
-    expect(service, contains('WebFinanceiroEstornoModo { correcao, devolucao }'));
+    expect(
+      service,
+      contains('WebFinanceiroEstornoModo { correcao, devolucao }'),
+    );
     expect(service, contains("'p_pagamento_atualizado_em'"));
     expect(service, contains("'p_idempotency_key'"));
     expect(service, contains("'p_origem_dispositivo'"));
@@ -25,10 +28,7 @@ void main() {
     expect(service, contains('sha256'));
 
     expect(lower, contains('security invoker'));
-    expect(
-      lower,
-      contains('imperium_financeiro_estornar_pagamento_web_v1'),
-    );
+    expect(lower, contains('imperium_financeiro_estornar_pagamento_web_v1'));
     expect(lower, contains("v_modo not in ('correcao','devolucao')"));
     expect(lower, contains("status = 'estornado'"));
     expect(lower, contains("v_modo = 'correcao'"));
