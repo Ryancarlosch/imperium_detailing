@@ -10,6 +10,7 @@ void main() {
         'lib/services/web_os_arquivos_service.dart',
       ).readAsStringSync();
       final page = File('lib/web/web_os_arquivos_page.dart').readAsStringSync();
+      final ordens = File('lib/web/web_ordens_v3_page.dart').readAsStringSync();
 
       expect(service, contains("from('imperium_ordens_servico')"));
       expect(service, contains("from('imperium_ordem_servico_fotos')"));
@@ -30,6 +31,13 @@ void main() {
       expect(page, contains('Image.memory'));
       expect(page, contains('InteractiveViewer'));
       expect(page, isNot(contains("import 'dart:io'")));
+
+      expect(ordens, contains("import 'web_os_arquivos_page.dart';"));
+      expect(ordens, contains('Future<void> _abrirArquivos'));
+      expect(ordens, contains('WebOsArquivosPage('));
+      expect(ordens, contains("tooltip: 'Fotos, avarias e assinatura'"));
+      expect(ordens, contains('onPressed: () => _abrirArquivos(os)'));
+      expect(ordens, contains("status != 'Aberta' && status != 'Em andamento'"));
     },
   );
 }
