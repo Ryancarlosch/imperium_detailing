@@ -17,10 +17,9 @@ typedef OperacionalConflitoRemoteFetcher =
 class OperacionalConflitoService {
   OperacionalConflitoService._({
     Future<Database> Function()? databaseProvider,
-    OperacionalConflitoRemoteFetcher? remoteFetcher,
+    this._remoteFetcher,
   }) : _databaseProvider =
-           databaseProvider ?? (() => AppDatabase.instance.database),
-       _remoteFetcher = remoteFetcher;
+           databaseProvider ?? (() => AppDatabase.instance.database);
 
   static final OperacionalConflitoService instance =
       OperacionalConflitoService._();
