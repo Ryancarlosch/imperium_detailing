@@ -34,11 +34,12 @@ Tornar visíveis e resolvíveis na Central Cloud os conflitos de sincronização
 - `flutter test test/operacional_conflitos_card_source_test.dart` — PASS.
 - `flutter analyze` — PASS / sem issues.
 - `git diff --check` — PASS / sem saída.
+- `flutter test` — PASS / suíte completa.
 
-## Observação de fechamento
+## Fechamento
 
-A suíte completa `flutter test` não foi executada novamente especificamente após o lote visual da Central Cloud. Antes de um fechamento amplo/release, manter a validação integral como requisito.
+O lote está validado localmente com testes específicos, análise estática, verificação de diff e suíte completa do Flutter em verde.
 
 ## Próximo passo recomendado
 
-Executar a suíte completa e, em seguida, homologar em cenário real com duas versões concorrentes de Cliente/Veículo/Agendamento para validar o fluxo completo: detecção -> bloqueio -> exibição na Central Cloud -> escolha Local/Nuvem -> nova sincronização sem sobrescrita silenciosa.
+Homologar em cenário real com duas versões concorrentes de Cliente/Veículo/Agendamento para validar o fluxo completo: detecção -> bloqueio -> exibição na Central Cloud -> escolha Local/Nuvem -> nova sincronização sem sobrescrita silenciosa.
