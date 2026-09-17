@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../repositories/veiculo_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import 'novo_veiculo_page.dart';
 import 'veiculo_detalhes_page.dart';
 
@@ -18,18 +21,36 @@ class _VeiculosPageState extends State<VeiculosPage> {
 
   List<Map<String, dynamic>> _veiculos = [];
   bool _carregando = true;
+  bool _atualizandoRealtime = false;
   String _pesquisa = '';
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
 
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) => unawaited(_recarregarPorRealtime()));
     _carregar();
   }
 
   @override
   void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
     _pesquisaController.dispose();
     super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _atualizandoRealtime) return;
+
+    _atualizandoRealtime = true;
+    try {
+      await _carregar();
+    } finally {
+      _atualizandoRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
