@@ -48,11 +48,15 @@ void main() {
     expect(realtime, contains('StreamController<void>.broadcast()'));
     expect(
       realtime,
-      contains('Stream<void> get atualizacoes => _atualizacoesController.stream'),
+      contains(
+        'Stream<void> get atualizacoes => _atualizacoesController.stream',
+      ),
     );
 
     final syncConcluido = realtime.indexOf('await onAtualizar();');
-    final telaNotificada = realtime.indexOf('_atualizacoesController.add(null);');
+    final telaNotificada = realtime.indexOf(
+      '_atualizacoesController.add(null);',
+    );
     expect(syncConcluido, greaterThanOrEqualTo(0));
     expect(telaNotificada, greaterThan(syncConcluido));
 
@@ -63,7 +67,9 @@ void main() {
     expect(agenda, contains('StreamSubscription<void>?'));
     expect(
       agenda,
-      contains('OperacionalRealtimeService\n        .instance\n        .atualizacoes'),
+      contains(
+        'OperacionalRealtimeService\n        .instance\n        .atualizacoes',
+      ),
     );
     expect(agenda, contains('unawaited(_recarregarPorRealtime())'));
     expect(agenda, contains('await carregarAgendamentos();'));
