@@ -48,8 +48,18 @@ class PontoRealtimeService {
 
       final geracao = ++_geracao;
       final channel = client.channel(
-        'ponto-registros-$empresaId-$remotoId-$geracao',
+        'ponto-$empresaId-$remotoId-$geracao',
       );
+
+      void agendarAtualizacao() {
+        if (geracao != _geracao) return;
+
+        _debounce?.cancel();
+        _debounce = Timer(const Duration(milliseconds: 400), () {
+          if (geracao != _geracao) return;
+          unawaited(_executarAtualizacao(onAtualizar));
+        });
+      }
 
       channel.onPostgresChanges(
         event: PostgresChangeEvent.all,
@@ -60,15 +70,31 @@ class PontoRealtimeService {
           column: 'colaborador_id',
           value: remotoId,
         ),
-        callback: (_) {
-          if (geracao != _geracao) return;
+        callback: (_) => agendarAtualizacao(),
+      );
 
-          _debounce?.cancel();
-          _debounce = Timer(const Duration(milliseconds: 400), () {
-            if (geracao != _geracao) return;
-            unawaited(_executarAtualizacao(onAtualizar));
-          });
-        },
+      channel.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'ponto_jornada',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'empresa_id',
+          value: empresaId,
+        ),
+        callback: (_) => agendarAtualizacao(),
+      );
+
+      channel.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'ponto_config',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'empresa_id',
+          value: empresaId,
+        ),
+        callback: (_) => agendarAtualizacao(),
       );
 
       _channel = channel;
