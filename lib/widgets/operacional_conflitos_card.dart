@@ -4,10 +4,7 @@ import '../services/operacional_cloud_v2_service.dart';
 import '../services/operacional_sync_service.dart';
 
 class OperacionalConflitosCard extends StatefulWidget {
-  const OperacionalConflitosCard({
-    super.key,
-    this.onSincronizar,
-  });
+  const OperacionalConflitosCard({super.key, this.onSincronizar});
 
   final Future<void> Function()? onSincronizar;
 
@@ -59,7 +56,10 @@ class _OperacionalConflitosCardState extends State<OperacionalConflitosCard> {
     } catch (erro) {
       if (!mounted) return;
       setState(() => _carregando = false);
-      _mensagem('Não foi possível carregar conflitos operacionais.\n$erro', erro: true);
+      _mensagem(
+        'Não foi possível carregar conflitos operacionais.\n$erro',
+        erro: true,
+      );
     }
   }
 
@@ -250,10 +250,7 @@ class _OperacionalConflitosCardState extends State<OperacionalConflitosCard> {
         children: [
           Expanded(child: Text(titulo)),
           const SizedBox(width: 10),
-          Text(
-            valor,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+          Text(valor, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     );
