@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/cliente.dart';
 import '../repositories/cliente_repository.dart';
 import '../repositories/usuario_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import 'cliente_detalhes_page.dart';
 import 'cliente_operacional_page.dart';
 
@@ -19,11 +22,34 @@ class _ClientesPageState extends State<ClientesPage> {
   List<Cliente> _clientes = [];
   bool _carregando = true;
   bool _mostrarArquivados = false;
+  bool _atualizandoRealtime = false;
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
 
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) => unawaited(_recarregarPorRealtime()));
     _carregarClientes();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _atualizandoRealtime) return;
+
+    _atualizandoRealtime = true;
+    try {
+      await _carregarClientes(exibirCarregamento: false);
+    } finally {
+      _atualizandoRealtime = false;
+    }
   }
 
   Future<void> _carregarClientes({bool exibirCarregamento = true}) async {
