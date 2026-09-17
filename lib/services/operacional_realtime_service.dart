@@ -18,10 +18,19 @@ class OperacionalRealtimeService {
   static final OperacionalRealtimeService instance =
       OperacionalRealtimeService._();
 
+  final StreamController<void> _atualizacoesController =
+      StreamController<void>.broadcast();
+
   RealtimeChannel? _channel;
   Timer? _debounce;
   String? _empresaAssinada;
   int _geracao = 0;
+
+  /// Notifica telas abertas depois que o ciclo disparado pelo Realtime termina.
+  ///
+  /// O evento não carrega dados remotos: as telas continuam lendo o SQLite,
+  /// mantendo a mesma fonte local usada no modo offline.
+  Stream<void> get atualizacoes => _atualizacoesController.stream;
 
   Future<bool> assinarEmpresa({
     required String empresaId,
@@ -82,6 +91,7 @@ class OperacionalRealtimeService {
   ) async {
     try {
       await onAtualizar();
+      _atualizacoesController.add(null);
     } catch (_) {
       // Realtime é um acelerador. Falha aqui não bloqueia o modo offline,
       // o timer de sincronização, o retorno ao app nem o botão manual.
