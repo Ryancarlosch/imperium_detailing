@@ -3,26 +3,32 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('detector operacional protege conflitos de clientes e veiculos', () {
-    final source = File(
+  test('conflitos operacional usam uma unica fonte de verdade', () {
+    final facade = File(
       'lib/services/operacional_conflito_service.dart',
     ).readAsStringSync();
+    final motor = File(
+      'lib/services/sync_motor_service.dart',
+    ).readAsStringSync();
 
-    expect(source, contains('class OperacionalConflitoService'));
-    expect(source, contains('OperacionalConflitoService.forTesting'));
-    expect(source, contains('imperium_sync_operacional_conflitos'));
-    expect(source, contains("_detectarEntidade(tenant, 'cliente')"));
-    expect(source, contains("_detectarEntidade(tenant, 'veiculo')"));
-    expect(source, contains("motivo: 'registro_remoto_ausente'"));
-    expect(source, contains("'alteracao_concorrente'"));
-    expect(source, contains("'exclusao_remota_e_alteracao_local'"));
-    expect(source, contains("mapa['local_hash']"));
-    expect(source, contains("mapa['remoto_atualizado_em']"));
-    expect(source, contains("remoto['atualizado_em']"));
-    expect(source, contains("remoto['excluido_em']"));
-    expect(source, contains('sha256.convert'));
-    expect(source, contains('listarConflitosPendentes'));
-    expect(source, contains('possuiConflitosPendentes'));
-    expect(source, contains('diagnosticar'));
+    expect(facade, contains("import 'operacional_cloud_v2_service.dart';"));
+    expect(facade, contains('OperacionalCloudV2Service.instance'));
+    expect(facade, contains('_delegate.prepararUpload'));
+    expect(facade, contains('_delegate.listarConflitosPendentes'));
+    expect(facade, contains('_delegate.resolverUsandoLocal'));
+    expect(facade, contains('_delegate.resolverUsandoNuvem'));
+    expect(
+      facade,
+      isNot(contains('CREATE TABLE IF NOT EXISTS imperium_sync_operacional_conflitos')),
+    );
+
+    expect(motor, contains("import 'operacional_cloud_v2_service.dart';"));
+    expect(motor, contains("if (etapa.modulo == 'operacional')"));
+    expect(motor, contains('OperacionalCloudV2Service.instance'));
+    expect(motor, contains('.prepararUpload(empresaId)'));
+    expect(
+      motor,
+      contains('Conflitos pendentes em Clientes, Veículos ou Agenda.'),
+    );
   });
 }
