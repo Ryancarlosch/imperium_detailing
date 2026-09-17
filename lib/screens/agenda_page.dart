@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -8,6 +10,7 @@ import '../repositories/financeiro_repository.dart';
 import '../repositories/usuario_repository.dart';
 import '../repositories/veiculo_repository.dart';
 import '../services/notification_service.dart';
+import '../services/operacional_realtime_service.dart';
 import '../services/whatsapp_service.dart';
 import 'agendamento_detalhes_page.dart';
 import 'novo_agendamento_page.dart';
@@ -31,10 +34,13 @@ class _AgendaPageState extends State<AgendaPage> {
   bool carregando = true;
   bool _permissaoSolicitada = false;
   bool _mostrarAnteriores = false;
+  bool _atualizandoRealtime = false;
 
   String? _dataDestacada;
 
   int? _agendamentoAbrindoWhatsAppId;
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
+
   bool get _podeLancarFinanceiro {
     final sessao = UsuarioRepository().sessaoAtual;
     if (sessao == null) return false;
@@ -51,7 +57,28 @@ class _AgendaPageState extends State<AgendaPage> {
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) => unawaited(_recarregarPorRealtime()));
     carregarAgendamentos();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _atualizandoRealtime) return;
+
+    _atualizandoRealtime = true;
+    try {
+      await carregarAgendamentos();
+    } finally {
+      _atualizandoRealtime = false;
+    }
   }
 
   Future<void> carregarAgendamentos() async {
