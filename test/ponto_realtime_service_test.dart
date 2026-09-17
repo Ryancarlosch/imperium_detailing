@@ -19,4 +19,17 @@ void main() {
     expect(service, contains('empresaAtualId()'));
     expect(service, contains('remotoIdPorLocal('));
   });
+
+  test('Meu Ponto retoma Realtime ao voltar ao primeiro plano', () {
+    final page = File('lib/screens/meu_ponto_page.dart').readAsStringSync();
+
+    expect(page, contains('with WidgetsBindingObserver'));
+    expect(page, contains('WidgetsBinding.instance.addObserver(this)'));
+    expect(page, contains('didChangeAppLifecycleState'));
+    expect(page, contains('AppLifecycleState.resumed'));
+    expect(page, contains('unawaited(_retomarSincronizacao())'));
+    expect(page, contains('await _iniciarRealtime()'));
+    expect(page, contains('await _carregar()'));
+    expect(page, contains('WidgetsBinding.instance.removeObserver(this)'));
+  });
 }
