@@ -47,9 +47,7 @@ class PontoRealtimeService {
       }
 
       final geracao = ++_geracao;
-      final channel = client.channel(
-        'ponto-$empresaId-$remotoId-$geracao',
-      );
+      final channel = client.channel('ponto-$empresaId-$remotoId-$geracao');
 
       void agendarAtualizacao() {
         if (geracao != _geracao) return;
