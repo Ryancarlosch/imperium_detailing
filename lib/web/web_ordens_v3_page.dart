@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../domain/ordem_servico_valor.dart';
 import '../services/web_cloud_operacional_service.dart';
 import '../services/web_os_v3_service.dart';
+import 'web_os_arquivos_page.dart';
 
 class WebOrdensV3Page extends StatefulWidget {
   const WebOrdensV3Page({super.key});
@@ -114,6 +115,23 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
     } catch (e) {
       _mensagem(e.toString(), erro: true);
     }
+  }
+
+  Future<void> _abrirArquivos(Map<String, dynamic> resumo) async {
+    final id = (resumo['id'] ?? '').toString().trim();
+    if (id.isEmpty) {
+      _mensagem('Não foi possível identificar esta OS.', erro: true);
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => WebOsArquivosPage(
+          ordemId: id,
+          numero: (resumo['numero'] ?? '').toString(),
+        ),
+      ),
+    );
   }
 
   void _mensagem(String texto, {bool erro = false}) {
@@ -271,7 +289,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                 ].where((e) => e.trim().isNotEmpty).join(' · '),
               ),
               trailing: SizedBox(
-                width: 210,
+                width: 260,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -280,6 +298,11 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: 'Fotos, avarias e assinatura',
+                      onPressed: () => _abrirArquivos(os),
+                      icon: const Icon(Icons.photo_library_outlined),
+                    ),
                     IconButton(
                       tooltip: editavel
                           ? 'Editar com CAS'
