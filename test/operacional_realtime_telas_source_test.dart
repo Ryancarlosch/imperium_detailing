@@ -17,11 +17,7 @@ void main() {
         reason: caminho,
       );
       expect(source, contains('StreamSubscription<void>?'), reason: caminho);
-      expect(
-        source,
-        contains('.atualizacoes'),
-        reason: caminho,
-      );
+      expect(source, contains('.atualizacoes'), reason: caminho);
       expect(
         source,
         contains('unawaited(_recarregarPorRealtime())'),
