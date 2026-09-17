@@ -75,9 +75,7 @@ class WebOsCancelamentoV5Service {
 
     final origem = await WebOrigemService.instance.proxima();
     final assinatura = sha256
-        .convert(
-          utf8.encode('$empresaId|$ordemId|$atualizadoEm|$motivoLimpo'),
-        )
+        .convert(utf8.encode('$empresaId|$ordemId|$atualizadoEm|$motivoLimpo'))
         .toString();
     final idempotencyKey = 'web-cancelar-$assinatura';
 
