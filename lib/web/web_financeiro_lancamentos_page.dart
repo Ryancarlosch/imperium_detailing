@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/web_cloud_gestao_service.dart';
+import '../widgets/web_financeiro_pagamentos_card.dart';
 
 class WebFinanceiroLancamentosPage extends StatefulWidget {
   const WebFinanceiroLancamentosPage({super.key});
@@ -530,6 +531,8 @@ class _WebFinanceiroLancamentosPageState
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
+              WebFinanceiroPagamentosCard(onChanged: _recarregar),
               const SizedBox(height: 20),
               const Text(
                 'Movimentos recentes',
