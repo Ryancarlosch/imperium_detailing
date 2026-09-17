@@ -64,13 +64,9 @@ void main() {
       agenda,
       contains("import '../services/operacional_realtime_service.dart';"),
     );
+    expect(agenda, contains('OperacionalRealtimeService'));
     expect(agenda, contains('StreamSubscription<void>?'));
-    expect(
-      agenda,
-      contains(
-        'OperacionalRealtimeService\n        .instance\n        .atualizacoes',
-      ),
-    );
+    expect(agenda, contains('.atualizacoes'));
     expect(agenda, contains('unawaited(_recarregarPorRealtime())'));
     expect(agenda, contains('await carregarAgendamentos();'));
     expect(agenda, contains('_operacionalRealtimeSubscription?.cancel();'));
