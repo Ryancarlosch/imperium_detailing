@@ -5,7 +5,7 @@ Branch: `desenvolvimento`
 
 ## Objetivo deste lote
 
-Levar para o Web a leitura dos arquivos de Ordem de Serviço que já são sincronizados pelo Android, reutilizando a infraestrutura existente do Supabase Storage e sem criar um banco ou fluxo paralelo.
+Levar para o Web a leitura dos arquivos de Ordem de Serviço que já são sincronizados pelo Android, reutilizando a infraestrutura existente do Supabase Storage e sem criar banco ou fluxo paralelo.
 
 ## Implementado
 
@@ -20,8 +20,9 @@ Arquivo: `lib/services/web_os_arquivos_service.dart`
 - lê a assinatura já vinculada em `imperium_ordens_servico`;
 - respeita soft delete (`excluido_em`);
 - reutiliza o bucket privado `imperium-os-arquivos`;
-- baixa conteúdo com `Supabase Storage` como bytes (`Uint8List`);
-- não depende de `dart:io`.
+- baixa conteúdo com Supabase Storage como bytes (`Uint8List`);
+- não depende de `dart:io`;
+- não cria URL pública para o bucket privado.
 
 ### Visualizador Web
 
@@ -32,7 +33,15 @@ Arquivo: `lib/web/web_os_arquivos_page.dart`
 - abre a imagem diretamente de bytes;
 - permite zoom com `InteractiveViewer`;
 - possui atualização manual;
-- mantém o Storage privado; não cria URL pública.
+- mantém o Storage privado.
+
+### Integração na lista de Ordens de Serviço
+
+Arquivo: `lib/web/web_ordens_v3_page.dart`
+
+- adiciona botão `Fotos, avarias e assinatura` em cada OS;
+- abre `WebOsArquivosPage` usando o ID e número da OS;
+- mantém intacta a regra de edição apenas para OS `Aberta` ou `Em andamento`.
 
 ### Teste de contrato
 
@@ -40,25 +49,42 @@ Arquivo: `test/web_os_arquivos_source_test.dart`
 
 Protege:
 
+- filtros por `empresa_id` e `ordem_servico_id`;
+- soft delete;
 - tabelas remotas corretas;
-- bucket correto;
+- bucket privado correto;
 - download por bytes;
-- fotos, avarias e assinatura;
-- ausência de `dart:io` na implementação Web.
+- ausência de `createPublicUrl`;
+- ausência de `dart:io` na implementação Web;
+- integração do botão da lista de OS com `WebOsArquivosPage`;
+- preservação da restrição de edição por status.
 
 ## Commits do lote
 
 - `9dc37d5` — `feat(web): adiciona leitura dos arquivos da OS`
 - `47814ee` — `feat(web): adiciona visualizador de arquivos da OS`
 - `c9926cb` — `test(web): protege visualizacao dos arquivos da OS`
-- `f01e3bd` — `style: aplica dart format` (GitHub Actions)
+- `f01e3bd` — `style: aplica dart format`
+- `503037f` — `docs: registra checkpoint dos arquivos da OS web`
+- `39bbbe2` — `test(web): reforca isolamento dos arquivos da OS`
+- `32b76ed` — `feat(web): liga arquivos a lista de OS`
+- `768f22c` — `test(web): protege acesso aos arquivos pela OS`
+- `fea671b` — `style: aplica dart format`
 
-## Estado de validação
+## Validação confirmada em 2026-09-16
 
-- primeira execução de `Web Preview Build` parou somente no gate de formatação;
-- o workflow de autoformatação corrigiu os dois arquivos apontados;
-- este checkpoint cria um push humano sobre o código formatado para disparar novamente a validação completa;
-- ainda falta ligar a tela ao botão da lista de Ordens de Serviço; essa integração será feita somente após `analyze`, teste e build do núcleo deste lote passarem.
+No computador de desenvolvimento, já alinhado ao commit `fea671b`:
+
+- `flutter test test/web_os_arquivos_source_test.dart` — PASSOU;
+- `flutter analyze` — PASSOU (`No issues found`);
+- `flutter build web --target lib/main_web_bootstrap.dart --release` — PASSOU (`Built build\\web`).
+
+O build exibiu apenas avisos não bloqueantes:
+
+- dry run de WebAssembly apontando incompatibilidades no pacote `image 4.3.0`;
+- aviso de fonte `CupertinoIcons` não encontrada durante tree-shaking.
+
+Esses avisos não impediram a compilação Web atual e ficam registrados para tratamento futuro caso o projeto passe a exigir build WASM ou uso efetivo dessa fonte.
 
 ## Regra de segurança preservada
 
@@ -74,10 +100,14 @@ Nenhuma alteração deste lote mexe em:
 
 O Web apenas lê arquivos já sincronizados e autorizados pelas políticas existentes da empresa.
 
+## Estado do lote
+
+✅ **Arquivos da OS Web V1 — implementado e validado localmente.**
+
+A lista Web de Ordens de Serviço já permite acessar fotos, avarias e assinatura sincronizadas, respeitando `empresa_id`, soft delete e Storage privado.
+
 ## Próximo passo exato
 
-1. confirmar `Flutter Quality` e `Web Preview Build` verdes para este lote;
-2. integrar `WebOsArquivosPage` à lista `WebOrdensV3Page`;
-3. adicionar teste do botão/rota;
-4. validar novamente;
-5. atualizar roadmap técnico da etapa.
+1. atualizar o roadmap mestre com a conclusão de `Arquivos da OS Web V1`;
+2. manter este lote congelado salvo correção identificada em homologação;
+3. continuar a próxima etapa do desenvolvimento Web conforme prioridade do roadmap.
