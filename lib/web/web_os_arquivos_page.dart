@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../services/web_os_arquivos_service.dart';
+import '../services/web_os_pdf_service.dart';
 
 class WebOsArquivosPage extends StatefulWidget {
   const WebOsArquivosPage({
@@ -20,6 +21,7 @@ class WebOsArquivosPage extends StatefulWidget {
 
 class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
   final _service = WebOsArquivosService.instance;
+  final _pdfService = WebOsPdfService.instance;
 
   late Future<Map<String, dynamic>> _dados;
 
@@ -38,6 +40,32 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
     await _dados;
   }
 
+  Future<void> _baixarPdf() async {
+    try {
+      await _pdfService.baixarPdf(
+        ordemId: widget.ordemId,
+        numero: widget.numero,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('PDF da OS gerado com sucesso.')),
+        );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Não foi possível gerar o PDF: $e'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,6 +76,11 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
               : 'Arquivos da OS ${widget.numero}',
         ),
         actions: [
+          IconButton(
+            tooltip: 'Baixar PDF da OS',
+            onPressed: _baixarPdf,
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+          ),
           IconButton(
             tooltip: 'Atualizar arquivos',
             onPressed: _atualizar,
