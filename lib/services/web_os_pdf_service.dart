@@ -98,10 +98,7 @@ class WebOsPdfService {
             pw.SizedBox(height: 16),
             pw.Text(
               'FOTOS, AVARIAS E ASSINATURA',
-              style: pw.TextStyle(
-                fontSize: 12,
-                fontWeight: pw.FontWeight.bold,
-              ),
+              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 8),
             ...imagens.map(_imagem),
@@ -113,10 +110,7 @@ class WebOsPdfService {
     return documento.save();
   }
 
-  Future<void> baixarPdf({
-    required String ordemId,
-    String numero = '',
-  }) async {
+  Future<void> baixarPdf({required String ordemId, String numero = ''}) async {
     final bytes = await gerarPdf(ordemId: ordemId);
     final identificador = _arquivoSeguro(numero.isEmpty ? ordemId : numero);
 
@@ -200,10 +194,7 @@ class WebOsPdfService {
       ],
       [
         'Saída',
-        _juntar(
-          _texto(ordem['data_finalizacao']),
-          _texto(ordem['hora_saida']),
-        ),
+        _juntar(_texto(ordem['data_finalizacao']), _texto(ordem['hora_saida'])),
       ],
       ['Responsável', _texto(ordem['funcionario_responsavel'])],
       ['Quilometragem', _texto(ordem['quilometragem_entrada'])],
@@ -309,9 +300,10 @@ class WebOsPdfService {
 
   pw.Widget _totais(Map<String, dynamic> ordem, double negociado) {
     final totalBruto = _double(ordem['valor_total']);
-    final desconto = _double(ordem['desconto']) +
-        _double(ordem['desconto_negociacao']);
-    final acrescimos = _double(ordem['acrescimo_negociacao']) +
+    final desconto =
+        _double(ordem['desconto']) + _double(ordem['desconto_negociacao']);
+    final acrescimos =
+        _double(ordem['acrescimo_negociacao']) +
         _double(ordem['juros_parcelamento']);
 
     return pw.Align(
@@ -361,7 +353,10 @@ class WebOsPdfService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(rotulo, style: const pw.TextStyle(fontSize: 8.5)),
-          pw.Text(_moeda.format(valor), style: const pw.TextStyle(fontSize: 8.5)),
+          pw.Text(
+            _moeda.format(valor),
+            style: const pw.TextStyle(fontSize: 8.5),
+          ),
         ],
       ),
     );
