@@ -22,7 +22,8 @@ class MeuPontoPage extends StatefulWidget {
   State<MeuPontoPage> createState() => _MeuPontoPageState();
 }
 
-class _MeuPontoPageState extends State<MeuPontoPage> {
+class _MeuPontoPageState extends State<MeuPontoPage>
+    with WidgetsBindingObserver {
   final PontoRepository _repository = PontoSincronizadoRepository();
   final PontoRealtimeService _realtime = PontoRealtimeService.instance;
 
@@ -46,10 +47,27 @@ class _MeuPontoPageState extends State<MeuPontoPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _carregar();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _iniciarRealtime();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state != AppLifecycleState.resumed) return;
+    unawaited(_retomarSincronizacao());
+  }
+
+  Future<void> _retomarSincronizacao() async {
+    if (!mounted) return;
+
+    await _iniciarRealtime();
+
+    if (!mounted || _batendo) return;
+    await _carregar();
   }
 
   // meu-ponto-iniciar-realtime-v4b
@@ -71,6 +89,7 @@ class _MeuPontoPageState extends State<MeuPontoPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     unawaited(_realtime.cancelar());
     super.dispose();
   }
