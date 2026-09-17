@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../domain/ordem_servico_valor.dart';
 import '../services/web_cloud_operacional_service.dart';
+import '../services/web_os_cancelamento_v5_service.dart';
 import '../services/web_os_v3_service.dart';
 import 'web_os_arquivos_page.dart';
 
@@ -16,6 +17,7 @@ class WebOrdensV3Page extends StatefulWidget {
 class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
   final _operacional = WebCloudOperacionalService.instance;
   final _service = WebOsV3Service.instance;
+  final _cancelamento = WebOsCancelamentoV5Service.instance;
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
   final _busca = TextEditingController();
 
@@ -117,6 +119,102 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
     }
   }
 
+  Future<void> _cancelar(Map<String, dynamic> resumo) async {
+    final status = (resumo['status'] ?? '').toString().trim();
+
+    if (status != 'Aberta' && status != 'Em andamento') {
+      _mensagem(
+        'Somente OS Aberta ou Em andamento pode ser cancelada por este fluxo. '
+        'OS finalizada exige estorno/correção.',
+        erro: true,
+      );
+      return;
+    }
+
+    final motivoController = TextEditingController();
+    final motivo = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Cancelar OS ${resumo['numero'] ?? ''}?'),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'O cancelamento é transacional: cobranças pendentes serão '
+                'canceladas, reservas de estoque serão liberadas e o '
+                'agendamento vinculado será atualizado. Se qualquer etapa '
+                'falhar, nenhuma alteração será gravada.',
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: motivoController,
+                autofocus: true,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Motivo do cancelamento *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Voltar'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              final texto = motivoController.text.trim();
+              if (texto.length < 3) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                    content: Text('Informe o motivo do cancelamento.'),
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(dialogContext, texto);
+            },
+            icon: const Icon(Icons.cancel_outlined),
+            label: const Text('Confirmar cancelamento'),
+          ),
+        ],
+      ),
+    );
+    motivoController.dispose();
+
+    if (motivo == null) return;
+
+    try {
+      final resultado = await _cancelamento.cancelar(
+        ordem: resumo,
+        motivo: motivo,
+      );
+
+      final reservaRaw = resultado['reserva'];
+      final reserva = reservaRaw is Map
+          ? Map<String, dynamic>.from(reservaRaw)
+          : <String, dynamic>{};
+      final reservasLiberadas =
+          (reserva['quantidade'] as num?)?.toInt() ?? 0;
+      final pagamentosCancelados =
+          (resultado['pagamentos_cancelados'] as num?)?.toInt() ?? 0;
+
+      _mensagem(
+        'OS cancelada com segurança. Reservas liberadas: '
+        '$reservasLiberadas. Cobranças pendentes canceladas: '
+        '$pagamentosCancelados.',
+      );
+      await _carregar();
+    } catch (e) {
+      _mensagem(e.toString(), erro: true);
+    }
+  }
+
   Future<void> _abrirArquivos(Map<String, dynamic> resumo) async {
     final id = (resumo['id'] ?? '').toString().trim();
     if (id.isEmpty) {
@@ -208,8 +306,9 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Finalizar/cancelar, baixar estoque e gerar financeiro continuam '
-          'bloqueados neste fluxo Web.',
+          'Finalização usa o fluxo V4 separado. O cancelamento de OS '
+          'abertas/em andamento usa a V5 transacional com CAS e liberação '
+          'segura dos efeitos pendentes.',
         ),
         const SizedBox(height: 18),
         Row(
@@ -289,7 +388,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                 ].where((e) => e.trim().isNotEmpty).join(' · '),
               ),
               trailing: SizedBox(
-                width: 260,
+                width: 310,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -309,6 +408,13 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                           : 'OS bloqueada para edição Web',
                       onPressed: editavel ? () => _editar(os) : null,
                       icon: const Icon(Icons.edit_outlined),
+                    ),
+                    IconButton(
+                      tooltip: editavel
+                          ? 'Cancelar OS com transação segura'
+                          : 'Cancelamento disponível só para OS Aberta/Em andamento',
+                      onPressed: editavel ? () => _cancelar(os) : null,
+                      icon: const Icon(Icons.cancel_outlined),
                     ),
                   ],
                 ),
