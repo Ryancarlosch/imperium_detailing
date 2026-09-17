@@ -85,9 +85,9 @@ class _WebFinanceiroPagamentosCardState
                 erro = null;
               });
 
-              Navigator.of(dialogContext).pop(
-                _EstornoDraft(modo: modo, motivo: motivoLimpo),
-              );
+              Navigator.of(
+                dialogContext,
+              ).pop(_EstornoDraft(modo: modo, motivo: motivoLimpo));
             }
 
             return AlertDialog(
