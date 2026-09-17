@@ -15,6 +15,11 @@ void main() {
 
     expect(service, contains("table: 'ponto_registros'"));
     expect(service, contains("column: 'colaborador_id'"));
+    expect(service, contains("table: 'ponto_jornada'"));
+    expect(service, contains("table: 'ponto_config'"));
+    expect(service, contains("column: 'empresa_id'"));
+    expect(service, contains('value: empresaId'));
+    expect(service, contains('void agendarAtualizacao()'));
     expect(service, contains('Duration(milliseconds: 400)'));
     expect(service, contains('empresaAtualId()'));
     expect(service, contains('remotoIdPorLocal('));
@@ -31,5 +36,26 @@ void main() {
     expect(page, contains('await _iniciarRealtime()'));
     expect(page, contains('await _carregar()'));
     expect(page, contains('WidgetsBinding.instance.removeObserver(this)'));
+  });
+
+  test('Migration publica jornada e configuração no Supabase Realtime', () {
+    final migration = File(
+      'supabase/migrations/20260917010144_ponto_realtime_jornada_config_v1.sql',
+    ).readAsStringSync();
+
+    expect(migration, contains("tablename = 'ponto_jornada'"));
+    expect(migration, contains("tablename = 'ponto_config'"));
+    expect(
+      migration,
+      contains(
+        'alter publication supabase_realtime add table public.ponto_jornada',
+      ),
+    );
+    expect(
+      migration,
+      contains(
+        'alter publication supabase_realtime add table public.ponto_config',
+      ),
+    );
   });
 }
