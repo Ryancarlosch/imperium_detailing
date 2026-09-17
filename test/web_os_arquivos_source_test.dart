@@ -37,7 +37,10 @@ void main() {
       expect(ordens, contains('WebOsArquivosPage('));
       expect(ordens, contains("tooltip: 'Fotos, avarias e assinatura'"));
       expect(ordens, contains('onPressed: () => _abrirArquivos(os)'));
-      expect(ordens, contains("status != 'Aberta' && status != 'Em andamento'"));
+      expect(
+        ordens,
+        contains("status != 'Aberta' && status != 'Em andamento'"),
+      );
     },
   );
 }
