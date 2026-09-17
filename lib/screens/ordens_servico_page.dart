@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -15,6 +17,7 @@ import 'ordem_servico_fotos_page.dart';
 import 'ordem_servico_assinatura_page.dart';
 import 'pagamentos_page.dart';
 import '../repositories/ordem_servico_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import '../services/ordem_servico_pdf_service.dart';
 import '../services/whatsapp_service.dart';
 
@@ -41,6 +44,8 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
 
   final TextEditingController _pesquisaController = TextEditingController();
 
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
+
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
@@ -52,6 +57,7 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
 
   bool _carregando = true;
   bool _executandoAcao = false;
+  bool _recarregandoPorRealtime = false;
 
   late String _statusSelecionado;
 
@@ -71,12 +77,19 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
     _statusSelecionado = widget.statusInicial ?? 'Todos';
 
     _pesquisaController.addListener(_aoAlterarPesquisa);
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
 
     _carregarOrdens();
   }
 
   @override
   void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
     _pesquisaController.removeListener(_aoAlterarPesquisa);
 
     _pesquisaController.dispose();
@@ -86,6 +99,41 @@ class _OrdensServicoPageState extends State<OrdensServicoPage> {
 
   void _aoAlterarPesquisa() {
     _carregarOrdens();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted ||
+        _recarregandoPorRealtime ||
+        _carregando ||
+        _executandoAcao) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    final statusConsultado = _statusSelecionado;
+    final pesquisaConsultada = _pesquisaController.text;
+
+    try {
+      final resultado = await _repository.listarOrdensServicoComDetalhes(
+        status: statusConsultado,
+        pesquisa: pesquisaConsultada,
+      );
+
+      if (!mounted ||
+          statusConsultado != _statusSelecionado ||
+          pesquisaConsultada != _pesquisaController.text) {
+        return;
+      }
+
+      setState(() {
+        _ordens = resultado;
+      });
+    } catch (_) {
+      // O Realtime só acelera a atualização. Falhas silenciosas aqui não
+      // substituem o refresh manual nem bloqueiam o funcionamento offline.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregarOrdens() async {
