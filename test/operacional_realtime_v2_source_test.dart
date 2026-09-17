@@ -38,4 +38,35 @@ void main() {
     expect(migration, contains('public.imperium_veiculos'));
     expect(migration, contains('public.imperium_agendamentos'));
   });
+
+  test('Agenda aberta recarrega SQLite depois do sync Realtime', () {
+    final realtime = File(
+      'lib/services/operacional_realtime_service.dart',
+    ).readAsStringSync();
+    final agenda = File('lib/screens/agenda_page.dart').readAsStringSync();
+
+    expect(realtime, contains('StreamController<void>.broadcast()'));
+    expect(
+      realtime,
+      contains('Stream<void> get atualizacoes => _atualizacoesController.stream'),
+    );
+
+    final syncConcluido = realtime.indexOf('await onAtualizar();');
+    final telaNotificada = realtime.indexOf('_atualizacoesController.add(null);');
+    expect(syncConcluido, greaterThanOrEqualTo(0));
+    expect(telaNotificada, greaterThan(syncConcluido));
+
+    expect(
+      agenda,
+      contains("import '../services/operacional_realtime_service.dart';"),
+    );
+    expect(agenda, contains('StreamSubscription<void>?'));
+    expect(
+      agenda,
+      contains('OperacionalRealtimeService\n        .instance\n        .atualizacoes'),
+    );
+    expect(agenda, contains('unawaited(_recarregarPorRealtime())'));
+    expect(agenda, contains('await carregarAgendamentos();'));
+    expect(agenda, contains('_operacionalRealtimeSubscription?.cancel();'));
+  });
 }
