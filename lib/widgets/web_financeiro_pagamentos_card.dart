@@ -106,13 +106,10 @@ class _WebFinanceiroPagamentosCardState
                     const SizedBox(height: 16),
                     RadioGroup<WebFinanceiroEstornoModo>(
                       groupValue: modo,
-                      onChanged: salvando
-                          ? null
-                          : (valor) {
-                              if (valor != null) {
-                                setModalState(() => modo = valor);
-                              }
-                            },
+                      onChanged: (valor) {
+                        if (salvando || valor == null) return;
+                        setModalState(() => modo = valor);
+                      },
                       child: const Column(
                         children: [
                           RadioListTile<WebFinanceiroEstornoModo>(
