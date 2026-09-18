@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -5,6 +7,7 @@ import '../models/configuracao_estoque.dart';
 import '../models/item_estoque.dart';
 import '../models/movimentacao_estoque.dart';
 import '../repositories/estoque_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import 'item_estoque_detalhes_page.dart';
 import 'novo_item_estoque_page.dart';
 
@@ -20,6 +23,7 @@ class _EstoquePageState extends State<EstoquePage>
   final EstoqueRepository _repository = EstoqueRepository();
 
   final TextEditingController _pesquisaController = TextEditingController();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
 
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
@@ -37,6 +41,7 @@ class _EstoquePageState extends State<EstoquePage>
 
   bool _carregando = true;
   bool _salvandoConfiguracao = false;
+  bool _recarregandoPorRealtime = false;
   bool _somenteBaixo = false;
 
   String _pesquisa = '';
@@ -46,15 +51,53 @@ class _EstoquePageState extends State<EstoquePage>
     super.initState();
 
     _tabController = TabController(length: 3, vsync: this);
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
 
     _carregar();
   }
 
   @override
   void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
     _tabController.dispose();
     _pesquisaController.dispose();
     super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted ||
+        _recarregandoPorRealtime ||
+        _carregando ||
+        _salvandoConfiguracao) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final resultados = await Future.wait([
+        _repository.listarItens(incluirInativos: true),
+        _repository.listarMovimentacoes(),
+        _repository.obterConfiguracao(),
+      ]);
+
+      if (!mounted) return;
+
+      setState(() {
+        _itens = resultados[0] as List<ItemEstoque>;
+        _movimentacoes = resultados[1] as List<MovimentacaoEstoque>;
+        _configuracao = resultados[2] as ConfiguracaoEstoque;
+      });
+    } catch (_) {
+      // O Realtime só acelera a atualização. O refresh manual continua
+      // disponível e o estoque local segue funcionando offline.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
