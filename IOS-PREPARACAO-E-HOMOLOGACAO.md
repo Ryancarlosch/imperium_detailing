@@ -21,8 +21,21 @@ A estrutura nativa iOS deve ser gerada pelo Flutter em um Mac com Xcode.
 No diretório raiz do projeto:
 
 ```bash
-flutter create . --platforms ios
+bash scripts/preparar_ios_macos.sh SEU_BUNDLE_IDENTIFIER
 ```
+
+Exemplo de formato:
+```text
+br.com.suaempresa.imperiummanager
+```
+
+Esse script:
+- exige Mac;
+- exige árvore Git limpa;
+- gera a pasta `ios/` pelo Flutter;
+- aplica automaticamente nome do app, permissões de câmera/fotos e URL scheme;
+- aplica o Bundle Identifier informado no projeto Xcode;
+- não sobrescreve uma pasta `ios/` já existente.
 
 Depois, versionar a pasta `ios/` gerada e revisar o diff antes de qualquer build assinada.
 
@@ -42,6 +55,7 @@ Contrato Dart:
 - pagamento: `imperiumdetailing://payment-return/`
 
 No iOS, registrar o scheme `imperiumdetailing` em `CFBundleURLTypes`.
+O script `scripts/configurar_ios_imperium.py` faz essa configuração automaticamente.
 Não criar outro scheme exclusivo para iOS.
 
 ### Privacidade — câmera e fotos
@@ -114,9 +128,7 @@ Não publicar o app assumindo que a configuração Android serve automaticamente
 Não publicar com `com.example` nem com identificador temporário.
 Definir o Bundle Identifier definitivo antes do primeiro envio ao App Store Connect/TestFlight.
 
-Sugestão de namespace organizacional já usado no Android:
-- `br.com.imperiumdetailing`
-
+O script de bootstrap exige esse identificador explicitamente e não assume um valor definitivo.
 O identificador final deve ser confirmado pelo proprietário da conta Apple antes do primeiro upload.
 
 ## Gate no Mac
