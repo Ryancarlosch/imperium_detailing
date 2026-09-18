@@ -366,6 +366,16 @@ class OperacionalSyncService {
   }
 
   Future<void> _syncOperacionalBase(String empresaId) async {
+    final podePublicar = await OperacionalCloudV2Service.instance.prepararUpload(
+      empresaId,
+    );
+
+    if (!podePublicar) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes em Clientes/Veículos/Agenda.',
+      );
+    }
+
     await _processarExclusoes(empresaId);
 
     await _publicarClientesLocais(empresaId);
@@ -375,6 +385,16 @@ class OperacionalSyncService {
     await _baixarClientes(empresaId);
     await _baixarVeiculos(empresaId);
     await _baixarAgendamentos(empresaId);
+
+    final reconciliado = await OperacionalCloudV2Service.instance.prepararUpload(
+      empresaId,
+    );
+
+    if (!reconciliado) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes em Clientes/Veículos/Agenda.',
+      );
+    }
   }
 
   Future<void> _syncOrdensServico(String empresaId) async {
