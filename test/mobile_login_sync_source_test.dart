@@ -27,10 +27,14 @@ void main() {
     final auth = File(
       'lib/services/imperium_auth_service.dart',
     ).readAsStringSync();
+    final links = File(
+      'lib/config/imperium_app_links.dart',
+    ).readAsStringSync();
 
-    expect(login, contains('imperiumdetailing://login-callback/'));
+    expect(links, contains("loginCallback = '\$scheme://\$loginHost/'"));
+    expect(login, contains('ImperiumAppLinks.loginCallback'));
     expect(login, contains('Começar 30 dias grátis'));
-    expect(cadastro, contains('imperiumdetailing://login-callback/'));
+    expect(cadastro, contains('ImperiumAppLinks.loginCallback'));
     expect(cadastro, contains('redirectTo: _redirectConfirmacao'));
     expect(auth, contains('emailRedirectTo: redirectTo'));
   });
@@ -49,8 +53,13 @@ void main() {
       'supabase/functions/imperium-infinitepay-retorno/index.ts',
     ).readAsStringSync();
 
-    expect(checkout, contains('imperiumdetailing://payment-return/'));
+    expect(checkout, contains('ImperiumAppLinks.paymentReturn'));
     expect(checkout, contains("'return_url': _returnUrl()"));
+    final links = File(
+      'lib/config/imperium_app_links.dart',
+    ).readAsStringSync();
+
+    expect(links, contains("paymentReturn = '\$scheme://\$paymentHost/'"));
     expect(manifest, contains('android:host="login-callback"'));
     expect(manifest, contains('android:host="payment-return"'));
     expect(edgeCheckout, contains('MOBILE_RETURN_URL'));
