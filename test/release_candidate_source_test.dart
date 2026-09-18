@@ -41,10 +41,22 @@ void main() {
 
     expect(prepararIos, contains('flutter create . --platforms ios'));
     expect(prepararIos, contains('arvore Git limpa'));
+    expect(prepararIos, contains('configurar_ios_imperium.py'));
+    expect(prepararIos, contains('BUNDLE_ID'));
     expect(validarIos, contains('NSCameraUsageDescription'));
     expect(validarIos, contains('NSPhotoLibraryUsageDescription'));
     expect(validarIos, contains('imperiumdetailing'));
     expect(validarIos, contains('flutter build ios --release --no-codesign'));
     expect(validarIos, contains('VALIDACAO IOS SEM ASSINATURA APROVADA.'));
+
+    expect(configurarIos, contains('CFBundleDisplayName'));
+    expect(configurarIos, contains('Imperium Manager'));
+    expect(configurarIos, contains('NSCameraUsageDescription'));
+    expect(configurarIos, contains('NSPhotoLibraryUsageDescription'));
+    expect(configurarIos, contains('NSPhotoLibraryAddUsageDescription'));
+    expect(configurarIos, contains('CFBundleURLTypes'));
+    expect(configurarIos, contains('imperiumdetailing'));
+    expect(configurarIos, contains('PRODUCT_BUNDLE_IDENTIFIER'));
+    expect(configurarIos, isNot(contains('br.com.imperiumdetailing.imperium_detailing')));
   });
 }
