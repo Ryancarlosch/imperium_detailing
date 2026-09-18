@@ -80,7 +80,10 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
         (atual - salvo).abs() > 0.000001;
 
     return _mesesMedia != config.mesesMedia ||
-        diferente(_valor(_margemClienteController.text), config.margemCliente) ||
+        diferente(
+          _valor(_margemClienteController.text),
+          config.margemCliente,
+        ) ||
         diferente(
           _valor(_margemRevenda1a4Controller.text),
           config.margemRevenda1a4,

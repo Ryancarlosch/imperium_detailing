@@ -56,10 +56,7 @@ class _PrecificacaoCloudCentralPageState
   }
 
   Future<void> _recarregarPorRealtime() async {
-    if (!mounted ||
-        _recarregandoPorRealtime ||
-        _carregando ||
-        _sincronizando) {
+    if (!mounted || _recarregandoPorRealtime || _carregando || _sincronizando) {
       return;
     }
 
