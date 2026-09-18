@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +9,7 @@ import '../repositories/configuracao_repository.dart';
 import '../repositories/dashboard_repository.dart';
 import '../repositories/financeiro_dashboard_repository.dart';
 import '../repositories/usuario_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import '../services/primeiro_uso_assistente.dart';
 import 'agenda_page.dart';
 import 'cliente_detalhes_page.dart';
@@ -47,12 +50,15 @@ class _DashboardPageState extends State<DashboardPage> {
   final ConfiguracaoRepository _configuracaoRepository =
       ConfiguracaoRepository();
   final UsuarioRepository _usuarioRepository = UsuarioRepository();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
+
   final NumberFormat _formatoMoeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
   String? _mensagemErro;
   String _nomeEmpresa = 'Sua empresa';
   bool _assistenteExibido = false;
@@ -66,11 +72,57 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarResumoPorRealtime());
+        });
     _carregarResumo();
     _carregarNomeEmpresa();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _mostrarAssistentePrimeiroUso();
     });
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarResumoPorRealtime() async {
+    if (!mounted || _recarregandoPorRealtime || _carregando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final agora = DateTime.now();
+      final resultados = await Future.wait<dynamic>([
+        _dashboardRepository.carregarDashboard(
+          periodo: _periodoSelecionado,
+          inicioPersonalizado: _periodoPersonalizado?.start,
+          fimPersonalizado: _periodoPersonalizado?.end,
+        ),
+        _financeiroDashboardRepository.carregar(
+          mes: DateTime(agora.year, agora.month, 1),
+        ),
+      ]);
+
+      if (!mounted) return;
+
+      setState(() {
+        _dados = resultados[0] as DashboardData;
+        _financeiroMes = resultados[1] as FinanceiroDashboardData;
+        _mensagemErro = null;
+      });
+    } catch (_) {
+      // O Realtime só acelera a atualização. O Dashboard mantém o último
+      // snapshot local e continua com refresh manual/offline.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregarNomeEmpresa() async {
