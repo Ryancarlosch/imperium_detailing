@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../config/imperium_app_links.dart';
+
 import '../services/cloud_session_service.dart';
 import '../services/imperium_auth_service.dart';
 
@@ -31,7 +33,7 @@ class _EmpresaPrimeiroAcessoPageState extends State<EmpresaPrimeiroAcessoPage> {
       final origem = Uri.base.origin;
       return origem.endsWith('/') ? origem : '$origem/';
     }
-    return 'imperiumdetailing://login-callback/';
+    return ImperiumAppLinks.loginCallback;
   }
 
   @override
