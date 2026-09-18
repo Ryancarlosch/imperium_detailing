@@ -155,8 +155,7 @@ class _MigracaoFinalAuditoriaPageState
                   title: Text(
                     resultado.tudoConfere
                         ? 'SQLite e Cloud conferem neste gate'
-                        : resultado.divergencias.toString() +
-                            ' divergência(s) encontrada(s)',
+                        : '${resultado.divergencias} divergência(s) encontrada(s)',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
@@ -181,11 +180,8 @@ class _MigracaoFinalAuditoriaPageState
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    'Cloud consultado em ' +
-                        _dataHora.format(
-                          resultado.geradoEmCloud!.toLocal(),
-                        ) +
-                        '.',
+                    'Cloud consultado em '
+                    '${_dataHora.format(resultado.geradoEmCloud!.toLocal())}.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
