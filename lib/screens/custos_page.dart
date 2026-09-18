@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../repositories/custos_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import 'custo_servicos_page.dart';
 import 'custos_fixos_page.dart';
 import 'mao_obra_custos_page.dart';
@@ -17,18 +20,52 @@ class CustosPage extends StatefulWidget {
 
 class _CustosPageState extends State<CustosPage> {
   final CustosRepository _repository = CustosRepository();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
   Map<String, double> _resumo = const {};
 
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _recarregandoPorRealtime || _carregando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final resumo = await _repository.obterResumoEstruturaCustos();
+      if (!mounted) return;
+
+      setState(() {
+        _resumo = resumo;
+      });
+    } catch (_) {
+      // O último resumo local é preservado se a releitura falhar.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
