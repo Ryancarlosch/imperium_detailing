@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../repositories/precificacao_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import '../services/operacional_sync_service.dart';
 import '../services/precificacao_cloud_v2_service.dart';
 
@@ -20,6 +22,7 @@ class _PrecificacaoCloudCentralPageState
     extends State<PrecificacaoCloudCentralPage> {
   final PrecificacaoRepository _repository = PrecificacaoRepository();
   final PrecificacaoCloudV2Service _cloud = PrecificacaoCloudV2Service.instance;
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: r'R$',
@@ -28,6 +31,7 @@ class _PrecificacaoCloudCentralPageState
 
   bool _carregando = true;
   bool _sincronizando = false;
+  bool _recarregandoPorRealtime = false;
   String? _empresaId;
   PrecificacaoPainel? _painel;
   List<Map<String, Object?>> _conflitos = const [];
@@ -36,7 +40,55 @@ class _PrecificacaoCloudCentralPageState
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted ||
+        _recarregandoPorRealtime ||
+        _carregando ||
+        _sincronizando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final empresaId = await OperacionalSyncService.instance.empresaAtualId();
+      final painel = await _repository.carregar();
+
+      List<Map<String, Object?>> conflitos = const [];
+      List<Map<String, Object?>> simulacoes = const [];
+
+      if (empresaId != null && empresaId.isNotEmpty) {
+        conflitos = await _cloud.listarConflitosPendentes(empresaId: empresaId);
+        simulacoes = await _cloud.listarSimulacoes(empresaId);
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _empresaId = empresaId;
+        _painel = painel;
+        _conflitos = conflitos;
+        _simulacoes = simulacoes;
+      });
+    } catch (_) {
+      // Realtime é um acelerador; a central mantém o último snapshot local.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
