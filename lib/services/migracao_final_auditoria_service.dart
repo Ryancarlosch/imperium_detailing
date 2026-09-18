@@ -1,3 +1,5 @@
+import 'package:sqflite/sqflite.dart';
+
 import '../database/app_database.dart';
 import 'operacional_sync_service.dart';
 import 'supabase_bootstrap.dart';
@@ -198,7 +200,7 @@ class MigracaoFinalAuditoriaService {
     );
   }
 
-  Future<double> _scalar(dynamic database, String sql) async {
+  Future<double> _scalar(Database database, String sql) async {
     final linhas = await database.rawQuery(sql);
     if (linhas.isEmpty) return 0;
 
