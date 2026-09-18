@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../config/imperium_app_links.dart';
-
 import 'supabase_bootstrap.dart';
 
 class AssinaturaPlano {
