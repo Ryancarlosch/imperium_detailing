@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../config/imperium_app_links.dart';
-
 import '../services/cloud_session_service.dart';
 import '../services/imperium_auth_service.dart';
 import '../services/supabase_bootstrap.dart';
