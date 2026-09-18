@@ -50,10 +50,10 @@ void main() {
         "'O SQLite ativo não corresponde à empresa selecionada na nuvem.'",
       ),
     );
+    expect(service, contains("client.rpc("));
     expect(
       service,
-      contains("client.rpc(
-      'imperium_migracao_auditoria_v1'"),
+      contains("'imperium_migracao_auditoria_v1'"),
     );
 
     // A auditoria local executa somente SELECTs.
