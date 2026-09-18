@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../repositories/saude_sistema_repository.dart';
+import 'migracao_final_auditoria_page.dart';
 
 class SaudeSistemaPage extends StatefulWidget {
   const SaudeSistemaPage({super.key});
@@ -97,9 +98,10 @@ class _SaudeSistemaPageState extends State<SaudeSistemaPage> {
       builder: (context) => AlertDialog(
         title: const Text('Sincronizar agora?'),
         content: const Text(
-          'Esta ação executa o motor de sincronização que já existe no '
-          'Imperium para clientes, veículos, agenda, OS e Ponto. Ela não '
-          'migra Financeiro nem Estoque para a nuvem.',
+          'Esta ação executa o motor atual de sincronização para '
+          'Configurações, Clientes/Veículos/Agenda, OS e arquivos, '
+          'CRM/Orçamentos, Estoque, Financeiro, Precificação e Ponto. '
+          'Conflitos protegidos continuam bloqueando apenas o módulo afetado.',
         ),
         actions: [
           TextButton(
@@ -149,6 +151,14 @@ class _SaudeSistemaPageState extends State<SaudeSistemaPage> {
         });
       }
     }
+  }
+
+  Future<void> _abrirAuditoriaMigracao() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => const MigracaoFinalAuditoriaPage(),
+      ),
+    );
   }
 
   Future<void> _sincronizarFilaPonto() async {
@@ -432,6 +442,13 @@ class _SaudeSistemaPageState extends State<SaudeSistemaPage> {
               label: Text(
                 _sincronizando ? 'Sincronizando...' : 'Sincronizar agora',
               ),
+            ),
+            OutlinedButton.icon(
+              onPressed: _sincronizando || _testandoNuvem
+                  ? null
+                  : _abrirAuditoriaMigracao,
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('Auditar migração final'),
             ),
             if (resumo.pontoPendentes > 0)
               OutlinedButton.icon(
