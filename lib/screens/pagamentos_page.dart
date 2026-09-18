@@ -10,6 +10,7 @@ import '../models/pagamento_ordem_servico.dart';
 import '../repositories/conta_financeira_repository.dart';
 import '../repositories/pagamento_repository.dart';
 import '../services/comprovante_pagamento_service.dart';
+import '../services/operacional_realtime_service.dart';
 import '../services/whatsapp_service.dart';
 
 class PagamentosPage extends StatefulWidget {
@@ -24,6 +25,7 @@ class PagamentosPage extends StatefulWidget {
 class _PagamentosPageState extends State<PagamentosPage> {
   final PagamentoRepository _repository = PagamentoRepository();
   final TextEditingController _pesquisaController = TextEditingController();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
@@ -31,6 +33,7 @@ class _PagamentosPageState extends State<PagamentosPage> {
   final DateFormat _data = DateFormat('dd/MM/yyyy');
 
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
   bool _abriuOrdemInicial = false;
   String _pesquisa = '';
   String _status = 'Todos';
@@ -54,13 +57,59 @@ class _PagamentosPageState extends State<PagamentosPage> {
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
   }
 
   @override
   void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
     _pesquisaController.dispose();
     super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _recarregandoPorRealtime || _carregando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final resultados = await Future.wait<dynamic>([
+        _repository.listarContasReceber(incluirPagas: true),
+        _repository.obterResumoGeral(),
+      ]);
+
+      var ordens = List<Map<String, dynamic>>.from(
+        resultados[0] as List<dynamic>,
+      );
+
+      final ordemInicial = widget.ordemServicoIdInicial;
+      if (ordemInicial != null) {
+        ordens = ordens
+            .where((item) => _int(item['id']) == ordemInicial)
+            .toList();
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _ordens = ordens;
+        _resumo = Map<String, double>.from(
+          resultados[1] as Map<String, double>,
+        );
+      });
+    } catch (_) {
+      // O Realtime só acelera a atualização; refresh manual e SQLite local
+      // continuam disponíveis quando a nuvem estiver indisponível.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
@@ -296,9 +345,11 @@ class _PagamentoOrdemDetalhesPageState
     symbol: 'R\$',
   );
   final DateFormat _data = DateFormat('dd/MM/yyyy');
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
 
   bool _carregando = true;
   bool _executando = false;
+  bool _recarregandoPorRealtime = false;
   Map<String, dynamic>? _ordem;
   List<PagamentoOrdemServico> _pagamentos = [];
   List<AjusteFinanceiroOrdemServico> _ajustes = [];
@@ -306,7 +357,54 @@ class _PagamentoOrdemDetalhesPageState
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted ||
+        _recarregandoPorRealtime ||
+        _carregando ||
+        _executando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final resultados = await Future.wait<dynamic>([
+        _repository.buscarResumoOrdem(widget.ordemServicoId),
+        _repository.listarPagamentosDaOrdem(widget.ordemServicoId),
+        _repository.listarAjustesDaOrdem(widget.ordemServicoId),
+      ]);
+
+      if (!mounted) return;
+
+      setState(() {
+        _ordem = resultados[0] as Map<String, dynamic>?;
+        _pagamentos = List<PagamentoOrdemServico>.from(
+          resultados[1] as List<dynamic>,
+        );
+        _ajustes = List<AjusteFinanceiroOrdemServico>.from(
+          resultados[2] as List<dynamic>,
+        );
+      });
+    } catch (_) {
+      // Realtime é apenas um gatilho. A tela mantém os dados locais atuais
+      // e o usuário ainda pode atualizar manualmente.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
