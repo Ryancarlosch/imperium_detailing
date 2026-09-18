@@ -20,6 +20,7 @@ void main() {
     expect(fim, greaterThan(inicio));
 
     final bloco = source.substring(inicio, fim);
+    final blocoNormalizado = bloco.replaceAll('\r\n', '\n');
 
     final reconciliarPrimeiro = RegExp(
       r'OperacionalCloudV2Service\.instance\s*\.prepararUpload',
@@ -38,7 +39,7 @@ void main() {
       greaterThanOrEqualTo(2),
     );
     expect(
-      bloco,
+      blocoNormalizado,
       contains(
         "throw const SyncMotorBloqueadoException(\n"
         "        'Conflitos pendentes em Clientes/Veículos/Agenda.',",
