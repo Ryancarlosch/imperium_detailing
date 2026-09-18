@@ -130,7 +130,7 @@ class MigracaoFinalPromocaoService {
     final gate = await MigracaoFinalGateV2Service.instance.avaliar();
     if (!gate.prontoParaPromover) {
       throw StateError(
-        'O Gate V2 ainda possui \${gate.bloqueios} bloqueio(s).',
+        'O Gate V2 ainda possui ${gate.bloqueios} bloqueio(s).',
       );
     }
 
