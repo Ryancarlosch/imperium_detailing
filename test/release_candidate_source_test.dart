@@ -38,5 +38,13 @@ void main() {
     expect(iosDoc, contains('NSCameraUsageDescription'));
     expect(iosDoc, contains('NSPhotoLibraryUsageDescription'));
     expect(iosDoc, contains('TestFlight'));
+
+    expect(prepararIos, contains('flutter create . --platforms ios'));
+    expect(prepararIos, contains('arvore Git limpa'));
+    expect(validarIos, contains('NSCameraUsageDescription'));
+    expect(validarIos, contains('NSPhotoLibraryUsageDescription'));
+    expect(validarIos, contains('imperiumdetailing'));
+    expect(validarIos, contains('flutter build ios --release --no-codesign'));
+    expect(validarIos, contains('VALIDACAO IOS SEM ASSINATURA APROVADA.'));
   });
 }
