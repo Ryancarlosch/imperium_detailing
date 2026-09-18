@@ -21,19 +21,19 @@ void main() {
 
     final bloco = source.substring(inicio, fim);
 
-    final reconciliarPrimeiro = bloco.indexOf(
-      'OperacionalCloudV2Service.instance.prepararUpload',
-    );
+    final reconciliarPrimeiro = RegExp(
+      r'OperacionalCloudV2Service\.instance\s*\.prepararUpload',
+    ).firstMatch(bloco);
     final publicarCliente = bloco.indexOf('_publicarClientesLocais');
     final baixarClientes = bloco.indexOf('_baixarClientes');
 
-    expect(reconciliarPrimeiro, greaterThanOrEqualTo(0));
-    expect(publicarCliente, greaterThan(reconciliarPrimeiro));
+    expect(reconciliarPrimeiro, isNotNull);
+    expect(publicarCliente, greaterThan(reconciliarPrimeiro!.start));
     expect(baixarClientes, greaterThan(publicarCliente));
 
     expect(
       RegExp(
-        r'OperacionalCloudV2Service\.instance\.prepararUpload',
+        r'OperacionalCloudV2Service\.instance\s*\.prepararUpload',
       ).allMatches(bloco).length,
       greaterThanOrEqualTo(2),
     );
