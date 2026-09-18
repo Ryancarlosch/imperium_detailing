@@ -84,44 +84,54 @@ class MigracaoFinalGateV2Service {
     final configuracao = await _configuracao.obterConfiguracao();
 
     final conflitos = <String, int>{
-      'Operacional': (await OperacionalCloudV2Service.instance
-              .listarConflitosPendentes(empresaId: empresaId))
-          .length,
-      'Ordens de Serviço': (await OsCloudV3Service.instance
-              .listarConflitosPendentes(empresaId: empresaId))
-          .length,
-      'Arquivos da OS': (await OsArquivosCloudV2Service.instance
-              .listarConflitosPendentes(empresaId: empresaId))
-          .length,
-      'CRM/Orçamentos': (await CrmOrcamentosCloudV2Service.instance
-              .listarConflitosPendentes(empresaId: empresaId))
-          .length,
-      'Estoque': (await EstoqueCloudConflitoService.instance
-              .listarConflitosPendentes(empresaId: empresaId))
-          .length,
-      'Financeiro': (await FinanceiroCloudV2Service.instance
-              .listarConflitosPendentes(empresaId: empresaId))
-          .length,
-      'Precificação': (await PrecificacaoCloudV2Service.instance
-              .listarConflitosPendentes(empresaId: empresaId))
-          .length,
-      'Configurações': (await ConfiguracaoCloudService.instance
-              .listarConflitosPendentes(empresaId: empresaId))
-          .length,
+      'Operacional':
+          (await OperacionalCloudV2Service.instance.listarConflitosPendentes(
+            empresaId: empresaId,
+          )).length,
+      'Ordens de Serviço':
+          (await OsCloudV3Service.instance.listarConflitosPendentes(
+            empresaId: empresaId,
+          )).length,
+      'Arquivos da OS':
+          (await OsArquivosCloudV2Service.instance.listarConflitosPendentes(
+            empresaId: empresaId,
+          )).length,
+      'CRM/Orçamentos':
+          (await CrmOrcamentosCloudV2Service.instance.listarConflitosPendentes(
+            empresaId: empresaId,
+          )).length,
+      'Estoque':
+          (await EstoqueCloudConflitoService.instance.listarConflitosPendentes(
+            empresaId: empresaId,
+          )).length,
+      'Financeiro':
+          (await FinanceiroCloudV2Service.instance.listarConflitosPendentes(
+            empresaId: empresaId,
+          )).length,
+      'Precificação':
+          (await PrecificacaoCloudV2Service.instance.listarConflitosPendentes(
+            empresaId: empresaId,
+          )).length,
+      'Configurações':
+          (await ConfiguracaoCloudService.instance.listarConflitosPendentes(
+            empresaId: empresaId,
+          )).length,
       'Arquivos de configuração':
           (await ConfiguracaoArquivosCloudService.instance
                   .listarConflitosPendentes(empresaId: empresaId))
               .length,
     };
 
-    final conflitosTotal =
-        conflitos.values.fold<int>(0, (total, valor) => total + valor);
+    final conflitosTotal = conflitos.values.fold<int>(
+      0,
+      (total, valor) => total + valor,
+    );
 
     final osArquivos = await OsArquivosCloudV2Service.instance.diagnosticar(
       empresaId,
     );
-    final configArquivos =
-        await ConfiguracaoArquivosCloudService.instance.diagnosticar(empresaId);
+    final configArquivos = await ConfiguracaoArquivosCloudService.instance
+        .diagnosticar(empresaId);
 
     final motorErros = _int(motor['modulos_erro']);
     final motorAguardando = _int(motor['modulos_aguardando']);
@@ -148,15 +158,15 @@ class MigracaoFinalGateV2Service {
     final osStorageConflitos =
         _int(osArquivos['conflitos_pendentes']) +
         _int(osArquivos['assinaturas_em_conflito']);
-    final configStorageConflitos =
-        _int(configArquivos['conflitos_pendentes']);
+    final configStorageConflitos = _int(configArquivos['conflitos_pendentes']);
 
     final itens = <MigracaoFinalGateItem>[
       MigracaoFinalGateItem(
         chave: 'tenant',
         titulo: 'Empresa local isolada',
         detalhe: 'SQLite ativo e empresa Cloud usam o mesmo tenant.',
-        ok: empresaLocal.trim() == empresaId.trim() &&
+        ok:
+            empresaLocal.trim() == empresaId.trim() &&
             saude.tenantsMapeados <= 1,
       ),
       MigracaoFinalGateItem(
@@ -166,7 +176,8 @@ class MigracaoFinalGateV2Service {
             'Schema ${saude.versaoSchema}; '
             '${saude.violacoesForeignKey} violação(ões) de foreign key; '
             '${saude.criticos} alerta(s) crítico(s).',
-        ok: saude.sqliteIntegro &&
+        ok:
+            saude.sqliteIntegro &&
             saude.versaoSchema == AppDatabase.schemaVersion &&
             saude.violacoesForeignKey == 0 &&
             saude.criticos == 0,
@@ -186,7 +197,8 @@ class MigracaoFinalGateV2Service {
             'Último ciclo: ${motorStatus.isEmpty ? 'não identificado' : motorStatus}; '
             '$motorErros erro(s), $motorAguardando aguardando, '
             '$motorBloqueados bloqueado(s).',
-        ok: motorStatus == 'Sucesso' &&
+        ok:
+            motorStatus == 'Sucesso' &&
             motorErros == 0 &&
             motorAguardando == 0 &&
             motorBloqueados == 0,

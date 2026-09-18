@@ -166,16 +166,16 @@ class _MigracaoFinalAuditoriaPageState
                     resultado.prontoParaPromover
                         ? 'Todos os pré-requisitos técnicos deste gate estão verdes.'
                         : 'A promoção Cloud permanece bloqueada até todos os '
-                            'itens abaixo ficarem verdes.',
+                              'itens abaixo ficarem verdes.',
                   ),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 'Pré-requisitos do Gate V2',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               for (final item in resultado.itens) ...[
@@ -188,9 +188,9 @@ class _MigracaoFinalAuditoriaPageState
               ],
               Text(
                 'Comparação SQLite × Cloud',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Card(
@@ -254,9 +254,7 @@ class _GateItemCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       child: ListTile(
         leading: Icon(
-          item.ok
-              ? Icons.check_circle_outline_rounded
-              : Icons.block_outlined,
+          item.ok ? Icons.check_circle_outline_rounded : Icons.block_outlined,
         ),
         title: Text(
           item.titulo,
