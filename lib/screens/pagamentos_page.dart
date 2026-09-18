@@ -373,10 +373,7 @@ class _PagamentoOrdemDetalhesPageState
   }
 
   Future<void> _recarregarPorRealtime() async {
-    if (!mounted ||
-        _recarregandoPorRealtime ||
-        _carregando ||
-        _executando) {
+    if (!mounted || _recarregandoPorRealtime || _carregando || _executando) {
       return;
     }
 

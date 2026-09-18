@@ -24,10 +24,7 @@ void main() {
     );
     expect(dashboard, contains('_dashboardRepository.carregarDashboard'));
     expect(dashboard, contains('_financeiroDashboardRepository.carregar'));
-    expect(
-      dashboard,
-      contains('_operacionalRealtimeSubscription?.cancel();'),
-    );
+    expect(dashboard, contains('_operacionalRealtimeSubscription?.cancel();'));
 
     expect(
       pagamentos,
@@ -36,19 +33,13 @@ void main() {
     expect(pagamentos, contains('StreamSubscription<void>?'));
     expect(pagamentos, contains('.atualizacoes'));
     expect(pagamentos, contains('unawaited(_recarregarPorRealtime())'));
-    expect(
-      pagamentos,
-      contains('Future<void> _recarregarPorRealtime() async'),
-    );
+    expect(pagamentos, contains('Future<void> _recarregarPorRealtime() async'));
     expect(pagamentos, contains('_repository.listarContasReceber'));
     expect(pagamentos, contains('_repository.obterResumoGeral'));
     expect(pagamentos, contains('_repository.buscarResumoOrdem'));
     expect(pagamentos, contains('_repository.listarPagamentosDaOrdem'));
     expect(pagamentos, contains('_repository.listarAjustesDaOrdem'));
     expect(pagamentos, contains('_executando'));
-    expect(
-      pagamentos,
-      contains('_operacionalRealtimeSubscription?.cancel();'),
-    );
+    expect(pagamentos, contains('_operacionalRealtimeSubscription?.cancel();'));
   });
 }
