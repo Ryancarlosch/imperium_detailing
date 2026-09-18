@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/conta_financeira.dart';
 import '../repositories/conta_financeira_repository.dart';
 import '../repositories/financeiro_dashboard_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import 'contas_financeiras_page.dart';
 import 'custos_page.dart';
 import 'dre_page.dart';
@@ -33,12 +36,15 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
       FinanceiroDashboardRepository();
   final ContaFinanceiraRepository _contasRepository =
       ContaFinanceiraRepository();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
+
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
   bool _valoresVisiveis = false; // financeiro-privacidade-v1
   FinanceiroDashboardData? _dados;
   double _saldoContas = 0;
@@ -51,7 +57,51 @@ class _FinanceiroPageState extends State<FinanceiroPage> {
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _recarregandoPorRealtime || _carregando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final resultados = await Future.wait<dynamic>([
+        _dashboard.carregar(mes: _mes),
+        _contasRepository.listar(),
+      ]);
+
+      final contas = List<ContaFinanceira>.from(resultados[1] as List<dynamic>);
+      final saldo = contas.fold<double>(
+        0,
+        (total, item) => total + (item.saldoAtual ?? item.saldoInicial),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _dados = resultados[0] as FinanceiroDashboardData;
+        _saldoContas = saldo;
+      });
+    } catch (_) {
+      // Realtime é apenas um acelerador; o refresh manual e o SQLite local
+      // permanecem disponíveis em caso de falha ou ausência de conexão.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
