@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -14,6 +15,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/configuracao.dart';
 import '../repositories/configuracao_repository.dart';
 import '../services/backup_service.dart';
+import '../services/operacional_realtime_service.dart';
 import '../widgets/backup_automatico_card.dart';
 import '../services/primeiro_uso_assistente.dart';
 
@@ -32,8 +34,10 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   final ConfiguracaoRepository _repository = ConfiguracaoRepository();
   final ImagePicker _imagePicker = ImagePicker();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
 
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
   bool _salvando = false;
   bool _processandoBackup = false;
   bool _processandoAssinaturaEmpresa = false;
@@ -113,7 +117,89 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarConfiguracoesPorRealtime());
+        });
     _carregarConfiguracoes();
+  }
+
+  bool get _temAlteracoesNaoSalvas {
+    if (_carregando) {
+      return false;
+    }
+
+    final configuracao = _configuracao;
+
+    String texto(TextEditingController controller) => controller.text.trim();
+
+    return texto(_nomeFantasiaController) != configuracao.nomeFantasia.trim() ||
+        texto(_razaoSocialController) != configuracao.razaoSocial.trim() ||
+        texto(_cnpjController) != configuracao.cnpj.trim() ||
+        texto(_inscricaoEstadualController) !=
+            configuracao.inscricaoEstadual.trim() ||
+        texto(_telefoneController) != configuracao.telefone.trim() ||
+        texto(_whatsappController) != configuracao.whatsapp.trim() ||
+        texto(_emailController) != configuracao.email.trim() ||
+        texto(_siteController) != configuracao.site.trim() ||
+        texto(_instagramController) != configuracao.instagram.trim() ||
+        texto(_facebookController) != configuracao.facebook.trim() ||
+        texto(_enderecoController) != configuracao.endereco.trim() ||
+        texto(_numeroController) != configuracao.numero.trim() ||
+        texto(_complementoController) != configuracao.complemento.trim() ||
+        texto(_bairroController) != configuracao.bairro.trim() ||
+        texto(_cidadeController) != configuracao.cidade.trim() ||
+        texto(_estadoController).toUpperCase() !=
+            configuracao.estado.trim().toUpperCase() ||
+        texto(_cepController) != configuracao.cep.trim() ||
+        texto(_nomeAplicativoController) !=
+            configuracao.nomeAplicativo.trim() ||
+        texto(_validadeOrcamentoController) !=
+            configuracao.validadeOrcamentoDias.toString() ||
+        texto(_rodapeDocumentosController) !=
+            configuracao.rodapeDocumentos.trim() ||
+        texto(_termosOrcamentoController) !=
+            configuracao.termosOrcamento.trim() ||
+        texto(_termosOrdemServicoController) !=
+            configuracao.termosOrdemServico.trim() ||
+        texto(_observacaoPadraoController) !=
+            configuracao.observacaoPadrao.trim() ||
+        texto(_mensagemAgradecimentoController) !=
+            configuracao.mensagemAgradecimento.trim() ||
+        texto(_mensagemOrcamentoController) !=
+            configuracao.mensagemOrcamento.trim() ||
+        texto(_mensagemConfirmacaoController) !=
+            configuracao.mensagemConfirmacao.trim() ||
+        texto(_mensagemEntregaController) !=
+            configuracao.mensagemEntrega.trim() ||
+        texto(_mensagemCobrancaController) !=
+            configuracao.mensagemCobranca.trim() ||
+        _temaSelecionado != configuracao.tema ||
+        _corPrincipalSelecionada != configuracao.corPrincipal ||
+        _corSecundariaSelecionada != configuracao.corSecundaria ||
+        _caminhoLogo != configuracao.caminhoLogo ||
+        _caminhoAssinaturaEmpresa != configuracao.caminhoAssinaturaEmpresa;
+  }
+
+  Future<void> _recarregarConfiguracoesPorRealtime() async {
+    if (!mounted ||
+        _recarregandoPorRealtime ||
+        _carregando ||
+        _salvando ||
+        _processandoBackup ||
+        _processandoAssinaturaEmpresa ||
+        _temAlteracoesNaoSalvas) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      await _carregarConfiguracoes(respeitarEdicaoLocal: true);
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   bool _arquivoExiste(String? caminho) {
@@ -128,11 +214,17 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
     }
   }
 
-  Future<void> _carregarConfiguracoes() async {
+  Future<void> _carregarConfiguracoes({
+    bool respeitarEdicaoLocal = false,
+  }) async {
     try {
       final configuracao = await _repository.obterConfiguracao();
 
       if (!mounted) {
+        return;
+      }
+
+      if (respeitarEdicaoLocal && _temAlteracoesNaoSalvas) {
         return;
       }
 
@@ -1623,6 +1715,7 @@ class _ConfiguracoesPageState extends State<ConfiguracoesPage> {
 
   @override
   void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
     _nomeFantasiaController.dispose();
     _razaoSocialController.dispose();
     _cnpjController.dispose();
