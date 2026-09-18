@@ -12,14 +12,16 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
-if len(sys.argv) != 2:
+if len(sys.argv) not in (2, 3):
     fail(
-        "Informe o Bundle Identifier. "
+        "Informe o Bundle Identifier e, opcionalmente, o Google iOS Client ID. "
         "Exemplo: python3 scripts/configurar_ios_imperium.py "
-        "br.com.suaempresa.imperiummanager"
+        "br.com.suaempresa.imperiummanager "
+        "123.apps.googleusercontent.com"
     )
 
 bundle_id = sys.argv[1].strip()
+google_ios_client_id = sys.argv[2].strip() if len(sys.argv) == 3 else ""
 
 if not re.fullmatch(r"[A-Za-z0-9.-]+", bundle_id):
     fail("Bundle Identifier invalido. Use apenas letras, numeros, ponto e hifen.")
@@ -79,6 +81,37 @@ if not found:
 
 plist["CFBundleURLTypes"] = url_types
 
+if google_ios_client_id:
+    if not google_ios_client_id.endswith(".apps.googleusercontent.com"):
+        fail("Google iOS Client ID invalido.")
+
+    plist["GIDClientID"] = google_ios_client_id
+    plist["GIDServerClientID"] = (
+        "451359395067-bchshovlm2fo2ihe5ir1ecpmg1e2abem.apps.googleusercontent.com"
+    )
+
+    suffix = google_ios_client_id.removesuffix(".apps.googleusercontent.com")
+    reversed_google_scheme = f"com.googleusercontent.apps.{suffix}"
+
+    google_scheme_found = False
+    for item in url_types:
+        if not isinstance(item, dict):
+            continue
+        schemes = item.get("CFBundleURLSchemes")
+        if isinstance(schemes, list) and reversed_google_scheme in schemes:
+            google_scheme_found = True
+            break
+
+    if not google_scheme_found:
+        url_types.append(
+            {
+                "CFBundleURLName": "Google Sign-In",
+                "CFBundleURLSchemes": [reversed_google_scheme],
+            }
+        )
+
+    plist["CFBundleURLTypes"] = url_types
+
 with plist_path.open("wb") as handle:
     plistlib.dump(plist, handle, fmt=plistlib.FMT_XML, sort_keys=False)
 
@@ -107,3 +140,7 @@ print("CONFIGURACAO IOS IMPERIUM APLICADA.")
 print(f"Bundle Identifier: {bundle_id}")
 print("URL scheme: imperiumdetailing")
 print("Display name: Imperium Manager")
+if google_ios_client_id:
+    print("Google Sign-In iOS configurado.")
+else:
+    print("AVISO: Google Sign-In iOS ainda nao configurado.")
