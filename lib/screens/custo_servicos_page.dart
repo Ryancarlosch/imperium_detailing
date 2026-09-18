@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -5,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../config/imperium_regras_negocio.dart';
 import '../repositories/precificacao_repository.dart';
 import '../repositories/fidelidade_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import 'precificacao_cloud_central_page.dart';
 
 class CustoServicosPage extends StatefulWidget {
@@ -17,6 +20,7 @@ class CustoServicosPage extends StatefulWidget {
 class _CustoServicosPageState extends State<CustoServicosPage> {
   final PrecificacaoRepository _repository = PrecificacaoRepository();
   final FidelidadeRepository _fidelidadeRepository = FidelidadeRepository();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
@@ -35,6 +39,7 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
   final TextEditingController _margemMinimaController = TextEditingController();
 
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
   bool _salvandoBase = false;
   bool _salvandoFidelidade = false;
   int _mesesMedia = 3;
@@ -44,11 +49,18 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
   }
 
   @override
   void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
     _horasController.dispose();
     _margemClienteController.dispose();
     _margemRevenda1a4Controller.dispose();
@@ -56,6 +68,69 @@ class _CustoServicosPageState extends State<CustoServicosPage> {
     _margemRevenda10MaisController.dispose();
     _margemMinimaController.dispose();
     super.dispose();
+  }
+
+  bool get _baseTemAlteracoesNaoSalvas {
+    final config = _painel?.config;
+    if (config == null || _carregando) {
+      return false;
+    }
+
+    bool diferente(double atual, double salvo) =>
+        (atual - salvo).abs() > 0.000001;
+
+    return _mesesMedia != config.mesesMedia ||
+        diferente(_valor(_margemClienteController.text), config.margemCliente) ||
+        diferente(
+          _valor(_margemRevenda1a4Controller.text),
+          config.margemRevenda1a4,
+        ) ||
+        diferente(
+          _valor(_margemRevendaController.text),
+          config.margemRevenda5a9,
+        ) ||
+        diferente(
+          _valor(_margemRevenda10MaisController.text),
+          config.margemRevenda10Mais,
+        ) ||
+        diferente(_valor(_margemMinimaController.text), config.margemMinima);
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted ||
+        _recarregandoPorRealtime ||
+        _carregando ||
+        _salvandoBase ||
+        _salvandoFidelidade ||
+        _baseTemAlteracoesNaoSalvas) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final painel = await _repository.carregar();
+
+      FidelidadeConfig? fidelidade;
+      try {
+        fidelidade = await _fidelidadeRepository.carregarConfig();
+      } catch (_) {
+        // Fidelidade é opcional para a atualização da precificação.
+      }
+
+      if (!mounted || _baseTemAlteracoesNaoSalvas) {
+        return;
+      }
+
+      _preencherConfig(painel.config);
+      setState(() {
+        _painel = painel;
+        _fidelidadeConfig = fidelidade;
+      });
+    } catch (_) {
+      // Realtime só acelera a atualização; o refresh manual permanece.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
