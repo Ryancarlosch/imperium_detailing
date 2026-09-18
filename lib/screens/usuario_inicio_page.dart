@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../repositories/usuario_repository.dart';
+import '../services/funcionario_acesso_realtime_service.dart';
 import '../services/funcionario_acesso_service.dart';
 import '../services/operacional_sync_service.dart';
 import '../services/ponto_offline_sync_service.dart';
@@ -37,6 +38,8 @@ class _UsuarioInicioPageState extends State<UsuarioInicioPage>
     with WidgetsBindingObserver {
   final UsuarioRepository _usuarios = UsuarioRepository();
   final FuncionarioAcessoService _acesso = FuncionarioAcessoService.instance;
+  final FuncionarioAcessoRealtimeService _acessoRealtime =
+      FuncionarioAcessoRealtimeService.instance;
   final OperacionalSyncService _operacional = OperacionalSyncService.instance;
   final PontoOfflineSyncService _pontoOffline =
       PontoOfflineSyncService.instance;
@@ -44,6 +47,7 @@ class _UsuarioInicioPageState extends State<UsuarioInicioPage>
   late Map<String, dynamic> _sessao;
   Timer? _timer;
   bool _sincronizando = false;
+  bool _sincronizacaoPendente = false;
   int _pontoPendente = 0;
   DateTime? _ultimoSync;
 
@@ -54,7 +58,8 @@ class _UsuarioInicioPageState extends State<UsuarioInicioPage>
     _sessao = Map<String, dynamic>.from(widget.sessao);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _sincronizar(silencioso: true);
+      unawaited(_iniciarRealtimeAcesso());
+      unawaited(_sincronizar(silencioso: true));
     });
 
     _timer = Timer.periodic(const Duration(seconds: 90), (_) {
@@ -72,12 +77,22 @@ class _UsuarioInicioPageState extends State<UsuarioInicioPage>
   @override
   void dispose() {
     _timer?.cancel();
+    unawaited(_acessoRealtime.cancelar());
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
+  Future<void> _iniciarRealtimeAcesso() async {
+    await _acessoRealtime.assinar(
+      onAtualizar: () => _sincronizar(silencioso: true),
+    );
+  }
+
   Future<void> _sincronizar({bool silencioso = false}) async {
-    if (_sincronizando) return;
+    if (_sincronizando) {
+      _sincronizacaoPendente = true;
+      return;
+    }
 
     if (mounted) setState(() => _sincronizando = true);
 
@@ -85,6 +100,7 @@ class _UsuarioInicioPageState extends State<UsuarioInicioPage>
       final remoto = await _acesso.sincronizarPermissoesLocais();
 
       if (remoto['consultado'] == true && remoto['ativo'] != true) {
+        await _acessoRealtime.cancelar();
         await _acesso.sairSupabase();
 
         if (!mounted) return;
@@ -150,7 +166,16 @@ class _UsuarioInicioPageState extends State<UsuarioInicioPage>
         );
       }
     } finally {
-      if (mounted) setState(() => _sincronizando = false);
+      if (mounted) {
+        setState(() => _sincronizando = false);
+      }
+
+      final repetir = _sincronizacaoPendente;
+      _sincronizacaoPendente = false;
+
+      if (repetir && mounted) {
+        unawaited(_sincronizar(silencioso: true));
+      }
     }
   }
 
