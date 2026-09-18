@@ -57,6 +57,9 @@ void main() {
     expect(configurarIos, contains('CFBundleURLTypes'));
     expect(configurarIos, contains('imperiumdetailing'));
     expect(configurarIos, contains('PRODUCT_BUNDLE_IDENTIFIER'));
-    expect(configurarIos, isNot(contains('br.com.imperiumdetailing.imperium_detailing')));
+    expect(
+      configurarIos,
+      isNot(contains('br.com.imperiumdetailing.imperium_detailing')),
+    );
   });
 }
