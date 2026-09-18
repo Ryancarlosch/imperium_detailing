@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../repositories/orcamento_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import 'novo_orcamento_page.dart';
 import 'orcamento_detalhes_page.dart';
 
@@ -15,24 +18,53 @@ class OrcamentosPage extends StatefulWidget {
 class _OrcamentosPageState extends State<OrcamentosPage> {
   final _repository = OrcamentoRepository();
   final _pesquisaController = TextEditingController();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
 
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
   List<Map<String, dynamic>> _orcamentos = [];
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
   String _pesquisa = '';
   String _status = 'Todos';
 
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
   }
 
   @override
   void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
     _pesquisaController.dispose();
     super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _recarregandoPorRealtime || _carregando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final orcamentos = await _repository.listarOrcamentosComDetalhes();
+      if (!mounted) return;
+
+      setState(() {
+        _orcamentos = orcamentos;
+      });
+    } catch (_) {
+      // O Realtime não substitui o refresh manual nem o funcionamento local.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
