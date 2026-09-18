@@ -287,6 +287,13 @@ class GoogleDriveBackupService {
 
     await inicializar();
 
+    if (!configurado) {
+      throw GoogleDriveBackupException(
+        _erroInicializacao ??
+            'O Google Drive não está configurado para esta plataforma.',
+      );
+    }
+
     final usuario = _usuario;
     if (usuario == null) {
       throw const GoogleDriveBackupException(
