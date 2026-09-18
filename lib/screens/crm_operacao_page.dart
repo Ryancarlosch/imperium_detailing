@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/crm_acao_relacionamento.dart';
 import '../repositories/crm_operacao_repository.dart';
 import '../services/notification_service.dart';
+import '../services/operacional_realtime_service.dart';
 import '../services/whatsapp_service.dart';
 import 'crm_desempenho_page.dart';
 import 'orcamento_detalhes_page.dart';
@@ -17,6 +20,7 @@ class CrmOperacaoPage extends StatefulWidget {
 
 class _CrmOperacaoPageState extends State<CrmOperacaoPage> {
   final CrmOperacaoRepository _repository = CrmOperacaoRepository();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
@@ -25,6 +29,7 @@ class _CrmOperacaoPageState extends State<CrmOperacaoPage> {
 
   bool _carregando = true;
   bool _sincronizando = false;
+  bool _recarregandoPorRealtime = false;
   bool _lembreteAtivo = false;
   String _filtro = 'Atrasadas';
   List<CrmAcaoRelacionamento> _acoes = const [];
@@ -33,7 +38,49 @@ class _CrmOperacaoPageState extends State<CrmOperacaoPage> {
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted ||
+        _recarregandoPorRealtime ||
+        _carregando ||
+        _sincronizando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      await _repository.sincronizarAcoes();
+      final resultados = await Future.wait<Object>([
+        _repository.listarAcoes(status: 'Todos'),
+        _repository.carregarResumo(),
+        NotificationService.instance.lembreteDiarioCrmAtivo(),
+      ]);
+      if (!mounted) return;
+
+      setState(() {
+        _acoes = resultados[0] as List<CrmAcaoRelacionamento>;
+        _resumo = resultados[1] as CrmOperacaoResumo;
+        _lembreteAtivo = resultados[2] as bool;
+      });
+    } catch (_) {
+      // O Realtime acelera a atualização, mas não bloqueia o CRM local.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar({bool sincronizar = true}) async {
