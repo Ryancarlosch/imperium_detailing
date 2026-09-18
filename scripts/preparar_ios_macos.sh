@@ -2,6 +2,7 @@
 set -euo pipefail
 
 BUNDLE_ID="${1:-}"
+GOOGLE_IOS_CLIENT_ID="${2:-}"
 
 if [[ -z "$BUNDLE_ID" ]]; then
   echo "ERRO: informe o Bundle Identifier como primeiro argumento."
@@ -37,10 +38,19 @@ if [[ ! -f "ios/Runner/Info.plist" ]]; then
   exit 1
 fi
 
-python3 scripts/configurar_ios_imperium.py "$BUNDLE_ID"
+if [[ -n "$GOOGLE_IOS_CLIENT_ID" ]]; then
+  python3 scripts/configurar_ios_imperium.py "$BUNDLE_ID" "$GOOGLE_IOS_CLIENT_ID"
+else
+  python3 scripts/configurar_ios_imperium.py "$BUNDLE_ID"
+fi
 
 echo ""
 echo "BASE IOS GERADA E CONFIGURADA."
 echo "Bundle Identifier: $BUNDLE_ID"
+if [[ -n "$GOOGLE_IOS_CLIENT_ID" ]]; then
+  echo "Google Sign-In iOS: configurado."
+else
+  echo "Google Sign-In iOS: pendente; o app continua compilavel."
+fi
 echo "Revise Signing & Capabilities no Xcode conforme IOS-PREPARACAO-E-HOMOLOGACAO.md."
 echo "Depois execute: bash scripts/validar_ios_macos.sh"
