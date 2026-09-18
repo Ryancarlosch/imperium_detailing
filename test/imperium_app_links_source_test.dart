@@ -4,9 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('deep links nativos usam contrato central e Android equivalente', () {
-    final links = File(
-      'lib/config/imperium_app_links.dart',
-    ).readAsStringSync();
+    final links = File('lib/config/imperium_app_links.dart').readAsStringSync();
     final primeiroAcesso = File(
       'lib/screens/empresa_primeiro_acesso_page.dart',
     ).readAsStringSync();
@@ -23,23 +21,14 @@ void main() {
     expect(links, contains("loginCallback = '\$scheme://\$loginHost/'"));
     expect(links, contains("paymentReturn = '\$scheme://\$paymentHost/'"));
 
-    expect(
-      primeiroAcesso,
-      contains('ImperiumAppLinks.loginCallback'),
-    );
-    expect(
-      funcionario,
-      contains('ImperiumAppLinks.loginCallback'),
-    );
+    expect(primeiroAcesso, contains('ImperiumAppLinks.loginCallback'));
+    expect(funcionario, contains('ImperiumAppLinks.loginCallback'));
 
     expect(
       primeiroAcesso,
       isNot(contains('imperiumdetailing://login-callback/')),
     );
-    expect(
-      funcionario,
-      isNot(contains('imperiumdetailing://login-callback/')),
-    );
+    expect(funcionario, isNot(contains('imperiumdetailing://login-callback/')));
 
     expect(manifest, contains('android:scheme="imperiumdetailing"'));
     expect(manifest, contains('android:host="login-callback"'));
