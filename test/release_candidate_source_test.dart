@@ -7,6 +7,15 @@ void main() {
     final script = File('VALIDAR_RC.ps1').readAsStringSync();
     final vercel = File('scripts/vercel_build.sh').readAsStringSync();
     final iosDoc = File('IOS-PREPARACAO-E-HOMOLOGACAO.md').readAsStringSync();
+    final prepararIos = File(
+      'scripts/preparar_ios_macos.sh',
+    ).readAsStringSync();
+    final validarIos = File(
+      'scripts/validar_ios_macos.sh',
+    ).readAsStringSync();
+    final configurarIos = File(
+      'scripts/configurar_ios_imperium.py',
+    ).readAsStringSync();
 
     expect(script, contains('flutter pub get'));
     expect(
@@ -32,7 +41,7 @@ void main() {
       ),
     );
 
-    expect(iosDoc, contains('flutter create . --platforms ios'));
+    expect(iosDoc, contains('scripts/preparar_ios_macos.sh'));
     expect(iosDoc, contains('flutter build ios --release --no-codesign'));
     expect(iosDoc, contains('imperiumdetailing://login-callback/'));
     expect(iosDoc, contains('NSCameraUsageDescription'));
