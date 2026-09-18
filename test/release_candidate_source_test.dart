@@ -6,7 +6,9 @@ void main() {
   test('gate de release candidate valida Android e Web release', () {
     final script = File('VALIDAR_RC.ps1').readAsStringSync();
     final vercel = File('scripts/vercel_build.sh').readAsStringSync();
-    final iosDoc = File('IOS-PREPARACAO-E-HOMOLOGACAO.md').readAsStringSync();
+    final iosDoc = File(
+      'IOS-PREPARACAO-E-HOMOLOGACAO.md',
+    ).readAsStringSync();
     final prepararIos = File(
       'scripts/preparar_ios_macos.sh',
     ).readAsStringSync();
