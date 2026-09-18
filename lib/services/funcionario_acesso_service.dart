@@ -4,6 +4,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
+
+import '../config/imperium_app_links.dart';
 import '../models/colaborador_custo.dart';
 import '../repositories/custos_repository.dart';
 import '../repositories/usuario_repository.dart';
@@ -22,7 +24,7 @@ class FuncionarioAcessoService {
 
   SupabaseClient? get _client => SupabaseBootstrap.client;
 
-  static const String redirectUrl = 'imperiumdetailing://login-callback/';
+  static const String redirectUrl = ImperiumAppLinks.loginCallback;
 
   static const Set<String> modulosRemotosProntos = <String>{
     'ponto',
