@@ -50,8 +50,14 @@ void main() {
     expect(service, contains('MigracaoFinalGateV2Service.instance.avaliar()'));
     expect(service, contains('if (!gate.prontoParaPromover)'));
     expect(service, contains('_validarSequencia(estados)'));
-    expect(service, contains('Future<MigracaoFinalModuloEstado> promoverProximo()'));
-    expect(service, contains('Future<MigracaoFinalModuloEstado> rollbackUltimo()'));
+    expect(
+      service,
+      contains('Future<MigracaoFinalModuloEstado> promoverProximo()'),
+    );
+    expect(
+      service,
+      contains('Future<MigracaoFinalModuloEstado> rollbackUltimo()'),
+    );
     expect(service, contains("'status': 'promovido'"));
     expect(service, contains("'status': 'rollback'"));
     expect(service, isNot(contains('.delete()')));

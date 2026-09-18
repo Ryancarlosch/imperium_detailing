@@ -59,11 +59,7 @@ class MigracaoFinalPromocaoService {
       titulo: 'CRM e Orçamentos',
       ordem: 40,
     ),
-    MigracaoFinalModuloSpec(
-      chave: 'estoque',
-      titulo: 'Estoque',
-      ordem: 50,
-    ),
+    MigracaoFinalModuloSpec(chave: 'estoque', titulo: 'Estoque', ordem: 50),
     MigracaoFinalModuloSpec(
       chave: 'financeiro',
       titulo: 'Financeiro',
@@ -79,11 +75,7 @@ class MigracaoFinalPromocaoService {
       titulo: 'Configurações',
       ordem: 80,
     ),
-    MigracaoFinalModuloSpec(
-      chave: 'ponto',
-      titulo: 'Ponto',
-      ordem: 90,
-    ),
+    MigracaoFinalModuloSpec(chave: 'ponto', titulo: 'Ponto', ordem: 90),
   ];
 
   final OperacionalSyncService _operacional = OperacionalSyncService.instance;
@@ -110,28 +102,28 @@ class MigracaoFinalPromocaoService {
       }
     }
 
-    return modulos.map((spec) {
-      final mapa = porModulo[spec.chave];
-      return MigracaoFinalModuloEstado(
-        spec: spec,
-        status: (mapa?['status'] ?? 'pendente').toString(),
-        promovidoEm: DateTime.tryParse(
-          (mapa?['promovido_em'] ?? '').toString(),
-        ),
-        rollbackEm: DateTime.tryParse(
-          (mapa?['rollback_em'] ?? '').toString(),
-        ),
-        observacao: (mapa?['observacao'] ?? '').toString(),
-      );
-    }).toList(growable: false);
+    return modulos
+        .map((spec) {
+          final mapa = porModulo[spec.chave];
+          return MigracaoFinalModuloEstado(
+            spec: spec,
+            status: (mapa?['status'] ?? 'pendente').toString(),
+            promovidoEm: DateTime.tryParse(
+              (mapa?['promovido_em'] ?? '').toString(),
+            ),
+            rollbackEm: DateTime.tryParse(
+              (mapa?['rollback_em'] ?? '').toString(),
+            ),
+            observacao: (mapa?['observacao'] ?? '').toString(),
+          );
+        })
+        .toList(growable: false);
   }
 
   Future<MigracaoFinalModuloEstado> promoverProximo() async {
     final gate = await MigracaoFinalGateV2Service.instance.avaliar();
     if (!gate.prontoParaPromover) {
-      throw StateError(
-        'O Gate V2 ainda possui ${gate.bloqueios} bloqueio(s).',
-      );
+      throw StateError('O Gate V2 ainda possui ${gate.bloqueios} bloqueio(s).');
     }
 
     final estados = await listar();
@@ -222,9 +214,7 @@ class MigracaoFinalPromocaoService {
     return estados.isNotEmpty && estados.every((item) => item.promovido);
   }
 
-  MigracaoFinalModuloEstado? proximo(
-    List<MigracaoFinalModuloEstado> estados,
-  ) {
+  MigracaoFinalModuloEstado? proximo(List<MigracaoFinalModuloEstado> estados) {
     for (final item in estados) {
       if (!item.promovido) return item;
     }

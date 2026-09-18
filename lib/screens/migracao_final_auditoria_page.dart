@@ -98,9 +98,9 @@ class _MigracaoFinalAuditoriaPageState
       await _auditar();
     } catch (erro) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_textoErro(erro))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_textoErro(erro))));
     } finally {
       if (mounted) {
         setState(() => _processandoPromocao = false);
@@ -109,8 +109,7 @@ class _MigracaoFinalAuditoriaPageState
   }
 
   Future<void> _rollbackUltimo() async {
-    if (_processandoPromocao ||
-        !_modulos.any((item) => item.promovido)) {
+    if (_processandoPromocao || !_modulos.any((item) => item.promovido)) {
       return;
     }
 
@@ -146,9 +145,9 @@ class _MigracaoFinalAuditoriaPageState
       await _auditar();
     } catch (erro) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_textoErro(erro))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_textoErro(erro))));
     } finally {
       if (mounted) {
         setState(() => _processandoPromocao = false);
@@ -302,21 +301,22 @@ class _MigracaoFinalAuditoriaPageState
                             modulo.promovido
                                 ? Icons.cloud_done_outlined
                                 : modulo.status == 'rollback'
-                                    ? Icons.undo_rounded
-                                    : Icons.cloud_queue_outlined,
+                                ? Icons.undo_rounded
+                                : Icons.cloud_queue_outlined,
                           ),
                           title: Text(modulo.spec.titulo),
                           trailing: Text(
                             modulo.promovido
                                 ? 'Promovido'
                                 : modulo.status == 'rollback'
-                                    ? 'Rollback'
-                                    : 'Pendente',
+                                ? 'Rollback'
+                                : 'Pendente',
                           ),
                         ),
                       const SizedBox(height: 8),
                       FilledButton.icon(
-                        onPressed: resultado.prontoParaPromover &&
+                        onPressed:
+                            resultado.prontoParaPromover &&
                                 proximoModulo != null &&
                                 !_processandoPromocao
                             ? _promoverProximo
