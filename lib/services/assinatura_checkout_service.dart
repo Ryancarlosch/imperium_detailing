@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../config/imperium_app_links.dart';
+
 import 'supabase_bootstrap.dart';
 
 class AssinaturaPlano {
@@ -70,7 +72,7 @@ class AssinaturaCheckoutService {
       return origem.endsWith('/') ? origem : '$origem/';
     }
 
-    return 'imperiumdetailing://payment-return/';
+    return ImperiumAppLinks.paymentReturn;
   }
 
   Future<List<AssinaturaPlano>> listarPlanos() async {
