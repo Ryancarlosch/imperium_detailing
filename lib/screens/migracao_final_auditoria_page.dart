@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../services/migracao_final_auditoria_service.dart';
 import '../services/migracao_final_gate_v2_service.dart';
+import '../services/migracao_final_promocao_service.dart';
 
 class MigracaoFinalAuditoriaPage extends StatefulWidget {
   const MigracaoFinalAuditoriaPage({super.key});
@@ -16,6 +17,8 @@ class _MigracaoFinalAuditoriaPageState
     extends State<MigracaoFinalAuditoriaPage> {
   final MigracaoFinalGateV2Service _service =
       MigracaoFinalGateV2Service.instance;
+  final MigracaoFinalPromocaoService _promocao =
+      MigracaoFinalPromocaoService.instance;
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: r'R$',
@@ -23,8 +26,10 @@ class _MigracaoFinalAuditoriaPageState
   final DateFormat _dataHora = DateFormat('dd/MM/yyyy HH:mm');
 
   bool _carregando = true;
+  bool _processandoPromocao = false;
   String? _erro;
   MigracaoFinalGateV2Resultado? _resultado;
+  List<MigracaoFinalModuloEstado> _modulos = const [];
 
   @override
   void initState() {
@@ -40,10 +45,12 @@ class _MigracaoFinalAuditoriaPageState
 
     try {
       final resultado = await _service.avaliar();
+      final modulos = await _promocao.listar();
       if (!mounted) return;
 
       setState(() {
         _resultado = resultado;
+        _modulos = modulos;
         _carregando = false;
       });
     } catch (erro) {
@@ -53,6 +60,99 @@ class _MigracaoFinalAuditoriaPageState
         _erro = _textoErro(erro);
         _carregando = false;
       });
+    }
+  }
+
+  Future<void> _promoverProximo() async {
+    final proximo = _promocao.proximo(_modulos);
+    if (proximo == null || _processandoPromocao) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Promover próximo módulo?'),
+        content: Text(
+          'O próximo cutover será: ${proximo.spec.titulo}. '
+          'O SQLite continuará como cache/offline e o Cloud ficará '
+          'registrado como referência compartilhada deste módulo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Promover'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    setState(() => _processandoPromocao = true);
+    try {
+      await _promocao.promoverProximo();
+      if (!mounted) return;
+      await _auditar();
+    } catch (erro) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_textoErro(erro))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _processandoPromocao = false);
+      }
+    }
+  }
+
+  Future<void> _rollbackUltimo() async {
+    if (_processandoPromocao ||
+        !_modulos.any((item) => item.promovido)) {
+      return;
+    }
+
+    final ultimo = _modulos.lastWhere((item) => item.promovido);
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rollback do último módulo?'),
+        content: Text(
+          'O estado de promoção de ${ultimo.spec.titulo} voltará para '
+          'rollback. Nenhum dado local ou Cloud será apagado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Fazer rollback'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    setState(() => _processandoPromocao = true);
+    try {
+      await _promocao.rollbackUltimo();
+      if (!mounted) return;
+      await _auditar();
+    } catch (erro) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_textoErro(erro))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _processandoPromocao = false);
+      }
     }
   }
 
@@ -94,6 +194,8 @@ class _MigracaoFinalAuditoriaPageState
   Widget build(BuildContext context) {
     final resultado = _resultado;
     final auditoria = resultado?.auditoria;
+    final proximoModulo = _promocao.proximo(_modulos);
+    final possuiPromovidos = _modulos.any((item) => item.promovido);
 
     return Scaffold(
       appBar: AppBar(
@@ -118,7 +220,8 @@ class _MigracaoFinalAuditoriaPageState
                 child: Text(
                   'Comparação somente leitura entre o SQLite da empresa ativa '
                   'e o Supabase. Sincronize antes de usar esta tela como gate. '
-                  'Ela não promove a nuvem nem altera dados.',
+                  'Ela não promove a nuvem nem altera dados. A promoção só '
+                  'acontece por ação explícita nos controles de cutover.',
                 ),
               ),
             ),
@@ -167,6 +270,69 @@ class _MigracaoFinalAuditoriaPageState
                         ? 'Todos os pré-requisitos técnicos deste gate estão verdes.'
                         : 'A promoção Cloud permanece bloqueada até todos os '
                               'itens abaixo ficarem verdes.',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Promoção Cloud controlada',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        proximoModulo == null
+                            ? 'Todos os módulos foram promovidos.'
+                            : 'Próximo: ${proximoModulo.spec.titulo}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      for (final modulo in _modulos)
+                        ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            modulo.promovido
+                                ? Icons.cloud_done_outlined
+                                : modulo.status == 'rollback'
+                                    ? Icons.undo_rounded
+                                    : Icons.cloud_queue_outlined,
+                          ),
+                          title: Text(modulo.spec.titulo),
+                          trailing: Text(
+                            modulo.promovido
+                                ? 'Promovido'
+                                : modulo.status == 'rollback'
+                                    ? 'Rollback'
+                                    : 'Pendente',
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                        onPressed: resultado.prontoParaPromover &&
+                                proximoModulo != null &&
+                                !_processandoPromocao
+                            ? _promoverProximo
+                            : null,
+                        icon: const Icon(Icons.cloud_upload_outlined),
+                        label: const Text('Promover próximo módulo'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: possuiPromovidos && !_processandoPromocao
+                            ? _rollbackUltimo
+                            : null,
+                        icon: const Icon(Icons.undo_rounded),
+                        label: const Text('Rollback do último'),
+                      ),
+                    ],
                   ),
                 ),
               ),
