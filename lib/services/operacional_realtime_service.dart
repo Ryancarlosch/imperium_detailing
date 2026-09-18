@@ -10,8 +10,8 @@ typedef OperacionalRealtimeAtualizar = Future<void> Function();
 ///
 /// O Realtime não substitui o motor de sincronização. Ele apenas dispara um
 /// ciclo normal quando outro aparelho altera Clientes, Veículos, Agenda,
-/// Ordens de Serviço, pagamentos da OS, Estoque, Financeiro ou os arquivos
-/// portáveis da empresa.
+/// Ordens de Serviço, pagamentos da OS, Estoque, Financeiro, CRM,
+/// Orçamentos ou os arquivos portáveis da empresa.
 /// Toda reconciliação, CAS, conflitos, retry e offline continuam centralizados
 /// nos serviços de sincronização existentes.
 class OperacionalRealtimeService {
@@ -84,6 +84,12 @@ class OperacionalRealtimeService {
       registrar('imperium_estoque_movimentacoes');
       registrar('imperium_financeiro_contas');
       registrar('imperium_financeiro_movimentos');
+      registrar('imperium_orcamentos');
+      registrar('imperium_orcamento_itens');
+      registrar('imperium_crm_leads');
+      registrar('imperium_crm_interacoes');
+      registrar('imperium_crm_campanhas');
+      registrar('imperium_crm_cupons');
       registrar('imperium_configuracao_arquivos');
 
       _channel = channel;
