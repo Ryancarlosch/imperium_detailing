@@ -163,9 +163,9 @@ class MigracaoFinalGateV2Service {
         chave: 'sqlite',
         titulo: 'SQLite íntegro',
         detalhe:
-            'Schema \${saude.versaoSchema}; '
-            '\${saude.violacoesForeignKey} violação(ões) de foreign key; '
-            '\${saude.criticos} alerta(s) crítico(s).',
+            'Schema ${saude.versaoSchema}; '
+            '${saude.violacoesForeignKey} violação(ões) de foreign key; '
+            '${saude.criticos} alerta(s) crítico(s).',
         ok: saude.sqliteIntegro &&
             saude.versaoSchema == AppDatabase.schemaVersion &&
             saude.violacoesForeignKey == 0 &&
@@ -176,16 +176,16 @@ class MigracaoFinalGateV2Service {
         titulo: 'Backup obrigatório atualizado',
         detalhe: backupEm == null
             ? 'Nenhum backup válido foi registrado.'
-            : 'Último backup: \${backupEm.toLocal().toIso8601String()}.',
+            : 'Último backup: ${backupEm.toLocal().toIso8601String()}.',
         ok: backupDepoisDoSync,
       ),
       MigracaoFinalGateItem(
         chave: 'motor_sync',
         titulo: 'Motor de sincronização concluído',
         detalhe:
-            'Último ciclo: \${motorStatus.isEmpty ? 'não identificado' : motorStatus}; '
-            '\$motorErros erro(s), \$motorAguardando aguardando, '
-            '\$motorBloqueados bloqueado(s).',
+            'Último ciclo: ${motorStatus.isEmpty ? 'não identificado' : motorStatus}; '
+            '$motorErros erro(s), $motorAguardando aguardando, '
+            '$motorBloqueados bloqueado(s).',
         ok: motorStatus == 'Sucesso' &&
             motorErros == 0 &&
             motorAguardando == 0 &&
@@ -194,36 +194,36 @@ class MigracaoFinalGateV2Service {
       MigracaoFinalGateItem(
         chave: 'cobertura_sync',
         titulo: 'Cobertura operacional completa',
-        detalhe: '\$coberturaPendente registro(s) local(is) sem mapeamento.',
+        detalhe: '$coberturaPendente registro(s) local(is) sem mapeamento.',
         ok: coberturaPendente == 0,
       ),
       MigracaoFinalGateItem(
         chave: 'filas',
         titulo: 'Filas pendentes zeradas',
         detalhe:
-            '\${saude.exclusoesSyncPendentes} exclusão(ões) aguardando sync; '
-            '\${saude.pontoPendentes} batida(s) de Ponto pendente(s).',
+            '${saude.exclusoesSyncPendentes} exclusão(ões) aguardando sync; '
+            '${saude.pontoPendentes} batida(s) de Ponto pendente(s).',
         ok: saude.exclusoesSyncPendentes == 0 && saude.pontoPendentes == 0,
       ),
       MigracaoFinalGateItem(
         chave: 'conflitos',
         titulo: 'Conflitos zerados',
-        detalhe: '\$conflitosTotal conflito(s) pendente(s) entre os módulos.',
+        detalhe: '$conflitosTotal conflito(s) pendente(s) entre os módulos.',
         ok: conflitosTotal == 0,
       ),
       MigracaoFinalGateItem(
         chave: 'storage',
         titulo: 'Storage sem conflito',
         detalhe:
-            'Arquivos OS: \$osStorageConflitos conflito(s); '
-            'Configurações: \$configStorageConflitos conflito(s).',
+            'Arquivos OS: $osStorageConflitos conflito(s); '
+            'Configurações: $configStorageConflitos conflito(s).',
         ok: osStorageConflitos == 0 && configStorageConflitos == 0,
       ),
       MigracaoFinalGateItem(
         chave: 'auditoria_cloud',
         titulo: 'SQLite e Cloud equivalentes',
         detalhe:
-            '\${auditoria.divergencias} divergência(s) nas contagens/totais V1.',
+            '${auditoria.divergencias} divergência(s) nas contagens/totais V1.',
         ok: auditoria.tudoConfere,
       ),
     ];
