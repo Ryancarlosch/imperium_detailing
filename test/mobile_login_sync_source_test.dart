@@ -27,9 +27,7 @@ void main() {
     final auth = File(
       'lib/services/imperium_auth_service.dart',
     ).readAsStringSync();
-    final links = File(
-      'lib/config/imperium_app_links.dart',
-    ).readAsStringSync();
+    final links = File('lib/config/imperium_app_links.dart').readAsStringSync();
 
     expect(links, contains("loginCallback = '\$scheme://\$loginHost/'"));
     expect(login, contains('ImperiumAppLinks.loginCallback'));
@@ -55,9 +53,7 @@ void main() {
 
     expect(checkout, contains('ImperiumAppLinks.paymentReturn'));
     expect(checkout, contains("'return_url': _returnUrl()"));
-    final links = File(
-      'lib/config/imperium_app_links.dart',
-    ).readAsStringSync();
+    final links = File('lib/config/imperium_app_links.dart').readAsStringSync();
 
     expect(links, contains("paymentReturn = '\$scheme://\$paymentHost/'"));
     expect(manifest, contains('android:host="login-callback"'));
