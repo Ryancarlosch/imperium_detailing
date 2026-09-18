@@ -158,6 +158,10 @@ class MigracaoFinalGateV2Service {
     final osStorageConflitos =
         _int(osArquivos['conflitos_pendentes']) +
         _int(osArquivos['assinaturas_em_conflito']);
+    final osStorageErros =
+        _int(osArquivos['fotos_com_erro']) +
+        _int(osArquivos['checklist_com_erro']) +
+        _int(osArquivos['assinaturas_com_erro']);
     final configStorageConflitos = _int(configArquivos['conflitos_pendentes']);
 
     final itens = <MigracaoFinalGateItem>[
@@ -227,9 +231,13 @@ class MigracaoFinalGateV2Service {
         chave: 'storage',
         titulo: 'Storage sem conflito',
         detalhe:
-            'Arquivos OS: $osStorageConflitos conflito(s); '
+            'Arquivos OS: $osStorageConflitos conflito(s), '
+            '$osStorageErros erro(s); '
             'Configurações: $configStorageConflitos conflito(s).',
-        ok: osStorageConflitos == 0 && configStorageConflitos == 0,
+        ok:
+            osStorageConflitos == 0 &&
+            osStorageErros == 0 &&
+            configStorageConflitos == 0,
       ),
       MigracaoFinalGateItem(
         chave: 'auditoria_cloud',
