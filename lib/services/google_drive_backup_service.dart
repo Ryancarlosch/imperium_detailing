@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
@@ -70,42 +71,49 @@ class GoogleDriveBackupService {
 
   Future<void>? _inicializacao;
   GoogleSignInAccount? _usuario;
+  String? _erroInicializacao;
 
-  bool get configurado => GoogleDriveOAuthConfig.configurado;
+  bool get configurado =>
+      GoogleDriveOAuthConfig.configurado && _erroInicializacao == null;
 
   Future<void> inicializar() {
     return _inicializacao ??= _inicializarInterno();
   }
 
   Future<void> _inicializarInterno() async {
-    if (!configurado) {
+    if (!GoogleDriveOAuthConfig.configurado) {
       return;
     }
 
-    await _googleSignIn.initialize(
-      serverClientId: GoogleDriveOAuthConfig.serverClientId,
-    );
-
-    _googleSignIn.authenticationEvents.listen((evento) {
-      if (evento is GoogleSignInAuthenticationEventSignIn) {
-        _usuario = evento.user;
-      } else if (evento is GoogleSignInAuthenticationEventSignOut) {
-        _usuario = null;
-      }
-    });
-
     try {
-      final tentativa = _googleSignIn.attemptLightweightAuthentication();
+      await _googleSignIn.initialize(
+        serverClientId: GoogleDriveOAuthConfig.serverClientId,
+      );
 
-      if (tentativa != null) {
-        final usuario = await tentativa;
-        if (usuario != null) {
-          _usuario = usuario;
+      _googleSignIn.authenticationEvents.listen((evento) {
+        if (evento is GoogleSignInAuthenticationEventSignIn) {
+          _usuario = evento.user;
+        } else if (evento is GoogleSignInAuthenticationEventSignOut) {
+          _usuario = null;
         }
+      });
+
+      try {
+        final tentativa = _googleSignIn.attemptLightweightAuthentication();
+
+        if (tentativa != null) {
+          final usuario = await tentativa;
+          if (usuario != null) {
+            _usuario = usuario;
+          }
+        }
+      } catch (_) {
+        // A restauração silenciosa é best-effort.
+        // A conexão interativa continua disponível na tela.
       }
-    } catch (_) {
-      // A restauração silenciosa é best-effort.
-      // A conexão interativa continua disponível na tela.
+    } catch (erro) {
+      _erroInicializacao = _mensagemInicializacao(erro);
+      _usuario = null;
     }
   }
 
@@ -125,6 +133,18 @@ class GoogleDriveBackupService {
     }
 
     await inicializar();
+
+    if (!configurado) {
+      return GoogleDriveEstado(
+        configurado: false,
+        conectado: false,
+        email: _textoNulo(local['email']),
+        nome: _textoNulo(local['nome']),
+        ultimoEnvioEm: _textoNulo(local['ultimo_envio_em']),
+        ultimoArquivoNome: _textoNulo(local['ultimo_arquivo_nome']),
+        ultimoErro: _erroInicializacao ?? _textoNulo(local['ultimo_erro']),
+      );
+    }
 
     final usuario = _usuario;
 
@@ -147,6 +167,13 @@ class GoogleDriveBackupService {
     }
 
     await inicializar();
+
+    if (!configurado) {
+      throw GoogleDriveBackupException(
+        _erroInicializacao ??
+            'O Google Drive não está configurado para esta plataforma.',
+      );
+    }
 
     GoogleSignInAccount? usuario = _usuario;
 
@@ -617,6 +644,18 @@ class GoogleDriveBackupService {
     final documentos = await getApplicationDocumentsDirectory();
 
     return File(path.join(documentos.path, _nomeEstadoLocal));
+  }
+
+  String _mensagemInicializacao(Object erro) {
+    final detalhe = _textoErro(erro);
+
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return 'Google Drive ainda não está configurado no iPhone. '
+          'Configure o OAuth Client ID iOS e o URL scheme reverso. '
+          '$detalhe';
+    }
+
+    return detalhe;
   }
 
   String _mensagemRespostaGoogle(int status, String corpo) {
