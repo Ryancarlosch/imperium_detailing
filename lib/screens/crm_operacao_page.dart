@@ -54,10 +54,7 @@ class _CrmOperacaoPageState extends State<CrmOperacaoPage> {
   }
 
   Future<void> _recarregarPorRealtime() async {
-    if (!mounted ||
-        _recarregandoPorRealtime ||
-        _carregando ||
-        _sincronizando) {
+    if (!mounted || _recarregandoPorRealtime || _carregando || _sincronizando) {
       return;
     }
 

@@ -41,9 +41,7 @@ void main() {
       greaterThanOrEqualTo(3),
     );
     expect(
-      RegExp(r'unawaited\(_recarregarPorRealtime\(\)\)')
-          .allMatches(crm)
-          .length,
+      RegExp(r'unawaited\(_recarregarPorRealtime\(\)\)').allMatches(crm).length,
       greaterThanOrEqualTo(3),
     );
     expect(crm, contains('_repository.listarLeads'));
@@ -64,10 +62,7 @@ void main() {
 
     expect(detalheOrcamento, contains('StreamSubscription<void>?'));
     expect(detalheOrcamento, contains('.atualizacoes'));
-    expect(
-      detalheOrcamento,
-      contains('unawaited(_recarregarPorRealtime())'),
-    );
+    expect(detalheOrcamento, contains('unawaited(_recarregarPorRealtime())'));
     expect(
       detalheOrcamento,
       contains('_repository.buscarOrcamentoComDetalhes'),
@@ -85,10 +80,7 @@ void main() {
         pagina,
         contains("import '../services/operacional_realtime_service.dart';"),
       );
-      expect(
-        pagina,
-        contains('_operacionalRealtimeSubscription?.cancel();'),
-      );
+      expect(pagina, contains('_operacionalRealtimeSubscription?.cancel();'));
     }
   });
 }
