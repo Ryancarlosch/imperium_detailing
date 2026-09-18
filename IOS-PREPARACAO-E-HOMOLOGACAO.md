@@ -21,12 +21,17 @@ A estrutura nativa iOS deve ser gerada pelo Flutter em um Mac com Xcode.
 No diretório raiz do projeto:
 
 ```bash
-bash scripts/preparar_ios_macos.sh SEU_BUNDLE_IDENTIFIER
+bash scripts/preparar_ios_macos.sh SEU_BUNDLE_IDENTIFIER [GOOGLE_IOS_CLIENT_ID]
 ```
 
-Exemplo de formato:
-```text
-br.com.suaempresa.imperiummanager
+Exemplo sem Google Drive configurado ainda:
+```bash
+bash scripts/preparar_ios_macos.sh br.com.suaempresa.imperiummanager
+```
+
+Exemplo já configurando Google Sign-In/Drive no iOS:
+```bash
+bash scripts/preparar_ios_macos.sh br.com.suaempresa.imperiummanager 123456789-abc.apps.googleusercontent.com
 ```
 
 Esse script:
@@ -120,7 +125,15 @@ Homologar em iPhone:
 ### Google Drive
 
 O backup Google Drive usa `google_sign_in`.
-Antes de considerar paridade iOS concluída, configurar o cliente OAuth iOS correspondente e o URL scheme exigido pelo Google Sign-In.
+Antes de considerar paridade iOS concluída, configurar o cliente OAuth iOS correspondente e o URL scheme reverso exigido pelo Google Sign-In.
+
+O bootstrap aceita o Client ID iOS como segundo argumento opcional. Quando informado, `scripts/configurar_ios_imperium.py` grava:
+- `GIDClientID`;
+- `GIDServerClientID`;
+- URL scheme reverso do Google em `CFBundleURLTypes`.
+
+Enquanto o Client ID iOS ainda não existir, o app continua compilável e o serviço do Drive informa que a plataforma ainda não está configurada, em vez de quebrar a tela.
+
 Não publicar o app assumindo que a configuração Android serve automaticamente no iOS.
 
 ## Bundle Identifier e assinatura
