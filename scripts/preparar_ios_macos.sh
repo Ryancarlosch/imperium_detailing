@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+BUNDLE_ID="${1:-}"
+
+if [[ -z "$BUNDLE_ID" ]]; then
+  echo "ERRO: informe o Bundle Identifier como primeiro argumento."
+  echo "Exemplo: bash scripts/preparar_ios_macos.sh br.com.suaempresa.imperiummanager"
+  exit 1
+fi
+
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "ERRO: este script deve ser executado em um Mac."
   exit 1
@@ -29,7 +37,10 @@ if [[ ! -f "ios/Runner/Info.plist" ]]; then
   exit 1
 fi
 
+python3 scripts/configurar_ios_imperium.py "$BUNDLE_ID"
+
 echo ""
-echo "BASE IOS GERADA."
-echo "Agora configure Info.plist e Signing conforme IOS-PREPARACAO-E-HOMOLOGACAO.md."
+echo "BASE IOS GERADA E CONFIGURADA."
+echo "Bundle Identifier: $BUNDLE_ID"
+echo "Revise Signing & Capabilities no Xcode conforme IOS-PREPARACAO-E-HOMOLOGACAO.md."
 echo "Depois execute: bash scripts/validar_ios_macos.sh"
