@@ -366,9 +366,8 @@ class OperacionalSyncService {
   }
 
   Future<void> _syncOperacionalBase(String empresaId) async {
-    final podePublicar = await OperacionalCloudV2Service.instance.prepararUpload(
-      empresaId,
-    );
+    final podePublicar = await OperacionalCloudV2Service.instance
+        .prepararUpload(empresaId);
 
     if (!podePublicar) {
       throw const SyncMotorBloqueadoException(
@@ -386,9 +385,8 @@ class OperacionalSyncService {
     await _baixarVeiculos(empresaId);
     await _baixarAgendamentos(empresaId);
 
-    final reconciliado = await OperacionalCloudV2Service.instance.prepararUpload(
-      empresaId,
-    );
+    final reconciliado = await OperacionalCloudV2Service.instance
+        .prepararUpload(empresaId);
 
     if (!reconciliado) {
       throw const SyncMotorBloqueadoException(
