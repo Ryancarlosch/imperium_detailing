@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +8,7 @@ import '../models/crm_campanha.dart';
 import '../models/crm_lead.dart';
 import '../repositories/crm_repository.dart';
 import '../repositories/precificacao_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import 'crm_operacao_page.dart';
 
 class CrmPage extends StatefulWidget {
@@ -18,12 +21,14 @@ class CrmPage extends StatefulWidget {
 class _CrmPageState extends State<CrmPage> {
   final CrmRepository _repository = CrmRepository();
   final TextEditingController _pesquisa = TextEditingController();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: 'R\$',
   );
 
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
   String _etapa = 'Todos';
   List<CrmLead> _leads = const [];
   CrmResumo? _resumo;
@@ -32,14 +37,57 @@ class _CrmPageState extends State<CrmPage> {
   void initState() {
     super.initState();
     _pesquisa.addListener(_carregar);
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
   }
 
   @override
   void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
     _pesquisa.removeListener(_carregar);
     _pesquisa.dispose();
     super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _recarregandoPorRealtime || _carregando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    final etapaConsultada = _etapa;
+    final pesquisaConsultada = _pesquisa.text;
+
+    try {
+      final resultados = await Future.wait<Object>([
+        _repository.listarLeads(
+          etapa: etapaConsultada == 'Todos' ? null : etapaConsultada,
+          pesquisa: pesquisaConsultada,
+        ),
+        _repository.carregarResumo(),
+      ]);
+
+      if (!mounted ||
+          etapaConsultada != _etapa ||
+          pesquisaConsultada != _pesquisa.text) {
+        return;
+      }
+
+      setState(() {
+        _leads = resultados[0] as List<CrmLead>;
+        _resumo = resultados[1] as CrmResumo;
+      });
+    } catch (_) {
+      // Realtime é apenas um acelerador; a tela mantém o snapshot local e o
+      // refresh manual continua disponível.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
@@ -664,9 +712,36 @@ class _LeadDetalhesPage extends StatefulWidget {
 }
 
 class _LeadDetalhesPageState extends State<_LeadDetalhesPage> {
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
   CrmLead? _lead;
   List<CrmInteracao> _interacoes = const [];
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _recarregandoPorRealtime || _carregando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final resultados = await Future.wait<Object?>([
+        widget.repository.buscarLead(widget.leadId),
+        widget.repository.listarInteracoes(widget.leadId),
+      ]);
+
+      if (!mounted) return;
+
+      setState(() {
+        _lead = resultados[0] as CrmLead?;
+        _interacoes = resultados[1] as List<CrmInteracao>;
+      });
+    } catch (_) {
+      // O detalhe preserva os dados locais atuais se a releitura falhar.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
+  }
 
   Future<void> _carregar() async {
     setState(() => _carregando = true);
@@ -683,7 +758,19 @@ class _LeadDetalhesPageState extends State<_LeadDetalhesPage> {
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _mudarEtapa(String etapa) async {
@@ -1140,15 +1227,55 @@ class CrmCampanhasPage extends StatefulWidget {
 }
 
 class _CrmCampanhasPageState extends State<CrmCampanhasPage> {
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
   List<CrmCampanha> _campanhas = const [];
   List<Map<String, dynamic>> _cupons = const [];
   List<Map<String, dynamic>> _clientes = const [];
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
 
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted || _recarregandoPorRealtime || _carregando) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final resultado = await Future.wait<Object>([
+        widget.repository.listarCampanhas(),
+        widget.repository.listarCupons(),
+        widget.repository.listarClientesParaBeneficios(),
+      ]);
+      if (!mounted) return;
+
+      setState(() {
+        _campanhas = resultado[0] as List<CrmCampanha>;
+        _cupons = resultado[1] as List<Map<String, dynamic>>;
+        _clientes = resultado[2] as List<Map<String, dynamic>>;
+      });
+    } catch (_) {
+      // Realtime não bloqueia a operação local nem substitui o refresh manual.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
