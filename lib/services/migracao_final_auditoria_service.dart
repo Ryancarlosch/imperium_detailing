@@ -63,7 +63,9 @@ class MigracaoFinalAuditoriaService {
 
     final empresaId = await _operacional.empresaAtualId();
     if (empresaId == null || empresaId.trim().isEmpty) {
-      throw StateError('Nenhuma empresa ativa foi identificada neste aparelho.');
+      throw StateError(
+        'Nenhuma empresa ativa foi identificada neste aparelho.',
+      );
     }
 
     final empresaLocal = await _appDatabase.empresaAtivaId;
@@ -104,32 +106,23 @@ class MigracaoFinalAuditoriaService {
         database,
         'SELECT COALESCE(SUM(quantidade), 0) AS total FROM itens_estoque',
       ),
-      'financeiro_entradas_realizadas': await _scalar(
-        database,
-        '''
+      'financeiro_entradas_realizadas': await _scalar(database, '''
         SELECT COALESCE(SUM(valor), 0) AS total
         FROM movimentos_financeiros
         WHERE LOWER(COALESCE(status, '')) = 'realizado'
           AND LOWER(COALESCE(tipo, '')) = 'entrada'
-        ''',
-      ),
-      'financeiro_saidas_realizadas': await _scalar(
-        database,
-        '''
+        '''),
+      'financeiro_saidas_realizadas': await _scalar(database, '''
         SELECT COALESCE(SUM(valor), 0) AS total
         FROM movimentos_financeiros
         WHERE LOWER(COALESCE(status, '')) = 'realizado'
           AND LOWER(COALESCE(tipo, '')) IN ('saida', 'saída')
-        ''',
-      ),
-      'pagamentos_os_pagos_total': await _scalar(
-        database,
-        '''
+        '''),
+      'pagamentos_os_pagos_total': await _scalar(database, '''
         SELECT COALESCE(SUM(valor), 0) AS total
         FROM ordem_servico_pagamentos
         WHERE LOWER(COALESCE(status, '')) = 'pago'
-        ''',
-      ),
+        '''),
     };
 
     final resposta = await client.rpc(
@@ -138,7 +131,9 @@ class MigracaoFinalAuditoriaService {
     );
 
     if (resposta is! Map) {
-      throw StateError('A nuvem retornou um formato inválido para a auditoria.');
+      throw StateError(
+        'A nuvem retornou um formato inválido para a auditoria.',
+      );
     }
 
     final cloud = Map<String, dynamic>.from(resposta);
