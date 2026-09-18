@@ -43,7 +43,10 @@ void main() {
       expect(service, contains("'$chave'"));
     }
 
-    expect(service, contains('final empresaLocal = await _appDatabase.empresaAtivaId'));
+    expect(
+      service,
+      contains('final empresaLocal = await _appDatabase.empresaAtivaId'),
+    );
     expect(
       service,
       contains(
@@ -51,33 +54,21 @@ void main() {
       ),
     );
     expect(service, contains("client.rpc("));
-    expect(
-      service,
-      contains("'imperium_migracao_auditoria_v1'"),
-    );
+    expect(service, contains("'imperium_migracao_auditoria_v1'"));
 
     // A auditoria local executa somente SELECTs.
     expect(service, isNot(contains('database.insert(')));
     expect(service, isNot(contains('database.update(')));
     expect(service, isNot(contains('database.delete(')));
 
-    expect(
-      page,
-      contains("title: const Text('Auditoria da migração final')"),
-    );
+    expect(page, contains("title: const Text('Auditoria da migração final')"));
     expect(page, contains('Ela não promove a nuvem nem altera dados.'));
     expect(page, contains('SQLite e Cloud conferem neste gate'));
     expect(page, contains('Não promova a nuvem como fonte principal'));
 
-    expect(
-      saude,
-      contains("import 'migracao_final_auditoria_page.dart';"),
-    );
+    expect(saude, contains("import 'migracao_final_auditoria_page.dart';"));
     expect(saude, contains("label: const Text('Auditar migração final')"));
     expect(saude, contains('MigracaoFinalAuditoriaPage'));
-    expect(
-      saude,
-      isNot(contains('migra Financeiro nem Estoque para a nuvem')),
-    );
+    expect(saude, isNot(contains('migra Financeiro nem Estoque para a nuvem')));
   });
 }

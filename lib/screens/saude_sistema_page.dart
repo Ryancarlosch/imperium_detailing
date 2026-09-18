@@ -155,9 +155,7 @@ class _SaudeSistemaPageState extends State<SaudeSistemaPage> {
 
   Future<void> _abrirAuditoriaMigracao() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => const MigracaoFinalAuditoriaPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const MigracaoFinalAuditoriaPage()),
     );
   }
 

@@ -15,8 +15,10 @@ class _MigracaoFinalAuditoriaPageState
     extends State<MigracaoFinalAuditoriaPage> {
   final MigracaoFinalAuditoriaService _service =
       MigracaoFinalAuditoriaService.instance;
-  final NumberFormat _moeda =
-      NumberFormat.currency(locale: 'pt_BR', symbol: r'R$');
+  final NumberFormat _moeda = NumberFormat.currency(
+    locale: 'pt_BR',
+    symbol: r'R$',
+  );
   final DateFormat _dataHora = DateFormat('dd/MM/yyyy HH:mm');
 
   bool _carregando = true;
@@ -162,7 +164,7 @@ class _MigracaoFinalAuditoriaPageState
                     resultado.tudoConfere
                         ? 'As contagens e totais críticos do V1 estão equivalentes.'
                         : 'Não promova a nuvem como fonte principal enquanto '
-                            'houver diferenças sem explicação.',
+                              'houver diferenças sem explicação.',
                   ),
                 ),
               ),
@@ -236,15 +238,16 @@ class _ItemAuditoriaCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _Valor(titulo: 'SQLite', valor: local)),
-                const SizedBox(width: 8),
-                Expanded(child: _Valor(titulo: 'Cloud', valor: cloud)),
+                Expanded(
+                  child: _Valor(titulo: 'SQLite', valor: local),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _Valor(
-                    titulo: 'Cloud - local',
-                    valor: diferenca,
-                  ),
+                  child: _Valor(titulo: 'Cloud', valor: cloud),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _Valor(titulo: 'Cloud - local', valor: diferenca),
                 ),
               ],
             ),
