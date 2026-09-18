@@ -78,12 +78,17 @@ void main() {
 
     expect(
       RegExp(
-        r'OperacionalCloudV2Service\.instance\.prepararUpload',
+        r'OperacionalCloudV2Service\.instance\s*\.prepararUpload',
       ).allMatches(bloco).length,
       greaterThanOrEqualTo(2),
     );
+    final primeiraReconciliacao = RegExp(
+      r'OperacionalCloudV2Service\.instance\s*\.prepararUpload',
+    ).firstMatch(bloco);
+
+    expect(primeiraReconciliacao, isNotNull);
     expect(
-      bloco.indexOf('OperacionalCloudV2Service.instance.prepararUpload'),
+      primeiraReconciliacao!.start,
       lessThan(bloco.indexOf('_publicarClientesLocais')),
     );
   });
