@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -5,6 +7,7 @@ import '../models/item_orcamento.dart';
 import '../repositories/orcamento_repository.dart';
 import '../repositories/ordem_servico_repository.dart';
 import '../repositories/fidelidade_repository.dart';
+import '../services/operacional_realtime_service.dart';
 import '../services/pdf/orcamento_pdf_service.dart';
 import '../services/whatsapp_service.dart';
 import 'novo_orcamento_page.dart';
@@ -24,6 +27,7 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
   final _ordemRepository = OrdemServicoRepository();
   final _fidelidadeRepository = FidelidadeRepository();
   final _pdfService = OrcamentoPdfService();
+  StreamSubscription<void>? _operacionalRealtimeSubscription;
 
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
@@ -34,6 +38,7 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
   DescontoDocumentoSnapshot? _snapshotDesconto;
 
   bool _carregando = true;
+  bool _recarregandoPorRealtime = false;
   bool _gerandoPdf = false;
   bool _alterandoStatus = false;
   bool _excluindo = false;
@@ -45,7 +50,69 @@ class _OrcamentoDetalhesPageState extends State<OrcamentoDetalhesPage> {
   @override
   void initState() {
     super.initState();
+    _operacionalRealtimeSubscription = OperacionalRealtimeService
+        .instance
+        .atualizacoes
+        .listen((_) {
+          unawaited(_recarregarPorRealtime());
+        });
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _operacionalRealtimeSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _recarregarPorRealtime() async {
+    if (!mounted ||
+        _recarregandoPorRealtime ||
+        _carregando ||
+        _gerandoPdf ||
+        _alterandoStatus ||
+        _excluindo ||
+        _abrindoWhatsApp ||
+        _abrindoOrdem) {
+      return;
+    }
+
+    _recarregandoPorRealtime = true;
+    try {
+      final dados = await _repository.buscarOrcamentoComDetalhes(
+        widget.orcamentoId,
+      );
+      if (!mounted) return;
+
+      final itens = _extrairItens(dados?['itens']);
+
+      DescontoDocumentoSnapshot? snapshotDesconto;
+      try {
+        snapshotDesconto = await _fidelidadeRepository.buscarDescontoDocumento(
+          documentoTipo: 'ORCAMENTO',
+          documentoId: widget.orcamentoId,
+        );
+      } catch (_) {
+        // Orçamentos antigos continuam abrindo normalmente.
+      }
+
+      final existeOrdem = await _ordemRepository.existeOrdemParaOrcamento(
+        widget.orcamentoId,
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _dados = dados;
+        _itens = itens;
+        _snapshotDesconto = snapshotDesconto;
+        _existeOrdemServico = existeOrdem;
+        _verificandoOrdem = false;
+      });
+    } catch (_) {
+      // Realtime é um acelerador; a tela preserva o último snapshot local.
+    } finally {
+      _recarregandoPorRealtime = false;
+    }
   }
 
   Future<void> _carregar() async {
