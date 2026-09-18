@@ -18,6 +18,7 @@ import 'financeiro_cloud_v2_service.dart';
 import 'financeiro_cloud_v3_service.dart';
 import 'precificacao_cloud_service.dart';
 import 'precificacao_cloud_v2_service.dart';
+import 'operacional_cloud_v2_service.dart';
 import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'os_cloud_v3_service.dart';
