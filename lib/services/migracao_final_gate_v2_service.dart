@@ -148,7 +148,7 @@ class MigracaoFinalGateV2Service {
         backupEm != null;
     final backupDepoisDoSync =
         backupRegistrado &&
-        (ultimoSyncEm == null || !backupEm!.isBefore(ultimoSyncEm));
+        (ultimoSyncEm == null || !backupEm.isBefore(ultimoSyncEm));
 
     final coberturaPendente = saude.coberturaSync.fold<int>(
       0,
