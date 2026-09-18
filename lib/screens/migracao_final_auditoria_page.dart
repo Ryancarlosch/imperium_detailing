@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/migracao_final_auditoria_service.dart';
+import '../services/migracao_final_gate_v2_service.dart';
 
 class MigracaoFinalAuditoriaPage extends StatefulWidget {
   const MigracaoFinalAuditoriaPage({super.key});
@@ -13,8 +14,8 @@ class MigracaoFinalAuditoriaPage extends StatefulWidget {
 
 class _MigracaoFinalAuditoriaPageState
     extends State<MigracaoFinalAuditoriaPage> {
-  final MigracaoFinalAuditoriaService _service =
-      MigracaoFinalAuditoriaService.instance;
+  final MigracaoFinalGateV2Service _service =
+      MigracaoFinalGateV2Service.instance;
   final NumberFormat _moeda = NumberFormat.currency(
     locale: 'pt_BR',
     symbol: r'R$',
@@ -23,7 +24,7 @@ class _MigracaoFinalAuditoriaPageState
 
   bool _carregando = true;
   String? _erro;
-  MigracaoFinalAuditoriaResultado? _resultado;
+  MigracaoFinalGateV2Resultado? _resultado;
 
   @override
   void initState() {
@@ -38,7 +39,7 @@ class _MigracaoFinalAuditoriaPageState
     });
 
     try {
-      final resultado = await _service.auditar();
+      final resultado = await _service.avaliar();
       if (!mounted) return;
 
       setState(() {
@@ -92,6 +93,7 @@ class _MigracaoFinalAuditoriaPageState
   @override
   Widget build(BuildContext context) {
     final resultado = _resultado;
+    final auditoria = resultado?.auditoria;
 
     return Scaffold(
       appBar: AppBar(
@@ -145,23 +147,68 @@ class _MigracaoFinalAuditoriaPageState
                   ),
                 ),
               )
-            else if (resultado != null) ...[
+            else if (resultado != null && auditoria != null) ...[
               Card(
                 child: ListTile(
                   leading: Icon(
-                    resultado.tudoConfere
+                    resultado.prontoParaPromover
+                        ? Icons.verified_rounded
+                        : Icons.lock_clock_outlined,
+                    size: 36,
+                  ),
+                  title: Text(
+                    resultado.prontoParaPromover
+                        ? 'Gate V2 aprovado para a próxima etapa'
+                        : '\${resultado.bloqueios} bloqueio(s) antes da promoção Cloud',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    resultado.prontoParaPromover
+                        ? 'Todos os pré-requisitos técnicos deste gate estão verdes.'
+                        : 'A promoção Cloud permanece bloqueada até todos os '
+                            'itens abaixo ficarem verdes.',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Pré-requisitos do Gate V2',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (final item in resultado.itens) ...[
+                _GateItemCard(item: item),
+                const SizedBox(height: 8),
+              ],
+              if (resultado.conflitosTotal > 0) ...[
+                _ConflitosCard(conflitos: resultado.conflitosPorModulo),
+                const SizedBox(height: 12),
+              ],
+              Text(
+                'Comparação SQLite × Cloud',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ListTile(
+                  leading: Icon(
+                    auditoria.tudoConfere
                         ? Icons.verified_rounded
                         : Icons.warning_amber_rounded,
                     size: 34,
                   ),
                   title: Text(
-                    resultado.tudoConfere
+                    auditoria.tudoConfere
                         ? 'SQLite e Cloud conferem neste gate'
-                        : '${resultado.divergencias} divergência(s) encontrada(s)',
+                        : '${auditoria.divergencias} divergência(s) encontrada(s)',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    resultado.tudoConfere
+                    auditoria.tudoConfere
                         ? 'As contagens e totais críticos do V1 estão equivalentes.'
                         : 'Não promova a nuvem como fonte principal enquanto '
                               'houver diferenças sem explicação.',
@@ -169,7 +216,7 @@ class _MigracaoFinalAuditoriaPageState
                 ),
               ),
               const SizedBox(height: 12),
-              for (final item in resultado.itens) ...[
+              for (final item in auditoria.itens) ...[
                 _ItemAuditoriaCard(
                   item: item,
                   local: _formatar(item, item.local),
@@ -178,17 +225,75 @@ class _MigracaoFinalAuditoriaPageState
                 ),
                 const SizedBox(height: 8),
               ],
-              if (resultado.geradoEmCloud != null)
+              if (auditoria.geradoEmCloud != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     'Cloud consultado em '
-                    '${_dataHora.format(resultado.geradoEmCloud!.toLocal())}.',
+                    '${_dataHora.format(auditoria.geradoEmCloud!.toLocal())}.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GateItemCard extends StatelessWidget {
+  const _GateItemCard({required this.item});
+
+  final MigracaoFinalGateItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        leading: Icon(
+          item.ok
+              ? Icons.check_circle_outline_rounded
+              : Icons.block_outlined,
+        ),
+        title: Text(
+          item.titulo,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(item.detalhe),
+        trailing: Text(item.ok ? 'OK' : 'Bloqueado'),
+      ),
+    );
+  }
+}
+
+class _ConflitosCard extends StatelessWidget {
+  const _ConflitosCard({required this.conflitos});
+
+  final Map<String, int> conflitos;
+
+  @override
+  Widget build(BuildContext context) {
+    final pendentes = conflitos.entries.where((entry) => entry.value > 0);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Conflitos que precisam ser resolvidos',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            for (final entry in pendentes)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text('\${entry.key}: \${entry.value}'),
+              ),
           ],
         ),
       ),
