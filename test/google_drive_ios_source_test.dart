@@ -25,19 +25,13 @@ void main() {
       service,
       contains('Configure o OAuth Client ID iOS e o URL scheme reverso.'),
     );
-    expect(
-      service,
-      contains('GoogleDriveOAuthConfig.serverClientId'),
-    );
+    expect(service, contains('GoogleDriveOAuthConfig.serverClientId'));
 
     expect(configurarIos, contains('google_ios_client_id'));
     expect(configurarIos, contains('GIDClientID'));
     expect(configurarIos, contains('GIDServerClientID'));
     expect(configurarIos, contains('com.googleusercontent.apps.'));
-    expect(
-      configurarIos,
-      contains('Google Sign-In iOS configurado.'),
-    );
+    expect(configurarIos, contains('Google Sign-In iOS configurado.'));
 
     expect(prepararIos, contains('GOOGLE_IOS_CLIENT_ID'));
     expect(

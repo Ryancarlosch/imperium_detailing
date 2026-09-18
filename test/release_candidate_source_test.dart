@@ -10,9 +10,7 @@ void main() {
     final prepararIos = File(
       'scripts/preparar_ios_macos.sh',
     ).readAsStringSync();
-    final validarIos = File(
-      'scripts/validar_ios_macos.sh',
-    ).readAsStringSync();
+    final validarIos = File('scripts/validar_ios_macos.sh').readAsStringSync();
     final configurarIos = File(
       'scripts/configurar_ios_imperium.py',
     ).readAsStringSync();
