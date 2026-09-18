@@ -159,7 +159,7 @@ class _MigracaoFinalAuditoriaPageState
                   title: Text(
                     resultado.prontoParaPromover
                         ? 'Gate V2 aprovado para a próxima etapa'
-                        : '\${resultado.bloqueios} bloqueio(s) antes da promoção Cloud',
+                        : '${resultado.bloqueios} bloqueio(s) antes da promoção Cloud',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
@@ -292,7 +292,7 @@ class _ConflitosCard extends StatelessWidget {
             for (final entry in pendentes)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text('\${entry.key}: \${entry.value}'),
+                child: Text('${entry.key}: ${entry.value}'),
               ),
           ],
         ),
