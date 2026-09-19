@@ -13,5 +13,10 @@ void main() {
     expect(source, contains('builder: (context) => pagina'));
     expect(source, isNot(contains('body: pagina')));
     expect(source, isNot(contains('appBar: AppBar(title: Text(titulo)')));
+    expect(source, contains("titulo: 'Agenda de hoje'"));
+    expect(source, contains("titulo: 'OS em aberto'"));
+    expect(source, contains('widget.onNavigate?.call(3)'));
+    expect(source, contains('widget.onNavigate?.call(4)'));
+    expect(source, contains('widget.onNavigate?.call(8)'));
   });
 }
