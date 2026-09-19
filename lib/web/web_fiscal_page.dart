@@ -132,10 +132,7 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                 const SizedBox(height: 14),
                 const Text(
                   'Itens fiscais e vínculo com estoque',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 8),
                 Expanded(
@@ -144,8 +141,8 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                     separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final item = itens[index];
-                      final estoqueId =
-                          (item['estoque_item_id'] ?? '').toString();
+                      final estoqueId = (item['estoque_item_id'] ?? '')
+                          .toString();
                       final itemId = item['id'].toString();
 
                       return Padding(
@@ -194,8 +191,9 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                                 key: ValueKey(
                                   'fiscal-' + itemId + '-' + estoqueId,
                                 ),
-                                initialValue:
-                                    estoqueId.isEmpty ? null : estoqueId,
+                                initialValue: estoqueId.isEmpty
+                                    ? null
+                                    : estoqueId,
                                 isExpanded: true,
                                 decoration: const InputDecoration(
                                   labelText: 'Produto no estoque',
@@ -249,9 +247,7 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
             OutlinedButton.icon(
               onPressed: () async {
                 try {
-                  await _service.confirmarEntradaEstoque(
-                    nota['id'].toString(),
-                  );
+                  await _service.confirmarEntradaEstoque(nota['id'].toString());
                   _snack('Entrada de estoque confirmada.');
                 } catch (e) {
                   _snack(_textoErro(e), erro: true);
@@ -363,17 +359,20 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                   decoration: const InputDecoration(
                     labelText: 'Forma de pagamento',
                   ),
-                  items: const [
-                    'Pix',
-                    'Dinheiro',
-                    'Boleto',
-                    'Débito',
-                    'Crédito',
-                    'Transferência',
-                    'Outro',
-                  ]
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
+                  items:
+                      const [
+                            'Pix',
+                            'Dinheiro',
+                            'Boleto',
+                            'Débito',
+                            'Crédito',
+                            'Transferência',
+                            'Outro',
+                          ]
+                          .map(
+                            (e) => DropdownMenuItem(value: e, child: Text(e)),
+                          )
+                          .toList(),
                   onChanged: (v) {
                     if (v != null) setLocal(() => forma = v);
                   },
@@ -451,8 +450,9 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
       ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
     }).toList();
 
-    final autorizadas =
-        dados.notas.where((e) => e['situacao_fiscal'] == 'autorizada').length;
+    final autorizadas = dados.notas
+        .where((e) => e['situacao_fiscal'] == 'autorizada')
+        .length;
     final total = dados.notas.fold<double>(
       0,
       (s, e) => s + _double(e['valor_total']),
@@ -586,8 +586,7 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                         DataColumn(label: Text('AÇÃO')),
                       ],
                       rows: notas.map((nota) {
-                        final qtd =
-                            _itensNota(nota['id'].toString()).length;
+                        final qtd = _itensNota(nota['id'].toString()).length;
                         return DataRow(
                           cells: [
                             DataCell(
@@ -659,9 +658,7 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                               (nota['emitente_nome'] ?? '').toString(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
                         subtitle: Text(
                           (nota['situacao_fiscal'] ?? '').toString() +
