@@ -61,9 +61,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
           diasReativacao: 180,
         );
     final retorno = TextEditingController(text: '${atual.diasRetorno}');
-    final reativacao = TextEditingController(
-      text: '${atual.diasReativacao}',
-    );
+    final reativacao = TextEditingController(text: '${atual.diasReativacao}');
 
     final salvar = await showDialog<bool>(
       context: context,
@@ -117,8 +115,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
     try {
       await _service.salvarConfigPosVenda(
         diasRetorno: int.tryParse(retorno.text) ?? atual.diasRetorno,
-        diasReativacao:
-            int.tryParse(reativacao.text) ?? atual.diasReativacao,
+        diasReativacao: int.tryParse(reativacao.text) ?? atual.diasReativacao,
       );
       await _carregar();
     } catch (e) {
@@ -148,21 +145,22 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                     decoration: const InputDecoration(
                       labelText: 'Canal de contato',
                     ),
-                    items: const [
-                      'WhatsApp',
-                      'Ligação',
-                      'E-mail',
-                      'Instagram',
-                      'Presencial',
-                      'Outro',
-                    ]
-                        .map(
-                          (item) => DropdownMenuItem(
-                            value: item,
-                            child: Text(item),
-                          ),
-                        )
-                        .toList(),
+                    items:
+                        const [
+                              'WhatsApp',
+                              'Ligação',
+                              'E-mail',
+                              'Instagram',
+                              'Presencial',
+                              'Outro',
+                            ]
+                            .map(
+                              (item) => DropdownMenuItem(
+                                value: item,
+                                child: Text(item),
+                              ),
+                            )
+                            .toList(),
                     onChanged: (v) {
                       if (v != null) setLocal(() => tipo = v);
                     },
@@ -212,9 +210,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                               context: context,
                               initialDate:
                                   proximoContato ??
-                                  DateTime.now().add(
-                                    const Duration(days: 7),
-                                  ),
+                                  DateTime.now().add(const Duration(days: 7)),
                               firstDate: DateTime.now(),
                               lastDate: DateTime.now().add(
                                 const Duration(days: 730),
@@ -239,10 +235,8 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
               child: const Text('Cancelar'),
             ),
             FilledButton.icon(
-              onPressed: () => Navigator.pop(
-                context,
-                descricao.text.trim().isNotEmpty,
-              ),
+              onPressed: () =>
+                  Navigator.pop(context, descricao.text.trim().isNotEmpty),
               icon: const Icon(Icons.check_rounded),
               label: const Text('Registrar contato'),
             ),
@@ -311,9 +305,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                         Expanded(
                           child: Text(
                             (item['tipo'] ?? 'Contato').toString(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ),
                         if (data != null)
@@ -391,15 +383,10 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: ImperiumWebTheme.accentStrong.withValues(
-                    alpha: 0.10,
-                  ),
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icone,
-                  color: ImperiumWebTheme.accentStrong,
-                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -522,8 +509,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1050;
-        final larguraDisponivel =
-            constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1180
             ? 4
             : constraints.maxWidth >= 720
@@ -561,9 +547,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                         Text(
                           'Retorno em ${dados.config.diasRetorno} dias · '
                           'Reativação em ${dados.config.diasReativacao} dias',
-                          style: const TextStyle(
-                            color: Color(0xFFAAB3BD),
-                          ),
+                          style: const TextStyle(color: Color(0xFFAAB3BD)),
                         ),
                       ],
                     ),
@@ -650,14 +634,8 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                       ),
                       SegmentedButton<String>(
                         segments: const [
-                          ButtonSegment(
-                            value: 'Ação',
-                            label: Text('Ação'),
-                          ),
-                          ButtonSegment(
-                            value: 'Todos',
-                            label: Text('Todos'),
-                          ),
+                          ButtonSegment(value: 'Ação', label: Text('Ação')),
+                          ButtonSegment(value: 'Todos', label: Text('Todos')),
                           ButtonSegment(
                             value: 'Hora do retorno',
                             label: Text('Retorno'),
@@ -670,10 +648,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                             value: 'Agendado',
                             label: Text('Agendados'),
                           ),
-                          ButtonSegment(
-                            value: 'Em dia',
-                            label: Text('Em dia'),
-                          ),
+                          ButtonSegment(value: 'Em dia', label: Text('Em dia')),
                         ],
                         selected: <String>{_filtro},
                         showSelectedIcon: false,
@@ -698,10 +673,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                 const Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 40,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                     child: Column(
                       children: [
                         Icon(
@@ -754,10 +726,8 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                               SizedBox(
                                 width: 240,
                                 child: Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       cliente.nome,
@@ -768,10 +738,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                                       ),
                                     ),
                                     Text(
-                                      [
-                                        cliente.telefone,
-                                        cliente.email,
-                                      ]
+                                      [cliente.telefone, cliente.email]
                                           .where((e) => e.trim().isNotEmpty)
                                           .join(' · '),
                                       maxLines: 1,
@@ -831,9 +798,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                                   child: Text(
                                     cliente.nome.trim().isEmpty
                                         ? '?'
-                                        : cliente.nome
-                                              .trim()[0]
-                                              .toUpperCase(),
+                                        : cliente.nome.trim()[0].toUpperCase(),
                                   ),
                                 ),
                                 const SizedBox(width: 11),
