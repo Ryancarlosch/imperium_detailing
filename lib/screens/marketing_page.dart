@@ -12,7 +12,7 @@ class MarketingPage extends StatefulWidget {
 
 class _MarketingPageState extends State<MarketingPage> {
   final _service = ComercialGrowthCloudService.instance;
-  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R$');
+  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: r'R$');
 
   bool _carregando = true;
   String? _erro;
@@ -157,7 +157,7 @@ class _MarketingPageState extends State<MarketingPage> {
                     ),
                     decoration: const InputDecoration(
                       labelText: 'Investimento',
-                      prefixText: 'R$ ',
+                      prefixText: r'R$ ',
                     ),
                   ),
                   const SizedBox(height: 10),
