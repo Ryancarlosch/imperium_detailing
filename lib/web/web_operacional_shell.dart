@@ -620,6 +620,7 @@ class _ClientesPage extends StatefulWidget {
 
 class _ClientesPageState extends State<_ClientesPage> {
   final busca = TextEditingController();
+  bool _mostrarArquivados = false;
 
   @override
   void dispose() {
@@ -639,31 +640,57 @@ class _ClientesPageState extends State<_ClientesPage> {
       builder: (context) => AlertDialog(
         title: Text(atual == null ? 'Novo cliente' : 'Editar cliente'),
         content: SizedBox(
-          width: 520,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nome,
-                decoration: const InputDecoration(labelText: 'Nome *'),
-              ),
-              TextField(
-                controller: telefone,
-                decoration: const InputDecoration(labelText: 'Telefone'),
-              ),
-              TextField(
-                controller: email,
-                decoration: const InputDecoration(labelText: 'E-mail'),
-              ),
-              TextField(
-                controller: endereco,
-                decoration: const InputDecoration(labelText: 'Endereço'),
-              ),
-              TextField(
-                controller: obs,
-                decoration: const InputDecoration(labelText: 'Observações'),
-              ),
-            ],
+          width: 560,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nome,
+                  autofocus: atual == null,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome *',
+                    prefixIcon: Icon(Icons.person_outline_rounded),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: telefone,
+                  decoration: const InputDecoration(
+                    labelText: 'Telefone',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'E-mail',
+                    prefixIcon: Icon(Icons.alternate_email_rounded),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: endereco,
+                  decoration: const InputDecoration(
+                    labelText: 'Endereço',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: obs,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Observações',
+                    alignLabelWithHint: true,
+                    prefixIcon: Icon(Icons.notes_rounded),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -671,10 +698,11 @@ class _ClientesPageState extends State<_ClientesPage> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
-          FilledButton(
+          FilledButton.icon(
             onPressed: () =>
                 Navigator.pop(context, nome.text.trim().isNotEmpty),
-            child: const Text('Salvar'),
+            icon: const Icon(Icons.check_rounded),
+            label: const Text('Salvar cliente'),
           ),
         ],
       ),
@@ -694,6 +722,251 @@ class _ClientesPageState extends State<_ClientesPage> {
     widget.onChanged();
   }
 
+  Future<void> _alternarArquivo(Map<String, dynamic> cliente) async {
+    final ativo = cliente['ativo'] != false;
+    await widget.service.arquivarCliente(cliente['id'].toString(), ativo);
+    widget.onChanged();
+  }
+
+  Widget _acoesCliente(Map<String, dynamic> cliente) {
+    final ativo = cliente['ativo'] != false;
+    return Wrap(
+      spacing: 2,
+      children: [
+        IconButton(
+          tooltip: 'Editar cliente',
+          onPressed: () => _editar(cliente),
+          icon: const Icon(Icons.edit_outlined),
+        ),
+        IconButton(
+          tooltip: ativo ? 'Arquivar cliente' : 'Reativar cliente',
+          onPressed: () => _alternarArquivo(cliente),
+          icon: Icon(
+            ativo ? Icons.archive_outlined : Icons.unarchive_outlined,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _resumoCard({
+    required double width,
+    required String titulo,
+    required String valor,
+    required String detalhe,
+    required IconData icon,
+    bool destaque = false,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: destaque
+                      ? ImperiumWebTheme.accentStrong.withValues(alpha: 0.13)
+                      : ImperiumWebTheme.surfaceRaised,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: ImperiumWebTheme.border),
+                ),
+                child: Icon(
+                  icon,
+                  color: destaque
+                      ? ImperiumWebTheme.accentStrong
+                      : const Color(0xFFB7C0CA),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tabelaClientes(List<Map<String, dynamic>> itens) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowHeight: 52,
+          dataRowMinHeight: 58,
+          dataRowMaxHeight: 72,
+          columns: const [
+            DataColumn(label: Text('CLIENTE')),
+            DataColumn(label: Text('TELEFONE')),
+            DataColumn(label: Text('E-MAIL')),
+            DataColumn(label: Text('STATUS')),
+            DataColumn(label: Text('AÇÕES')),
+          ],
+          rows: itens.map((cliente) {
+            final ativo = cliente['ativo'] != false;
+            final nome = (cliente['nome'] ?? '').toString().trim();
+            final telefone = (cliente['telefone'] ?? '').toString().trim();
+            final email = (cliente['email'] ?? '').toString().trim();
+
+            return DataRow(
+              cells: [
+                DataCell(
+                  SizedBox(
+                    width: 260,
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 17,
+                          backgroundColor: ImperiumWebTheme.accentStrong
+                              .withValues(alpha: 0.10),
+                          child: Text(
+                            nome.isEmpty ? '?' : nome[0].toUpperCase(),
+                            style: const TextStyle(
+                              color: ImperiumWebTheme.accentStrong,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            nome.isEmpty ? 'Cliente sem nome' : nome,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 150,
+                    child: Text(telefone.isEmpty ? '—' : telefone),
+                  ),
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 230,
+                    child: Text(
+                      email.isEmpty ? '—' : email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Chip(
+                    avatar: Icon(
+                      ativo ? Icons.check_circle_outline : Icons.archive_outlined,
+                      size: 16,
+                    ),
+                    label: Text(ativo ? 'Ativo' : 'Arquivado'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+                DataCell(_acoesCliente(cliente)),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _cardsClientes(List<Map<String, dynamic>> itens) {
+    return Column(
+      children: [
+        for (final cliente in itens) ...[
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: ImperiumWebTheme.accentStrong.withValues(
+                      alpha: 0.10,
+                    ),
+                    child: const Icon(
+                      Icons.person_outline_rounded,
+                      color: ImperiumWebTheme.accentStrong,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          (cliente['nome'] ?? 'Cliente').toString(),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          [
+                            (cliente['telefone'] ?? '').toString(),
+                            (cliente['email'] ?? '').toString(),
+                            if (cliente['ativo'] == false) 'Arquivado',
+                          ].where((e) => e.trim().isNotEmpty).join(' · '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFFAAB3BD),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _acoesCliente(cliente),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Map<String, dynamic>>>(
@@ -704,81 +977,226 @@ class _ClientesPageState extends State<_ClientesPage> {
         }
         if (snapshot.hasError) return _Erro(snapshot.error.toString());
 
+        final todos = snapshot.data!;
+        final ativos = todos.where((e) => e['ativo'] != false).length;
+        final arquivados = todos.length - ativos;
+        final comEmail = todos.where((e) {
+          return (e['email'] ?? '').toString().trim().isNotEmpty;
+        }).length;
+
         final termo = busca.text.trim().toLowerCase();
-        final itens = snapshot.data!.where((e) {
+        final itens = todos.where((e) {
+          final ativo = e['ativo'] != false;
+          if (!_mostrarArquivados && !ativo) return false;
           if (termo.isEmpty) return true;
+
           return [
             'nome',
             'telefone',
             'email',
+            'endereco',
           ].any((k) => '${e[k] ?? ''}'.toLowerCase().contains(termo));
-        }).toList();
+        }).toList()
+          ..sort(
+            (a, b) => (a['nome'] ?? '')
+                .toString()
+                .toLowerCase()
+                .compareTo((b['nome'] ?? '').toString().toLowerCase()),
+          );
 
-        return Column(
-          children: [
-            _Topo(
-              campo: TextField(
-                controller: busca,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Buscar cliente',
-                  border: OutlineInputBorder(),
-                ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final compacto = constraints.maxWidth < 760;
+            final tabela = constraints.maxWidth >= 900;
+            final conteudo = constraints.maxWidth - (compacto ? 32 : 48);
+            final colunasResumo = constraints.maxWidth >= 1080
+                ? 3
+                : constraints.maxWidth >= 640
+                ? 2
+                : 1;
+            final larguraResumo =
+                (conteudo - (12 * (colunasResumo - 1))) / colunasResumo;
+
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                compacto ? 16 : 24,
+                compacto ? 18 : 24,
+                compacto ? 16 : 24,
+                40,
               ),
-              botao: FilledButton.icon(
-                onPressed: () => _editar(null),
-                icon: const Icon(Icons.add),
-                label: const Text('Novo cliente'),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                itemCount: itens.length,
-                itemBuilder: (context, i) {
-                  final e = itens[i];
-                  final ativo = e['ativo'] != false;
-                  return Card(
-                    child: ListTile(
-                      title: Text('${e['nome'] ?? ''}'),
-                      subtitle: Text(
-                        [
-                          '${e['telefone'] ?? ''}',
-                          '${e['email'] ?? ''}',
-                          if (!ativo) 'Arquivado',
-                        ].where((x) => x.trim().isNotEmpty).join(' · '),
-                      ),
-                      trailing: Wrap(
-                        children: [
-                          IconButton(
-                            tooltip: 'Editar',
-                            onPressed: () => _editar(e),
-                            icon: const Icon(Icons.edit_outlined),
-                          ),
-                          IconButton(
-                            tooltip: ativo ? 'Arquivar' : 'Reativar',
-                            onPressed: () async {
-                              await widget.service.arquivarCliente(
-                                e['id'].toString(),
-                                ativo,
-                              );
-                              widget.onChanged();
-                            },
-                            icon: Icon(
-                              ativo
-                                  ? Icons.archive_outlined
-                                  : Icons.unarchive_outlined,
+              children: [
+                if (compacto) ...[
+                  const Text(
+                    'Clientes',
+                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Cadastros, contatos e situação da carteira.',
+                    style: TextStyle(color: Color(0xFFAAB3BD)),
+                  ),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: () => _editar(null),
+                    icon: const Icon(Icons.person_add_alt_1_rounded),
+                    label: const Text('Novo cliente'),
+                  ),
+                ] else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Clientes',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
                             ),
+                            SizedBox(height: 5),
+                            Text(
+                              'Visão geral da carteira, contatos e situação dos cadastros.',
+                              style: TextStyle(color: Color(0xFFAAB3BD)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 18),
+                      FilledButton.icon(
+                        onPressed: () => _editar(null),
+                        icon: const Icon(Icons.person_add_alt_1_rounded),
+                        label: const Text('Novo cliente'),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _resumoCard(
+                      width: larguraResumo,
+                      titulo: 'Clientes ativos',
+                      valor: '$ativos',
+                      detalhe: 'Cadastros disponíveis para operação',
+                      icon: Icons.people_outline_rounded,
+                      destaque: true,
+                    ),
+                    _resumoCard(
+                      width: larguraResumo,
+                      titulo: 'Arquivados',
+                      valor: '$arquivados',
+                      detalhe: 'Cadastros fora da operação atual',
+                      icon: Icons.archive_outlined,
+                    ),
+                    _resumoCard(
+                      width: larguraResumo,
+                      titulo: 'Com e-mail',
+                      valor: '$comEmail',
+                      detalhe: 'Clientes com contato digital cadastrado',
+                      icon: Icons.alternate_email_rounded,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: compacto ? conteudo - 28 : 430,
+                          child: TextField(
+                            controller: busca,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search_rounded),
+                              hintText:
+                                  'Buscar por nome, telefone, e-mail ou endereço',
+                              suffixIcon: busca.text.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      tooltip: 'Limpar busca',
+                                      onPressed: () {
+                                        busca.clear();
+                                        setState(() {});
+                                      },
+                                      icon: const Icon(Icons.close_rounded),
+                                    ),
+                            ),
+                          ),
+                        ),
+                        FilterChip(
+                          selected: _mostrarArquivados,
+                          onSelected: (valor) {
+                            setState(() => _mostrarArquivados = valor);
+                          },
+                          avatar: const Icon(Icons.archive_outlined, size: 17),
+                          label: const Text('Mostrar arquivados'),
+                        ),
+                        Text(
+                          '${itens.length} resultado(s)',
+                          style: const TextStyle(
+                            color: Color(0xFF89939E),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (itens.isEmpty)
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 42,
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.person_search_outlined,
+                            size: 42,
+                            color: Color(0xFF89939E),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Nenhum cliente encontrado',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            termo.isEmpty
+                                ? 'Cadastre um cliente para começar sua carteira.'
+                                : 'Tente alterar a busca ou os filtros.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Color(0xFFAAB3BD)),
                           ),
                         ],
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-          ],
+                  )
+                else if (tabela)
+                  _tabelaClientes(itens)
+                else
+                  _cardsClientes(itens),
+              ],
+            );
+          },
         );
       },
     );
