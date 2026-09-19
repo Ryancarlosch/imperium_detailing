@@ -12,6 +12,8 @@ class AppBranding {
   static const String webTitle = 'Imperium Manager Web';
   static const String wordmarkPrimary = 'IMPERIUM';
   static const String wordmarkSecondary = 'MANAGER';
+  static const String loginHeadline = 'Gestão completa para sua empresa';
+  static const String loginTagline = 'MAIS QUE GESTÃO  •  MOVEMOS O SEU FUTURO';
 
   static const Color loginBackground = Color(0xFF07090C);
   static const Color loginSurface = Color(0xFF101419);
