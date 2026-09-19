@@ -5,6 +5,7 @@ import '../domain/ordem_servico_valor.dart';
 import '../services/web_cloud_operacional_service.dart';
 import '../services/web_os_cancelamento_v5_service.dart';
 import '../services/web_os_v3_service.dart';
+import 'imperium_web_theme.dart';
 import 'web_os_arquivos_page.dart';
 
 class WebOrdensV3Page extends StatefulWidget {
@@ -244,6 +245,121 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
       );
   }
 
+  Widget _resumo({
+    required double width,
+    required String titulo,
+    required String valor,
+    required String detalhe,
+    required IconData icone,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(String status) {
+    final normalizado = status.toLowerCase();
+    final cor = normalizado.contains('cancel')
+        ? Colors.redAccent
+        : normalizado.contains('final')
+        ? Colors.greenAccent
+        : normalizado.contains('andamento')
+        ? Colors.lightBlueAccent
+        : Colors.orangeAccent;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: cor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cor.withValues(alpha: 0.40)),
+      ),
+      child: Text(
+        status.trim().isEmpty ? 'Sem status' : status,
+        style: TextStyle(
+          color: cor,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _acoesOs(Map<String, dynamic> os, bool editavel) {
+    return Wrap(
+      spacing: 2,
+      children: [
+        IconButton(
+          tooltip: 'Fotos, avarias e assinatura',
+          onPressed: () => _abrirArquivos(os),
+          icon: const Icon(Icons.photo_library_outlined),
+        ),
+        IconButton(
+          tooltip: editavel
+              ? 'Editar com proteção de concorrência'
+              : 'OS bloqueada para edição Web',
+          onPressed: editavel ? () => _editar(os) : null,
+          icon: const Icon(Icons.edit_outlined),
+        ),
+        IconButton(
+          tooltip: editavel
+              ? 'Cancelar OS com transação segura'
+              : 'Cancelamento disponível apenas para OS aberta/em andamento',
+          onPressed: editavel ? () => _cancelar(os) : null,
+          icon: const Icon(Icons.cancel_outlined),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_carregando) {
@@ -254,9 +370,23 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            _erro!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 42),
+              const SizedBox(height: 12),
+              Text(
+                _erro!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: _carregar,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Tentar novamente'),
+              ),
+            ],
           ),
         ),
       );
@@ -286,145 +416,424 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
             nomes[os['cliente_id']?.toString()],
             carros[os['veiculo_id']?.toString()],
             os['funcionario_responsavel'],
+            os['status'],
           ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
         }).toList()..sort(
           (a, b) => '${b['data_abertura']}'.compareTo('${a['data_abertura']}'),
         );
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Text(
-          'Editar OS',
-          style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Edição segura de OS abertas/em andamento. Cabeçalho e serviços '
-          'são gravados numa transação única no Postgres e protegidos por CAS.',
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Finalização usa o fluxo V4 separado. O cancelamento de OS '
-          'abertas/em andamento usa a V5 transacional com CAS e liberação '
-          'segura dos efeitos pendentes.',
-        ),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _busca,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Buscar OS, cliente, veículo ou responsável',
-                  border: OutlineInputBorder(),
-                ),
+    final abertas = _ordens.where((e) => e['status'] == 'Aberta').length;
+    final andamento =
+        _ordens.where((e) => e['status'] == 'Em andamento').length;
+    final bloqueadas = _ordens
+        .where((e) => e['status'] != 'Aberta' && e['status'] != 'Em andamento')
+        .length;
+    final valorEditavel = _ordens
+        .where((e) => e['status'] == 'Aberta' || e['status'] == 'Em andamento')
+        .fold<double>(
+          0,
+          (total, os) =>
+              total +
+              OrdemServicoValor.valorNegociado(
+                valorTotal: _double(os['valor_total']),
+                desconto: _double(os['desconto']),
+                descontoNegociacao: _double(os['desconto_negociacao']),
+                acrescimoNegociacao: _double(os['acrescimo_negociacao']),
+                jurosParcelamento: _double(os['juros_parcelamento']),
               ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 190,
-              child: DropdownButtonFormField<String>(
-                initialValue: _status,
-                decoration: const InputDecoration(
-                  labelText: 'Status',
-                  border: OutlineInputBorder(),
-                ),
-                items:
-                    const [
-                          'Todos',
-                          'Aberta',
-                          'Em andamento',
-                          'Finalizada',
-                          'Cancelada',
-                        ]
-                        .map(
-                          (item) =>
-                              DropdownMenuItem(value: item, child: Text(item)),
-                        )
-                        .toList(),
-                onChanged: (v) => setState(() => _status = v ?? 'Todos'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.tonalIcon(
-              onPressed: _carregar,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Atualizar'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ...filtradas.map((os) {
-          final negociado = OrdemServicoValor.valorNegociado(
-            valorTotal: _double(os['valor_total']),
-            desconto: _double(os['desconto']),
-            descontoNegociacao: _double(os['desconto_negociacao']),
-            acrescimoNegociacao: _double(os['acrescimo_negociacao']),
-            jurosParcelamento: _double(os['juros_parcelamento']),
-          );
+        );
 
-          final editavel =
-              os['status'] == 'Aberta' || os['status'] == 'Em andamento';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compacto = constraints.maxWidth < 760;
+        final tabela = constraints.maxWidth >= 1050;
+        final larguraDisponivel =
+            constraints.maxWidth - (compacto ? 32 : 48);
+        final colunas = constraints.maxWidth >= 1180
+            ? 4
+            : constraints.maxWidth >= 720
+            ? 2
+            : 1;
+        final larguraResumo =
+            (larguraDisponivel - (12 * (colunas - 1))) / colunas;
 
-          return Card(
-            child: ListTile(
-              leading: Icon(
-                editavel ? Icons.edit_note_outlined : Icons.lock_outline,
+        return RefreshIndicator(
+          onRefresh: _carregar,
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              compacto ? 16 : 24,
+              compacto ? 18 : 24,
+              compacto ? 16 : 24,
+              40,
+            ),
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Editar ordens de serviço',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          'Edição segura de OS abertas/em andamento com CAS, histórico e cancelamento transacional.',
+                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Atualizar',
+                    onPressed: _carregar,
+                    icon: const Icon(Icons.refresh_rounded),
+                  ),
+                ],
               ),
-              title: Text(
-                'OS ${os['numero'] ?? ''} · '
-                '${nomes[os['cliente_id']?.toString()] ?? 'Cliente'}',
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _resumo(
+                    width: larguraResumo,
+                    titulo: 'Abertas',
+                    valor: '$abertas',
+                    detalhe: 'Disponíveis para edição',
+                    icone: Icons.edit_note_outlined,
+                  ),
+                  _resumo(
+                    width: larguraResumo,
+                    titulo: 'Em andamento',
+                    valor: '$andamento',
+                    detalhe: 'Em execução e ainda editáveis',
+                    icone: Icons.car_repair_outlined,
+                  ),
+                  _resumo(
+                    width: larguraResumo,
+                    titulo: 'Valor editável',
+                    valor: _moeda.format(valorEditavel),
+                    detalhe: 'Total negociado das OS editáveis',
+                    icone: Icons.payments_outlined,
+                  ),
+                  _resumo(
+                    width: larguraResumo,
+                    titulo: 'Bloqueadas',
+                    valor: '$bloqueadas',
+                    detalhe: 'Finalizadas/canceladas protegidas',
+                    icone: Icons.lock_outline_rounded,
+                  ),
+                ],
               ),
-              subtitle: Text(
-                [
-                  (os['status'] ?? '').toString(),
-                  carros[os['veiculo_id']?.toString()] ?? '',
-                  (os['funcionario_responsavel'] ?? '').toString(),
-                  (os['data_abertura'] ?? '').toString(),
-                ].where((e) => e.trim().isNotEmpty).join(' · '),
-              ),
-              trailing: SizedBox(
-                width: 310,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      _moeda.format(negociado),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'Fotos, avarias e assinatura',
-                      onPressed: () => _abrirArquivos(os),
-                      icon: const Icon(Icons.photo_library_outlined),
-                    ),
-                    IconButton(
-                      tooltip: editavel
-                          ? 'Editar com CAS'
-                          : 'OS bloqueada para edição Web',
-                      onPressed: editavel ? () => _editar(os) : null,
-                      icon: const Icon(Icons.edit_outlined),
-                    ),
-                    IconButton(
-                      tooltip: editavel
-                          ? 'Cancelar OS com transação segura'
-                          : 'Cancelamento disponível só para OS Aberta/Em andamento',
-                      onPressed: editavel ? () => _cancelar(os) : null,
-                      icon: const Icon(Icons.cancel_outlined),
-                    ),
-                  ],
+              const SizedBox(height: 22),
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: compacto ? larguraDisponivel - 28 : 430,
+                        child: TextField(
+                          controller: _busca,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            hintText:
+                                'Buscar OS, cliente, veículo ou responsável',
+                            suffixIcon: _busca.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Limpar busca',
+                                    onPressed: () {
+                                      _busca.clear();
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(Icons.close_rounded),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 190,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _status,
+                          decoration: const InputDecoration(
+                            labelText: 'Status',
+                          ),
+                          items: const [
+                            'Todos',
+                            'Aberta',
+                            'Em andamento',
+                            'Finalizada',
+                            'Cancelada',
+                          ]
+                              .map(
+                                (item) => DropdownMenuItem(
+                                  value: item,
+                                  child: Text(item),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _status = v ?? 'Todos'),
+                        ),
+                      ),
+                      Text(
+                        '${filtradas.length} resultado(s)',
+                        style: const TextStyle(
+                          color: Color(0xFF89939E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        }),
-      ],
+              const SizedBox(height: 14),
+              if (filtradas.isEmpty)
+                const Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 40,
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.edit_note_outlined,
+                          size: 42,
+                          color: Color(0xFF89939E),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Nenhuma OS encontrada',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (tabela)
+                Card(
+                  margin: EdgeInsets.zero,
+                  clipBehavior: Clip.antiAlias,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowHeight: 52,
+                      dataRowMinHeight: 62,
+                      dataRowMaxHeight: 80,
+                      columns: const [
+                        DataColumn(label: Text('OS / CLIENTE')),
+                        DataColumn(label: Text('VEÍCULO')),
+                        DataColumn(label: Text('STATUS')),
+                        DataColumn(label: Text('RESPONSÁVEL')),
+                        DataColumn(label: Text('ABERTURA')),
+                        DataColumn(label: Text('VALOR')),
+                        DataColumn(label: Text('AÇÕES')),
+                      ],
+                      rows: filtradas.map((os) {
+                        final negociado = OrdemServicoValor.valorNegociado(
+                          valorTotal: _double(os['valor_total']),
+                          desconto: _double(os['desconto']),
+                          descontoNegociacao:
+                              _double(os['desconto_negociacao']),
+                          acrescimoNegociacao:
+                              _double(os['acrescimo_negociacao']),
+                          jurosParcelamento:
+                              _double(os['juros_parcelamento']),
+                        );
+                        final editavel =
+                            os['status'] == 'Aberta' ||
+                            os['status'] == 'Em andamento';
+
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              SizedBox(
+                                width: 250,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'OS ${os['numero'] ?? ''}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    Text(
+                                      nomes[os['cliente_id']?.toString()] ??
+                                          'Cliente',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFFAAB3BD),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              SizedBox(
+                                width: 220,
+                                child: Text(
+                                  carros[os['veiculo_id']?.toString()] ?? '—',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              _statusChip(
+                                (os['status'] ?? 'Sem status').toString(),
+                              ),
+                            ),
+                            DataCell(
+                              SizedBox(
+                                width: 170,
+                                child: Text(
+                                  (os['funcionario_responsavel'] ?? '—')
+                                      .toString(),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                (os['data_abertura'] ?? '—').toString(),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                _moeda.format(negociado),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            DataCell(_acoesOs(os, editavel)),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                )
+              else
+                ...filtradas.map((os) {
+                  final negociado = OrdemServicoValor.valorNegociado(
+                    valorTotal: _double(os['valor_total']),
+                    desconto: _double(os['desconto']),
+                    descontoNegociacao:
+                        _double(os['desconto_negociacao']),
+                    acrescimoNegociacao:
+                        _double(os['acrescimo_negociacao']),
+                    jurosParcelamento:
+                        _double(os['juros_parcelamento']),
+                  );
+                  final editavel =
+                      os['status'] == 'Aberta' ||
+                      os['status'] == 'Em andamento';
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 13, 8, 13),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              child: Icon(
+                                editavel
+                                    ? Icons.edit_note_outlined
+                                    : Icons.lock_outline,
+                              ),
+                            ),
+                            const SizedBox(width: 11),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'OS ${os['numero'] ?? ''} · '
+                                    '${nomes[os['cliente_id']?.toString()] ?? 'Cliente'}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    [
+                                      carros[os['veiculo_id']?.toString()] ??
+                                          '',
+                                      (os['funcionario_responsavel'] ?? '')
+                                          .toString(),
+                                      (os['data_abertura'] ?? '').toString(),
+                                    ]
+                                        .where((e) => e.trim().isNotEmpty)
+                                        .join(' · '),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(0xFFAAB3BD),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 7),
+                                  Row(
+                                    children: [
+                                      _statusChip(
+                                        (os['status'] ?? 'Sem status')
+                                            .toString(),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _moeda.format(negociado),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _acoesOs(os, editavel),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+            ],
+          ),
+        );
+      },
     );
   }
 }
+
 
 class _WebOsEditDialog extends StatefulWidget {
   const _WebOsEditDialog({required this.original});
