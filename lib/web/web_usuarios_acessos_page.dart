@@ -6,16 +6,12 @@ import '../services/web_cloud_ponto_service.dart';
 import 'imperium_web_theme.dart';
 
 class WebUsuariosAcessosPage extends StatefulWidget {
-  const WebUsuariosAcessosPage({
-    required this.empresaId,
-    super.key,
-  });
+  const WebUsuariosAcessosPage({required this.empresaId, super.key});
 
   final String empresaId;
 
   @override
-  State<WebUsuariosAcessosPage> createState() =>
-      _WebUsuariosAcessosPageState();
+  State<WebUsuariosAcessosPage> createState() => _WebUsuariosAcessosPageState();
 }
 
 class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
@@ -108,10 +104,9 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
 
   int _quantidadePermissoes(Map<String, dynamic>? acesso) {
     if (acesso == null) return 0;
-    return _permissoes(acesso['permissoes'])
-        .values
-        .where((permitido) => permitido)
-        .length;
+    return _permissoes(
+      acesso['permissoes'],
+    ).values.where((permitido) => permitido).length;
   }
 
   Future<void> _configurar(
@@ -138,9 +133,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setLocal) {
           return AlertDialog(
-            title: Text(
-              atual == null ? 'Configurar acesso' : 'Editar acesso',
-            ),
+            title: Text(atual == null ? 'Configurar acesso' : 'Editar acesso'),
             content: SizedBox(
               width: 680,
               child: SingleChildScrollView(
@@ -192,10 +185,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                     const SizedBox(height: 4),
                     const Text(
                       'Libere apenas os módulos necessários para este funcionário.',
-                      style: TextStyle(
-                        color: Color(0xFF89939E),
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
                     ),
                     const SizedBox(height: 8),
                     ..._modulos.map((modulo) {
@@ -344,9 +334,9 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
         content: Text(
           dispositivos <= 0
               ? 'Não há dispositivo ativo registrado para $nome. '
-                  'Mesmo assim, você pode revogar vínculos existentes.'
+                    'Mesmo assim, você pode revogar vínculos existentes.'
               : '$nome possui $dispositivos dispositivo(s) ativo(s). '
-                  'Eles precisarão refazer o vínculo de acesso.',
+                    'Eles precisarão refazer o vínculo de acesso.',
         ),
         actions: [
           TextButton(
@@ -471,8 +461,10 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
     }
 
     final ativo = acesso['ativo'] == true;
-    final vinculado =
-        (acesso['auth_user_id'] ?? '').toString().trim().isNotEmpty;
+    final vinculado = (acesso['auth_user_id'] ?? '')
+        .toString()
+        .trim()
+        .isNotEmpty;
 
     return Chip(
       avatar: Icon(
@@ -566,9 +558,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
         .length;
     final ativos = _acessos.where((a) => a['ativo'] == true).length;
     final vinculados = _acessos
-        .where(
-          (a) => (a['auth_user_id'] ?? '').toString().trim().isNotEmpty,
-        )
+        .where((a) => (a['auth_user_id'] ?? '').toString().trim().isNotEmpty)
         .length;
     final dispositivos = _acessos.fold<int>(
       0,
@@ -579,8 +569,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1050;
-        final larguraDisponivel =
-            constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1180
             ? 4
             : constraints.maxWidth >= 720
@@ -730,20 +719,21 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                           decoration: const InputDecoration(
                             labelText: 'Situação',
                           ),
-                          items: const [
-                            'Todos',
-                            'Configurados',
-                            'Sem acesso',
-                            'Ativos',
-                            'Inativos',
-                          ]
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
+                          items:
+                              const [
+                                    'Todos',
+                                    'Configurados',
+                                    'Sem acesso',
+                                    'Ativos',
+                                    'Inativos',
+                                  ]
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (valor) =>
                               setState(() => _filtro = valor ?? 'Todos'),
                         ),
@@ -765,10 +755,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                 const Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 40,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                     child: Column(
                       children: [
                         Icon(
@@ -932,9 +919,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                                         (acesso['email'] ?? '').toString(),
                                       if (acesso != null)
                                         '${_quantidadePermissoes(acesso)} permissões',
-                                    ]
-                                        .where((e) => e.trim().isNotEmpty)
-                                        .join(' · '),
+                                    ].where((e) => e.trim().isNotEmpty).join(' · '),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
