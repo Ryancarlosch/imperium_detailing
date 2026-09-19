@@ -1,7 +1,45 @@
 import '../domain/ordem_servico_valor.dart';
 import 'web_cloud_contas_service.dart';
+import 'comercial_growth_cloud_service.dart';
+import 'web_cloud_expansao_service.dart';
 import 'web_cloud_operacional_service.dart';
 import 'web_cloud_relatorios_service.dart';
+
+class WebDashboardComercialResumo {
+  const WebDashboardComercialResumo({
+    required this.leadsAbertos,
+    required this.leadsGanhos,
+    required this.potencial,
+    required this.posVendaAcoes,
+    required this.posVendaReativacao,
+    required this.campanhasAtivas,
+    required this.marketingLeads,
+    required this.marketingRoas,
+    required this.marketingFaturamento,
+  });
+
+  final int leadsAbertos;
+  final int leadsGanhos;
+  final double potencial;
+  final int posVendaAcoes;
+  final int posVendaReativacao;
+  final int campanhasAtivas;
+  final int marketingLeads;
+  final double marketingRoas;
+  final double marketingFaturamento;
+
+  static const vazio = WebDashboardComercialResumo(
+    leadsAbertos: 0,
+    leadsGanhos: 0,
+    potencial: 0,
+    posVendaAcoes: 0,
+    posVendaReativacao: 0,
+    campanhasAtivas: 0,
+    marketingLeads: 0,
+    marketingRoas: 0,
+    marketingFaturamento: 0,
+  );
+}
 
 class WebDashboardGerencialResumo {
   const WebDashboardGerencialResumo({
@@ -11,6 +49,7 @@ class WebDashboardGerencialResumo {
     required this.saldoConsolidado,
     required this.agendaHoje,
     required this.ordensAbertas,
+    required this.comercial,
   });
 
   final Map<String, Object?> operacional;
@@ -19,6 +58,7 @@ class WebDashboardGerencialResumo {
   final double saldoConsolidado;
   final List<Map<String, dynamic>> agendaHoje;
   final List<Map<String, dynamic>> ordensAbertas;
+  final WebDashboardComercialResumo comercial;
 }
 
 class WebCloudDashboardService {
@@ -137,6 +177,63 @@ class WebCloudDashboardService {
       (total, conta) => total + conta.saldoAtual,
     );
 
+    var comercial = WebDashboardComercialResumo.vazio;
+
+    try {
+      final leads = await WebCloudExpansaoService.instance.listarLeads();
+      final leadsAbertos = leads
+          .where((e) => e['etapa'] != 'Ganho' && e['etapa'] != 'Perdido')
+          .length;
+      final leadsGanhos = leads.where((e) => e['etapa'] == 'Ganho').length;
+      final potencial = leads
+          .where((e) => e['etapa'] != 'Perdido')
+          .fold<double>(
+            0,
+            (total, e) => total + _double(e['valor_potencial']),
+          );
+
+      var posVendaAcoes = 0;
+      var posVendaReativacao = 0;
+      var campanhasAtivas = 0;
+      var marketingLeads = 0;
+      var marketingRoas = 0.0;
+      var marketingFaturamento = 0.0;
+
+      try {
+        final painel =
+            await ComercialGrowthCloudService.instance.carregarPosVenda();
+        posVendaAcoes = painel.precisamAcao;
+        posVendaReativacao = painel.reativacao;
+      } catch (_) {
+        // Mantém o dashboard principal disponível mesmo se o pós-venda falhar.
+      }
+
+      try {
+        final marketing =
+            await ComercialGrowthCloudService.instance.carregarResumoMarketing();
+        campanhasAtivas = marketing.campanhasAtivas;
+        marketingLeads = marketing.leads;
+        marketingRoas = marketing.roas;
+        marketingFaturamento = marketing.faturamentoAtribuido;
+      } catch (_) {
+        // Mantém o dashboard principal disponível mesmo se marketing falhar.
+      }
+
+      comercial = WebDashboardComercialResumo(
+        leadsAbertos: leadsAbertos,
+        leadsGanhos: leadsGanhos,
+        potencial: potencial,
+        posVendaAcoes: posVendaAcoes,
+        posVendaReativacao: posVendaReativacao,
+        campanhasAtivas: campanhasAtivas,
+        marketingLeads: marketingLeads,
+        marketingRoas: marketingRoas,
+        marketingFaturamento: marketingFaturamento,
+      );
+    } catch (_) {
+      // CRM é complementar ao resumo operacional/financeiro.
+    }
+
     return WebDashboardGerencialResumo(
       operacional: Map<String, Object?>.from(
         resultados[0] as Map<String, Object?>,
@@ -146,6 +243,7 @@ class WebCloudDashboardService {
       saldoConsolidado: saldo,
       agendaHoje: agendaHoje,
       ordensAbertas: ordensAbertas,
+      comercial: comercial,
     );
   }
 
