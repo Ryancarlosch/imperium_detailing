@@ -55,18 +55,21 @@ class _WebClienteDetalhesPageState extends State<WebClienteDetalhesPage> {
       final veiculos = (resultados[0] as List<Map<String, dynamic>>)
           .where((e) => (e['cliente_id'] ?? '').toString() == _clienteId)
           .toList();
-      final ordens = (resultados[1] as List<Map<String, dynamic>>)
-          .where((e) => (e['cliente_id'] ?? '').toString() == _clienteId)
-          .toList()
-        ..sort((a, b) {
-          final da = _parseData(a['data_finalizacao']) ??
-              _parseData(a['data_abertura']) ??
-              DateTime(1900);
-          final db = _parseData(b['data_finalizacao']) ??
-              _parseData(b['data_abertura']) ??
-              DateTime(1900);
-          return db.compareTo(da);
-        });
+      final ordens =
+          (resultados[1] as List<Map<String, dynamic>>)
+              .where((e) => (e['cliente_id'] ?? '').toString() == _clienteId)
+              .toList()
+            ..sort((a, b) {
+              final da =
+                  _parseData(a['data_finalizacao']) ??
+                  _parseData(a['data_abertura']) ??
+                  DateTime(1900);
+              final db =
+                  _parseData(b['data_finalizacao']) ??
+                  _parseData(b['data_abertura']) ??
+                  DateTime(1900);
+              return db.compareTo(da);
+            });
       final painel = resultados[2] as GrowthPosVendaPainel;
       GrowthPosVendaCliente? posVenda;
       for (final item in painel.clientes) {
@@ -226,7 +229,7 @@ class _WebClienteDetalhesPageState extends State<WebClienteDetalhesPage> {
     final ultimo = _ordens.isEmpty
         ? null
         : _parseData(_ordens.first['data_finalizacao']) ??
-            _parseData(_ordens.first['data_abertura']);
+              _parseData(_ordens.first['data_abertura']);
 
     return Scaffold(
       appBar: AppBar(
@@ -249,289 +252,283 @@ class _WebClienteDetalhesPageState extends State<WebClienteDetalhesPage> {
       body: _carregando && _ordens.isEmpty && _veiculos.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : _erro != null && _ordens.isEmpty && _veiculos.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(_erro!, textAlign: TextAlign.center),
-                  ),
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compacto = constraints.maxWidth < 760;
-                    final width = constraints.maxWidth;
-                    final colunas = width >= 1100 ? 4 : width >= 650 ? 2 : 1;
-                    final cardWidth =
-                        (width - (compacto ? 32 : 48) - 12 * (colunas - 1)) /
-                            colunas;
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(_erro!, textAlign: TextAlign.center),
+              ),
+            )
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final compacto = constraints.maxWidth < 760;
+                final width = constraints.maxWidth;
+                final colunas = width >= 1100
+                    ? 4
+                    : width >= 650
+                    ? 2
+                    : 1;
+                final cardWidth =
+                    (width - (compacto ? 32 : 48) - 12 * (colunas - 1)) /
+                    colunas;
 
-                    return ListView(
-                      padding: EdgeInsets.fromLTRB(
-                        compacto ? 16 : 24,
-                        20,
-                        compacto ? 16 : 24,
-                        40,
-                      ),
-                      children: [
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                  radius: 28,
-                                  backgroundColor: ImperiumWebTheme.accentStrong
-                                      .withValues(alpha: 0.12),
-                                  child: Text(
-                                    nome.trim().isEmpty
-                                        ? '?'
-                                        : nome.trim()[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: ImperiumWebTheme.accentStrong,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
+                return ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    compacto ? 16 : 24,
+                    20,
+                    compacto ? 16 : 24,
+                    40,
+                  ),
+                  children: [
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: ImperiumWebTheme.accentStrong
+                                  .withValues(alpha: 0.12),
+                              child: Text(
+                                nome.trim().isEmpty
+                                    ? '?'
+                                    : nome.trim()[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: ImperiumWebTheme.accentStrong,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Wrap(
+                                    spacing: 10,
+                                    runSpacing: 8,
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        WrapCrossAlignment.center,
                                     children: [
-                                      Wrap(
-                                        spacing: 10,
-                                        runSpacing: 8,
-                                        crossAxisAlignment:
-                                            WrapCrossAlignment.center,
-                                        children: [
-                                          Text(
-                                            nome,
-                                            style: const TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.w900,
-                                            ),
-                                          ),
-                                          _statusRelacionamento(),
-                                          if (cliente['ativo'] == false)
-                                            const Chip(
-                                              label: Text('Arquivado'),
-                                              visualDensity:
-                                                  VisualDensity.compact,
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
                                       Text(
-                                        [
+                                        nome,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      _statusRelacionamento(),
+                                      if (cliente['ativo'] == false)
+                                        const Chip(
+                                          label: Text('Arquivado'),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    [
                                           (cliente['telefone'] ?? '')
                                               .toString(),
                                           (cliente['email'] ?? '').toString(),
                                           (cliente['endereco'] ?? '')
                                               .toString(),
                                         ]
-                                            .where(
-                                              (e) => e.trim().isNotEmpty,
-                                            )
-                                            .join(' · '),
-                                        style: const TextStyle(
-                                          color: Color(0xFFAAB3BD),
-                                        ),
-                                      ),
-                                      if ((cliente['observacoes'] ?? '')
-                                          .toString()
-                                          .trim()
-                                          .isNotEmpty) ...[
-                                        const SizedBox(height: 10),
-                                        Text(
-                                          (cliente['observacoes'] ?? '')
-                                              .toString(),
-                                        ),
-                                      ],
-                                    ],
+                                        .where((e) => e.trim().isNotEmpty)
+                                        .join(' · '),
+                                    style: const TextStyle(
+                                      color: Color(0xFFAAB3BD),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            SizedBox(
-                              width: cardWidth,
-                              child: _indicador(
-                                'Veículos',
-                                '${_veiculos.length}',
-                                Icons.directions_car_outlined,
-                              ),
-                            ),
-                            SizedBox(
-                              width: cardWidth,
-                              child: _indicador(
-                                'Ordens de serviço',
-                                '${_ordens.length}',
-                                Icons.receipt_long_outlined,
-                              ),
-                            ),
-                            SizedBox(
-                              width: cardWidth,
-                              child: _indicador(
-                                'Total negociado',
-                                _moeda.format(total),
-                                Icons.payments_outlined,
-                              ),
-                            ),
-                            SizedBox(
-                              width: cardWidth,
-                              child: _indicador(
-                                'Ticket médio',
-                                _moeda.format(ticket),
-                                Icons.analytics_outlined,
-                                detalhe: ultimo == null
-                                    ? 'Nenhum atendimento'
-                                    : 'Último: ${_data.format(ultimo)}',
+                                  if ((cliente['observacoes'] ?? '')
+                                      .toString()
+                                      .trim()
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      (cliente['observacoes'] ?? '').toString(),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Veículos',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        SizedBox(
+                          width: cardWidth,
+                          child: _indicador(
+                            'Veículos',
+                            '${_veiculos.length}',
+                            Icons.directions_car_outlined,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        if (_veiculos.isEmpty)
-                          const Card(
-                            margin: EdgeInsets.zero,
-                            child: Padding(
-                              padding: EdgeInsets.all(18),
-                              child: Text('Nenhum veículo vinculado.'),
-                            ),
-                          )
-                        else
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: _veiculos
-                                .map(
-                                  (v) => SizedBox(
-                                    width: compacto ? width - 32 : 340,
-                                    child: Card(
-                                      margin: EdgeInsets.zero,
-                                      child: ListTile(
-                                        leading: const CircleAvatar(
-                                          child: Icon(
-                                            Icons.directions_car_outlined,
-                                          ),
-                                        ),
-                                        title: Text(
-                                          '${v['marca'] ?? ''} ${v['modelo'] ?? ''}'
-                                              .trim(),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                        subtitle: Text(
-                                          [
+                        SizedBox(
+                          width: cardWidth,
+                          child: _indicador(
+                            'Ordens de serviço',
+                            '${_ordens.length}',
+                            Icons.receipt_long_outlined,
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _indicador(
+                            'Total negociado',
+                            _moeda.format(total),
+                            Icons.payments_outlined,
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _indicador(
+                            'Ticket médio',
+                            _moeda.format(ticket),
+                            Icons.analytics_outlined,
+                            detalhe: ultimo == null
+                                ? 'Nenhum atendimento'
+                                : 'Último: ${_data.format(ultimo)}',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Veículos',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_veiculos.isEmpty)
+                      const Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: EdgeInsets.all(18),
+                          child: Text('Nenhum veículo vinculado.'),
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: _veiculos
+                            .map(
+                              (v) => SizedBox(
+                                width: compacto ? width - 32 : 340,
+                                child: Card(
+                                  margin: EdgeInsets.zero,
+                                  child: ListTile(
+                                    leading: const CircleAvatar(
+                                      child: Icon(
+                                        Icons.directions_car_outlined,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      '${v['marca'] ?? ''} ${v['modelo'] ?? ''}'
+                                          .trim(),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      [
                                             (v['placa'] ?? '').toString(),
                                             (v['ano'] ?? '').toString(),
                                             (v['cor'] ?? '').toString(),
                                           ]
-                                              .where(
-                                                (e) => e.trim().isNotEmpty,
-                                              )
-                                              .join(' · '),
-                                        ),
-                                      ),
+                                          .where((e) => e.trim().isNotEmpty)
+                                          .join(' · '),
                                     ),
                                   ),
-                                )
-                                .toList(),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Histórico de ordens de serviço',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                        const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                'Histórico de ordens de serviço',
-                                style: TextStyle(
-                                  fontSize: 20,
+                        ),
+                        Text(
+                          '${_ordens.length} registro(s)',
+                          style: const TextStyle(
+                            color: Color(0xFF89939E),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (_ordens.isEmpty)
+                      const Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: EdgeInsets.all(18),
+                          child: Text('Nenhuma ordem de serviço encontrada.'),
+                        ),
+                      )
+                    else
+                      ..._ordens.map((ordem) {
+                        final data =
+                            _parseData(ordem['data_finalizacao']) ??
+                            _parseData(ordem['data_abertura']);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Card(
+                            margin: EdgeInsets.zero,
+                            child: ListTile(
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.receipt_long_outlined),
+                              ),
+                              title: Text(
+                                'OS ${ordem['numero'] ?? ''} · '
+                                '${_moeda.format(_valorOrdem(ordem))}',
+                                style: const TextStyle(
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
-                            ),
-                            Text(
-                              '${_ordens.length} registro(s)',
-                              style: const TextStyle(
-                                color: Color(0xFF89939E),
-                                fontSize: 12,
+                              subtitle: Text(
+                                [
+                                  (ordem['status'] ?? '').toString(),
+                                  (ordem['status_pagamento'] ?? '').toString(),
+                                  if (data != null) _data.format(data),
+                                  (ordem['funcionario_responsavel'] ?? '')
+                                      .toString(),
+                                ].where((e) => e.trim().isNotEmpty).join(' · '),
+                              ),
+                              trailing: IconButton(
+                                tooltip: 'Baixar/compartilhar PDF',
+                                onPressed: _acao
+                                    ? null
+                                    : () => _baixarPdf(ordem),
+                                icon: const Icon(Icons.picture_as_pdf_outlined),
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        if (_ordens.isEmpty)
-                          const Card(
-                            margin: EdgeInsets.zero,
-                            child: Padding(
-                              padding: EdgeInsets.all(18),
-                              child: Text('Nenhuma ordem de serviço encontrada.'),
-                            ),
-                          )
-                        else
-                          ..._ordens.map((ordem) {
-                            final data = _parseData(ordem['data_finalizacao']) ??
-                                _parseData(ordem['data_abertura']);
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Card(
-                                margin: EdgeInsets.zero,
-                                child: ListTile(
-                                  leading: const CircleAvatar(
-                                    child: Icon(Icons.receipt_long_outlined),
-                                  ),
-                                  title: Text(
-                                    'OS ${ordem['numero'] ?? ''} · '
-                                    '${_moeda.format(_valorOrdem(ordem))}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    [
-                                      (ordem['status'] ?? '').toString(),
-                                      (ordem['status_pagamento'] ?? '')
-                                          .toString(),
-                                      if (data != null) _data.format(data),
-                                      (ordem['funcionario_responsavel'] ?? '')
-                                          .toString(),
-                                    ]
-                                        .where((e) => e.trim().isNotEmpty)
-                                        .join(' · '),
-                                  ),
-                                  trailing: IconButton(
-                                    tooltip: 'Baixar/compartilhar PDF',
-                                    onPressed:
-                                        _acao ? null : () => _baixarPdf(ordem),
-                                    icon: const Icon(
-                                      Icons.picture_as_pdf_outlined,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                      ],
-                    );
-                  },
-                ),
+                          ),
+                        );
+                      }),
+                  ],
+                );
+              },
+            ),
     );
   }
 
