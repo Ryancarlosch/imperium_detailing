@@ -435,6 +435,17 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     );
   }
 
+  Future<void> _abrirBuscaGlobal() async {
+    final destino = await showDialog<int>(
+      context: context,
+      builder: (context) => _BuscaGlobalDialog(service: _service),
+    );
+
+    if (destino != null && mounted) {
+      _selecionar(destino, fecharMenu: false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final largura = MediaQuery.sizeOf(context).width;
@@ -496,6 +507,11 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.dashboard_outlined),
             ),
+          IconButton(
+            tooltip: 'Busca global',
+            onPressed: _abrirBuscaGlobal,
+            icon: const Icon(Icons.search_rounded),
+          ),
           IconButton(
             tooltip: 'Atualizar página',
             onPressed: _atualizar,
@@ -621,6 +637,427 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
           : _pagina(),
     );
   }
+}
+
+class _BuscaGlobalDialog extends StatefulWidget {
+  const _BuscaGlobalDialog({required this.service});
+
+  final WebCloudOperacionalService service;
+
+  @override
+  State<_BuscaGlobalDialog> createState() => _BuscaGlobalDialogState();
+}
+
+class _BuscaGlobalDialogState extends State<_BuscaGlobalDialog> {
+  final _busca = TextEditingController();
+  late Future<List<_BuscaGlobalResultado>> _future;
+
+  static const _modulos = <_BuscaGlobalResultado>[
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Dashboard',
+      subtitulo: 'Visão geral da empresa',
+      indice: 0,
+      icone: Icons.dashboard_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Clientes',
+      subtitulo: 'Cadastro e histórico de clientes',
+      indice: 1,
+      icone: Icons.people_outline,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Veículos',
+      subtitulo: 'Veículos cadastrados',
+      indice: 2,
+      icone: Icons.directions_car_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Agenda',
+      subtitulo: 'Agendamentos e compromissos',
+      indice: 3,
+      icone: Icons.calendar_month_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Ordens de serviço',
+      subtitulo: 'Execução e gestão das OS',
+      indice: 4,
+      icone: Icons.receipt_long_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Nova OS',
+      subtitulo: 'Abrir uma nova ordem de serviço',
+      indice: 5,
+      icone: Icons.add_business_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Estoque',
+      subtitulo: 'Produtos e movimentações',
+      indice: 8,
+      icone: Icons.inventory_2_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Fluxo de caixa',
+      subtitulo: 'Entradas, saídas e lançamentos',
+      indice: 9,
+      icone: Icons.swap_vert_circle_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'DRE',
+      subtitulo: 'Resultado gerencial',
+      indice: 10,
+      icone: Icons.query_stats_rounded,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Contas bancárias',
+      subtitulo: 'Saldos e contas financeiras',
+      indice: 11,
+      icone: Icons.account_balance_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Relatórios',
+      subtitulo: 'Indicadores e análises',
+      indice: 12,
+      icone: Icons.analytics_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'CRM',
+      subtitulo: 'Leads e pipeline comercial',
+      indice: 13,
+      icone: Icons.hub_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Orçamentos',
+      subtitulo: 'Propostas comerciais',
+      indice: 14,
+      icone: Icons.request_quote_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Precificação',
+      subtitulo: 'Custos, margens e preços sugeridos',
+      indice: 15,
+      icone: Icons.price_change_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Ponto e funcionários',
+      subtitulo: 'Equipe, jornada e registros',
+      indice: 16,
+      icone: Icons.badge_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Pós-venda',
+      subtitulo: 'Retorno e reativação de clientes',
+      indice: 18,
+      icone: Icons.replay_circle_filled_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Marketing',
+      subtitulo: 'Campanhas, conteúdo e ROAS',
+      indice: 19,
+      icone: Icons.campaign_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Usuários e acessos',
+      subtitulo: 'Permissões e dispositivos',
+      indice: 20,
+      icone: Icons.manage_accounts_outlined,
+    ),
+    _BuscaGlobalResultado(
+      tipo: 'Módulo',
+      titulo: 'Central Cloud',
+      subtitulo: 'Diagnóstico dos módulos em nuvem',
+      indice: 17,
+      icone: Icons.cloud_outlined,
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _carregar();
+  }
+
+  @override
+  void dispose() {
+    _busca.dispose();
+    super.dispose();
+  }
+
+  Future<List<_BuscaGlobalResultado>> _carregar() async {
+    final dados = await Future.wait([
+      widget.service.listarClientes(),
+      widget.service.listarVeiculos(),
+      widget.service.listarAgendamentos(),
+      widget.service.listarOrdens(),
+    ]);
+
+    final clientes = dados[0];
+    final veiculos = dados[1];
+    final agenda = dados[2];
+    final ordens = dados[3];
+
+    final nomes = <String, String>{
+      for (final item in clientes)
+        (item['id'] ?? '').toString(): (item['nome'] ?? 'Cliente').toString(),
+    };
+    final carros = <String, String>{
+      for (final item in veiculos)
+        (item['id'] ?? '').toString(): [
+          (item['marca'] ?? '').toString(),
+          (item['modelo'] ?? '').toString(),
+          (item['placa'] ?? '').toString(),
+        ].where((e) => e.trim().isNotEmpty).join(' '),
+    };
+
+    return <_BuscaGlobalResultado>[
+      ..._modulos,
+      ...clientes.map(
+        (item) => _BuscaGlobalResultado(
+          tipo: 'Cliente',
+          titulo: (item['nome'] ?? 'Cliente').toString(),
+          subtitulo: [
+            (item['telefone'] ?? '').toString(),
+            (item['email'] ?? '').toString(),
+          ].where((e) => e.trim().isNotEmpty).join(' · '),
+          indice: 1,
+          icone: Icons.person_outline_rounded,
+        ),
+      ),
+      ...veiculos.map(
+        (item) => _BuscaGlobalResultado(
+          tipo: 'Veículo',
+          titulo: carros[(item['id'] ?? '').toString()] ?? 'Veículo',
+          subtitulo:
+              nomes[(item['cliente_id'] ?? '').toString()] ?? 'Sem cliente',
+          indice: 2,
+          icone: Icons.directions_car_outlined,
+        ),
+      ),
+      ...agenda.map(
+        (item) => _BuscaGlobalResultado(
+          tipo: 'Agenda',
+          titulo:
+              nomes[(item['cliente_id'] ?? '').toString()] ?? 'Agendamento',
+          subtitulo: [
+            (item['data'] ?? '').toString(),
+            (item['hora'] ?? '').toString(),
+            (item['servico'] ?? '').toString(),
+            carros[(item['veiculo_id'] ?? '').toString()] ?? '',
+          ].where((e) => e.trim().isNotEmpty).join(' · '),
+          indice: 3,
+          icone: Icons.calendar_month_outlined,
+        ),
+      ),
+      ...ordens.map(
+        (item) => _BuscaGlobalResultado(
+          tipo: 'OS',
+          titulo: 'OS ${item['numero'] ?? ''} · '
+              '${nomes[(item['cliente_id'] ?? '').toString()] ?? 'Cliente'}',
+          subtitulo: [
+            carros[(item['veiculo_id'] ?? '').toString()] ?? '',
+            (item['status'] ?? '').toString(),
+            (item['funcionario_responsavel'] ?? '').toString(),
+          ].where((e) => e.trim().isNotEmpty).join(' · '),
+          indice: 4,
+          icone: Icons.receipt_long_outlined,
+        ),
+      ),
+    ];
+  }
+
+  List<_BuscaGlobalResultado> _filtrar(
+    List<_BuscaGlobalResultado> resultados,
+  ) {
+    final termo = _busca.text.trim().toLowerCase();
+    if (termo.isEmpty) {
+      return resultados.where((item) => item.tipo == 'Módulo').toList();
+    }
+
+    return resultados.where((item) {
+      return [
+        item.tipo,
+        item.titulo,
+        item.subtitulo,
+      ].any((texto) => texto.toLowerCase().contains(termo));
+    }).take(30).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final largura = MediaQuery.sizeOf(context).width;
+    final compacto = largura < 700;
+
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: compacto ? 12 : 40,
+        vertical: 28,
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760, maxHeight: 680),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Busca global',
+                      style: TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Fechar',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _busca,
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  hintText: 'Buscar cliente, placa, OS, agenda ou módulo',
+                  suffixIcon: _busca.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Limpar',
+                          onPressed: () {
+                            _busca.clear();
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: FutureBuilder<List<_BuscaGlobalResultado>>(
+                  future: _future,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData && !snapshot.hasError) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Não foi possível carregar a busca.\n'
+                          '${snapshot.error}',
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
+
+                    final itens = _filtrar(snapshot.data!);
+                    if (itens.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'Nenhum resultado encontrado.',
+                          style: TextStyle(color: Color(0xFF89939E)),
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      itemCount: itens.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final item = itens[index];
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: ImperiumWebTheme.accentStrong
+                                .withValues(alpha: 0.10),
+                            child: Icon(
+                              item.icone,
+                              color: ImperiumWebTheme.accentStrong,
+                              size: 19,
+                            ),
+                          ),
+                          title: Text(
+                            item.titulo,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          subtitle: Text(
+                            [
+                              item.tipo,
+                              item.subtitulo,
+                            ].where((e) => e.trim().isNotEmpty).join(' · '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                          ),
+                          onTap: () => Navigator.pop(context, item.indice),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Os resultados levam ao módulo correspondente; as buscas internas continuam disponíveis para filtros detalhados.',
+                  style: TextStyle(
+                    color: Color(0xFF89939E),
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BuscaGlobalResultado {
+  const _BuscaGlobalResultado({
+    required this.tipo,
+    required this.titulo,
+    required this.subtitulo,
+    required this.indice,
+    required this.icone,
+  });
+
+  final String tipo;
+  final String titulo;
+  final String subtitulo;
+  final int indice;
+  final IconData icone;
 }
 
 class _ClientesPage extends StatefulWidget {
