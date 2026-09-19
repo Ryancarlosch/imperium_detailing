@@ -25,7 +25,9 @@ import 'importar_nota_fiscal_page.dart';
 import 'movimentacoes_financeiras_page.dart';
 import 'financeiro_page.dart';
 import 'fotos_page.dart';
+import 'marketing_page.dart';
 import 'orcamentos_page.dart';
+import 'pos_venda_page.dart';
 import 'ordens_servico_page.dart';
 import 'funcionarios_central_page.dart';
 import 'pendencias_operacionais_page.dart';
@@ -332,6 +334,16 @@ class _DashboardPageState extends State<DashboardPage> {
     await _abrirPagina(const CrmPage());
   }
 
+  Future<void> _abrirPosVenda() async {
+    if (!_validarAcesso('crm')) return;
+    await _abrirPagina(const PosVendaPage());
+  }
+
+  Future<void> _abrirMarketing() async {
+    if (!_validarAcesso('crm')) return;
+    await _abrirPagina(const MarketingPage());
+  }
+
   Future<void> _abrirCentralGerencial() async {
     if (!_validarAcesso('financeiro')) return;
     await _abrirPagina(const CentralGerencialPage());
@@ -510,6 +522,8 @@ class _DashboardPageState extends State<DashboardPage> {
         onAgenda: () => _menuAbrir(_abrirAgenda),
         onClientes: () => _menuAbrir(_abrirClientes),
         onCrm: () => _menuAbrir(_abrirCrm),
+        onPosVenda: () => _menuAbrir(_abrirPosVenda),
+        onMarketing: () => _menuAbrir(_abrirMarketing),
         onCentralGerencial: () => _menuAbrir(_abrirCentralGerencial),
         onVeiculos: () => _menuAbrir(_abrirVeiculos),
         onOrdens: () => _menuAbrir(() => _abrirOrdens('Todos')),
@@ -714,6 +728,8 @@ class _DashboardMenuV2 extends StatelessWidget {
     required this.onAgenda,
     required this.onClientes,
     required this.onCrm,
+    required this.onPosVenda,
+    required this.onMarketing,
     required this.onCentralGerencial,
     required this.onVeiculos,
     required this.onOrdens,
@@ -738,6 +754,7 @@ class _DashboardMenuV2 extends StatelessWidget {
   final bool podePonto, podeConfiguracoes;
 
   final VoidCallback onInicio, onAgenda, onClientes, onCrm, onVeiculos;
+  final VoidCallback onPosVenda, onMarketing;
   final VoidCallback onCentralGerencial;
   final VoidCallback onOrdens, onOrcamentos, onEstoque, onServicos;
   final VoidCallback onFotos, onPonto, onReceita, onFluxoCaixa;
@@ -795,7 +812,6 @@ class _DashboardMenuV2 extends StatelessWidget {
               _item(Icons.people_outline, 'Clientes', onClientes),
               _item(Icons.directions_car_outlined, 'Veículos', onVeiculos),
             ],
-            if (podeCrm) _item(Icons.handshake_outlined, 'CRM', onCrm),
             if (podeOrdens) ...[
               _item(Icons.car_repair_outlined, 'Ordens de serviço', onOrdens),
               _item(Icons.photo_library_outlined, 'Fotos', onFotos),
@@ -805,6 +821,12 @@ class _DashboardMenuV2 extends StatelessWidget {
               'Importar Nota Fiscal',
               onImportarNotaFiscal,
             ),
+            if (podeCrm || podeOrcamentos) _secao('Comercial'),
+            if (podeCrm) ...[
+              _item(Icons.handshake_outlined, 'CRM', onCrm),
+              _item(Icons.replay_circle_filled_outlined, 'Pós-venda', onPosVenda),
+              _item(Icons.campaign_outlined, 'Marketing', onMarketing),
+            ],
             if (podeOrcamentos)
               _item(Icons.request_quote_outlined, 'Orçamentos', onOrcamentos),
             if (podeEstoque)
