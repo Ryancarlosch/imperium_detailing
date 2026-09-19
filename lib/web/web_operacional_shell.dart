@@ -150,10 +150,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       7 => WebOsFinalizacaoV4Page(key: ValueKey('finalizar-os-$_revisao')),
       8 => WebEstoqueGestaoPage(key: ValueKey('estoque-$_revisao')),
       9 => WebFinanceiroLancamentosPage(key: ValueKey('financeiro-$_revisao')),
-      10 => WebDrePage(
-        key: ValueKey('dre-$_revisao'),
-        embedded: true,
-      ),
+      10 => WebDrePage(key: ValueKey('dre-$_revisao'), embedded: true),
       11 => WebContasFinanceirasPage(
         key: ValueKey('contas-$_revisao'),
         embedded: true,

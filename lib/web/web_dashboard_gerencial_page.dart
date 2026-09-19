@@ -492,10 +492,7 @@ class _AgendaHojePainel extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'Agenda de hoje',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
                   ),
                 ),
                 TextButton(
@@ -527,9 +524,7 @@ class _AgendaHojePainel extends StatelessWidget {
                         width: 54,
                         child: Text(
                           (item['hora'] ?? '—').toString(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -565,9 +560,7 @@ class _AgendaHojePainel extends StatelessWidget {
                         const SizedBox(width: 10),
                         Text(
                           valor(valorPrevisto),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ],
                     ],
@@ -606,10 +599,7 @@ class _OrdensAbertasPainel extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'OS em aberto',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
                   ),
                 ),
                 TextButton(
@@ -684,9 +674,7 @@ class _OrdensAbertasPainel extends StatelessWidget {
                         const SizedBox(width: 10),
                         Text(
                           valor(negociado),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ],
                     ],

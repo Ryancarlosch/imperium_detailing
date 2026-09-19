@@ -24,8 +24,7 @@ class WebDashboardGerencialResumo {
 class WebCloudDashboardService {
   WebCloudDashboardService._();
 
-  static final WebCloudDashboardService instance =
-      WebCloudDashboardService._();
+  static final WebCloudDashboardService instance = WebCloudDashboardService._();
 
   Future<WebDashboardGerencialResumo> carregar() async {
     final agora = DateTime.now();
@@ -53,78 +52,85 @@ class WebCloudDashboardService {
 
     final nomes = <String, String>{
       for (final cliente in clientes)
-        (cliente['id'] ?? '').toString():
-            (cliente['nome'] ?? 'Cliente').toString(),
+        (cliente['id'] ?? '').toString(): (cliente['nome'] ?? 'Cliente')
+            .toString(),
     };
     final carros = <String, String>{
       for (final veiculo in veiculos)
-        (veiculo['id'] ?? '').toString():
-            [
-              (veiculo['marca'] ?? '').toString(),
-              (veiculo['modelo'] ?? '').toString(),
-              (veiculo['placa'] ?? '').toString(),
-            ].where((e) => e.trim().isNotEmpty).join(' '),
+        (veiculo['id'] ?? '').toString(): [
+          (veiculo['marca'] ?? '').toString(),
+          (veiculo['modelo'] ?? '').toString(),
+          (veiculo['placa'] ?? '').toString(),
+        ].where((e) => e.trim().isNotEmpty).join(' '),
     };
 
     final hoje = DateTime(agora.year, agora.month, agora.day);
 
-    final agendaHoje = agenda.where((item) {
-      if (!_statusAgendaAberto(item['status'])) return false;
-      final data = _parseData(item['data']);
-      if (data == null) return false;
-      return data.year == hoje.year &&
-          data.month == hoje.month &&
-          data.day == hoje.day;
-    }).map((item) {
-      return <String, dynamic>{
-        ...item,
-        '_cliente_nome':
-            nomes[(item['cliente_id'] ?? '').toString()] ?? 'Cliente',
-        '_veiculo_nome':
-            carros[(item['veiculo_id'] ?? '').toString()] ?? '',
-      };
-    }).toList()
-      ..sort(
-        (a, b) => (a['hora'] ?? '')
-            .toString()
-            .compareTo((b['hora'] ?? '').toString()),
-      );
+    final agendaHoje =
+        agenda
+            .where((item) {
+              if (!_statusAgendaAberto(item['status'])) return false;
+              final data = _parseData(item['data']);
+              if (data == null) return false;
+              return data.year == hoje.year &&
+                  data.month == hoje.month &&
+                  data.day == hoje.day;
+            })
+            .map((item) {
+              return <String, dynamic>{
+                ...item,
+                '_cliente_nome':
+                    nomes[(item['cliente_id'] ?? '').toString()] ?? 'Cliente',
+                '_veiculo_nome':
+                    carros[(item['veiculo_id'] ?? '').toString()] ?? '',
+              };
+            })
+            .toList()
+          ..sort(
+            (a, b) => (a['hora'] ?? '').toString().compareTo(
+              (b['hora'] ?? '').toString(),
+            ),
+          );
 
-    final ordensAbertas = ordens.where((item) {
-      final status = (item['status'] ?? '').toString();
-      return status == 'Aberta' || status == 'Em andamento';
-    }).map((item) {
-      final negociado = OrdemServicoValor.valorNegociado(
-        valorTotal: _double(item['valor_total']),
-        desconto: _double(item['desconto']),
-        descontoNegociacao: _double(item['desconto_negociacao']),
-        acrescimoNegociacao: _double(item['acrescimo_negociacao']),
-        jurosParcelamento: _double(item['juros_parcelamento']),
-      );
-      final recebido = _double(item['valor_recebido']);
+    final ordensAbertas =
+        ordens
+            .where((item) {
+              final status = (item['status'] ?? '').toString();
+              return status == 'Aberta' || status == 'Em andamento';
+            })
+            .map((item) {
+              final negociado = OrdemServicoValor.valorNegociado(
+                valorTotal: _double(item['valor_total']),
+                desconto: _double(item['desconto']),
+                descontoNegociacao: _double(item['desconto_negociacao']),
+                acrescimoNegociacao: _double(item['acrescimo_negociacao']),
+                jurosParcelamento: _double(item['juros_parcelamento']),
+              );
+              final recebido = _double(item['valor_recebido']);
 
-      return <String, dynamic>{
-        ...item,
-        '_cliente_nome':
-            nomes[(item['cliente_id'] ?? '').toString()] ?? 'Cliente',
-        '_veiculo_nome':
-            carros[(item['veiculo_id'] ?? '').toString()] ?? '',
-        '_valor_negociado': negociado,
-        '_pendente': (negociado - recebido).clamp(0, double.infinity),
-      };
-    }).toList()
-      ..sort((a, b) {
-        final statusA = (a['status'] ?? '').toString();
-        final statusB = (b['status'] ?? '').toString();
-        if (statusA != statusB) {
-          if (statusA == 'Em andamento') return -1;
-          if (statusB == 'Em andamento') return 1;
-        }
+              return <String, dynamic>{
+                ...item,
+                '_cliente_nome':
+                    nomes[(item['cliente_id'] ?? '').toString()] ?? 'Cliente',
+                '_veiculo_nome':
+                    carros[(item['veiculo_id'] ?? '').toString()] ?? '',
+                '_valor_negociado': negociado,
+                '_pendente': (negociado - recebido).clamp(0, double.infinity),
+              };
+            })
+            .toList()
+          ..sort((a, b) {
+            final statusA = (a['status'] ?? '').toString();
+            final statusB = (b['status'] ?? '').toString();
+            if (statusA != statusB) {
+              if (statusA == 'Em andamento') return -1;
+              if (statusB == 'Em andamento') return 1;
+            }
 
-        final dataA = _parseData(a['data_abertura']) ?? DateTime(2000);
-        final dataB = _parseData(b['data_abertura']) ?? DateTime(2000);
-        return dataB.compareTo(dataA);
-      });
+            final dataA = _parseData(a['data_abertura']) ?? DateTime(2000);
+            final dataB = _parseData(b['data_abertura']) ?? DateTime(2000);
+            return dataB.compareTo(dataA);
+          });
 
     final saldo = contas.fold<double>(
       0,
@@ -177,9 +183,6 @@ class WebCloudDashboardService {
 
   static double _double(dynamic valor) {
     if (valor is num) return valor.toDouble();
-    return double.tryParse(
-          valor?.toString().replaceAll(',', '.') ?? '',
-        ) ??
-        0;
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0;
   }
 }

@@ -67,141 +67,139 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
     );
 
     final body = _carregando && _contas.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : _erro != null && _contas.isEmpty
-          ? _ErroFinanceiro(mensagem: _erro!, onTentarNovamente: _carregar)
-          : Stack(
-              children: [
-                ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-                  children: [
-                    _HeroFinanceiro(
-                      saldoTotal: saldoTotal,
-                      contasAtivas: ativas.length,
-                      moeda: _moeda,
-                    ),
-                    const SizedBox(height: 22),
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Suas contas',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              SizedBox(height: 3),
-                              Text(
-                                'Saldo calculado com o mesmo snapshot financeiro usado no Android.',
-                                style: TextStyle(color: Color(0xFFAAB3BD)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        FilterChip(
-                          selected: _mostrarInativas,
-                          onSelected: (valor) {
-                            setState(() => _mostrarInativas = valor);
-                          },
-                          avatar: const Icon(Icons.archive_outlined, size: 18),
-                          label: const Text('Mostrar inativas'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (visiveis.isEmpty)
-                      const _EstadoVazio(
-                        titulo: 'Nenhuma conta financeira',
-                        detalhe:
-                            'As contas sincronizadas com a empresa aparecerão aqui.',
-                      )
-                    else
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final largura = constraints.maxWidth >= 1180
-                              ? (constraints.maxWidth - 24) / 3
-                              : constraints.maxWidth >= 720
-                              ? (constraints.maxWidth - 12) / 2
-                              : constraints.maxWidth;
-
-                          return Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              for (final conta in visiveis)
-                                SizedBox(
-                                  width: largura,
-                                  child: _ContaCard(
-                                    conta: conta,
-                                    moeda: _moeda,
-                                    onTap: () => _abrirConta(conta),
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-                    const SizedBox(height: 24),
-                    Card(
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Row(
+        ? const Center(child: CircularProgressIndicator())
+        : _erro != null && _contas.isEmpty
+        ? _ErroFinanceiro(mensagem: _erro!, onTentarNovamente: _carregar)
+        : Stack(
+            children: [
+              ListView(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+                children: [
+                  _HeroFinanceiro(
+                    saldoTotal: saldoTotal,
+                    contasAtivas: ativas.length,
+                    moeda: _moeda,
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: ImperiumWebTheme.accentStrong.withValues(
-                                  alpha: 0.10,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.verified_user_outlined,
-                                color: ImperiumWebTheme.accentStrong,
+                            Text(
+                              'Suas contas',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
-                            const SizedBox(width: 14),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Financeiro compartilhado com o aplicativo',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Esta tela lê as mesmas contas e movimentos protegidos por empresa no Supabase. Edição e conciliação Web serão liberadas somente pelo fluxo sincronizado, sem criar lançamentos paralelos.',
-                                    style: TextStyle(color: Color(0xFFAAB3BD)),
-                                  ),
-                                ],
-                              ),
+                            SizedBox(height: 3),
+                            Text(
+                              'Saldo calculado com o mesmo snapshot financeiro usado no Android.',
+                              style: TextStyle(color: Color(0xFFAAB3BD)),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                if (_carregando)
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    child: LinearProgressIndicator(minHeight: 2),
+                      const SizedBox(width: 12),
+                      FilterChip(
+                        selected: _mostrarInativas,
+                        onSelected: (valor) {
+                          setState(() => _mostrarInativas = valor);
+                        },
+                        avatar: const Icon(Icons.archive_outlined, size: 18),
+                        label: const Text('Mostrar inativas'),
+                      ),
+                    ],
                   ),
-              ],
-            );
+                  const SizedBox(height: 12),
+                  if (visiveis.isEmpty)
+                    const _EstadoVazio(
+                      titulo: 'Nenhuma conta financeira',
+                      detalhe:
+                          'As contas sincronizadas com a empresa aparecerão aqui.',
+                    )
+                  else
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final largura = constraints.maxWidth >= 1180
+                            ? (constraints.maxWidth - 24) / 3
+                            : constraints.maxWidth >= 720
+                            ? (constraints.maxWidth - 12) / 2
+                            : constraints.maxWidth;
+
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            for (final conta in visiveis)
+                              SizedBox(
+                                width: largura,
+                                child: _ContaCard(
+                                  conta: conta,
+                                  moeda: _moeda,
+                                  onTap: () => _abrirConta(conta),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  const SizedBox(height: 24),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: ImperiumWebTheme.accentStrong.withValues(
+                                alpha: 0.10,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.verified_user_outlined,
+                              color: ImperiumWebTheme.accentStrong,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Financeiro compartilhado com o aplicativo',
+                                  style: TextStyle(fontWeight: FontWeight.w800),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Esta tela lê as mesmas contas e movimentos protegidos por empresa no Supabase. Edição e conciliação Web serão liberadas somente pelo fluxo sincronizado, sem criar lançamentos paralelos.',
+                                  style: TextStyle(color: Color(0xFFAAB3BD)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (_carregando)
+                const Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+            ],
+          );
 
     if (widget.embedded) return body;
 
