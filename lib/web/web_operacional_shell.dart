@@ -105,26 +105,9 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
 
   void _atualizar() => setState(() => _revisao++);
 
-  Widget? _paginaRoteada(int indice) => switch (indice) {
-    10 => WebDrePage(key: ValueKey('dre-rota-$_revisao')),
-    11 => WebContasFinanceirasPage(key: ValueKey('contas-rota-$_revisao')),
-    12 => WebRelatoriosPage(key: ValueKey('relatorios-rota-$_revisao')),
-    _ => null,
-  };
-
   void _selecionar(int indice, {bool fecharMenu = true}) {
     if (fecharMenu && _scaffoldKey.currentState?.isDrawerOpen == true) {
       Navigator.of(context).pop();
-    }
-
-    final paginaRoteada = _paginaRoteada(indice);
-    if (paginaRoteada != null) {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => paginaRoteada)).then((_) {
-        if (mounted) _atualizar();
-      });
-      return;
     }
 
     setState(() => _indice = indice);
@@ -166,9 +149,18 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       7 => WebOsFinalizacaoV4Page(key: ValueKey('finalizar-os-$_revisao')),
       8 => WebEstoqueGestaoPage(key: ValueKey('estoque-$_revisao')),
       9 => WebFinanceiroLancamentosPage(key: ValueKey('financeiro-$_revisao')),
-      10 => WebDrePage(key: ValueKey('dre-$_revisao')),
-      11 => WebContasFinanceirasPage(key: ValueKey('contas-$_revisao')),
-      12 => WebRelatoriosPage(key: ValueKey('relatorios-$_revisao')),
+      10 => WebDrePage(
+        key: ValueKey('dre-$_revisao'),
+        embedded: true,
+      ),
+      11 => WebContasFinanceirasPage(
+        key: ValueKey('contas-$_revisao'),
+        embedded: true,
+      ),
+      12 => WebRelatoriosPage(
+        key: ValueKey('relatorios-$_revisao'),
+        embedded: true,
+      ),
       13 => WebCrmPage(key: ValueKey('crm-$_revisao')),
       14 => WebOrcamentosPage(key: ValueKey('orcamentos-$_revisao')),
       15 => WebPrecificacaoPage(key: ValueKey('precificacao-$_revisao')),
