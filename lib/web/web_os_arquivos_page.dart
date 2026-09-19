@@ -522,37 +522,41 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                              if (editavel)
-                                FilledButton.tonalIcon(
-                                  onPressed: _salvando ? null : _adicionarFoto,
-                                  icon: const Icon(
-                                    Icons.add_photo_alternate_outlined,
+                                  if (editavel)
+                                    FilledButton.tonalIcon(
+                                      onPressed: _salvando
+                                          ? null
+                                          : _adicionarFoto,
+                                      icon: const Icon(
+                                        Icons.add_photo_alternate_outlined,
+                                      ),
+                                      label: const Text('Adicionar foto'),
+                                    ),
+                                  if (editavel)
+                                    FilledButton.tonalIcon(
+                                      onPressed: _salvando
+                                          ? null
+                                          : () => _editarChecklist(),
+                                      icon: const Icon(
+                                        Icons.checklist_outlined,
+                                      ),
+                                      label: const Text('Checklist'),
+                                    ),
+                                  if (editavel)
+                                    FilledButton.icon(
+                                      onPressed: _salvando
+                                          ? null
+                                          : () => _assinar(ordem),
+                                      icon: const Icon(Icons.draw_outlined),
+                                      label: const Text('Assinar'),
+                                    ),
+                                  OutlinedButton.icon(
+                                    onPressed: _baixarPdf,
+                                    icon: const Icon(
+                                      Icons.picture_as_pdf_outlined,
+                                    ),
+                                    label: const Text('Gerar PDF'),
                                   ),
-                                  label: const Text('Adicionar foto'),
-                                ),
-                              if (editavel)
-                                FilledButton.tonalIcon(
-                                  onPressed: _salvando
-                                      ? null
-                                      : () => _editarChecklist(),
-                                  icon: const Icon(Icons.checklist_outlined),
-                                  label: const Text('Checklist'),
-                                ),
-                              if (editavel)
-                                FilledButton.icon(
-                                  onPressed: _salvando
-                                      ? null
-                                      : () => _assinar(ordem),
-                                  icon: const Icon(Icons.draw_outlined),
-                                  label: const Text('Assinar'),
-                                ),
-                              OutlinedButton.icon(
-                                onPressed: _baixarPdf,
-                                icon: const Icon(
-                                  Icons.picture_as_pdf_outlined,
-                                ),
-                                label: const Text('Gerar PDF'),
-                              ),
                                 ],
                               ),
                             ),
@@ -965,7 +969,10 @@ class _ChecklistCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Icon(icone, color: cor),
-        title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(
+          titulo,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
         subtitle: Text(
           [
             if (categoria.isNotEmpty) categoria,

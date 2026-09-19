@@ -182,26 +182,24 @@ class WebOsArquivosService {
           fileOptions: FileOptions(upsert: true, contentType: mime),
         );
 
-    await _client
-        .from('imperium_ordem_servico_fotos')
-        .upsert(<String, dynamic>{
-          'empresa_id': empresaId,
-          'origem_dispositivo': origem.dispositivoId,
-          'origem_local_id': origem.localId,
-          'ordem_servico_id': id,
-          'etapa': etapa.trim().isEmpty ? 'Antes' : etapa.trim(),
-          'descricao': descricao.trim(),
-          'data_registro': DateTime.now().toIso8601String(),
-          'ordem': DateTime.now().microsecondsSinceEpoch,
-          'origem_caminho': 'web:$nomeOriginal',
-          'storage_bucket': bucketPadrao,
-          'storage_path': caminho,
-          'nome_original': nomeOriginal.trim(),
-          'sha256': hash,
-          'tamanho': bytes.length,
-          'mime': mime,
-          'excluido_em': null,
-        }, onConflict: 'empresa_id,origem_dispositivo,origem_local_id');
+    await _client.from('imperium_ordem_servico_fotos').upsert(<String, dynamic>{
+      'empresa_id': empresaId,
+      'origem_dispositivo': origem.dispositivoId,
+      'origem_local_id': origem.localId,
+      'ordem_servico_id': id,
+      'etapa': etapa.trim().isEmpty ? 'Antes' : etapa.trim(),
+      'descricao': descricao.trim(),
+      'data_registro': DateTime.now().toIso8601String(),
+      'ordem': DateTime.now().microsecondsSinceEpoch,
+      'origem_caminho': 'web:$nomeOriginal',
+      'storage_bucket': bucketPadrao,
+      'storage_path': caminho,
+      'nome_original': nomeOriginal.trim(),
+      'sha256': hash,
+      'tamanho': bytes.length,
+      'mime': mime,
+      'excluido_em': null,
+    }, onConflict: 'empresa_id,origem_dispositivo,origem_local_id');
   }
 
   Future<void> salvarChecklist({
