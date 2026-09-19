@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../config/app_branding.dart';
 import '../domain/ordem_servico_valor.dart';
 import '../screens/imperium_planos_page.dart';
 import '../screens/licenca_status_page.dart';
@@ -374,7 +375,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Imperium Manager',
+                      AppBranding.productName,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
