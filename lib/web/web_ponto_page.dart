@@ -506,8 +506,7 @@ class _WebPontoPageState extends State<WebPontoPage>
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 980;
-        final larguraDisponivel =
-            constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1100
             ? 4
             : constraints.maxWidth >= 700
@@ -560,10 +559,7 @@ class _WebPontoPageState extends State<WebPontoPage>
                 const Expanded(
                   child: Text(
                     'Funcionários',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                 ),
                 Text(
@@ -649,9 +645,7 @@ class _WebPontoPageState extends State<WebPontoPage>
                           DataCell(
                             SizedBox(
                               width: 150,
-                              child: Text(
-                                '${colaborador['funcao'] ?? '—'}',
-                              ),
+                              child: Text('${colaborador['funcao'] ?? '—'}'),
                             ),
                           ),
                           DataCell(
@@ -719,9 +713,7 @@ class _WebPontoPageState extends State<WebPontoPage>
               ...ativos.map((colaborador) {
                 final registro = _primeiroOuNulo(
                   registrosHoje.where(
-                    (r) =>
-                        '${r['colaborador_id']}' ==
-                        '${colaborador['id']}',
+                    (r) => '${r['colaborador_id']}' == '${colaborador['id']}',
                   ),
                 );
                 final vinculado =
@@ -743,9 +735,7 @@ class _WebPontoPageState extends State<WebPontoPage>
                       ),
                       title: Text(
                         '${colaborador['nome'] ?? 'Funcionário'}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                       subtitle: Text(
                         [
@@ -785,10 +775,7 @@ class _WebPontoPageState extends State<WebPontoPage>
                 const Expanded(
                   child: Text(
                     'Registros do mês',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                 ),
                 Text(
@@ -833,11 +820,7 @@ class _WebPontoPageState extends State<WebPontoPage>
                       final fim = _hora(registro['intervalo_fim']);
                       return DataRow(
                         cells: [
-                          DataCell(
-                            Text(
-                              _dataExibicao('${registro['data']}'),
-                            ),
-                          ),
+                          DataCell(Text(_dataExibicao('${registro['data']}'))),
                           DataCell(
                             SizedBox(
                               width: 220,
@@ -856,9 +839,7 @@ class _WebPontoPageState extends State<WebPontoPage>
                             ),
                           ),
                           DataCell(Text(_hora(registro['saida']))),
-                          DataCell(
-                            Text('${registro['situacao'] ?? '—'}'),
-                          ),
+                          DataCell(Text('${registro['situacao'] ?? '—'}')),
                         ],
                       );
                     }).toList(),
@@ -866,7 +847,9 @@ class _WebPontoPageState extends State<WebPontoPage>
                 ),
               )
             else
-              ..._registros.take(60).map(
+              ..._registros
+                  .take(60)
+                  .map(
                     (registro) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Card(
@@ -1064,12 +1047,7 @@ class _WebPontoPageState extends State<WebPontoPage>
 }
 
 class _ResumoCard extends StatelessWidget {
-  const _ResumoCard(
-    this.label,
-    this.valor,
-    this.icon, {
-    this.width = 230,
-  });
+  const _ResumoCard(this.label, this.valor, this.icon, {this.width = 230});
 
   final String label;
   final String valor;
