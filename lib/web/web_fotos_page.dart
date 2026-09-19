@@ -56,7 +56,10 @@ class _WebFotosPageState extends State<WebFotosPage> {
   Future<void> _novoAntesDepois() async {
     final pacote = _pacote;
     if (pacote == null || pacote.clientes.isEmpty || pacote.veiculos.isEmpty) {
-      _snack('Cadastre cliente e veículo antes de adicionar fotos.', erro: true);
+      _snack(
+        'Cadastre cliente e veículo antes de adicionar fotos.',
+        erro: true,
+      );
       return;
     }
 
@@ -104,9 +107,7 @@ class _WebFotosPageState extends State<WebFotosPage> {
                           .map(
                             (e) => DropdownMenuItem(
                               value: e['id'].toString(),
-                              child: Text(
-                                (e['nome'] ?? 'Cliente').toString(),
-                              ),
+                              child: Text((e['nome'] ?? 'Cliente').toString()),
                             ),
                           )
                           .toList(),
@@ -117,8 +118,9 @@ class _WebFotosPageState extends State<WebFotosPage> {
                           final lista = pacote.veiculos
                               .where((e) => e['cliente_id'].toString() == v)
                               .toList();
-                          veiculoId =
-                              lista.isEmpty ? '' : lista.first['id'].toString();
+                          veiculoId = lista.isEmpty
+                              ? ''
+                              : lista.first['id'].toString();
                         });
                       },
                     ),
@@ -185,15 +187,13 @@ class _WebFotosPageState extends State<WebFotosPage> {
                             arquivo: antes?.name,
                             icon: Icons.photo_camera_back_outlined,
                             onTap: () async {
-                              final resultado =
-                                  await FilePicker.platform.pickFiles(
-                                type: FileType.image,
-                                withData: true,
-                              );
+                              final resultado = await FilePicker.platform
+                                  .pickFiles(
+                                    type: FileType.image,
+                                    withData: true,
+                                  );
                               if (resultado != null) {
-                                setLocal(
-                                  () => antes = resultado.files.single,
-                                );
+                                setLocal(() => antes = resultado.files.single);
                               }
                             },
                           ),
@@ -205,15 +205,13 @@ class _WebFotosPageState extends State<WebFotosPage> {
                             arquivo: depois?.name,
                             icon: Icons.photo_camera_front_outlined,
                             onTap: () async {
-                              final resultado =
-                                  await FilePicker.platform.pickFiles(
-                                type: FileType.image,
-                                withData: true,
-                              );
+                              final resultado = await FilePicker.platform
+                                  .pickFiles(
+                                    type: FileType.image,
+                                    withData: true,
+                                  );
                               if (resultado != null) {
-                                setLocal(
-                                  () => depois = resultado.files.single,
-                                );
+                                setLocal(() => depois = resultado.files.single);
                               }
                             },
                           ),
@@ -283,9 +281,7 @@ class _WebFotosPageState extends State<WebFotosPage> {
     final veiculos = {
       for (final e in dados.veiculos) e['id'].toString(): _veiculo(e),
     };
-    final ordens = {
-      for (final e in dados.ordens) e['id'].toString(): e,
-    };
+    final ordens = {for (final e in dados.ordens) e['id'].toString(): e};
 
     final termo = _busca.text.trim().toLowerCase();
 
@@ -298,9 +294,7 @@ class _WebFotosPageState extends State<WebFotosPage> {
         e['data'],
       ];
       return termo.isEmpty ||
-          textos.any(
-            (v) => (v ?? '').toString().toLowerCase().contains(termo),
-          );
+          textos.any((v) => (v ?? '').toString().toLowerCase().contains(termo));
     }).toList();
 
     final fotosOs = dados.fotosOs.where((e) {
@@ -314,9 +308,7 @@ class _WebFotosPageState extends State<WebFotosPage> {
         e['etapa'],
       ];
       return termo.isEmpty ||
-          textos.any(
-            (v) => (v ?? '').toString().toLowerCase().contains(termo),
-          );
+          textos.any((v) => (v ?? '').toString().toLowerCase().contains(termo));
     }).toList();
 
     return LayoutBuilder(
@@ -412,7 +404,8 @@ class _WebFotosPageState extends State<WebFotosPage> {
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.search_rounded),
-                            hintText: 'Buscar cliente, veículo, OS ou descrição',
+                            hintText:
+                                'Buscar cliente, veículo, OS ou descrição',
                             suffixIcon: _busca.text.isEmpty
                                 ? null
                                 : IconButton(
@@ -427,18 +420,12 @@ class _WebFotosPageState extends State<WebFotosPage> {
                       ),
                       SegmentedButton<String>(
                         segments: const [
-                          ButtonSegment(
-                            value: 'Todas',
-                            label: Text('Todas'),
-                          ),
+                          ButtonSegment(value: 'Todas', label: Text('Todas')),
                           ButtonSegment(
                             value: 'Antes/Depois',
                             label: Text('Antes/Depois'),
                           ),
-                          ButtonSegment(
-                            value: 'OS',
-                            label: Text('OS'),
-                          ),
+                          ButtonSegment(value: 'OS', label: Text('OS')),
                         ],
                         selected: {_tipo},
                         showSelectedIcon: false,
@@ -469,9 +456,11 @@ class _WebFotosPageState extends State<WebFotosPage> {
                         child: _AntesDepoisCard(
                           item: e,
                           cliente:
-                              clientes[e['cliente_id']?.toString()] ?? 'Cliente',
+                              clientes[e['cliente_id']?.toString()] ??
+                              'Cliente',
                           veiculo:
-                              veiculos[e['veiculo_id']?.toString()] ?? 'Veículo',
+                              veiculos[e['veiculo_id']?.toString()] ??
+                              'Veículo',
                           service: _service,
                         ),
                       ),
@@ -662,10 +651,7 @@ class _AntesDepoisCard extends StatelessWidget {
                   cliente,
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
-                Text(
-                  veiculo,
-                  style: const TextStyle(color: Color(0xFFAAB3BD)),
-                ),
+                Text(veiculo, style: const TextStyle(color: Color(0xFFAAB3BD))),
                 if ((item['descricao'] ?? '').toString().trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -716,8 +702,8 @@ class _FotoOsCard extends StatelessWidget {
         children: [
           _ImagemCloud(
             service: service,
-            bucket:
-                (item['storage_bucket'] ?? 'imperium-os-arquivos').toString(),
+            bucket: (item['storage_bucket'] ?? 'imperium-os-arquivos')
+                .toString(),
             path: (item['storage_path'] ?? '').toString(),
             altura: 210,
           ),
@@ -731,9 +717,11 @@ class _FotoOsCard extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 Text(
-                  [cliente, veiculo, (item['etapa'] ?? '').toString()]
-                      .where((e) => e.trim().isNotEmpty)
-                      .join(' · '),
+                  [
+                    cliente,
+                    veiculo,
+                    (item['etapa'] ?? '').toString(),
+                  ].where((e) => e.trim().isNotEmpty).join(' · '),
                   style: const TextStyle(color: Color(0xFFAAB3BD)),
                 ),
                 if ((item['descricao'] ?? '').toString().trim().isNotEmpty)
