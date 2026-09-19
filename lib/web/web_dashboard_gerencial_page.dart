@@ -99,7 +99,9 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
     final operacional = resumo.operacional;
     final financeiro = resumo.financeiro;
     final comercial = resumo.comercial;
+    final semContaFinanceira = resumo.contas.isEmpty;
     final alertasGestor =
+        (semContaFinanceira ? 1 : 0) +
         (financeiro.aReceber > 0 ? 1 : 0) +
         (((operacional['os_abertas'] as num?)?.toInt() ?? 0) > 0 ? 1 : 0) +
         (comercial.posVendaAcoes > 0 ? 1 : 0) +
@@ -151,12 +153,13 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
               ),
               const SizedBox(height: 18),
               _HeroGestao(
-                saldo: _valor(resumo.saldoConsolidado),
+                saldo: semContaFinanceira ? '—' : _valor(resumo.saldoConsolidado),
                 faturamento: _valor(financeiro.vendas),
                 resultado: _valor(financeiro.competencia.resultadoGerencial),
                 aReceber: _valor(financeiro.aReceber),
                 resultadoNegativo:
                     financeiro.competencia.resultadoGerencial < 0,
+                contasConfiguradas: !semContaFinanceira,
               ),
               const SizedBox(height: 24),
               _SectionTitle(
@@ -175,6 +178,16 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                   ),
                   child: Column(
                     children: [
+                      _AtencaoLinha(
+                        icon: Icons.account_balance_outlined,
+                        titulo: 'Contas financeiras',
+                        detalhe: semContaFinanceira
+                            ? 'Nenhuma conta Cloud configurada. Cadastre ou sincronize uma conta para calcular o saldo real.'
+                            : '${resumo.contas.length} conta(s) financeira(s) ativa(s) no cálculo do saldo',
+                        alerta: semContaFinanceira,
+                        onTap: () => widget.onNavigate?.call(11),
+                      ),
+                      const Divider(height: 1),
                       _AtencaoLinha(
                         icon: Icons.schedule_rounded,
                         titulo: 'Recebimentos pendentes',
@@ -934,6 +947,7 @@ class _HeroGestao extends StatelessWidget {
     required this.resultado,
     required this.aReceber,
     required this.resultadoNegativo,
+    required this.contasConfiguradas,
   });
 
   final String saldo;
@@ -941,6 +955,7 @@ class _HeroGestao extends StatelessWidget {
   final String resultado;
   final String aReceber;
   final bool resultadoNegativo;
+  final bool contasConfiguradas;
 
   @override
   Widget build(BuildContext context) {
@@ -1007,9 +1022,15 @@ class _HeroGestao extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Soma das contas financeiras ativas',
-                  style: TextStyle(color: Color(0xFFAAB3BD)),
+                Text(
+                  contasConfiguradas
+                      ? 'Soma das contas financeiras ativas'
+                      : 'Cadastre ou sincronize uma conta financeira para exibir o saldo real',
+                  style: TextStyle(
+                    color: contasConfiguradas
+                        ? const Color(0xFFAAB3BD)
+                        : Colors.orangeAccent,
+                  ),
                 ),
               ],
             ),
