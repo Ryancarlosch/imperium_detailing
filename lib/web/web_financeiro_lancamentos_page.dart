@@ -1144,39 +1144,6 @@ class _FinanceiroDados {
   final List<Map<String, dynamic>> movimentos;
 }
 
-class _ResumoFinanceiroCard extends StatelessWidget {
-  const _ResumoFinanceiroCard({required this.titulo, required this.valor});
-
-  final String titulo;
-  final String valor;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 230,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(titulo),
-              const SizedBox(height: 6),
-              Text(
-                valor,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 String _nomeConta(List<Map<String, dynamic>> contas, String? contaId) {
   if (contaId == null || contaId.isEmpty) return '';
   for (final conta in contas) {
