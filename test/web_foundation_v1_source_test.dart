@@ -39,6 +39,22 @@ void main() {
     expect(source, isNot(contains('backup_automatico_service.dart')));
   });
 
+  test('Workspace Web abre sistema completo sem dashboard intermediario', () {
+    final workspace = File(
+      'lib/web/web_workspace_shell.dart',
+    ).readAsStringSync();
+    final operacional = File(
+      'lib/web/web_operacional_shell.dart',
+    ).readAsStringSync();
+
+    expect(workspace, contains('return WebOperacionalShell('));
+    expect(workspace, isNot(contains('WebDashboardGerencialPage')));
+    expect(workspace, isNot(contains('Abrir sistema completo')));
+    expect(operacional, contains('Plano e assinatura'));
+    expect(operacional, contains('Gerenciar planos'));
+    expect(operacional, contains('LicencaStatusPage'));
+  });
+
   test('Target Web e assets SQLite existem', () {
     expect(File('web/index.html').existsSync(), isTrue);
     expect(File('web/sqlite3.wasm').existsSync(), isTrue);
