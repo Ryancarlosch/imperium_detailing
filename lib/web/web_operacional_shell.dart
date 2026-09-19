@@ -741,9 +741,7 @@ class _ClientesPageState extends State<_ClientesPage> {
         IconButton(
           tooltip: ativo ? 'Arquivar cliente' : 'Reativar cliente',
           onPressed: () => _alternarArquivo(cliente),
-          icon: Icon(
-            ativo ? Icons.archive_outlined : Icons.unarchive_outlined,
-          ),
+          icon: Icon(ativo ? Icons.archive_outlined : Icons.unarchive_outlined),
         ),
       ],
     );
@@ -893,7 +891,9 @@ class _ClientesPageState extends State<_ClientesPage> {
                 DataCell(
                   Chip(
                     avatar: Icon(
-                      ativo ? Icons.check_circle_outline : Icons.archive_outlined,
+                      ativo
+                          ? Icons.check_circle_outline
+                          : Icons.archive_outlined,
                       size: 16,
                     ),
                     label: Text(ativo ? 'Ativo' : 'Arquivado'),
@@ -985,24 +985,23 @@ class _ClientesPageState extends State<_ClientesPage> {
         }).length;
 
         final termo = busca.text.trim().toLowerCase();
-        final itens = todos.where((e) {
-          final ativo = e['ativo'] != false;
-          if (!_mostrarArquivados && !ativo) return false;
-          if (termo.isEmpty) return true;
+        final itens =
+            todos.where((e) {
+              final ativo = e['ativo'] != false;
+              if (!_mostrarArquivados && !ativo) return false;
+              if (termo.isEmpty) return true;
 
-          return [
-            'nome',
-            'telefone',
-            'email',
-            'endereco',
-          ].any((k) => '${e[k] ?? ''}'.toLowerCase().contains(termo));
-        }).toList()
-          ..sort(
-            (a, b) => (a['nome'] ?? '')
-                .toString()
-                .toLowerCase()
-                .compareTo((b['nome'] ?? '').toString().toLowerCase()),
-          );
+              return [
+                'nome',
+                'telefone',
+                'email',
+                'endereco',
+              ].any((k) => '${e[k] ?? ''}'.toLowerCase().contains(termo));
+            }).toList()..sort(
+              (a, b) => (a['nome'] ?? '').toString().toLowerCase().compareTo(
+                (b['nome'] ?? '').toString().toLowerCase(),
+              ),
+            );
 
         return LayoutBuilder(
           builder: (context, constraints) {
