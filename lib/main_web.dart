@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'config/app_branding.dart';
 import 'database/app_database.dart';
 import 'screens/licenca_status_page.dart';
 import 'screens/login_email_senha_page.dart';
@@ -28,7 +29,7 @@ class ImperiumWebApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Imperium Manager Web',
+      title: AppBranding.webTitle,
       debugShowCheckedModeBanner: false,
       locale: const Locale('pt', 'BR'),
       supportedLocales: const [Locale('pt', 'BR')],
@@ -374,10 +375,10 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
                     children: [
                       const Icon(Icons.error_outline_rounded, size: 52),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Não foi possível abrir o Imperium',
+                      Text(
+                        'Não foi possível abrir o ${AppBranding.developmentName}',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -507,8 +508,8 @@ class _WebSessaoGateState extends State<_WebSessaoGate> {
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Essa senha será a mesma no Imperium Web e no aplicativo.',
+                      Text(
+                        'Essa senha será a mesma no ${AppBranding.productName} Web e no aplicativo.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 22),
