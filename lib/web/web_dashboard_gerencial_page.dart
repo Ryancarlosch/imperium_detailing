@@ -161,8 +161,7 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
               const SizedBox(height: 24),
               _SectionTitle(
                 titulo: 'Atenções do gestor',
-                subtitulo:
-                    alertasGestor == 0
+                subtitulo: alertasGestor == 0
                     ? 'Nenhum alerta prioritário identificado neste momento.'
                     : '$alertasGestor ponto(s) pedem acompanhamento.',
               ),
@@ -325,7 +324,8 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     width: larguraKpi,
                     titulo: 'Leads abertos',
                     valor: '${comercial.leadsAbertos}',
-                    detalhe: '${comercial.leadsGanhos} lead(s) marcado(s) como ganho',
+                    detalhe:
+                        '${comercial.leadsGanhos} lead(s) marcado(s) como ganho',
                     icon: Icons.person_search_outlined,
                     alerta: comercial.leadsAbertos > 0,
                   ),
@@ -365,7 +365,8 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     valor: comercial.marketingRoas <= 0
                         ? '—'
                         : '${comercial.marketingRoas.toStringAsFixed(2)}x',
-                    detalhe: 'Retorno de receita sobre investimento em marketing',
+                    detalhe:
+                        'Retorno de receita sobre investimento em marketing',
                     icon: Icons.analytics_outlined,
                   ),
                 ],

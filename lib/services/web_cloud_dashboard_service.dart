@@ -190,10 +190,7 @@ class WebCloudDashboardService {
       final leadsGanhos = leads.where((e) => e['etapa'] == 'Ganho').length;
       final potencial = leads
           .where((e) => e['etapa'] != 'Perdido')
-          .fold<double>(
-            0,
-            (total, e) => total + _double(e['valor_potencial']),
-          );
+          .fold<double>(0, (total, e) => total + _double(e['valor_potencial']));
 
       var posVendaAcoes = 0;
       var posVendaReativacao = 0;
@@ -203,8 +200,8 @@ class WebCloudDashboardService {
       var marketingFaturamento = 0.0;
 
       try {
-        final painel =
-            await ComercialGrowthCloudService.instance.carregarPosVenda();
+        final painel = await ComercialGrowthCloudService.instance
+            .carregarPosVenda();
         posVendaAcoes = painel.precisamAcao;
         posVendaReativacao = painel.reativacao;
       } catch (_) {
@@ -212,8 +209,8 @@ class WebCloudDashboardService {
       }
 
       try {
-        final marketing =
-            await ComercialGrowthCloudService.instance.carregarResumoMarketing();
+        final marketing = await ComercialGrowthCloudService.instance
+            .carregarResumoMarketing();
         campanhasAtivas = marketing.campanhasAtivas;
         marketingLeads = marketing.leads;
         marketingRoas = marketing.roas;
