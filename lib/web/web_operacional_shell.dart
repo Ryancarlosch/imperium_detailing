@@ -1970,9 +1970,8 @@ class _AgendaPageState extends State<_AgendaPage> {
       clienteId = '${ativos.first['id']}';
     }
 
-    List<Map<String, dynamic>> disponiveis() => veiculos
-        .where((v) => '${v['cliente_id']}' == clienteId)
-        .toList();
+    List<Map<String, dynamic>> disponiveis() =>
+        veiculos.where((v) => '${v['cliente_id']}' == clienteId).toList();
 
     var lista = disponiveis();
     if (lista.isEmpty) {
@@ -1995,10 +1994,8 @@ class _AgendaPageState extends State<_AgendaPage> {
       text: (atual?['observacoes'] ?? '').toString(),
     );
 
-    DateTime dataSelecionada =
-        _parseData(atual?['data']) ?? DateTime.now();
-    TimeOfDay horaSelecionada =
-        _parseHora(atual?['hora']) ?? TimeOfDay.now();
+    DateTime dataSelecionada = _parseData(atual?['data']) ?? DateTime.now();
+    TimeOfDay horaSelecionada = _parseHora(atual?['hora']) ?? TimeOfDay.now();
     var status = (atual?['status'] ?? 'Agendado').toString();
     const statuses = [
       'Agendado',
@@ -2369,9 +2366,7 @@ class _AgendaPageState extends State<_AgendaPage> {
         final agenda = snapshot.data![0];
         final clientes = snapshot.data![1];
         final veiculos = snapshot.data![2];
-        final nomes = {
-          for (final c in clientes) '${c['id']}': '${c['nome']}',
-        };
+        final nomes = {for (final c in clientes) '${c['id']}': '${c['nome']}'};
         final carros = {
           for (final v in veiculos)
             '${v['id']}':
@@ -2380,49 +2375,47 @@ class _AgendaPageState extends State<_AgendaPage> {
         };
 
         final hojeAgora = DateTime.now();
-        final hoje = DateTime(
-          hojeAgora.year,
-          hojeAgora.month,
-          hojeAgora.day,
-        );
+        final hoje = DateTime(hojeAgora.year, hojeAgora.month, hojeAgora.day);
         final termo = _busca.text.trim().toLowerCase();
 
-        final itens = agenda.where((e) {
-          final status = (e['status'] ?? 'Agendado').toString();
-          if (_filtroStatus == 'Abertos' && !_statusAberto(status)) {
-            return false;
-          }
-          if (_filtroStatus == 'Concluídos' &&
-              !status.toLowerCase().contains('conclu') &&
-              !status.toLowerCase().contains('finaliz')) {
-            return false;
-          }
-          if (_filtroStatus == 'Cancelados' &&
-              !status.toLowerCase().contains('cancel')) {
-            return false;
-          }
+        final itens =
+            agenda.where((e) {
+              final status = (e['status'] ?? 'Agendado').toString();
+              if (_filtroStatus == 'Abertos' && !_statusAberto(status)) {
+                return false;
+              }
+              if (_filtroStatus == 'Concluídos' &&
+                  !status.toLowerCase().contains('conclu') &&
+                  !status.toLowerCase().contains('finaliz')) {
+                return false;
+              }
+              if (_filtroStatus == 'Cancelados' &&
+                  !status.toLowerCase().contains('cancel')) {
+                return false;
+              }
 
-          if (termo.isEmpty) return true;
-          return [
-            e['servico'],
-            e['data'],
-            e['hora'],
-            e['status'],
-            nomes['${e['cliente_id']}'] ?? '',
-            carros['${e['veiculo_id']}'] ?? '',
-          ].any((v) => '${v ?? ''}'.toLowerCase().contains(termo));
-        }).toList()
-          ..sort((a, b) {
-            final da = _parseData(a['data']) ?? DateTime(2099);
-            final db = _parseData(b['data']) ?? DateTime(2099);
-            final cmp = da.compareTo(db);
-            if (cmp != 0) return cmp;
-            return (a['hora'] ?? '').toString().compareTo(
-              (b['hora'] ?? '').toString(),
-            );
-          });
+              if (termo.isEmpty) return true;
+              return [
+                e['servico'],
+                e['data'],
+                e['hora'],
+                e['status'],
+                nomes['${e['cliente_id']}'] ?? '',
+                carros['${e['veiculo_id']}'] ?? '',
+              ].any((v) => '${v ?? ''}'.toLowerCase().contains(termo));
+            }).toList()..sort((a, b) {
+              final da = _parseData(a['data']) ?? DateTime(2099);
+              final db = _parseData(b['data']) ?? DateTime(2099);
+              final cmp = da.compareTo(db);
+              if (cmp != 0) return cmp;
+              return (a['hora'] ?? '').toString().compareTo(
+                (b['hora'] ?? '').toString(),
+              );
+            });
 
-        final abertos = agenda.where((e) => _statusAberto(e['status'])).toList();
+        final abertos = agenda
+            .where((e) => _statusAberto(e['status']))
+            .toList();
         final hojeQtd = abertos.where((e) {
           final d = _parseData(e['data']);
           return d != null &&
@@ -2563,10 +2556,7 @@ class _AgendaPageState extends State<_AgendaPage> {
                         ),
                         SegmentedButton<String>(
                           segments: const [
-                            ButtonSegment(
-                              value: 'Todos',
-                              label: Text('Todos'),
-                            ),
+                            ButtonSegment(value: 'Todos', label: Text('Todos')),
                             ButtonSegment(
                               value: 'Abertos',
                               label: Text('Abertos'),
@@ -2638,8 +2628,7 @@ class _AgendaPageState extends State<_AgendaPage> {
                           DataColumn(label: Text('AÇÕES')),
                         ],
                         rows: itens.map((e) {
-                          final status =
-                              (e['status'] ?? 'Agendado').toString();
+                          final status = (e['status'] ?? 'Agendado').toString();
                           return DataRow(
                             cells: [
                               DataCell(
@@ -2735,9 +2724,7 @@ class _AgendaPageState extends State<_AgendaPage> {
                               nomes['${e['cliente_id']}'] ?? '',
                               carros['${e['veiculo_id']}'] ?? '',
                               widget.moeda.format(_double(e['valor'])),
-                            ]
-                                .where((x) => x.trim().isNotEmpty)
-                                .join(' · '),
+                            ].where((x) => x.trim().isNotEmpty).join(' · '),
                           ),
                           trailing: PopupMenuButton<String>(
                             onSelected: (acao) {
