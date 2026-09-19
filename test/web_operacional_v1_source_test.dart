@@ -37,6 +37,8 @@ void main() {
       'DRE',
       'Contas bancárias',
       'Relatórios',
+      'Gestão financeira',
+      'Notas fiscais',
       'Estoque',
       'Comercial',
       'CRM',
@@ -72,6 +74,8 @@ void main() {
     expect(source, contains('11 => WebContasFinanceirasPage('));
     expect(source, contains('12 => WebRelatoriosPage('));
     expect(source, contains('16 => WebPontoPage('));
+    expect(source, contains('25 => WebFiscalPage('));
+    expect(source, contains('26 => WebFinanceiroAdministracaoPage('));
     expect(source, contains('embedded: true'));
     expect(dre, contains('this.embedded = false'));
     expect(contas, contains('this.embedded = false'));
@@ -132,6 +136,8 @@ void main() {
         'Contas e caixa',
         'DRE gerencial',
         'Ponto e equipe',
+        'Gestão financeira',
+        'Notas fiscais',
         'Desempenho da equipe',
       ]) {
         expect(dashboard, contains(marker));
