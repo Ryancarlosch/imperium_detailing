@@ -10,10 +10,7 @@ import 'web_ponto_page.dart';
 import 'web_relatorios_page.dart';
 
 class WebDashboardGerencialPage extends StatefulWidget {
-  const WebDashboardGerencialPage({
-    super.key,
-    this.onNavigate,
-  });
+  const WebDashboardGerencialPage({super.key, this.onNavigate});
 
   final ValueChanged<int>? onNavigate;
 
@@ -75,11 +72,7 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
     if (mounted) await _carregar();
   }
 
-  Future<void> _irParaModulo(
-    int indice,
-    String titulo,
-    Widget fallback,
-  ) async {
+  Future<void> _irParaModulo(int indice, String titulo, Widget fallback) async {
     final onNavigate = widget.onNavigate;
     if (onNavigate != null) {
       onNavigate(indice);
@@ -273,8 +266,11 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     icon: Icons.badge_outlined,
                     titulo: 'Ponto e equipe',
                     detalhe: 'Funcionários, jornada, batidas e ajustes',
-                    onTap: () =>
-                        _irParaModulo(16, 'Ponto e equipe', const WebPontoPage()),
+                    onTap: () => _irParaModulo(
+                      16,
+                      'Ponto e equipe',
+                      const WebPontoPage(),
+                    ),
                   ),
                   _QuickAction(
                     width: larguraAcao,

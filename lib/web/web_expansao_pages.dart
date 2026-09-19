@@ -2557,11 +2557,7 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
       ),
       child: Text(
         texto,
-        style: TextStyle(
-          color: cor,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
+        style: TextStyle(color: cor, fontSize: 11, fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -2589,32 +2585,31 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
     final margemMedia = _snapshots.isEmpty
         ? 0.0
         : _snapshots.fold<double>(
-              0,
-              (total, item) => total + _double(item['margem_atual']),
-            ) /
-            _snapshots.length;
+                0,
+                (total, item) => total + _double(item['margem_atual']),
+              ) /
+              _snapshots.length;
 
     final termo = _buscaPrecificacao.text.trim().toLowerCase();
-    final filtrados = _snapshots.where((item) {
-      final temAlerta = alerta(item);
-      if (_filtroPrecificacao == 'Alertas' && !temAlerta) return false;
-      if (_filtroPrecificacao == 'Saudáveis' && temAlerta) return false;
-      if (termo.isEmpty) return true;
-      final nome = nomes[item['servico_id']?.toString()] ?? 'Serviço';
-      return nome.toLowerCase().contains(termo);
-    }).toList()
-      ..sort((a, b) {
-        final na = nomes[a['servico_id']?.toString()] ?? '';
-        final nb = nomes[b['servico_id']?.toString()] ?? '';
-        return na.toLowerCase().compareTo(nb.toLowerCase());
-      });
+    final filtrados =
+        _snapshots.where((item) {
+          final temAlerta = alerta(item);
+          if (_filtroPrecificacao == 'Alertas' && !temAlerta) return false;
+          if (_filtroPrecificacao == 'Saudáveis' && temAlerta) return false;
+          if (termo.isEmpty) return true;
+          final nome = nomes[item['servico_id']?.toString()] ?? 'Serviço';
+          return nome.toLowerCase().contains(termo);
+        }).toList()..sort((a, b) {
+          final na = nomes[a['servico_id']?.toString()] ?? '';
+          final nb = nomes[b['servico_id']?.toString()] ?? '';
+          return na.toLowerCase().compareTo(nb.toLowerCase());
+        });
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 980;
-        final larguraDisponivel =
-            constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1180
             ? 5
             : constraints.maxWidth >= 720
@@ -2731,12 +2726,8 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
                       runSpacing: 10,
                       children: [
                         Text('Cliente final: ${config['margem_cliente']}%'),
-                        Text(
-                          'Revenda 1–4: ${config['margem_revenda_1_4']}%',
-                        ),
-                        Text(
-                          'Revenda 5–9: ${config['margem_revenda_5_9']}%',
-                        ),
+                        Text('Revenda 1–4: ${config['margem_revenda_1_4']}%'),
+                        Text('Revenda 5–9: ${config['margem_revenda_5_9']}%'),
                         Text(
                           'Revenda 10+: ${config['margem_revenda_10_mais']}%',
                         ),
@@ -2793,9 +2784,7 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
                         selected: <String>{_filtroPrecificacao},
                         showSelectedIcon: false,
                         onSelectionChanged: (valor) {
-                          setState(
-                            () => _filtroPrecificacao = valor.first,
-                          );
+                          setState(() => _filtroPrecificacao = valor.first);
                         },
                       ),
                       Text(
@@ -2841,8 +2830,7 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
                         final nome =
                             nomes[item['servico_id']?.toString()] ?? 'Serviço';
                         final atual = _double(item['preco_atual']);
-                        final equilibrio =
-                            _double(item['preco_equilibrio']);
+                        final equilibrio = _double(item['preco_equilibrio']);
                         final sugerido = _double(item['preco_sugerido']);
                         final margem = _double(item['margem_atual']);
                         final abaixoEquilibrio = atual < equilibrio;
@@ -2967,9 +2955,7 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
                           ),
                           title: Text(
                             (item['nome'] ?? 'Cenário').toString(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
                           subtitle: Text(
                             'Margem ${item['margem_cliente']}% · '
@@ -2982,9 +2968,7 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
                                     _double(item['meta_faturamento']),
                                   )
                                 : 'Sem meta',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ),
                       ),
@@ -2999,7 +2983,6 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
     );
   }
 }
-
 
 class WebCentralCloudPage extends StatefulWidget {
   const WebCentralCloudPage({super.key});
@@ -3204,9 +3187,7 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                         children: [
                           Text(
                             'Plataforma: ${dados['plataforma'] ?? 'Web'}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                           Text('Usuário: ${dados['usuario'] ?? '—'}'),
                           Text('Tenant: ${dados['empresa_id'] ?? '—'}'),
@@ -3256,10 +3237,7 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                   const SizedBox(height: 24),
                   const Text(
                     'Módulos Cloud',
-                    style: TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 10),
                   if (modulos.isEmpty)
@@ -3267,7 +3245,9 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                       margin: EdgeInsets.zero,
                       child: Padding(
                         padding: EdgeInsets.all(22),
-                        child: Text('Nenhum módulo retornado pelo diagnóstico.'),
+                        child: Text(
+                          'Nenhum módulo retornado pelo diagnóstico.',
+                        ),
                       ),
                     )
                   else if (tabela)
@@ -3287,8 +3267,8 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                             DataColumn(label: Text('ÚLTIMA ATUALIZAÇÃO')),
                           ],
                           rows: modulos.map((item) {
-                            final status =
-                                (item['status'] ?? 'Indisponível').toString();
+                            final status = (item['status'] ?? 'Indisponível')
+                                .toString();
                             return DataRow(
                               cells: [
                                 DataCell(
@@ -3328,8 +3308,8 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                     )
                   else
                     ...modulos.map((item) {
-                      final status =
-                          (item['status'] ?? 'Indisponível').toString();
+                      final status = (item['status'] ?? 'Indisponível')
+                          .toString();
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Card(
@@ -3368,10 +3348,7 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                   const SizedBox(height: 12),
                   const Text(
                     'O diagnóstico limita a leitura a 500 registros por módulo para manter a Central leve.',
-                    style: TextStyle(
-                      color: Color(0xFF89939E),
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
                   ),
                 ],
               ),
@@ -3381,7 +3358,6 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
       },
     );
   }
-
 }
 
 class _ResumoExpansao extends StatelessWidget {
