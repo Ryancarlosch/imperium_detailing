@@ -53,7 +53,8 @@ void main() {
     expect(source, contains('Novo lead'));
     expect(source, contains('Novo orçamento'));
     expect(source, contains('Novo cenário'));
-    expect(source, contains('Central Web'));
+    expect(source, contains('Central Cloud'));
+    expect(source, contains('Diagnóstico'));
   });
 
   test('Shell Web escala com sidebar desktop e drawer responsivo', () {
