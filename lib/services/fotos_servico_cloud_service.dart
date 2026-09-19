@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as path;
@@ -479,7 +480,7 @@ class _ArquivoLocal {
     required this.sha256,
   });
 
-  final List<int> bytes;
+  final Uint8List bytes;
   final String nome;
   final String extensao;
   final String mime;
