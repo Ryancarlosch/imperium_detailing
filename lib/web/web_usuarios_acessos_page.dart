@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../repositories/usuario_repository.dart';
 import '../services/funcionario_acesso_service.dart';
@@ -18,6 +19,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
   final _acesso = FuncionarioAcessoService.instance;
   final _ponto = WebCloudPontoService.instance;
   final _busca = TextEditingController();
+  final _dataHora = DateFormat('dd/MM/yyyy HH:mm', 'pt_BR');
 
   bool _carregando = true;
   String? _erro;
@@ -871,7 +873,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                               SizedBox(
                                 width: 180,
                                 child: Text(
-                                  ultimo.trim().isEmpty ? 'Nunca' : ultimo,
+                                  _formatarDataHora(ultimo),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -956,6 +958,15 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
           backgroundColor: erro ? Colors.red.shade700 : null,
         ),
       );
+  }
+
+  String _formatarDataHora(String valor) {
+    final texto = valor.trim();
+    if (texto.isEmpty) return 'Nunca';
+
+    final data = DateTime.tryParse(texto)?.toLocal();
+    if (data == null) return texto;
+    return _dataHora.format(data);
   }
 
   static int _int(dynamic valor) {
