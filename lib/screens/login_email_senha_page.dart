@@ -741,7 +741,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
                 Container(width: 38, height: 2, color: _goldSoft),
                 const SizedBox(height: 10),
                 Text(
-                  'MAIS QUE GESTÃO  •  MOVEMOS O SEU FUTURO',
+                  AppBranding.loginTagline,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: _muted.withValues(alpha: 0.58),
