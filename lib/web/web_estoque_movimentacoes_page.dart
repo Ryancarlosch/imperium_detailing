@@ -509,21 +509,20 @@ class _WebEstoqueMovimentacoesPageState
         );
 
         final termo = _busca.text.trim().toLowerCase();
-        final itensFiltrados = dados.itens.where((item) {
-          if (termo.isEmpty) return true;
-          return [
-            item['nome'],
-            item['categoria'],
-            item['ean'],
-            item['fornecedor'],
-          ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
-        }).toList()
-          ..sort(
-            (a, b) => (a['nome'] ?? '')
-                .toString()
-                .toLowerCase()
-                .compareTo((b['nome'] ?? '').toString().toLowerCase()),
-          );
+        final itensFiltrados =
+            dados.itens.where((item) {
+              if (termo.isEmpty) return true;
+              return [
+                item['nome'],
+                item['categoria'],
+                item['ean'],
+                item['fornecedor'],
+              ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
+            }).toList()..sort(
+              (a, b) => (a['nome'] ?? '').toString().toLowerCase().compareTo(
+                (b['nome'] ?? '').toString().toLowerCase(),
+              ),
+            );
 
         final movimentosFiltrados = dados.movimentacoes.where((movimento) {
           final tipo = (movimento['tipo'] ?? '').toString().toUpperCase();
@@ -609,7 +608,9 @@ class _WebEstoqueMovimentacoesPageState
                       FilledButton.icon(
                         onPressed: () => _abrirMovimentacao(dados),
                         icon: const Icon(Icons.swap_vert_rounded),
-                        label: Text(compacto ? 'Movimentar' : 'Nova movimentação'),
+                        label: Text(
+                          compacto ? 'Movimentar' : 'Nova movimentação',
+                        ),
                       ),
                     ],
                   ),
@@ -848,9 +849,7 @@ class _WebEstoqueMovimentacoesPageState
                                     '${_numero(saldo)} $unidade',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w800,
-                                      color: baixo
-                                          ? Colors.orangeAccent
-                                          : null,
+                                      color: baixo ? Colors.orangeAccent : null,
                                     ),
                                   ),
                                 ),
@@ -860,9 +859,7 @@ class _WebEstoqueMovimentacoesPageState
                                 DataCell(
                                   Text('${_numero(disponivel)} $unidade'),
                                 ),
-                                DataCell(
-                                  Text('${_numero(minimo)} $unidade'),
-                                ),
+                                DataCell(Text('${_numero(minimo)} $unidade')),
                                 DataCell(
                                   Text(
                                     custo > 0
@@ -971,14 +968,12 @@ class _WebEstoqueMovimentacoesPageState
                             DataColumn(label: Text('MOTIVO / OBSERVAÇÃO')),
                           ],
                           rows: movimentosFiltrados.map((movimento) {
-                            final tipo =
-                                (movimento['tipo'] ?? '').toString();
+                            final tipo = (movimento['tipo'] ?? '').toString();
                             final item = _itemPorId(
                               dados.itens,
                               movimento['item_estoque_id']?.toString(),
                             );
-                            final unidade =
-                                (item?['unidade'] ?? '').toString();
+                            final unidade = (item?['unidade'] ?? '').toString();
                             final entrada = tipo.toUpperCase() == 'ENTRADA';
                             final saida = tipo.toUpperCase() == 'SAIDA';
 
@@ -1034,7 +1029,11 @@ class _WebEstoqueMovimentacoesPageState
                                 ),
                                 DataCell(
                                   Text(
-                                    '${entrada ? '+' : saida ? '-' : ''}'
+                                    '${entrada
+                                        ? '+'
+                                        : saida
+                                        ? '-'
+                                        : ''}'
                                     '${_numero(_double(movimento['quantidade']))} $unidade',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w800,
@@ -1046,14 +1045,18 @@ class _WebEstoqueMovimentacoesPageState
                                     width: 260,
                                     child: Text(
                                       () {
-                                        final detalhe = [
-                                          (movimento['motivo'] ?? '')
-                                              .toString(),
-                                          (movimento['observacoes'] ?? '')
-                                              .toString(),
-                                        ]
-                                            .where((e) => e.trim().isNotEmpty)
-                                            .join(' · ');
+                                        final detalhe =
+                                            [
+                                                  (movimento['motivo'] ?? '')
+                                                      .toString(),
+                                                  (movimento['observacoes'] ??
+                                                          '')
+                                                      .toString(),
+                                                ]
+                                                .where(
+                                                  (e) => e.trim().isNotEmpty,
+                                                )
+                                                .join(' · ');
                                         return detalhe.isEmpty ? '—' : detalhe;
                                       }(),
                                       maxLines: 2,
@@ -1101,15 +1104,17 @@ class _WebEstoqueMovimentacoesPageState
                             ),
                             subtitle: Text(
                               [
-                                _formatarData(
-                                  movimento['data']?.toString(),
-                                ),
+                                _formatarData(movimento['data']?.toString()),
                                 (movimento['origem'] ?? '').toString(),
                                 (movimento['motivo'] ?? '').toString(),
                               ].where((e) => e.trim().isNotEmpty).join(' · '),
                             ),
                             trailing: Text(
-                              '${entrada ? '+' : saida ? '-' : ''}'
+                              '${entrada
+                                  ? '+'
+                                  : saida
+                                  ? '-'
+                                  : ''}'
                               '${_numero(_double(movimento['quantidade']))} $unidade',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
