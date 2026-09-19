@@ -88,16 +88,21 @@ class _MarketingPageState extends State<MarketingPage> {
                   DropdownButtonFormField<String>(
                     initialValue: plataforma,
                     decoration: const InputDecoration(labelText: 'Plataforma'),
-                    items: const <String>[
-                      'Instagram',
-                      'Facebook',
-                      'Google',
-                      'TikTok',
-                      'Outro',
-                    ].map((item) => DropdownMenuItem<String>(
-                      value: item,
-                      child: Text(item),
-                    )).toList(),
+                    items:
+                        const <String>[
+                              'Instagram',
+                              'Facebook',
+                              'Google',
+                              'TikTok',
+                              'Outro',
+                            ]
+                            .map(
+                              (item) => DropdownMenuItem<String>(
+                                value: item,
+                                child: Text(item),
+                              ),
+                            )
+                            .toList(),
                     onChanged: (v) {
                       if (v != null) setLocal(() => plataforma = v);
                     },
@@ -109,15 +114,20 @@ class _MarketingPageState extends State<MarketingPage> {
                         child: DropdownButtonFormField<String>(
                           initialValue: tipo,
                           decoration: const InputDecoration(labelText: 'Tipo'),
-                          items: const <String>[
-                            'Pago',
-                            'Orgânico',
-                            'Impulsionado',
-                            'Outro',
-                          ].map((item) => DropdownMenuItem<String>(
-                            value: item,
-                            child: Text(item),
-                          )).toList(),
+                          items:
+                              const <String>[
+                                    'Pago',
+                                    'Orgânico',
+                                    'Impulsionado',
+                                    'Outro',
+                                  ]
+                                  .map(
+                                    (item) => DropdownMenuItem<String>(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (v) {
                             if (v != null) setLocal(() => tipo = v);
                           },
@@ -127,16 +137,23 @@ class _MarketingPageState extends State<MarketingPage> {
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           initialValue: status,
-                          decoration: const InputDecoration(labelText: 'Status'),
-                          items: const <String>[
-                            'Rascunho',
-                            'Ativa',
-                            'Pausada',
-                            'Finalizada',
-                          ].map((item) => DropdownMenuItem<String>(
-                            value: item,
-                            child: Text(item),
-                          )).toList(),
+                          decoration: const InputDecoration(
+                            labelText: 'Status',
+                          ),
+                          items:
+                              const <String>[
+                                    'Rascunho',
+                                    'Ativa',
+                                    'Pausada',
+                                    'Finalizada',
+                                  ]
+                                  .map(
+                                    (item) => DropdownMenuItem<String>(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (v) {
                             if (v != null) setLocal(() => status = v);
                           },
@@ -174,7 +191,9 @@ class _MarketingPageState extends State<MarketingPage> {
                         child: TextField(
                           controller: alcance,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: 'Alcance'),
+                          decoration: const InputDecoration(
+                            labelText: 'Alcance',
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -182,7 +201,9 @@ class _MarketingPageState extends State<MarketingPage> {
                         child: TextField(
                           controller: cliques,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: 'Cliques'),
+                          decoration: const InputDecoration(
+                            labelText: 'Cliques',
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -205,10 +226,8 @@ class _MarketingPageState extends State<MarketingPage> {
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(
-                context,
-                nome.text.trim().isNotEmpty,
-              ),
+              onPressed: () =>
+                  Navigator.pop(context, nome.text.trim().isNotEmpty),
               child: const Text('Salvar'),
             ),
           ],
@@ -258,8 +277,8 @@ class _MarketingPageState extends State<MarketingPage> {
 
       final nomes = <String, String>{
         for (final cliente in clientes)
-          (cliente['id'] ?? '').toString():
-              (cliente['nome'] ?? 'Cliente').toString(),
+          (cliente['id'] ?? '').toString(): (cliente['nome'] ?? 'Cliente')
+              .toString(),
       };
 
       var campanhaId = _campanhas.first['id'].toString();
@@ -300,9 +319,7 @@ class _MarketingPageState extends State<MarketingPage> {
                           'Cliente';
                       return DropdownMenuItem<String>(
                         value: ordem['id'].toString(),
-                        child: Text(
-                          'OS ${ordem['numero'] ?? ''} · $cliente',
-                        ),
+                        child: Text('OS ${ordem['numero'] ?? ''} · $cliente'),
                       );
                     }).toList(),
                     onChanged: (v) {
@@ -438,9 +455,7 @@ class _MarketingPageState extends State<MarketingPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 9),
       child: ListTile(
-        leading: const CircleAvatar(
-          child: Icon(Icons.campaign_outlined),
-        ),
+        leading: const CircleAvatar(child: Icon(Icons.campaign_outlined)),
         title: Text((item['nome'] ?? 'Campanha').toString()),
         subtitle: Text(
           [

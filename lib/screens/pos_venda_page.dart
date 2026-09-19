@@ -106,8 +106,7 @@ class _PosVendaPageState extends State<PosVendaPage> {
     try {
       await _service.salvarConfigPosVenda(
         diasRetorno: int.tryParse(retorno.text) ?? atual.diasRetorno,
-        diasReativacao:
-            int.tryParse(reativacao.text) ?? atual.diasReativacao,
+        diasReativacao: int.tryParse(reativacao.text) ?? atual.diasReativacao,
       );
       await _carregar();
     } catch (e) {
@@ -212,10 +211,8 @@ class _PosVendaPageState extends State<PosVendaPage> {
               child: const Text('Cancelar'),
             ),
             FilledButton.icon(
-              onPressed: () => Navigator.pop(
-                context,
-                descricao.text.trim().isNotEmpty,
-              ),
+              onPressed: () =>
+                  Navigator.pop(context, descricao.text.trim().isNotEmpty),
               icon: const Icon(Icons.check_rounded),
               label: const Text('Registrar'),
             ),
@@ -536,10 +533,7 @@ class _ResumoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(icone, size: 17),
-      label: Text('$titulo: $valor'),
-    );
+    return Chip(avatar: Icon(icone, size: 17), label: Text('$titulo: $valor'));
   }
 }
 
@@ -569,11 +563,7 @@ class _StatusPosVenda extends StatelessWidget {
       ),
       child: Text(
         status,
-        style: TextStyle(
-          color: cor,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
+        style: TextStyle(color: cor, fontSize: 11, fontWeight: FontWeight.w700),
       ),
     );
   }

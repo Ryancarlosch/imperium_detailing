@@ -824,7 +824,11 @@ class _DashboardMenuV2 extends StatelessWidget {
             if (podeCrm || podeOrcamentos) _secao('Comercial'),
             if (podeCrm) ...[
               _item(Icons.handshake_outlined, 'CRM', onCrm),
-              _item(Icons.replay_circle_filled_outlined, 'Pós-venda', onPosVenda),
+              _item(
+                Icons.replay_circle_filled_outlined,
+                'Pós-venda',
+                onPosVenda,
+              ),
               _item(Icons.campaign_outlined, 'Marketing', onMarketing),
             ],
             if (podeOrcamentos)
