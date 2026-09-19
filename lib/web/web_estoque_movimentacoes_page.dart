@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/item_estoque.dart';
 import '../services/web_estoque_cloud_service.dart';
+import 'imperium_web_theme.dart';
 
 class WebEstoqueMovimentacoesPage extends StatefulWidget {
   const WebEstoqueMovimentacoesPage({super.key});
@@ -19,6 +20,8 @@ class _WebEstoqueMovimentacoesPageState
   final _data = DateFormat('dd/MM/yyyy HH:mm', 'pt_BR');
 
   late Future<_EstoqueDados> _future;
+  final _busca = TextEditingController();
+  String _filtroTipo = 'Todos';
 
   @override
   void initState() {
@@ -45,6 +48,12 @@ class _WebEstoqueMovimentacoesPageState
 
   void _recarregar() {
     setState(() => _future = _buscarDados());
+  }
+
+  @override
+  void dispose() {
+    _busca.dispose();
+    super.dispose();
   }
 
   Future<void> _abrirMovimentacao(_EstoqueDados dados) async {
@@ -406,6 +415,66 @@ class _WebEstoqueMovimentacoesPageState
     }
   }
 
+  Widget _resumoCard({
+    required double width,
+    required String titulo,
+    required String valor,
+    required String detalhe,
+    required IconData icone,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_EstoqueDados>(
@@ -439,169 +508,620 @@ class _WebEstoqueMovimentacoesPageState
           (total, valor) => total + valor,
         );
 
+        final termo = _busca.text.trim().toLowerCase();
+        final itensFiltrados = dados.itens.where((item) {
+          if (termo.isEmpty) return true;
+          return [
+            item['nome'],
+            item['categoria'],
+            item['ean'],
+            item['fornecedor'],
+          ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
+        }).toList()
+          ..sort(
+            (a, b) => (a['nome'] ?? '')
+                .toString()
+                .toLowerCase()
+                .compareTo((b['nome'] ?? '').toString().toLowerCase()),
+          );
+
+        final movimentosFiltrados = dados.movimentacoes.where((movimento) {
+          final tipo = (movimento['tipo'] ?? '').toString().toUpperCase();
+          if (_filtroTipo != 'Todos' && tipo != _filtroTipo) return false;
+
+          final item = _itemPorId(
+            dados.itens,
+            movimento['item_estoque_id']?.toString(),
+          );
+          if (termo.isEmpty) return true;
+
+          return [
+            item?['nome'],
+            movimento['origem'],
+            movimento['motivo'],
+            movimento['observacoes'],
+            movimento['fornecedor'],
+          ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
+        }).toList();
+
+        final alertasAtivos = dados.alertas.where((item) {
+          final status = (item['status'] ?? 'Ativo').toString().toLowerCase();
+          return status == 'ativo' || status == 'aberto';
+        }).toList();
+
         return RefreshIndicator(
           onRefresh: () async {
             _recarregar();
             await _future;
           },
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 16,
-                runSpacing: 12,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compacto = constraints.maxWidth < 760;
+              final tabela = constraints.maxWidth >= 1000;
+              final larguraDisponivel =
+                  constraints.maxWidth - (compacto ? 32 : 48);
+              final colunas = constraints.maxWidth >= 1160
+                  ? 4
+                  : constraints.maxWidth >= 720
+                  ? 2
+                  : 1;
+              final larguraCard =
+                  (larguraDisponivel - (12 * (colunas - 1))) / colunas;
+
+              return ListView(
+                padding: EdgeInsets.fromLTRB(
+                  compacto ? 16 : 24,
+                  compacto ? 18 : 24,
+                  compacto ? 16 : 24,
+                  40,
+                ),
                 children: [
-                  const Column(
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Estoque',
-                        style: TextStyle(
-                          fontSize: 27,
-                          fontWeight: FontWeight.bold,
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Saldo e movimentações',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            SizedBox(height: 5),
+                            Text(
+                              'Controle de saldo, reservas de OS, estoque mínimo e histórico de movimentações.',
+                              style: TextStyle(color: Color(0xFFAAB3BD)),
+                            ),
+                          ],
                         ),
                       ),
-                      SizedBox(height: 5),
-                      Text(
-                        'Saldo Cloud compartilhado com o aplicativo e protegido por FIFO e reservas.',
+                      const SizedBox(width: 14),
+                      IconButton(
+                        tooltip: 'Atualizar',
+                        onPressed: _recarregar,
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      FilledButton.icon(
+                        onPressed: () => _abrirMovimentacao(dados),
+                        icon: const Icon(Icons.swap_vert_rounded),
+                        label: Text(compacto ? 'Movimentar' : 'Nova movimentação'),
                       ),
                     ],
                   ),
-                  FilledButton.icon(
-                    onPressed: () => _abrirMovimentacao(dados),
-                    icon: const Icon(Icons.swap_vert_rounded),
-                    label: const Text('Nova movimentação'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _ResumoEstoqueCard(
-                    titulo: 'Produtos ativos',
-                    valor: dados.itens.length.toString(),
-                  ),
-                  _ResumoEstoqueCard(
-                    titulo: 'Alertas ativos',
-                    valor: dados.alertas.length.toString(),
-                  ),
-                  _ResumoEstoqueCard(
-                    titulo: 'Valor em estoque',
-                    valor: _moeda.format(valorEstoque),
-                  ),
-                  _ResumoEstoqueCard(
-                    titulo: 'Quantidade reservada',
-                    valor: _numero(reservadoTotal),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-              const Text(
-                'Produtos',
-                style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              if (dados.itens.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('Nenhum produto ativo no estoque.'),
-                  ),
-                )
-              else
-                ...dados.itens.map((item) {
-                  final id = item['id'].toString();
-                  final saldo = _double(item['quantidade']);
-                  final reservado = dados.reservasPorItem[id] ?? 0;
-                  final disponivel = (saldo - reservado).clamp(
-                    0,
-                    double.infinity,
-                  );
-                  final minimo = _double(item['quantidade_minima']);
-                  final baixo = minimo > 0 && saldo <= minimo;
-                  final unidade = (item['unidade'] ?? '').toString();
-
-                  return Card(
-                    child: ListTile(
-                      leading: Icon(
-                        baixo
-                            ? Icons.warning_amber_rounded
-                            : Icons.inventory_2_outlined,
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _resumoCard(
+                        width: larguraCard,
+                        titulo: 'Produtos ativos',
+                        valor: '${dados.itens.length}',
+                        detalhe: 'Itens disponíveis para a operação',
+                        icone: Icons.inventory_2_outlined,
                       ),
-                      title: Text((item['nome'] ?? 'Produto').toString()),
-                      subtitle: Text(
-                        [
-                          (item['categoria'] ?? '').toString(),
-                          'Reservado: ${_numero(reservado)} $unidade',
-                          'Disponível: ${_numero(disponivel)} $unidade',
-                        ].where((texto) => texto.trim().isNotEmpty).join(' · '),
+                      _resumoCard(
+                        width: larguraCard,
+                        titulo: 'Alertas ativos',
+                        valor: '${alertasAtivos.length}',
+                        detalhe: 'Produtos que exigem atenção',
+                        icone: Icons.warning_amber_rounded,
                       ),
-                      trailing: Text(
-                        '${_numero(saldo)} $unidade',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      _resumoCard(
+                        width: larguraCard,
+                        titulo: 'Valor em estoque',
+                        valor: _moeda.format(valorEstoque),
+                        detalhe: 'Custo estimado do saldo atual',
+                        icone: Icons.payments_outlined,
+                      ),
+                      _resumoCard(
+                        width: larguraCard,
+                        titulo: 'Quantidade reservada',
+                        valor: _numero(reservadoTotal),
+                        detalhe: 'Saldo comprometido com ordens de serviço',
+                        icone: Icons.lock_clock_outlined,
+                      ),
+                    ],
+                  ),
+                  if (alertasAtivos.isNotEmpty) ...[
+                    const SizedBox(height: 22),
+                    const Text(
+                      'Alertas de estoque',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                  );
-                }),
-              const SizedBox(height: 20),
-              const Text(
-                'Movimentações recentes',
-                style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              if (dados.movimentacoes.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('Nenhuma movimentação registrada.'),
-                  ),
-                )
-              else
-                ...dados.movimentacoes.take(50).map((movimento) {
-                  final tipo = (movimento['tipo'] ?? '').toString();
-                  final item = _itemPorId(
-                    dados.itens,
-                    movimento['item_estoque_id']?.toString(),
-                  );
-                  final unidade = (item?['unidade'] ?? '').toString();
-                  final entrada = tipo.toUpperCase() == 'ENTRADA';
-
-                  return Card(
-                    child: ListTile(
-                      leading: Icon(
-                        entrada
-                            ? Icons.south_west_rounded
-                            : tipo.toUpperCase() == 'SAIDA'
-                            ? Icons.north_east_rounded
-                            : Icons.tune_rounded,
-                      ),
-                      title: Text(
-                        '${item?['nome'] ?? 'Produto'} · ${_rotuloTipo(tipo)}',
-                      ),
-                      subtitle: Text(
-                        [
-                          _formatarData(movimento['data']?.toString()),
-                          (movimento['origem'] ?? '').toString(),
-                          (movimento['motivo'] ?? '').toString(),
-                        ].where((texto) => texto.trim().isNotEmpty).join(' · '),
-                      ),
-                      trailing: Text(
-                        '${entrada
-                            ? '+'
-                            : tipo.toUpperCase() == 'SAIDA'
-                            ? '-'
-                            : ''}'
-                        '${_numero(_double(movimento['quantidade']))} $unidade',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: alertasAtivos.take(8).map((alerta) {
+                        final item = _itemPorId(
+                          dados.itens,
+                          alerta['item_estoque_id']?.toString(),
+                        );
+                        return Chip(
+                          avatar: const Icon(
+                            Icons.warning_amber_rounded,
+                            size: 17,
+                          ),
+                          label: Text(
+                            (alerta['mensagem'] ??
+                                    item?['nome'] ??
+                                    'Estoque baixo')
+                                .toString(),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 22),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: compacto ? larguraDisponivel - 28 : 430,
+                            child: TextField(
+                              controller: _busca,
+                              onChanged: (_) => setState(() {}),
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.search_rounded),
+                                hintText:
+                                    'Buscar produto, categoria, origem ou observação',
+                                suffixIcon: _busca.text.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        tooltip: 'Limpar busca',
+                                        onPressed: () {
+                                          _busca.clear();
+                                          setState(() {});
+                                        },
+                                        icon: const Icon(Icons.close_rounded),
+                                      ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 180,
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _filtroTipo,
+                              decoration: const InputDecoration(
+                                labelText: 'Movimentação',
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Todos',
+                                  child: Text('Todos os tipos'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'ENTRADA',
+                                  child: Text('Entradas'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'SAIDA',
+                                  child: Text('Saídas'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'AJUSTE',
+                                  child: Text('Ajustes'),
+                                ),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _filtroTipo = v ?? 'Todos'),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                }),
-            ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Produtos',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${itensFiltrados.length} resultado(s)',
+                        style: const TextStyle(
+                          color: Color(0xFF89939E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (itensFiltrados.isEmpty)
+                    const Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text('Nenhum produto encontrado.'),
+                      ),
+                    )
+                  else if (tabela)
+                    Card(
+                      margin: EdgeInsets.zero,
+                      clipBehavior: Clip.antiAlias,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          headingRowHeight: 52,
+                          dataRowMinHeight: 58,
+                          dataRowMaxHeight: 72,
+                          columns: const [
+                            DataColumn(label: Text('PRODUTO')),
+                            DataColumn(label: Text('SALDO')),
+                            DataColumn(label: Text('RESERVADO')),
+                            DataColumn(label: Text('DISPONÍVEL')),
+                            DataColumn(label: Text('MÍNIMO')),
+                            DataColumn(label: Text('CUSTO ESTIMADO')),
+                          ],
+                          rows: itensFiltrados.map((item) {
+                            final id = item['id'].toString();
+                            final saldo = _double(item['quantidade']);
+                            final reservado = dados.reservasPorItem[id] ?? 0;
+                            final disponivel = (saldo - reservado).clamp(
+                              0,
+                              double.infinity,
+                            );
+                            final minimo = _double(item['quantidade_minima']);
+                            final unidade = (item['unidade'] ?? '').toString();
+                            final baixo = minimo > 0 && saldo <= minimo;
+                            final custo =
+                                _double(item['custo_unitario_calculado']) > 0
+                                ? _double(item['custo_unitario_calculado'])
+                                : _double(item['custo_unitario']);
+
+                            return DataRow(
+                              cells: [
+                                DataCell(
+                                  SizedBox(
+                                    width: 250,
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 17,
+                                          child: Icon(
+                                            baixo
+                                                ? Icons.warning_amber_rounded
+                                                : Icons.inventory_2_outlined,
+                                            size: 18,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            (item['nome'] ?? 'Produto')
+                                                .toString(),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    '${_numero(saldo)} $unidade',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: baixo
+                                          ? Colors.orangeAccent
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Text('${_numero(reservado)} $unidade'),
+                                ),
+                                DataCell(
+                                  Text('${_numero(disponivel)} $unidade'),
+                                ),
+                                DataCell(
+                                  Text('${_numero(minimo)} $unidade'),
+                                ),
+                                DataCell(
+                                  Text(
+                                    custo > 0
+                                        ? _moeda.format(saldo * custo)
+                                        : '—',
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    )
+                  else
+                    ...itensFiltrados.map((item) {
+                      final id = item['id'].toString();
+                      final saldo = _double(item['quantidade']);
+                      final reservado = dados.reservasPorItem[id] ?? 0;
+                      final disponivel = (saldo - reservado).clamp(
+                        0,
+                        double.infinity,
+                      );
+                      final minimo = _double(item['quantidade_minima']);
+                      final baixo = minimo > 0 && saldo <= minimo;
+                      final unidade = (item['unidade'] ?? '').toString();
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              child: Icon(
+                                baixo
+                                    ? Icons.warning_amber_rounded
+                                    : Icons.inventory_2_outlined,
+                              ),
+                            ),
+                            title: Text(
+                              (item['nome'] ?? 'Produto').toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Reservado ${_numero(reservado)} · '
+                              'Disponível ${_numero(disponivel)} $unidade',
+                            ),
+                            trailing: Text(
+                              '${_numero(saldo)} $unidade',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Movimentações',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${movimentosFiltrados.length} resultado(s)',
+                        style: const TextStyle(
+                          color: Color(0xFF89939E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (movimentosFiltrados.isEmpty)
+                    const Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text('Nenhuma movimentação encontrada.'),
+                      ),
+                    )
+                  else if (tabela)
+                    Card(
+                      margin: EdgeInsets.zero,
+                      clipBehavior: Clip.antiAlias,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          headingRowHeight: 52,
+                          dataRowMinHeight: 58,
+                          dataRowMaxHeight: 72,
+                          columns: const [
+                            DataColumn(label: Text('DATA')),
+                            DataColumn(label: Text('PRODUTO')),
+                            DataColumn(label: Text('TIPO')),
+                            DataColumn(label: Text('ORIGEM')),
+                            DataColumn(label: Text('QUANTIDADE')),
+                            DataColumn(label: Text('MOTIVO / OBSERVAÇÃO')),
+                          ],
+                          rows: movimentosFiltrados.map((movimento) {
+                            final tipo =
+                                (movimento['tipo'] ?? '').toString();
+                            final item = _itemPorId(
+                              dados.itens,
+                              movimento['item_estoque_id']?.toString(),
+                            );
+                            final unidade =
+                                (item?['unidade'] ?? '').toString();
+                            final entrada = tipo.toUpperCase() == 'ENTRADA';
+                            final saida = tipo.toUpperCase() == 'SAIDA';
+
+                            return DataRow(
+                              cells: [
+                                DataCell(
+                                  SizedBox(
+                                    width: 135,
+                                    child: Text(
+                                      _formatarData(
+                                        movimento['data']?.toString(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  SizedBox(
+                                    width: 230,
+                                    child: Text(
+                                      (item?['nome'] ?? 'Produto').toString(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        entrada
+                                            ? Icons.south_west_rounded
+                                            : saida
+                                            ? Icons.north_east_rounded
+                                            : Icons.tune_rounded,
+                                        size: 17,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(_rotuloTipo(tipo)),
+                                    ],
+                                  ),
+                                ),
+                                DataCell(
+                                  SizedBox(
+                                    width: 150,
+                                    child: Text(
+                                      (movimento['origem'] ?? '—').toString(),
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    '${entrada ? '+' : saida ? '-' : ''}'
+                                    '${_numero(_double(movimento['quantidade']))} $unidade',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  SizedBox(
+                                    width: 260,
+                                    child: Text(
+                                      () {
+                                        final detalhe = [
+                                          (movimento['motivo'] ?? '')
+                                              .toString(),
+                                          (movimento['observacoes'] ?? '')
+                                              .toString(),
+                                        ]
+                                            .where((e) => e.trim().isNotEmpty)
+                                            .join(' · ');
+                                        return detalhe.isEmpty ? '—' : detalhe;
+                                      }(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    )
+                  else
+                    ...movimentosFiltrados.map((movimento) {
+                      final tipo = (movimento['tipo'] ?? '').toString();
+                      final item = _itemPorId(
+                        dados.itens,
+                        movimento['item_estoque_id']?.toString(),
+                      );
+                      final unidade = (item?['unidade'] ?? '').toString();
+                      final entrada = tipo.toUpperCase() == 'ENTRADA';
+                      final saida = tipo.toUpperCase() == 'SAIDA';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              child: Icon(
+                                entrada
+                                    ? Icons.south_west_rounded
+                                    : saida
+                                    ? Icons.north_east_rounded
+                                    : Icons.tune_rounded,
+                              ),
+                            ),
+                            title: Text(
+                              '${item?['nome'] ?? 'Produto'} · '
+                              '${_rotuloTipo(tipo)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            subtitle: Text(
+                              [
+                                _formatarData(
+                                  movimento['data']?.toString(),
+                                ),
+                                (movimento['origem'] ?? '').toString(),
+                                (movimento['motivo'] ?? '').toString(),
+                              ].where((e) => e.trim().isNotEmpty).join(' · '),
+                            ),
+                            trailing: Text(
+                              '${entrada ? '+' : saida ? '-' : ''}'
+                              '${_numero(_double(movimento['quantidade']))} $unidade',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                ],
+              );
+            },
           ),
         );
       },
