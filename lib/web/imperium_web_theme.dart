@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../config/app_branding.dart';
+
 class ImperiumWebTheme {
   ImperiumWebTheme._();
 
-  static const Color background = Color(0xFF090B0E);
-  static const Color surface = Color(0xFF11151A);
-  static const Color surfaceRaised = Color(0xFF171C22);
-  static const Color border = Color(0xFF28303A);
-  static const Color accent = Color(0xFFF2B84B);
-  static const Color accentStrong = Color(0xFFFFC857);
+  static const Color background = AppBranding.webBackground;
+  static const Color surface = AppBranding.webSurface;
+  static const Color surfaceRaised = AppBranding.webSurfaceRaised;
+  static const Color border = AppBranding.webBorder;
+  static const Color accent = AppBranding.webAccent;
+  static const Color accentStrong = AppBranding.webAccentStrong;
 
   static ThemeData dark() {
     final colorScheme =
