@@ -197,10 +197,12 @@ class WebPendenciasOperacionaisService {
         acrescimoNegociacao: _double(ordem['acrescimo_negociacao']),
         jurosParcelamento: _double(ordem['juros_parcelamento']),
       );
-      final pendente = (negociado - _double(ordem['valor_recebido'])).clamp(
-        0,
-        double.infinity,
-      );
+      final pendente = (negociado - _double(ordem['valor_recebido']))
+          .clamp(
+            0,
+            double.infinity,
+          )
+          .toDouble();
       if (pendente <= 0.001) continue;
 
       final numero = _texto(ordem['numero']).isEmpty
