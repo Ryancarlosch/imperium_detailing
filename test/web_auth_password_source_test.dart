@@ -96,16 +96,20 @@ void main() {
       final workspace = File(
         'lib/web/web_workspace_shell.dart',
       ).readAsStringSync();
+      final shell = File(
+        'lib/web/web_operacional_shell.dart',
+      ).readAsStringSync();
       final plano = File(
         'lib/screens/licenca_status_page.dart',
       ).readAsStringSync();
 
       expect(web, contains('Plano / renovar acesso'));
       expect(web, contains('LicencaStatusPage(empresaId: empresaId)'));
-      expect(workspace, contains('Plano e assinatura'));
+      expect(workspace, contains('WebOperacionalShell'));
+      expect(shell, contains('Plano e assinatura'));
       expect(
-        workspace,
-        contains('LicencaStatusPage(empresaId: empresaAtualId)'),
+        shell,
+        contains('LicencaStatusPage(empresaId: widget.empresaAtualId)'),
       );
       expect(plano, contains('Plano do Imperium'));
       expect(plano, contains('Assinar antes do vencimento'));
