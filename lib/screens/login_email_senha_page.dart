@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../config/app_branding.dart';
 import '../config/imperium_app_links.dart';
 import '../services/cloud_session_service.dart';
 import '../services/imperium_auth_service.dart';
@@ -18,14 +19,14 @@ class LoginEmailSenhaPage extends StatefulWidget {
 }
 
 class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
-  static const _gold = Color(0xFFFFC857);
-  static const _goldSoft = Color(0xFFF2B84B);
-  static const _background = Color(0xFF07090C);
-  static const _surface = Color(0xFF101419);
-  static const _surfaceRaised = Color(0xFF171C22);
-  static const _border = Color(0xFF2A313A);
-  static const _text = Color(0xFFF5F6F8);
-  static const _muted = Color(0xFF9CA5AF);
+  static const _gold = AppBranding.webAccentStrong;
+  static const _goldSoft = AppBranding.webAccent;
+  static const _background = AppBranding.loginBackground;
+  static const _surface = AppBranding.loginSurface;
+  static const _surfaceRaised = AppBranding.loginSurfaceRaised;
+  static const _border = AppBranding.loginBorder;
+  static const _text = AppBranding.loginText;
+  static const _muted = AppBranding.loginMuted;
 
   final TextEditingController _email = TextEditingController();
   final TextEditingController _senha = TextEditingController();
@@ -126,8 +127,8 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
       if (!mounted) return;
       setState(() {
         _mensagem = kIsWeb
-            ? 'Enviamos um e-mail para você definir uma nova senha. Abra o link e conclua a troca no Imperium.'
-            : 'Enviamos um e-mail para você definir uma nova senha. Abra o link neste celular; o Imperium será aberto para concluir a troca.';
+            ? 'Enviamos um e-mail para você definir uma nova senha. Abra o link e conclua a troca no ${AppBranding.productName}.'
+            : 'Enviamos um e-mail para você definir uma nova senha. Abra o link neste celular; o ${AppBranding.productName} será aberto para concluir a troca.';
       });
     } catch (erro) {
       if (!mounted) return;
@@ -339,7 +340,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
                 _logoImperium(),
                 const SizedBox(height: 16),
                 const Text(
-                  'IMPERIUM',
+                  AppBranding.wordmarkPrimary,
                   style: TextStyle(
                     color: _text,
                     fontSize: 25,
@@ -349,7 +350,7 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
                 ),
                 const SizedBox(height: 5),
                 const Text(
-                  'MANAGER',
+                  AppBranding.wordmarkSecondary,
                   style: TextStyle(
                     color: _gold,
                     fontSize: 12,
