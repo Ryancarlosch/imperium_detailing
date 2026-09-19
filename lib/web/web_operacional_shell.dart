@@ -4,8 +4,6 @@ import 'package:intl/intl.dart';
 import '../domain/ordem_servico_valor.dart';
 import '../screens/imperium_planos_page.dart';
 import '../screens/licenca_status_page.dart';
-import '../screens/marketing_page.dart';
-import '../screens/pos_venda_page.dart';
 import '../services/web_cloud_operacional_service.dart';
 import 'imperium_web_theme.dart';
 import 'web_contas_financeiras_page.dart';
@@ -14,11 +12,13 @@ import 'web_dre_page.dart';
 import 'web_expansao_pages.dart';
 import 'web_financeiro_lancamentos_page.dart';
 import 'web_gestao_pages.dart';
+import 'web_marketing_page.dart';
 import 'web_ordens_v3_page.dart';
 import 'web_estoque_gestao_page.dart';
 import 'web_os_arquivos_page.dart';
 import 'web_os_finalizacao_v4_page.dart';
 import 'web_ponto_page.dart';
+import 'web_pos_venda_page.dart';
 import 'web_relatorios_page.dart';
 
 class WebOperacionalShell extends StatefulWidget {
@@ -110,8 +110,6 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     11 => WebContasFinanceirasPage(key: ValueKey('contas-rota-$_revisao')),
     12 => WebRelatoriosPage(key: ValueKey('relatorios-rota-$_revisao')),
     16 => WebPontoPage(key: ValueKey('ponto-rota-$_revisao')),
-    18 => PosVendaPage(key: ValueKey('pos-venda-rota-$_revisao')),
-    19 => MarketingPage(key: ValueKey('marketing-rota-$_revisao')),
     _ => null,
   };
 
@@ -175,6 +173,8 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       14 => WebOrcamentosPage(key: ValueKey('orcamentos-$_revisao')),
       15 => WebPrecificacaoPage(key: ValueKey('precificacao-$_revisao')),
       16 => WebPontoPage(key: ValueKey('ponto-$_revisao')),
+      18 => WebPosVendaPage(key: ValueKey('pos-venda-$_revisao')),
+      19 => WebMarketingPage(key: ValueKey('marketing-$_revisao')),
       _ => WebCentralCloudPage(key: ValueKey('central-$_revisao')),
     };
   }
