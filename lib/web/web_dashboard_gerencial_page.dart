@@ -98,6 +98,7 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
     final resumo = _resumo!;
     final operacional = resumo.operacional;
     final financeiro = resumo.financeiro;
+    final comercial = resumo.comercial;
     final contas = resumo.contas.take(4).toList();
     final executores = financeiro.executores.take(5).toList();
     final agendaHoje = resumo.agendaHoje.take(6).toList();
@@ -219,6 +220,85 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     valor: '${operacional['veiculos'] ?? 0}',
                     detalhe: 'Veículos cadastrados na empresa',
                     icon: Icons.directions_car_outlined,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+              _SectionTitle(
+                titulo: 'Comercial e retenção',
+                subtitulo:
+                    'CRM, pós-venda e marketing usando os mesmos dados Cloud do restante da plataforma.',
+                trailing: compacto
+                    ? null
+                    : Wrap(
+                        spacing: 6,
+                        children: [
+                          TextButton(
+                            onPressed: () => widget.onNavigate?.call(13),
+                            child: const Text('CRM'),
+                          ),
+                          TextButton(
+                            onPressed: () => widget.onNavigate?.call(18),
+                            child: const Text('Pós-venda'),
+                          ),
+                          TextButton(
+                            onPressed: () => widget.onNavigate?.call(19),
+                            child: const Text('Marketing'),
+                          ),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _KpiCard(
+                    width: larguraKpi,
+                    titulo: 'Leads abertos',
+                    valor: '${comercial.leadsAbertos}',
+                    detalhe: '${comercial.leadsGanhos} lead(s) marcado(s) como ganho',
+                    icon: Icons.person_search_outlined,
+                    alerta: comercial.leadsAbertos > 0,
+                  ),
+                  _KpiCard(
+                    width: larguraKpi,
+                    titulo: 'Potencial do CRM',
+                    valor: _valor(comercial.potencial),
+                    detalhe: 'Soma das oportunidades ainda não perdidas',
+                    icon: Icons.handshake_outlined,
+                  ),
+                  _KpiCard(
+                    width: larguraKpi,
+                    titulo: 'Pós-venda pendente',
+                    valor: '${comercial.posVendaAcoes}',
+                    detalhe:
+                        '${comercial.posVendaReativacao} cliente(s) em reativação',
+                    icon: Icons.replay_circle_filled_outlined,
+                    alerta: comercial.posVendaAcoes > 0,
+                  ),
+                  _KpiCard(
+                    width: larguraKpi,
+                    titulo: 'Campanhas ativas',
+                    valor: '${comercial.campanhasAtivas}',
+                    detalhe: '${comercial.marketingLeads} lead(s) de marketing',
+                    icon: Icons.campaign_outlined,
+                  ),
+                  _KpiCard(
+                    width: larguraKpi,
+                    titulo: 'Faturamento atribuído',
+                    valor: _valor(comercial.marketingFaturamento),
+                    detalhe: 'Receita de OS vinculadas às campanhas',
+                    icon: Icons.trending_up_rounded,
+                  ),
+                  _KpiCard(
+                    width: larguraKpi,
+                    titulo: 'ROAS',
+                    valor: comercial.marketingRoas <= 0
+                        ? '—'
+                        : '${comercial.marketingRoas.toStringAsFixed(2)}x',
+                    detalhe: 'Retorno de receita sobre investimento em marketing',
+                    icon: Icons.analytics_outlined,
                   ),
                 ],
               ),
