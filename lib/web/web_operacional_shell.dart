@@ -23,6 +23,7 @@ import 'web_pos_venda_page.dart';
 import 'web_relatorios_page.dart';
 import 'web_usuarios_acessos_page.dart';
 
+// Workspace Web profissional: navegação, busca global e módulos gerenciais.
 class WebOperacionalShell extends StatefulWidget {
   const WebOperacionalShell({
     super.key,
