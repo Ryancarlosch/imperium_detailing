@@ -210,18 +210,12 @@ class _WebConfiguracoesEmpresaPageState
           children: [
             Text(
               titulo,
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
-              ),
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 3),
             Text(
               subtitulo,
-              style: const TextStyle(
-                color: Color(0xFF89939E),
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Color(0xFF89939E), fontSize: 12),
             ),
             const SizedBox(height: 16),
             ...children,
@@ -492,10 +486,7 @@ class _WebConfiguracoesEmpresaPageState
                   controller: _observacaoPadrao,
                   minLines: 2,
                   maxLines: 5,
-                  decoration: _dec(
-                    'Observação padrão',
-                    Icons.notes_outlined,
-                  ),
+                  decoration: _dec('Observação padrão', Icons.notes_outlined),
                 ),
               ],
             ),
