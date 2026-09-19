@@ -44,23 +44,38 @@ class WebFinanceiroAdministracaoService {
         .toList();
   }
 
-  Future<List<Map<String, dynamic>>> listarFornecedores() =>
-      _listar('imperium_financeiro_fornecedores', ordenarPor: 'nome', crescente: true);
+  Future<List<Map<String, dynamic>>> listarFornecedores() => _listar(
+    'imperium_financeiro_fornecedores',
+    ordenarPor: 'nome',
+    crescente: true,
+  );
 
-  Future<List<Map<String, dynamic>>> listarRegrasTaxa() =>
-      _listar('imperium_financeiro_regras_taxa', ordenarPor: 'prioridade', crescente: true);
+  Future<List<Map<String, dynamic>>> listarRegrasTaxa() => _listar(
+    'imperium_financeiro_regras_taxa',
+    ordenarPor: 'prioridade',
+    crescente: true,
+  );
 
-  Future<List<Map<String, dynamic>>> listarCustosFixos() =>
-      _listar('imperium_financeiro_custos_fixos', ordenarPor: 'nome', crescente: true);
+  Future<List<Map<String, dynamic>>> listarCustosFixos() => _listar(
+    'imperium_financeiro_custos_fixos',
+    ordenarPor: 'nome',
+    crescente: true,
+  );
 
   Future<List<Map<String, dynamic>>> listarMetas() =>
       _listar('imperium_financeiro_metas', ordenarPor: 'ano');
 
-  Future<List<Map<String, dynamic>>> listarPlanoContas() =>
-      _listar('imperium_financeiro_plano_contas', ordenarPor: 'codigo', crescente: true);
+  Future<List<Map<String, dynamic>>> listarPlanoContas() => _listar(
+    'imperium_financeiro_plano_contas',
+    ordenarPor: 'codigo',
+    crescente: true,
+  );
 
-  Future<List<Map<String, dynamic>>> listarContas() =>
-      _listar('imperium_financeiro_contas', ordenarPor: 'nome', crescente: true);
+  Future<List<Map<String, dynamic>>> listarContas() => _listar(
+    'imperium_financeiro_contas',
+    ordenarPor: 'nome',
+    crescente: true,
+  );
 
   Future<List<Map<String, dynamic>>> listarMovimentos() =>
       _listar('imperium_financeiro_movimentos', ordenarPor: 'data');
@@ -68,12 +83,11 @@ class WebFinanceiroAdministracaoService {
   Future<List<Map<String, dynamic>>> listarTransferencias() =>
       _listar('imperium_financeiro_transferencias', ordenarPor: 'data');
 
-  Future<List<Map<String, dynamic>>> listarColaboradoresCusto() =>
-      _listar(
-        'imperium_precificacao_colaboradores_custo',
-        ordenarPor: 'nome',
-        crescente: true,
-      );
+  Future<List<Map<String, dynamic>>> listarColaboradoresCusto() => _listar(
+    'imperium_precificacao_colaboradores_custo',
+    ordenarPor: 'nome',
+    crescente: true,
+  );
 
   Future<void> _salvar({
     required String tabela,
@@ -213,7 +227,9 @@ class WebFinanceiroAdministracaoService {
       valores: <String, Object?>{
         'nome': nome.trim(),
         'valor_mensal': valorMensal,
-        'categoria': categoria.trim().isEmpty ? 'Despesa fixa' : categoria.trim(),
+        'categoria': categoria.trim().isEmpty
+            ? 'Despesa fixa'
+            : categoria.trim(),
         'dia_vencimento': diaVencimento,
         'plano_conta_id': _nulo(planoContaId),
         'observacoes': observacoes.trim(),
