@@ -109,7 +109,6 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     10 => WebDrePage(key: ValueKey('dre-rota-$_revisao')),
     11 => WebContasFinanceirasPage(key: ValueKey('contas-rota-$_revisao')),
     12 => WebRelatoriosPage(key: ValueKey('relatorios-rota-$_revisao')),
-    16 => WebPontoPage(key: ValueKey('ponto-rota-$_revisao')),
     _ => null,
   };
 
