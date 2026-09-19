@@ -101,7 +101,7 @@ void main() {
       expect(source, contains('WebWorkspaceShell'));
 
       expect(workspace, contains('WebOperacionalShell'));
-      expect(workspace, contains("ValueKey('workspace-$empresaAtualId')"));
+      expect(workspace, contains("ValueKey('workspace-\$empresaAtualId')"));
       expect(workspace, isNot(contains('WebDashboardGerencialPage')));
       expect(workspace, isNot(contains('_abrirSistemaCompleto')));
       expect(workspace, isNot(contains('Abrir sistema completo')));
