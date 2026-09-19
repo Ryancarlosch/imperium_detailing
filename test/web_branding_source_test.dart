@@ -25,6 +25,17 @@ void main() {
     expect(source, isNot(contains('<title>imperium_detailing</title>')));
   });
 
+  test('Identidade Flutter Web fica centralizada em AppBranding', () {
+    final branding = File('lib/config/app_branding.dart').readAsStringSync();
+    final theme = File('lib/web/imperium_web_theme.dart').readAsStringSync();
+    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
+
+    expect(branding, contains('class AppBranding'));
+    expect(branding, contains("productName = 'Imperium Manager'"));
+    expect(theme, contains('AppBranding.webAccentStrong'));
+    expect(shell, contains('AppBranding.productName'));
+  });
+
   test('Manifesto PWA preserva identidade Imperium', () {
     final source = File('web/manifest.json').readAsStringSync();
 
