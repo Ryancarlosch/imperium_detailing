@@ -17,7 +17,7 @@ class WebNovaOrdemPage extends StatefulWidget {
 class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
   final _gestao = WebCloudGestaoService.instance;
   final _operacional = WebCloudOperacionalService.instance;
-  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\
+  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: r'R$');
   final _responsavel = TextEditingController();
   final _observacoes = TextEditingController();
 
