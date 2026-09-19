@@ -462,8 +462,10 @@ class _WebFinanceiroLancamentosPageState
     }).toList();
 
     filtrados.sort((a, b) {
-      final da = DateTime.tryParse((a['data'] ?? '').toString()) ?? DateTime(2000);
-      final db = DateTime.tryParse((b['data'] ?? '').toString()) ?? DateTime(2000);
+      final da =
+          DateTime.tryParse((a['data'] ?? '').toString()) ?? DateTime(2000);
+      final db =
+          DateTime.tryParse((b['data'] ?? '').toString()) ?? DateTime(2000);
       return db.compareTo(da);
     });
 
@@ -630,12 +632,13 @@ class _WebFinanceiroLancamentosPageState
         final saldos =
             dados.resumo['saldos'] as Map<String, double>? ?? const {};
         final movimentos = _filtrarMovimentos(dados.movimentos);
-        final statuses = dados.movimentos
-            .map((e) => (e['status'] ?? '').toString().trim())
-            .where((e) => e.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+        final statuses =
+            dados.movimentos
+                .map((e) => (e['status'] ?? '').toString().trim())
+                .where((e) => e.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
 
         return RefreshIndicator(
           onRefresh: () async {
@@ -801,8 +804,7 @@ class _WebFinanceiroLancamentosPageState
                       runSpacing: 12,
                       children: dados.contas
                           .map(
-                            (conta) =>
-                                _contaCard(conta, saldos, larguraConta),
+                            (conta) => _contaCard(conta, saldos, larguraConta),
                           )
                           .toList(),
                     ),
@@ -811,10 +813,7 @@ class _WebFinanceiroLancamentosPageState
                   const SizedBox(height: 22),
                   const Text(
                     'Movimentos financeiros',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 10),
                   Card(
@@ -892,9 +891,8 @@ class _WebFinanceiroLancamentosPageState
                                   ),
                                 ),
                               ],
-                              onChanged: (v) => setState(
-                                () => _filtroStatus = v ?? 'Todos',
-                              ),
+                              onChanged: (v) =>
+                                  setState(() => _filtroStatus = v ?? 'Todos'),
                             ),
                           ),
                           SizedBox(
@@ -983,8 +981,8 @@ class _WebFinanceiroLancamentosPageState
                           ],
                           rows: movimentos.map((movimento) {
                             final entrada = _entrada(movimento['tipo']);
-                            final status =
-                                (movimento['status'] ?? '').toString();
+                            final status = (movimento['status'] ?? '')
+                                .toString();
                             final contaNome = _nomeConta(
                               dados.contas,
                               movimento['conta_id']?.toString(),
@@ -1070,8 +1068,7 @@ class _WebFinanceiroLancamentosPageState
                   else
                     ...movimentos.map((movimento) {
                       final entrada = _entrada(movimento['tipo']);
-                      final status =
-                          (movimento['status'] ?? '').toString();
+                      final status = (movimento['status'] ?? '').toString();
                       final contaNome = _nomeConta(
                         dados.contas,
                         movimento['conta_id']?.toString(),
@@ -1098,9 +1095,7 @@ class _WebFinanceiroLancamentosPageState
                             ),
                             subtitle: Text(
                               [
-                                _formatarData(
-                                  movimento['data']?.toString(),
-                                ),
+                                _formatarData(movimento['data']?.toString()),
                                 status,
                                 contaNome,
                                 (movimento['forma_pagamento'] ?? '').toString(),
