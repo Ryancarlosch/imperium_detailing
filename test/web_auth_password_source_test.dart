@@ -56,7 +56,8 @@ void main() {
     expect(source, contains('AuthChangeEvent.passwordRecovery'));
     expect(source, contains('definirNovaSenha'));
     expect(source, contains('Salvar nova senha'));
-    expect(source, contains('mesma no Imperium Web e no aplicativo'));
+    expect(source, contains('Essa senha será a mesma no'));
+    expect(source, contains('AppBranding.productName'));
     expect(source, isNot(contains('signInWithOtp')));
     expect(source, isNot(contains('Magic Link')));
   });
