@@ -5,7 +5,9 @@ import '../services/web_cloud_contas_service.dart';
 import 'imperium_web_theme.dart';
 
 class WebContasFinanceirasPage extends StatefulWidget {
-  const WebContasFinanceirasPage({super.key});
+  const WebContasFinanceirasPage({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<WebContasFinanceirasPage> createState() =>
@@ -64,19 +66,7 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
       (total, conta) => total + conta.saldoAtual,
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Contas e caixa'),
-        actions: [
-          IconButton(
-            tooltip: 'Atualizar saldos',
-            onPressed: _carregando ? null : _carregar,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: _carregando && _contas.isEmpty
+    final body = _carregando && _contas.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : _erro != null && _contas.isEmpty
           ? _ErroFinanceiro(mensagem: _erro!, onTentarNovamente: _carregar)
@@ -211,7 +201,23 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
                     child: LinearProgressIndicator(minHeight: 2),
                   ),
               ],
-            ),
+            );
+
+    if (widget.embedded) return body;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Contas e caixa'),
+        actions: [
+          IconButton(
+            tooltip: 'Atualizar saldos',
+            onPressed: _carregando ? null : _carregar,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: body,
     );
   }
 
