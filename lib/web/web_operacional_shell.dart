@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../domain/ordem_servico_valor.dart';
 import '../screens/imperium_planos_page.dart';
 import '../screens/licenca_status_page.dart';
+import '../screens/marketing_page.dart';
+import '../screens/pos_venda_page.dart';
 import '../services/web_cloud_operacional_service.dart';
 import 'imperium_web_theme.dart';
 import 'web_contas_financeiras_page.dart';
@@ -95,6 +97,8 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     14 => 'Orçamentos',
     15 => 'Precificação',
     16 => 'Ponto e funcionários',
+    18 => 'Pós-venda',
+    19 => 'Marketing',
     _ => 'Central Cloud',
   };
 
@@ -105,6 +109,8 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     11 => WebContasFinanceirasPage(key: ValueKey('contas-rota-$_revisao')),
     12 => WebRelatoriosPage(key: ValueKey('relatorios-rota-$_revisao')),
     16 => WebPontoPage(key: ValueKey('ponto-rota-$_revisao')),
+    18 => PosVendaPage(key: ValueKey('pos-venda-rota-$_revisao')),
+    19 => MarketingPage(key: ValueKey('marketing-rota-$_revisao')),
     _ => null,
   };
 
@@ -296,9 +302,19 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         _grupoMenu(
           titulo: 'Comercial',
           icone: Icons.storefront_outlined,
-          indices: const {13, 14, 15},
+          indices: const {13, 14, 15, 18, 19},
           filhos: [
             _itemMenu(indice: 13, titulo: 'CRM', icone: Icons.hub_outlined),
+            _itemMenu(
+              indice: 18,
+              titulo: 'Pós-venda',
+              icone: Icons.replay_circle_filled_outlined,
+            ),
+            _itemMenu(
+              indice: 19,
+              titulo: 'Marketing',
+              icone: Icons.campaign_outlined,
+            ),
             _itemMenu(
               indice: 14,
               titulo: 'Orçamentos',
