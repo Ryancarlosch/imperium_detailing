@@ -16,6 +16,7 @@ import 'web_financeiro_lancamentos_page.dart';
 import 'web_gestao_pages.dart';
 import 'web_ordens_v3_page.dart';
 import 'web_estoque_gestao_page.dart';
+import 'web_os_arquivos_page.dart';
 import 'web_os_finalizacao_v4_page.dart';
 import 'web_ponto_page.dart';
 import 'web_relatorios_page.dart';
@@ -157,6 +158,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         key: ValueKey('os-$_revisao'),
         service: _service,
         moeda: _moeda,
+        onNavigate: (indice) => _selecionar(indice, fecharMenu: false),
       ),
       5 => WebNovaOrdemPage(
         key: ValueKey('nova-os-$_revisao'),
@@ -2758,19 +2760,230 @@ class _AgendaPageState extends State<_AgendaPage> {
   }
 }
 
-class _OrdensPage extends StatelessWidget {
-  const _OrdensPage({super.key, required this.service, required this.moeda});
+class _OrdensPage extends StatefulWidget {
+  const _OrdensPage({
+    super.key,
+    required this.service,
+    required this.moeda,
+    required this.onNavigate,
+  });
 
   final WebCloudOperacionalService service;
   final NumberFormat moeda;
+  final ValueChanged<int> onNavigate;
+
+  @override
+  State<_OrdensPage> createState() => _OrdensPageState();
+}
+
+class _OrdensPageState extends State<_OrdensPage> {
+  final _busca = TextEditingController();
+  String _status = 'Todos';
+  String _pagamento = 'Todos';
+  String _periodo = 'Todos';
+
+  @override
+  void dispose() {
+    _busca.dispose();
+    super.dispose();
+  }
+
+  DateTime? _parseData(dynamic raw) {
+    final texto = raw?.toString().trim() ?? '';
+    if (texto.isEmpty) return null;
+
+    final iso = DateTime.tryParse(texto);
+    if (iso != null) return iso.toLocal();
+
+    final partes = texto.split('/');
+    if (partes.length == 3) {
+      final d = int.tryParse(partes[0]);
+      final m = int.tryParse(partes[1]);
+      final a = int.tryParse(partes[2]);
+      if (d != null && m != null && a != null) {
+        return DateTime(a, m, d);
+      }
+    }
+    return null;
+  }
+
+  double _valorNegociado(Map<String, dynamic> e) {
+    return OrdemServicoValor.valorNegociado(
+      valorTotal: _double(e['valor_total']),
+      desconto: _double(e['desconto']),
+      descontoNegociacao: _double(e['desconto_negociacao']),
+      acrescimoNegociacao: _double(e['acrescimo_negociacao']),
+      jurosParcelamento: _double(e['juros_parcelamento']),
+    );
+  }
+
+  double _pendente(Map<String, dynamic> e) {
+    return (_valorNegociado(e) - _double(e['valor_recebido'])).clamp(
+      0,
+      double.infinity,
+    );
+  }
+
+  bool _estaNoPeriodo(Map<String, dynamic> e) {
+    if (_periodo == 'Todos') return true;
+
+    final agora = DateTime.now();
+    final data =
+        _parseData(e['data_finalizacao']) ??
+        _parseData(e['data_abertura']) ??
+        _parseData(e['data_inicio']);
+    if (data == null) return false;
+
+    if (_periodo == 'Este mês') {
+      return data.year == agora.year && data.month == agora.month;
+    }
+
+    if (_periodo == '30 dias') {
+      return !data.isBefore(agora.subtract(const Duration(days: 30)));
+    }
+
+    return true;
+  }
+
+  Future<void> _abrirArquivos(Map<String, dynamic> ordem) async {
+    final id = (ordem['id'] ?? '').toString().trim();
+    if (id.isEmpty) return;
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => WebOsArquivosPage(
+          ordemId: id,
+          numero: (ordem['numero'] ?? '').toString(),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(String valor) {
+    final texto = valor.trim().isEmpty ? 'Sem status' : valor.trim();
+    final normalizado = texto.toLowerCase();
+    IconData icon = Icons.receipt_long_outlined;
+
+    if (normalizado.contains('final')) {
+      icon = Icons.task_alt_outlined;
+    } else if (normalizado.contains('andamento')) {
+      icon = Icons.pending_actions_outlined;
+    } else if (normalizado.contains('cancel')) {
+      icon = Icons.cancel_outlined;
+    } else if (normalizado.contains('aberta')) {
+      icon = Icons.edit_note_outlined;
+    }
+
+    return Chip(
+      avatar: Icon(icon, size: 16),
+      label: Text(texto),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Widget _pagamentoChip(String valor) {
+    final texto = valor.trim().isEmpty ? 'Não informado' : valor.trim();
+    return Chip(
+      avatar: const Icon(Icons.payments_outlined, size: 16),
+      label: Text(texto),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Widget _resumo({
+    required double width,
+    required String titulo,
+    required String valor,
+    required String detalhe,
+    required IconData icone,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _acoes(Map<String, dynamic> ordem) {
+    final status = (ordem['status'] ?? '').toString();
+    final editavel = status == 'Aberta' || status == 'Em andamento';
+    final finalizavel = editavel;
+
+    return Wrap(
+      spacing: 2,
+      children: [
+        IconButton(
+          tooltip: 'Fotos, avarias, arquivos e assinatura',
+          onPressed: () => _abrirArquivos(ordem),
+          icon: const Icon(Icons.photo_library_outlined),
+        ),
+        IconButton(
+          tooltip: editavel ? 'Abrir edição segura' : 'OS não editável',
+          onPressed: editavel ? () => widget.onNavigate(6) : null,
+          icon: const Icon(Icons.edit_outlined),
+        ),
+        IconButton(
+          tooltip: finalizavel ? 'Abrir finalização' : 'OS já encerrada',
+          onPressed: finalizavel ? () => widget.onNavigate(7) : null,
+          icon: const Icon(Icons.task_alt_outlined),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<List<Map<String, dynamic>>>>(
       future: Future.wait([
-        service.listarOrdens(),
-        service.listarClientes(),
-        service.listarVeiculos(),
+        widget.service.listarOrdens(),
+        widget.service.listarClientes(),
+        widget.service.listarVeiculos(),
       ]),
       builder: (context, snapshot) {
         if (!snapshot.hasData && !snapshot.hasError) {
@@ -2778,66 +2991,497 @@ class _OrdensPage extends StatelessWidget {
         }
         if (snapshot.hasError) return _Erro(snapshot.error.toString());
 
-        final ordens = snapshot.data![0].reversed.toList();
+        final ordens = snapshot.data![0];
         final clientes = snapshot.data![1];
         final veiculos = snapshot.data![2];
-        final nomes = {for (final c in clientes) '${c['id']}': '${c['nome']}'};
+        final nomes = {
+          for (final c in clientes) '${c['id']}': '${c['nome']}',
+        };
         final carros = {
           for (final v in veiculos)
-            '${v['id']}': '${v['marca']} ${v['modelo']} ${v['placa']}',
+            '${v['id']}':
+                '${v['marca'] ?? ''} ${v['modelo'] ?? ''} ${v['placa'] ?? ''}'
+                    .trim(),
         };
 
-        return ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            const Text(
-              'Ordens de serviço',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Consulta Web V1. Criação/finalização entra no próximo lote.',
-            ),
-            const SizedBox(height: 16),
-            ...ordens.map((e) {
-              final negociado = OrdemServicoValor.valorNegociado(
-                valorTotal: _double(e['valor_total']),
-                desconto: _double(e['desconto']),
-                descontoNegociacao: _double(e['desconto_negociacao']),
-                acrescimoNegociacao: _double(e['acrescimo_negociacao']),
-                jurosParcelamento: _double(e['juros_parcelamento']),
-              );
-              final pendente = (negociado - _double(e['valor_recebido'])).clamp(
-                0,
-                double.infinity,
-              );
+        final termo = _busca.text.trim().toLowerCase();
+        final filtradas = ordens.where((os) {
+          final status = (os['status'] ?? '').toString();
+          final statusPagamento = (os['status_pagamento'] ?? '').toString();
 
-              return Card(
-                child: ListTile(
-                  leading: const Icon(Icons.receipt_long_rounded),
-                  title: Text(
-                    'OS ${e['numero'] ?? ''} · ${nomes['${e['cliente_id']}'] ?? ''}',
-                  ),
-                  subtitle: Text(
-                    [
-                      carros['${e['veiculo_id']}'] ?? '',
-                      '${e['status'] ?? ''}',
-                      '${e['status_pagamento'] ?? ''}',
-                    ].where((x) => x.trim().isNotEmpty).join(' · '),
-                  ),
-                  trailing: Text(
-                    '${moeda.format(negociado)}\nPendente ${moeda.format(pendente)}',
-                    textAlign: TextAlign.right,
+          if (_status != 'Todos' && status != _status) return false;
+          if (_pagamento != 'Todos' && statusPagamento != _pagamento) {
+            return false;
+          }
+          if (!_estaNoPeriodo(os)) return false;
+
+          if (termo.isEmpty) return true;
+
+          return [
+            os['numero'],
+            nomes['${os['cliente_id']}'] ?? '',
+            carros['${os['veiculo_id']}'] ?? '',
+            os['funcionario_responsavel'],
+            status,
+            statusPagamento,
+          ].any((v) => '${v ?? ''}'.toLowerCase().contains(termo));
+        }).toList()
+          ..sort((a, b) {
+            final da =
+                _parseData(a['data_finalizacao']) ??
+                _parseData(a['data_abertura']) ??
+                DateTime(2000);
+            final db =
+                _parseData(b['data_finalizacao']) ??
+                _parseData(b['data_abertura']) ??
+                DateTime(2000);
+            return db.compareTo(da);
+          });
+
+        final abertas = ordens.where((e) => e['status'] == 'Aberta').length;
+        final emAndamento = ordens
+            .where((e) => e['status'] == 'Em andamento')
+            .length;
+        final finalizadas = ordens
+            .where((e) => e['status'] == 'Finalizada')
+            .toList();
+        final faturamentoFinalizado = finalizadas.fold<double>(
+          0,
+          (total, e) => total + _valorNegociado(e),
+        );
+        final pendenteTotal = ordens.fold<double>(
+          0,
+          (total, e) => total + _pendente(e),
+        );
+
+        final statusesPagamento = ordens
+            .map((e) => (e['status_pagamento'] ?? '').toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final compacto = constraints.maxWidth < 760;
+            final tabela = constraints.maxWidth >= 1050;
+            final larguraDisponivel =
+                constraints.maxWidth - (compacto ? 32 : 48);
+            final colunas = constraints.maxWidth >= 1180
+                ? 4
+                : constraints.maxWidth >= 760
+                ? 2
+                : 1;
+            final larguraCard =
+                (larguraDisponivel - (12 * (colunas - 1))) / colunas;
+
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                compacto ? 16 : 24,
+                compacto ? 18 : 24,
+                compacto ? 16 : 24,
+                40,
+              ),
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ordens de serviço',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          SizedBox(height: 5),
+                          Text(
+                            'Central da operação: acompanhe execução, valores, pagamentos e arquivos.',
+                            style: TextStyle(color: Color(0xFFAAB3BD)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    if (!compacto) ...[
+                      OutlinedButton.icon(
+                        onPressed: () => widget.onNavigate(6),
+                        icon: const Icon(Icons.edit_note_outlined),
+                        label: const Text('Editar OS'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => widget.onNavigate(7),
+                        icon: const Icon(Icons.task_alt_outlined),
+                        label: const Text('Finalizar'),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    FilledButton.icon(
+                      onPressed: () => widget.onNavigate(5),
+                      icon: const Icon(Icons.add_rounded),
+                      label: Text(compacto ? 'Nova' : 'Nova OS'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Abertas',
+                      valor: '$abertas',
+                      detalhe: 'Aguardando início ou execução',
+                      icone: Icons.edit_note_outlined,
+                    ),
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Em andamento',
+                      valor: '$emAndamento',
+                      detalhe: 'Veículos em execução',
+                      icone: Icons.car_repair_outlined,
+                    ),
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Faturamento finalizado',
+                      valor: widget.moeda.format(faturamentoFinalizado),
+                      detalhe: '${finalizadas.length} OS finalizada(s)',
+                      icone: Icons.trending_up_rounded,
+                    ),
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Pendente de recebimento',
+                      valor: widget.moeda.format(pendenteTotal),
+                      detalhe: 'Saldo comercial ainda não recebido',
+                      icone: Icons.account_balance_wallet_outlined,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: compacto ? larguraDisponivel - 28 : 400,
+                          child: TextField(
+                            controller: _busca,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search_rounded),
+                              hintText:
+                                  'Buscar OS, cliente, veículo ou responsável',
+                              suffixIcon: _busca.text.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      tooltip: 'Limpar busca',
+                                      onPressed: () {
+                                        _busca.clear();
+                                        setState(() {});
+                                      },
+                                      icon: const Icon(Icons.close_rounded),
+                                    ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 175,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _status,
+                            decoration: const InputDecoration(
+                              labelText: 'Status',
+                            ),
+                            items: const [
+                              'Todos',
+                              'Aberta',
+                              'Em andamento',
+                              'Finalizada',
+                              'Cancelada',
+                            ]
+                                .map(
+                                  (item) => DropdownMenuItem(
+                                    value: item,
+                                    child: Text(item),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _status = v ?? 'Todos'),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 195,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _pagamento,
+                            decoration: const InputDecoration(
+                              labelText: 'Pagamento',
+                            ),
+                            items: [
+                              const DropdownMenuItem(
+                                value: 'Todos',
+                                child: Text('Todos'),
+                              ),
+                              ...statusesPagamento.map(
+                                (item) => DropdownMenuItem(
+                                  value: item,
+                                  child: Text(item),
+                                ),
+                              ),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _pagamento = v ?? 'Todos'),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 160,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _periodo,
+                            decoration: const InputDecoration(
+                              labelText: 'Período',
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'Todos',
+                                child: Text('Todos'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Este mês',
+                                child: Text('Este mês'),
+                              ),
+                              DropdownMenuItem(
+                                value: '30 dias',
+                                child: Text('Últimos 30 dias'),
+                              ),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _periodo = v ?? 'Todos'),
+                          ),
+                        ),
+                        Text(
+                          '${filtradas.length} resultado(s)',
+                          style: const TextStyle(
+                            color: Color(0xFF89939E),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            }),
-          ],
+                const SizedBox(height: 14),
+                if (filtradas.isEmpty)
+                  const Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 42,
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 42,
+                            color: Color(0xFF89939E),
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Nenhuma OS encontrada',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          SizedBox(height: 5),
+                          Text(
+                            'Altere a busca ou os filtros para visualizar outras ordens.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Color(0xFFAAB3BD)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (tabela)
+                  Card(
+                    margin: EdgeInsets.zero,
+                    clipBehavior: Clip.antiAlias,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        headingRowHeight: 52,
+                        dataRowMinHeight: 64,
+                        dataRowMaxHeight: 80,
+                        columns: const [
+                          DataColumn(label: Text('OS / CLIENTE')),
+                          DataColumn(label: Text('VEÍCULO')),
+                          DataColumn(label: Text('STATUS')),
+                          DataColumn(label: Text('PAGAMENTO')),
+                          DataColumn(label: Text('VALOR')),
+                          DataColumn(label: Text('RECEBIDO')),
+                          DataColumn(label: Text('PENDENTE')),
+                          DataColumn(label: Text('AÇÕES')),
+                        ],
+                        rows: filtradas.map((e) {
+                          final negociado = _valorNegociado(e);
+                          final recebido = _double(e['valor_recebido']);
+                          final pendente = _pendente(e);
+                          final status = (e['status'] ?? '').toString();
+                          final statusPagamento =
+                              (e['status_pagamento'] ?? '').toString();
+
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                SizedBox(
+                                  width: 255,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'OS ${e['numero'] ?? ''}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      Text(
+                                        nomes['${e['cliente_id']}'] ?? '—',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Color(0xFFAAB3BD),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                SizedBox(
+                                  width: 220,
+                                  child: Text(
+                                    carros['${e['veiculo_id']}'] ?? '—',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              DataCell(_statusChip(status)),
+                              DataCell(_pagamentoChip(statusPagamento)),
+                              DataCell(
+                                Text(
+                                  widget.moeda.format(negociado),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              DataCell(Text(widget.moeda.format(recebido))),
+                              DataCell(
+                                Text(
+                                  widget.moeda.format(pendente),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: pendente > 0
+                                        ? Colors.orangeAccent
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                              DataCell(_acoes(e)),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  )
+                else
+                  ...filtradas.map((e) {
+                    final negociado = _valorNegociado(e);
+                    final pendente = _pendente(e);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
+                          child: Row(
+                            children: [
+                              const CircleAvatar(
+                                child: Icon(Icons.receipt_long_outlined),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'OS ${e['numero'] ?? ''} · '
+                                      '${nomes['${e['cliente_id']}'] ?? ''}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      [
+                                        carros['${e['veiculo_id']}'] ?? '',
+                                        (e['status'] ?? '').toString(),
+                                        (e['status_pagamento'] ?? '').toString(),
+                                      ]
+                                          .where((x) => x.trim().isNotEmpty)
+                                          .join(' · '),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFFAAB3BD),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      '${widget.moeda.format(negociado)} · '
+                                      'Pendente ${widget.moeda.format(pendente)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              _acoes(e),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+              ],
+            );
+          },
         );
       },
     );
   }
 }
+
 
 class _Erro extends StatelessWidget {
   const _Erro(this.texto);
