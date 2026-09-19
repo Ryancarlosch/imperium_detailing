@@ -92,8 +92,10 @@ class WebConfiguracaoEmpresaService {
       'cidade': _texto(valores['cidade']),
       'estado': _texto(valores['estado']),
       'cep': _texto(valores['cep']),
-      'validade_orcamento_dias':
-          _inteiro(valores['validade_orcamento_dias'], padrao: 15).clamp(1, 365),
+      'validade_orcamento_dias': _inteiro(
+        valores['validade_orcamento_dias'],
+        padrao: 15,
+      ).clamp(1, 365),
       'rodape_documentos': _texto(valores['rodape_documentos']),
       'termos_orcamento': _texto(valores['termos_orcamento']),
       'termos_ordem_servico': _texto(valores['termos_ordem_servico']),
@@ -111,13 +113,10 @@ class WebConfiguracaoEmpresaService {
     if (versao.isEmpty) {
       final resposta = await client
           .from('imperium_configuracoes_empresa')
-          .upsert(
-            <String, dynamic>{
-              'empresa_id': empresaId,
-              ...payload,
-            },
-            onConflict: 'empresa_id',
-          )
+          .upsert(<String, dynamic>{
+            'empresa_id': empresaId,
+            ...payload,
+          }, onConflict: 'empresa_id')
           .select()
           .single();
       return Map<String, dynamic>.from(resposta);

@@ -415,6 +415,7 @@ class WebCloudExpansaoService {
   Future<List<Map<String, dynamic>>> listarCatalogoPrecificacao() {
     return _listar('imperium_precificacao_servicos_catalogo', orderBy: 'nome');
   }
+
   Future<List<Map<String, dynamic>>> listarCatalogoServicos() {
     return listarCatalogoPrecificacao();
   }
@@ -489,7 +490,6 @@ class WebCloudExpansaoService {
       },
     );
   }
-
 
   Future<List<Map<String, dynamic>>> listarSnapshotsPrecificacao() {
     return _listar(
