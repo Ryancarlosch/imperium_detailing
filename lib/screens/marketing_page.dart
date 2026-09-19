@@ -12,7 +12,10 @@ class MarketingPage extends StatefulWidget {
 
 class _MarketingPageState extends State<MarketingPage> {
   final _service = ComercialGrowthCloudService.instance;
-  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: r'R
+  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+  final _dataHora = DateFormat('dd/MM/yyyy HH:mm', 'pt_BR');
+
+  bool _carregando = true;
   String? _erro;
   GrowthMarketingResumo? _resumo;
   List<Map<String, dynamic>> _campanhas = const [];
