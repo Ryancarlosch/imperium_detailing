@@ -1218,7 +1218,7 @@ class _ClientesPageState extends State<_ClientesPage> {
   }
 }
 
-class _VeiculosPage extends StatelessWidget {
+class _VeiculosPage extends StatefulWidget {
   const _VeiculosPage({
     super.key,
     required this.service,
@@ -1228,19 +1228,42 @@ class _VeiculosPage extends StatelessWidget {
   final WebCloudOperacionalService service;
   final VoidCallback onChanged;
 
+  @override
+  State<_VeiculosPage> createState() => _VeiculosPageState();
+}
+
+class _VeiculosPageState extends State<_VeiculosPage> {
+  final _busca = TextEditingController();
+
+  @override
+  void dispose() {
+    _busca.dispose();
+    super.dispose();
+  }
+
   Future<void> _editar(
-    BuildContext context,
     Map<String, dynamic>? atual,
     List<Map<String, dynamic>> clientes,
   ) async {
-    if (clientes.isEmpty) return;
+    final ativos = clientes.where((c) => c['ativo'] != false).toList();
+    if (ativos.isEmpty) {
+      _snack('Cadastre um cliente ativo antes de adicionar um veículo.');
+      return;
+    }
 
-    var clienteId = '${atual?['cliente_id'] ?? clientes.first['id']}';
+    var clienteId = '${atual?['cliente_id'] ?? ativos.first['id']}';
+    if (!ativos.any((c) => '${c['id']}' == clienteId)) {
+      clienteId = '${ativos.first['id']}';
+    }
+
     final marca = TextEditingController(text: '${atual?['marca'] ?? ''}');
     final modelo = TextEditingController(text: '${atual?['modelo'] ?? ''}');
     final placa = TextEditingController(text: '${atual?['placa'] ?? ''}');
     final cor = TextEditingController(text: '${atual?['cor'] ?? ''}');
     final ano = TextEditingController(text: '${atual?['ano'] ?? ''}');
+    final observacoes = TextEditingController(
+      text: '${atual?['observacoes'] ?? ''}',
+    );
 
     final salvar = await showDialog<bool>(
       context: context,
@@ -1248,47 +1271,107 @@ class _VeiculosPage extends StatelessWidget {
         builder: (context, setLocal) => AlertDialog(
           title: Text(atual == null ? 'Novo veículo' : 'Editar veículo'),
           content: SizedBox(
-            width: 520,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: clientes.any((c) => '${c['id']}' == clienteId)
-                      ? clienteId
-                      : '${clientes.first['id']}',
-                  items: clientes
-                      .where((c) => c['ativo'] != false)
-                      .map(
-                        (c) => DropdownMenuItem(
-                          value: '${c['id']}',
-                          child: Text('${c['nome']}'),
+            width: 600,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: clienteId,
+                    isExpanded: true,
+                    items: ativos
+                        .map(
+                          (c) => DropdownMenuItem<String>(
+                            value: '${c['id']}',
+                            child: Text(
+                              '${c['nome']}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) setLocal(() => clienteId = v);
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Cliente *',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: marca,
+                          decoration: const InputDecoration(
+                            labelText: 'Marca *',
+                            prefixIcon: Icon(Icons.factory_outlined),
+                          ),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setLocal(() => clienteId = v ?? clienteId),
-                  decoration: const InputDecoration(labelText: 'Cliente'),
-                ),
-                TextField(
-                  controller: marca,
-                  decoration: const InputDecoration(labelText: 'Marca *'),
-                ),
-                TextField(
-                  controller: modelo,
-                  decoration: const InputDecoration(labelText: 'Modelo *'),
-                ),
-                TextField(
-                  controller: placa,
-                  decoration: const InputDecoration(labelText: 'Placa'),
-                ),
-                TextField(
-                  controller: cor,
-                  decoration: const InputDecoration(labelText: 'Cor'),
-                ),
-                TextField(
-                  controller: ano,
-                  decoration: const InputDecoration(labelText: 'Ano'),
-                ),
-              ],
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: modelo,
+                          decoration: const InputDecoration(
+                            labelText: 'Modelo *',
+                            prefixIcon: Icon(Icons.directions_car_outlined),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: placa,
+                          textCapitalization: TextCapitalization.characters,
+                          decoration: const InputDecoration(
+                            labelText: 'Placa',
+                            prefixIcon: Icon(Icons.pin_outlined),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: cor,
+                          decoration: const InputDecoration(
+                            labelText: 'Cor',
+                            prefixIcon: Icon(Icons.palette_outlined),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: 130,
+                        child: TextField(
+                          controller: ano,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Ano',
+                            prefixIcon: Icon(Icons.calendar_today_outlined),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: observacoes,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Observações',
+                      alignLabelWithHint: true,
+                      prefixIcon: Icon(Icons.notes_rounded),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -1296,12 +1379,13 @@ class _VeiculosPage extends StatelessWidget {
               onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancelar'),
             ),
-            FilledButton(
+            FilledButton.icon(
               onPressed: () => Navigator.pop(
                 context,
                 marca.text.trim().isNotEmpty && modelo.text.trim().isNotEmpty,
               ),
-              child: const Text('Salvar'),
+              icon: const Icon(Icons.check_rounded),
+              label: const Text('Salvar veículo'),
             ),
           ],
         ),
@@ -1310,7 +1394,7 @@ class _VeiculosPage extends StatelessWidget {
 
     if (salvar != true) return;
 
-    await service.salvarVeiculo(
+    await widget.service.salvarVeiculo(
       id: atual?['id']?.toString(),
       clienteId: clienteId,
       marca: marca.text,
@@ -1318,15 +1402,223 @@ class _VeiculosPage extends StatelessWidget {
       placa: placa.text,
       cor: cor.text,
       ano: ano.text,
-      observacoes: '${atual?['observacoes'] ?? ''}',
+      observacoes: observacoes.text,
     );
-    onChanged();
+    widget.onChanged();
+  }
+
+  Future<void> _excluir(Map<String, dynamic> veiculo) async {
+    final descricao =
+        '${veiculo['marca'] ?? ''} ${veiculo['modelo'] ?? ''}'.trim();
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir veículo?'),
+        content: Text(
+          descricao.isEmpty
+              ? 'Este veículo será removido da operação.'
+              : 'O veículo "$descricao" será removido da operação.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.tonalIcon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+    await widget.service.excluirVeiculo(veiculo['id'].toString());
+    widget.onChanged();
+  }
+
+  void _snack(String mensagem) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(mensagem)));
+  }
+
+  Widget _resumo({
+    required double width,
+    required String titulo,
+    required String valor,
+    required IconData icone,
+    required String detalhe,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icone,
+                  color: ImperiumWebTheme.accentStrong,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tabela(
+    List<Map<String, dynamic>> itens,
+    Map<String, String> nomes,
+    List<Map<String, dynamic>> clientes,
+  ) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowHeight: 52,
+          dataRowMinHeight: 60,
+          dataRowMaxHeight: 72,
+          columns: const [
+            DataColumn(label: Text('VEÍCULO')),
+            DataColumn(label: Text('PLACA')),
+            DataColumn(label: Text('CLIENTE')),
+            DataColumn(label: Text('DETALHES')),
+            DataColumn(label: Text('AÇÕES')),
+          ],
+          rows: itens.map((e) {
+            final marcaModelo =
+                '${e['marca'] ?? ''} ${e['modelo'] ?? ''}'.trim();
+            final placa = (e['placa'] ?? '').toString().trim();
+            final detalhe = [
+              (e['ano'] ?? '').toString(),
+              (e['cor'] ?? '').toString(),
+            ].where((x) => x.trim().isNotEmpty).join(' · ');
+
+            return DataRow(
+              cells: [
+                DataCell(
+                  SizedBox(
+                    width: 250,
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 17,
+                          child: Icon(Icons.directions_car_outlined, size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            marcaModelo.isEmpty ? 'Veículo' : marcaModelo,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      placa.isEmpty ? '—' : placa,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 220,
+                    child: Text(
+                      nomes['${e['cliente_id']}'] ?? '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 180,
+                    child: Text(detalhe.isEmpty ? '—' : detalhe),
+                  ),
+                ),
+                DataCell(
+                  Wrap(
+                    spacing: 2,
+                    children: [
+                      IconButton(
+                        tooltip: 'Editar veículo',
+                        onPressed: () => _editar(e, clientes),
+                        icon: const Icon(Icons.edit_outlined),
+                      ),
+                      IconButton(
+                        tooltip: 'Excluir veículo',
+                        onPressed: () => _excluir(e),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<List<Map<String, dynamic>>>>(
-      future: Future.wait([service.listarVeiculos(), service.listarClientes()]),
+      future: Future.wait([
+        widget.service.listarVeiculos(),
+        widget.service.listarClientes(),
+      ]),
       builder: (context, snapshot) {
         if (!snapshot.hasData && !snapshot.hasError) {
           return const Center(child: CircularProgressIndicator());
@@ -1335,58 +1627,244 @@ class _VeiculosPage extends StatelessWidget {
 
         final veiculos = snapshot.data![0];
         final clientes = snapshot.data![1];
-        final nomes = {for (final c in clientes) '${c['id']}': '${c['nome']}'};
+        final nomes = {
+          for (final c in clientes) '${c['id']}': '${c['nome']}',
+        };
 
-        return Column(
-          children: [
-            _Topo(
-              campo: const Text(
-                'Veículos',
-                style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
+        final termo = _busca.text.trim().toLowerCase();
+        final itens = veiculos.where((e) {
+          if (termo.isEmpty) return true;
+          final cliente = nomes['${e['cliente_id']}'] ?? '';
+          return [
+            e['marca'],
+            e['modelo'],
+            e['placa'],
+            e['cor'],
+            e['ano'],
+            cliente,
+          ].any((v) => '${v ?? ''}'.toLowerCase().contains(termo));
+        }).toList()
+          ..sort((a, b) {
+            final aa = '${a['marca'] ?? ''} ${a['modelo'] ?? ''}'
+                .toLowerCase();
+            final bb = '${b['marca'] ?? ''} ${b['modelo'] ?? ''}'
+                .toLowerCase();
+            return aa.compareTo(bb);
+          });
+
+        final comPlaca = veiculos
+            .where((e) => (e['placa'] ?? '').toString().trim().isNotEmpty)
+            .length;
+        final proprietarios = veiculos
+            .map((e) => (e['cliente_id'] ?? '').toString())
+            .where((id) => id.isNotEmpty)
+            .toSet()
+            .length;
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final compacto = constraints.maxWidth < 760;
+            final tabela = constraints.maxWidth >= 920;
+            final larguraDisponivel =
+                constraints.maxWidth - (compacto ? 32 : 48);
+            final colunas = constraints.maxWidth >= 1080
+                ? 3
+                : constraints.maxWidth >= 640
+                ? 2
+                : 1;
+            final larguraCard =
+                (larguraDisponivel - (12 * (colunas - 1))) / colunas;
+
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                compacto ? 16 : 24,
+                compacto ? 18 : 24,
+                compacto ? 16 : 24,
+                40,
               ),
-              botao: FilledButton.icon(
-                onPressed: () => _editar(context, null, clientes),
-                icon: const Icon(Icons.add),
-                label: const Text('Novo veículo'),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                itemCount: veiculos.length,
-                itemBuilder: (context, i) {
-                  final e = veiculos[i];
-                  return Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.directions_car_rounded),
-                      title: Text('${e['marca'] ?? ''} ${e['modelo'] ?? ''}'),
-                      subtitle: Text(
-                        [
-                          '${e['placa'] ?? ''}',
-                          nomes['${e['cliente_id']}'] ?? '',
-                        ].where((x) => x.trim().isNotEmpty).join(' · '),
-                      ),
-                      trailing: Wrap(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            onPressed: () => _editar(context, e, clientes),
-                            icon: const Icon(Icons.edit_outlined),
+                          Text(
+                            'Veículos',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                          IconButton(
-                            onPressed: () async {
-                              await service.excluirVeiculo(e['id'].toString());
-                              onChanged();
-                            },
-                            icon: const Icon(Icons.delete_outline),
+                          SizedBox(height: 5),
+                          Text(
+                            'Frota cadastrada, proprietário e identificação do veículo.',
+                            style: TextStyle(color: Color(0xFFAAB3BD)),
                           ),
                         ],
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-          ],
+                    const SizedBox(width: 14),
+                    FilledButton.icon(
+                      onPressed: () => _editar(null, clientes),
+                      icon: const Icon(Icons.add_rounded),
+                      label: Text(compacto ? 'Novo' : 'Novo veículo'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Veículos cadastrados',
+                      valor: '${veiculos.length}',
+                      icone: Icons.directions_car_outlined,
+                      detalhe: 'Total disponível na operação',
+                    ),
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Com placa',
+                      valor: '$comPlaca',
+                      icone: Icons.pin_outlined,
+                      detalhe: 'Cadastros com identificação de placa',
+                    ),
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Proprietários',
+                      valor: '$proprietarios',
+                      icone: Icons.people_outline_rounded,
+                      detalhe: 'Clientes com veículo vinculado',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _busca,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search_rounded),
+                              hintText:
+                                  'Buscar por veículo, placa, cliente, cor ou ano',
+                              suffixIcon: _busca.text.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      tooltip: 'Limpar busca',
+                                      onPressed: () {
+                                        _busca.clear();
+                                        setState(() {});
+                                      },
+                                      icon: const Icon(Icons.close_rounded),
+                                    ),
+                            ),
+                          ),
+                        ),
+                        if (!compacto) ...[
+                          const SizedBox(width: 14),
+                          Text(
+                            '${itens.length} resultado(s)',
+                            style: const TextStyle(
+                              color: Color(0xFF89939E),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (itens.isEmpty)
+                  const Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: 42,
+                        horizontal: 24,
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.car_crash_outlined,
+                            size: 42,
+                            color: Color(0xFF89939E),
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Nenhum veículo encontrado',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (tabela)
+                  _tabela(itens, nomes, clientes)
+                else
+                  ...itens.map(
+                    (e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.directions_car_outlined),
+                          ),
+                          title: Text(
+                            '${e['marca'] ?? ''} ${e['modelo'] ?? ''}'.trim(),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          subtitle: Text(
+                            [
+                              (e['placa'] ?? '').toString(),
+                              nomes['${e['cliente_id']}'] ?? '',
+                              (e['ano'] ?? '').toString(),
+                              (e['cor'] ?? '').toString(),
+                            ]
+                                .where((x) => x.trim().isNotEmpty)
+                                .join(' · '),
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (acao) {
+                              if (acao == 'editar') {
+                                _editar(e, clientes);
+                              } else if (acao == 'excluir') {
+                                _excluir(e);
+                              }
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'editar',
+                                child: Text('Editar'),
+                              ),
+                              PopupMenuItem(
+                                value: 'excluir',
+                                child: Text('Excluir'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         );
       },
     );
