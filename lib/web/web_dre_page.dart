@@ -5,7 +5,9 @@ import '../services/web_cloud_dre_service.dart';
 import 'imperium_web_theme.dart';
 
 class WebDrePage extends StatefulWidget {
-  const WebDrePage({super.key});
+  const WebDrePage({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<WebDrePage> createState() => _WebDrePageState();
@@ -106,6 +108,16 @@ class _WebDrePageState extends State<WebDrePage> {
 
   @override
   Widget build(BuildContext context) {
+    final body = Column(
+      children: [
+        _filtros(),
+        const Divider(),
+        Expanded(child: _conteudo()),
+      ],
+    );
+
+    if (widget.embedded) return body;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('DRE gerencial'),
@@ -118,13 +130,7 @@ class _WebDrePageState extends State<WebDrePage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        children: [
-          _filtros(),
-          const Divider(),
-          Expanded(child: _conteudo()),
-        ],
-      ),
+      body: body,
     );
   }
 
