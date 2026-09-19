@@ -260,7 +260,7 @@ class ComercialGrowthCloudService {
           : DateTime(ultimaVisita.year, ultimaVisita.month, ultimaVisita.day);
       final dias = ultimaDia == null
           ? 0
-          : max(0, hojeDia.difference(ultimaDia).inDays);
+          : max(0, hojeDia.difference(ultimaDia).inDays).toInt();
 
       DateTime? proximoAgendamento;
       for (final agenda in agendaPorCliente[id] ?? const []) {
@@ -411,16 +411,16 @@ class ComercialGrowthCloudService {
       'tipo': tipo.trim().isEmpty ? 'Orgânico' : tipo.trim(),
       'objetivo': objetivo.trim(),
       'status': status.trim().isEmpty ? 'Rascunho' : status.trim(),
-      'investimento': max(0, investimento),
+      'investimento': max(0.0, investimento).toDouble(),
       'data_inicio': dataInicio == null ? null : _dataIso(dataInicio),
       'data_fim': dataFim == null ? null : _dataIso(dataFim),
       'utm_source': utmSource.trim(),
       'utm_medium': utmMedium.trim(),
       'utm_campaign': utmCampaign.trim(),
-      'alcance': max(0, alcance),
-      'impressoes': max(0, impressoes),
-      'cliques': max(0, cliques),
-      'leads': max(0, leads),
+      'alcance': max(0, alcance).toInt(),
+      'impressoes': max(0, impressoes).toInt(),
+      'cliques': max(0, cliques).toInt(),
+      'leads': max(0, leads).toInt(),
       'observacoes': observacoes.trim(),
       'excluido_em': null,
     };
@@ -610,7 +610,7 @@ class ComercialGrowthCloudService {
       campanhasAtivas: campanhas
           .where((e) => (e['status'] ?? '').toString() == 'Ativa')
           .length,
-      leads: max(leadsInformados, idsLeads.length),
+      leads: max(leadsInformados, idsLeads.length).toInt(),
       clientes: idsClientes.length,
       ordens: idsOrdens.length,
       alcance: alcance,
@@ -665,12 +665,12 @@ class ComercialGrowthCloudService {
 
   static double _valorNegociado(Map<String, dynamic> ordem) {
     return max(
-      0,
+      0.0,
       _double(ordem['valor_total']) -
           _double(ordem['desconto']) -
           _double(ordem['desconto_negociacao']) +
           _double(ordem['acrescimo_negociacao']) +
           _double(ordem['juros_parcelamento']),
-    );
+    ).toDouble();
   }
 }
