@@ -39,7 +39,8 @@ void main() {
     expect(source, contains('Novo lançamento'));
     expect(source, contains('Categoria financeira'));
     expect(source, contains('Conta / caixa *'));
-    expect(source, contains('Lançamentos Web e aplicativo'));
+    expect(source, contains('Fluxo de caixa'));
+    expect(source, contains('Movimentos financeiros'));
   });
 
   test('Menu Web usa o fluxo de caixa sincronizado', () {
