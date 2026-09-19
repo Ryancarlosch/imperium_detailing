@@ -95,23 +95,14 @@ class FotosServicoCloudService {
       final mapa = await _mapaLocal(empresaId, localId);
       if (mapa != null && _texto(mapa['local_hash']) == hash) continue;
 
-      final base = empresaId +
-          '/galeria/' +
-          dispositivoId +
-          '/' +
-          localId.toString();
+      final base =
+          empresaId + '/galeria/' + dispositivoId + '/' + localId.toString();
       final antesStorage = antes == null
           ? null
-          : await _subir(
-              base + '/antes.' + antes.extensao,
-              antes,
-            );
+          : await _subir(base + '/antes.' + antes.extensao, antes);
       final depoisStorage = depois == null
           ? null
-          : await _subir(
-              base + '/depois.' + depois.extensao,
-              depois,
-            );
+          : await _subir(base + '/depois.' + depois.extensao, depois);
 
       final payload = <String, dynamic>{
         'empresa_id': empresaId,
@@ -251,14 +242,13 @@ class FotosServicoCloudService {
     final client = _client;
     if (client == null) return null;
 
-    await client.storage.from(bucket).uploadBinary(
-      destino,
-      arquivo.bytes,
-      fileOptions: FileOptions(
-        upsert: true,
-        contentType: arquivo.mime,
-      ),
-    );
+    await client.storage
+        .from(bucket)
+        .uploadBinary(
+          destino,
+          arquivo.bytes,
+          fileOptions: FileOptions(upsert: true, contentType: arquivo.mime),
+        );
     return destino;
   }
 
@@ -379,20 +369,16 @@ class FotosServicoCloudService {
     required String? depoisStoragePath,
   }) async {
     final database = await _appDatabase.database;
-    await database.insert(
-      'imperium_sync_fotos_servico',
-      {
-        'empresa_id': empresaId,
-        'local_id': localId,
-        'remoto_id': remotoId,
-        'local_hash': localHash,
-        'remoto_atualizado_em': remotoAtualizadoEm,
-        'antes_storage_path': antesStoragePath,
-        'depois_storage_path': depoisStoragePath,
-        'sincronizado_em': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert('imperium_sync_fotos_servico', {
+      'empresa_id': empresaId,
+      'local_id': localId,
+      'remoto_id': remotoId,
+      'local_hash': localHash,
+      'remoto_atualizado_em': remotoAtualizadoEm,
+      'antes_storage_path': antesStoragePath,
+      'depois_storage_path': depoisStoragePath,
+      'sincronizado_em': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<String> _dispositivoId() async {
