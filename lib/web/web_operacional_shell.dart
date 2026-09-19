@@ -2839,26 +2839,6 @@ class _OrdensPage extends StatelessWidget {
   }
 }
 
-class _Topo extends StatelessWidget {
-  const _Topo({required this.campo, required this.botao});
-  final Widget campo;
-  final Widget botao;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          Expanded(child: campo),
-          const SizedBox(width: 16),
-          botao,
-        ],
-      ),
-    );
-  }
-}
-
 class _Erro extends StatelessWidget {
   const _Erro(this.texto);
   final String texto;
