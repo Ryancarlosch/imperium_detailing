@@ -36,6 +36,21 @@ void main() {
     expect(shell, contains('AppBranding.productName'));
   });
 
+  test('Login compartilhado usa identidade centralizada', () {
+    final branding = File('lib/config/app_branding.dart').readAsStringSync();
+    final login = File(
+      'lib/screens/login_email_senha_page.dart',
+    ).readAsStringSync();
+
+    expect(branding, contains('wordmarkPrimary'));
+    expect(branding, contains('wordmarkSecondary'));
+    expect(branding, contains('loginBackground'));
+    expect(login, contains('AppBranding.wordmarkPrimary'));
+    expect(login, contains('AppBranding.wordmarkSecondary'));
+    expect(login, contains('AppBranding.webAccentStrong'));
+    expect(login, contains('AppBranding.productName'));
+  });
+
   test('Manifesto PWA preserva identidade Imperium', () {
     final source = File('web/manifest.json').readAsStringSync();
 
