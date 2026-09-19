@@ -398,33 +398,63 @@ class _WebPontoPageState extends State<WebPontoPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ponto e funcionários'),
-        actions: [
-          IconButton(
-            tooltip: 'Atualizar',
-            onPressed: _carregar,
-            icon: const Icon(Icons.refresh_rounded),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ponto e funcionários',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'Equipe, registros de jornada, acessos e configurações do ponto.',
+                      style: TextStyle(color: Color(0xFFAAB3BD)),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Atualizar',
+                onPressed: _carregando ? null : _carregar,
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-        ],
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: const [
-            Tab(icon: Icon(Icons.groups_2_outlined), text: 'Equipe e ponto'),
-            Tab(icon: Icon(Icons.schedule_outlined), text: 'Jornada'),
-          ],
         ),
-      ),
-      body: _carregando
-          ? const Center(child: CircularProgressIndicator())
-          : _erro != null
-          ? _erroView()
-          : TabBarView(
-              controller: _tabs,
-              children: [_equipeView(), _jornadaView()],
-            ),
+        Material(
+          color: Colors.transparent,
+          child: TabBar(
+            controller: _tabs,
+            tabs: const [
+              Tab(icon: Icon(Icons.groups_2_outlined), text: 'Equipe e ponto'),
+              Tab(icon: Icon(Icons.schedule_outlined), text: 'Jornada'),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: _carregando
+              ? const Center(child: CircularProgressIndicator())
+              : _erro != null
+              ? _erroView()
+              : TabBarView(
+                  controller: _tabs,
+                  children: [_equipeView(), _jornadaView()],
+                ),
+        ),
+      ],
     );
   }
 
@@ -472,121 +502,390 @@ class _WebPontoPageState extends State<WebPontoPage>
       for (final c in _colaboradores) '${c['id']}': '${c['nome']}',
     };
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        _cabecalho(
-          'Equipe e ponto',
-          'Acompanhe as batidas da nuvem e faça correções administrativas com auditoria.',
-        ),
-        const SizedBox(height: 18),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compacto = constraints.maxWidth < 760;
+        final tabela = constraints.maxWidth >= 980;
+        final larguraDisponivel =
+            constraints.maxWidth - (compacto ? 32 : 48);
+        final colunas = constraints.maxWidth >= 1100
+            ? 4
+            : constraints.maxWidth >= 700
+            ? 2
+            : 1;
+        final larguraCard =
+            (larguraDisponivel - (12 * (colunas - 1))) / colunas;
+
+        return ListView(
+          padding: EdgeInsets.fromLTRB(
+            compacto ? 16 : 24,
+            20,
+            compacto ? 16 : 24,
+            40,
+          ),
           children: [
-            _ResumoCard(
-              'Funcionários ativos',
-              '${ativos.length}',
-              Icons.groups_2_outlined,
-            ),
-            _ResumoCard(
-              'Batidas hoje',
-              '${registrosHoje.length}',
-              Icons.fingerprint_rounded,
-            ),
-            _ResumoCard(
-              'Jornada concluída',
-              '$completos',
-              Icons.task_alt_rounded,
-            ),
-            _ResumoCard(
-              'Acessos vinculados',
-              '$vinculados',
-              Icons.verified_user_outlined,
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        const Text(
-          'Funcionários',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 8),
-        ...ativos.map((colaborador) {
-          final registro = _primeiroOuNulo(
-            registrosHoje.where(
-              (r) => '${r['colaborador_id']}' == '${colaborador['id']}',
-            ),
-          );
-          final vinculado = '${colaborador['auth_user_id'] ?? ''}'.isNotEmpty;
-          return Card(
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 8,
-              ),
-              leading: CircleAvatar(
-                backgroundColor: ImperiumWebTheme.accentStrong.withValues(
-                  alpha: 0.10,
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _ResumoCard(
+                  'Funcionários ativos',
+                  '${ativos.length}',
+                  Icons.groups_2_outlined,
+                  width: larguraCard,
                 ),
-                child: const Icon(Icons.person_outline_rounded),
-              ),
-              title: Text(
-                '${colaborador['nome'] ?? 'Funcionário'}',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: Text(
-                [
-                  '${colaborador['funcao'] ?? ''}',
-                  registro == null
-                      ? 'Sem registro hoje'
-                      : _resumoRegistro(registro),
-                  vinculado ? 'Login vinculado' : 'Sem login vinculado',
-                ].where((e) => e.trim().isNotEmpty).join(' · '),
-              ),
-              trailing: Wrap(
-                spacing: 4,
-                children: [
-                  IconButton(
-                    tooltip: 'Editar ponto de hoje',
-                    onPressed: () => _editarRegistro(colaborador, registro),
-                    icon: const Icon(Icons.edit_calendar_outlined),
-                  ),
-                  IconButton(
-                    tooltip: 'Vincular login',
-                    onPressed: () => _vincular(colaborador),
-                    icon: Icon(
-                      vinculado
-                          ? Icons.verified_user_rounded
-                          : Icons.person_add_alt_1_rounded,
+                _ResumoCard(
+                  'Batidas hoje',
+                  '${registrosHoje.length}',
+                  Icons.fingerprint_rounded,
+                  width: larguraCard,
+                ),
+                _ResumoCard(
+                  'Jornada concluída',
+                  '$completos',
+                  Icons.task_alt_rounded,
+                  width: larguraCard,
+                ),
+                _ResumoCard(
+                  'Acessos vinculados',
+                  '$vinculados',
+                  Icons.verified_user_outlined,
+                  width: larguraCard,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Funcionários',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                ],
-              ),
-            ),
-          );
-        }),
-        const SizedBox(height: 24),
-        const Text(
-          'Registros do mês',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 8),
-        ..._registros
-            .take(60)
-            .map(
-              (registro) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.schedule_rounded),
-                  title: Text(
-                    '${nomes['${registro['colaborador_id']}'] ?? 'Funcionário'} · ${_dataExibicao('${registro['data']}')}',
-                  ),
-                  subtitle: Text(_resumoRegistro(registro)),
-                  trailing: Text('${registro['situacao'] ?? ''}'),
                 ),
-              ),
+                Text(
+                  '${ativos.length} ativo(s)',
+                  style: const TextStyle(
+                    color: Color(0xFF89939E),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
-      ],
+            const SizedBox(height: 10),
+            if (ativos.isEmpty)
+              const Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: EdgeInsets.all(22),
+                  child: Text('Nenhum funcionário ativo cadastrado.'),
+                ),
+              )
+            else if (tabela)
+              Card(
+                margin: EdgeInsets.zero,
+                clipBehavior: Clip.antiAlias,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowHeight: 52,
+                    dataRowMinHeight: 62,
+                    dataRowMaxHeight: 78,
+                    columns: const [
+                      DataColumn(label: Text('FUNCIONÁRIO')),
+                      DataColumn(label: Text('FUNÇÃO')),
+                      DataColumn(label: Text('PONTO HOJE')),
+                      DataColumn(label: Text('SITUAÇÃO')),
+                      DataColumn(label: Text('ACESSO')),
+                      DataColumn(label: Text('AÇÕES')),
+                    ],
+                    rows: ativos.map((colaborador) {
+                      final registro = _primeiroOuNulo(
+                        registrosHoje.where(
+                          (r) =>
+                              '${r['colaborador_id']}' ==
+                              '${colaborador['id']}',
+                        ),
+                      );
+                      final vinculado =
+                          '${colaborador['auth_user_id'] ?? ''}'.isNotEmpty;
+
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            SizedBox(
+                              width: 230,
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 17,
+                                    backgroundColor: ImperiumWebTheme
+                                        .accentStrong
+                                        .withValues(alpha: 0.10),
+                                    child: const Icon(
+                                      Icons.person_outline_rounded,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      '${colaborador['nome'] ?? 'Funcionário'}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 150,
+                              child: Text(
+                                '${colaborador['funcao'] ?? '—'}',
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 210,
+                              child: Text(
+                                registro == null
+                                    ? 'Sem registro hoje'
+                                    : _resumoRegistro(registro),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              registro == null
+                                  ? '—'
+                                  : '${registro['situacao'] ?? '—'}',
+                            ),
+                          ),
+                          DataCell(
+                            Chip(
+                              avatar: Icon(
+                                vinculado
+                                    ? Icons.verified_user_rounded
+                                    : Icons.person_off_outlined,
+                                size: 16,
+                              ),
+                              label: Text(
+                                vinculado ? 'Vinculado' : 'Sem login',
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                          DataCell(
+                            Wrap(
+                              spacing: 2,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Editar ponto de hoje',
+                                  onPressed: () =>
+                                      _editarRegistro(colaborador, registro),
+                                  icon: const Icon(
+                                    Icons.edit_calendar_outlined,
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Vincular login',
+                                  onPressed: () => _vincular(colaborador),
+                                  icon: Icon(
+                                    vinculado
+                                        ? Icons.verified_user_rounded
+                                        : Icons.person_add_alt_1_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              )
+            else
+              ...ativos.map((colaborador) {
+                final registro = _primeiroOuNulo(
+                  registrosHoje.where(
+                    (r) =>
+                        '${r['colaborador_id']}' ==
+                        '${colaborador['id']}',
+                  ),
+                );
+                final vinculado =
+                    '${colaborador['auth_user_id'] ?? ''}'.isNotEmpty;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Card(
+                    margin: EdgeInsets.zero,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      leading: CircleAvatar(
+                        backgroundColor: ImperiumWebTheme.accentStrong
+                            .withValues(alpha: 0.10),
+                        child: const Icon(Icons.person_outline_rounded),
+                      ),
+                      title: Text(
+                        '${colaborador['nome'] ?? 'Funcionário'}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      subtitle: Text(
+                        [
+                          '${colaborador['funcao'] ?? ''}',
+                          registro == null
+                              ? 'Sem registro hoje'
+                              : _resumoRegistro(registro),
+                          vinculado ? 'Login vinculado' : 'Sem login',
+                        ].where((e) => e.trim().isNotEmpty).join(' · '),
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (acao) {
+                          if (acao == 'ponto') {
+                            _editarRegistro(colaborador, registro);
+                          } else if (acao == 'acesso') {
+                            _vincular(colaborador);
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                            value: 'ponto',
+                            child: Text('Editar ponto'),
+                          ),
+                          PopupMenuItem(
+                            value: 'acesso',
+                            child: Text('Vincular acesso'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            const SizedBox(height: 26),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Registros do mês',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${_registros.length} registro(s)',
+                  style: const TextStyle(
+                    color: Color(0xFF89939E),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (_registros.isEmpty)
+              const Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: EdgeInsets.all(22),
+                  child: Text('Nenhum registro no mês atual.'),
+                ),
+              )
+            else if (tabela)
+              Card(
+                margin: EdgeInsets.zero,
+                clipBehavior: Clip.antiAlias,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowHeight: 52,
+                    dataRowMinHeight: 58,
+                    dataRowMaxHeight: 72,
+                    columns: const [
+                      DataColumn(label: Text('DATA')),
+                      DataColumn(label: Text('FUNCIONÁRIO')),
+                      DataColumn(label: Text('ENTRADA')),
+                      DataColumn(label: Text('INTERVALO')),
+                      DataColumn(label: Text('SAÍDA')),
+                      DataColumn(label: Text('SITUAÇÃO')),
+                    ],
+                    rows: _registros.take(120).map((registro) {
+                      final inicio = _hora(registro['intervalo_inicio']);
+                      final fim = _hora(registro['intervalo_fim']);
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            Text(
+                              _dataExibicao('${registro['data']}'),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 220,
+                              child: Text(
+                                nomes['${registro['colaborador_id']}'] ??
+                                    'Funcionário',
+                              ),
+                            ),
+                          ),
+                          DataCell(Text(_hora(registro['entrada']))),
+                          DataCell(
+                            Text(
+                              inicio.isEmpty && fim.isEmpty
+                                  ? '—'
+                                  : '$inicio – $fim',
+                            ),
+                          ),
+                          DataCell(Text(_hora(registro['saida']))),
+                          DataCell(
+                            Text('${registro['situacao'] ?? '—'}'),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              )
+            else
+              ..._registros.take(60).map(
+                    (registro) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          leading: const Icon(Icons.schedule_rounded),
+                          title: Text(
+                            '${nomes['${registro['colaborador_id']}'] ?? 'Funcionário'} · '
+                            '${_dataExibicao('${registro['data']}')}',
+                          ),
+                          subtitle: Text(_resumoRegistro(registro)),
+                          trailing: Text('${registro['situacao'] ?? ''}'),
+                        ),
+                      ),
+                    ),
+                  ),
+          ],
+        );
+      },
     );
   }
 
@@ -765,16 +1064,22 @@ class _WebPontoPageState extends State<WebPontoPage>
 }
 
 class _ResumoCard extends StatelessWidget {
-  const _ResumoCard(this.label, this.valor, this.icon);
+  const _ResumoCard(
+    this.label,
+    this.valor,
+    this.icon, {
+    this.width = 230,
+  });
 
   final String label;
   final String valor;
   final IconData icon;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 230,
+      width: width,
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(18),
