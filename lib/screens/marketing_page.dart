@@ -17,6 +17,8 @@ class _MarketingPageState extends State<MarketingPage> {
   GrowthMarketingResumo? _resumo;
   List<Map<String, dynamic>> _campanhas = const [];
   List<Map<String, dynamic>> _publicacoes = const [];
+  Map<String, GrowthMarketingCampanhaDesempenho> _desempenhoPorCampanha =
+      const {};
 
   @override
   void initState() {
@@ -35,6 +37,7 @@ class _MarketingPageState extends State<MarketingPage> {
         _service.carregarResumoMarketing(),
         _service.listarCampanhasMarketing(),
         _service.listarPublicacoesMarketing(),
+        _service.carregarDesempenhoCampanhas(),
       ]);
 
       if (!mounted) return;
@@ -42,6 +45,11 @@ class _MarketingPageState extends State<MarketingPage> {
         _resumo = dados[0] as GrowthMarketingResumo;
         _campanhas = dados[1] as List<Map<String, dynamic>>;
         _publicacoes = dados[2] as List<Map<String, dynamic>>;
+        final desempenho =
+            dados[3] as List<GrowthMarketingCampanhaDesempenho>;
+        _desempenhoPorCampanha = {
+          for (final item in desempenho) item.campanhaId: item,
+        };
       });
     } catch (e) {
       if (!mounted) return;
@@ -816,6 +824,9 @@ class _MarketingPageState extends State<MarketingPage> {
 
   Widget _campanhaCard(Map<String, dynamic> item) {
     final investimento = _double(item['investimento']);
+    final desempenho = _desempenhoPorCampanha[item['id']?.toString() ?? ''];
+    final faturamento = desempenho?.faturamentoAtribuido ?? 0;
+    final roas = desempenho?.roas ?? 0;
     return Card(
       margin: const EdgeInsets.only(bottom: 9),
       child: ListTile(
@@ -827,7 +838,11 @@ class _MarketingPageState extends State<MarketingPage> {
             (item['tipo'] ?? '').toString(),
             (item['status'] ?? '').toString(),
             if (investimento > 0) _moeda.format(investimento),
-            '${_int(item['leads'])} leads',
+            '${desempenho?.leads ?? _int(item['leads'])} leads',
+            if ((desempenho?.ordens ?? 0) > 0)
+              '${desempenho!.ordens} OS atribuída(s)',
+            if (faturamento > 0) 'Faturou ${_moeda.format(faturamento)}',
+            if (roas > 0) 'ROAS ${roas.toStringAsFixed(2)}x',
           ].where((e) => e.trim().isNotEmpty).join(' · '),
         ),
         trailing: IconButton(
