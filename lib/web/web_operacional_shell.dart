@@ -134,6 +134,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     return switch (_indice) {
       0 => WebDashboardGerencialPage(
         key: ValueKey('dashboard-premium-${widget.empresaAtualId}-$_revisao'),
+        onNavigate: (indice) => _selecionar(indice, fecharMenu: false),
       ),
       1 => _ClientesPage(
         key: ValueKey('clientes-$_revisao'),
