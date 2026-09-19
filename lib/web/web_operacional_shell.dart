@@ -1408,8 +1408,8 @@ class _VeiculosPageState extends State<_VeiculosPage> {
   }
 
   Future<void> _excluir(Map<String, dynamic> veiculo) async {
-    final descricao =
-        '${veiculo['marca'] ?? ''} ${veiculo['modelo'] ?? ''}'.trim();
+    final descricao = '${veiculo['marca'] ?? ''} ${veiculo['modelo'] ?? ''}'
+        .trim();
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1467,10 +1467,7 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                   color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icone,
-                  color: ImperiumWebTheme.accentStrong,
-                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -1530,8 +1527,8 @@ class _VeiculosPageState extends State<_VeiculosPage> {
             DataColumn(label: Text('AÇÕES')),
           ],
           rows: itens.map((e) {
-            final marcaModelo =
-                '${e['marca'] ?? ''} ${e['modelo'] ?? ''}'.trim();
+            final marcaModelo = '${e['marca'] ?? ''} ${e['modelo'] ?? ''}'
+                .trim();
             final placa = (e['placa'] ?? '').toString().trim();
             final detalhe = [
               (e['ano'] ?? '').toString(),
@@ -1627,30 +1624,28 @@ class _VeiculosPageState extends State<_VeiculosPage> {
 
         final veiculos = snapshot.data![0];
         final clientes = snapshot.data![1];
-        final nomes = {
-          for (final c in clientes) '${c['id']}': '${c['nome']}',
-        };
+        final nomes = {for (final c in clientes) '${c['id']}': '${c['nome']}'};
 
         final termo = _busca.text.trim().toLowerCase();
-        final itens = veiculos.where((e) {
-          if (termo.isEmpty) return true;
-          final cliente = nomes['${e['cliente_id']}'] ?? '';
-          return [
-            e['marca'],
-            e['modelo'],
-            e['placa'],
-            e['cor'],
-            e['ano'],
-            cliente,
-          ].any((v) => '${v ?? ''}'.toLowerCase().contains(termo));
-        }).toList()
-          ..sort((a, b) {
-            final aa = '${a['marca'] ?? ''} ${a['modelo'] ?? ''}'
-                .toLowerCase();
-            final bb = '${b['marca'] ?? ''} ${b['modelo'] ?? ''}'
-                .toLowerCase();
-            return aa.compareTo(bb);
-          });
+        final itens =
+            veiculos.where((e) {
+              if (termo.isEmpty) return true;
+              final cliente = nomes['${e['cliente_id']}'] ?? '';
+              return [
+                e['marca'],
+                e['modelo'],
+                e['placa'],
+                e['cor'],
+                e['ano'],
+                cliente,
+              ].any((v) => '${v ?? ''}'.toLowerCase().contains(termo));
+            }).toList()..sort((a, b) {
+              final aa = '${a['marca'] ?? ''} ${a['modelo'] ?? ''}'
+                  .toLowerCase();
+              final bb = '${b['marca'] ?? ''} ${b['modelo'] ?? ''}'
+                  .toLowerCase();
+              return aa.compareTo(bb);
+            });
 
         final comPlaca = veiculos
             .where((e) => (e['placa'] ?? '').toString().trim().isNotEmpty)
@@ -1835,9 +1830,7 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                               nomes['${e['cliente_id']}'] ?? '',
                               (e['ano'] ?? '').toString(),
                               (e['cor'] ?? '').toString(),
-                            ]
-                                .where((x) => x.trim().isNotEmpty)
-                                .join(' · '),
+                            ].where((x) => x.trim().isNotEmpty).join(' · '),
                           ),
                           trailing: PopupMenuButton<String>(
                             onSelected: (acao) {
