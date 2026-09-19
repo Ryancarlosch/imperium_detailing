@@ -659,8 +659,7 @@ class ComercialGrowthCloudService {
       for (final ordem in ordens) (ordem['id'] ?? '').toString(): ordem,
     };
 
-    final atribuicoesPorCampanha =
-        <String, List<Map<String, dynamic>>>{};
+    final atribuicoesPorCampanha = <String, List<Map<String, dynamic>>>{};
     for (final atribuicao in atribuicoes) {
       final campanhaId = (atribuicao['campanha_id'] ?? '').toString();
       if (campanhaId.isEmpty) continue;

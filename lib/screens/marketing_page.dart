@@ -48,8 +48,7 @@ class _MarketingPageState extends State<MarketingPage> {
         _resumo = dados[0] as GrowthMarketingResumo;
         _campanhas = dados[1] as List<Map<String, dynamic>>;
         _publicacoes = dados[2] as List<Map<String, dynamic>>;
-        final desempenho =
-            dados[3] as List<GrowthMarketingCampanhaDesempenho>;
+        final desempenho = dados[3] as List<GrowthMarketingCampanhaDesempenho>;
         _desempenhoPorCampanha = {
           for (final item in desempenho) item.campanhaId: item,
         };
@@ -291,9 +290,7 @@ class _MarketingPageState extends State<MarketingPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
-          title: Text(
-            atual == null ? 'Nova publicação' : 'Editar publicação',
-          ),
+          title: Text(atual == null ? 'Nova publicação' : 'Editar publicação'),
           content: SizedBox(
             width: 560,
             child: SingleChildScrollView(
@@ -313,9 +310,7 @@ class _MarketingPageState extends State<MarketingPage> {
                       ..._campanhas.map(
                         (item) => DropdownMenuItem<String>(
                           value: item['id'].toString(),
-                          child: Text(
-                            (item['nome'] ?? 'Campanha').toString(),
-                          ),
+                          child: Text((item['nome'] ?? 'Campanha').toString()),
                         ),
                       ),
                     ],
@@ -508,8 +503,7 @@ class _MarketingPageState extends State<MarketingPage> {
             FilledButton.icon(
               onPressed: () => Navigator.pop(
                 context,
-                titulo.text.trim().isNotEmpty ||
-                    legenda.text.trim().isNotEmpty,
+                titulo.text.trim().isNotEmpty || legenda.text.trim().isNotEmpty,
               ),
               icon: const Icon(Icons.check_rounded),
               label: const Text('Salvar publicação'),
