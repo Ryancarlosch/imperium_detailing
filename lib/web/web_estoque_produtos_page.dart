@@ -517,25 +517,24 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
         final inativos = todos.length - ativos;
         final termo = _busca.text.trim().toLowerCase();
 
-        final itens = todos.where((item) {
-          final ativo = item['ativo'] != false;
-          if (!_mostrarInativos && !ativo) return false;
-          if (termo.isEmpty) return true;
+        final itens =
+            todos.where((item) {
+              final ativo = item['ativo'] != false;
+              if (!_mostrarInativos && !ativo) return false;
+              if (termo.isEmpty) return true;
 
-          return [
-            item['nome'],
-            item['categoria'],
-            item['ean'],
-            item['fornecedor'],
-            item['unidade'],
-          ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
-        }).toList()
-          ..sort(
-            (a, b) => (a['nome'] ?? '')
-                .toString()
-                .toLowerCase()
-                .compareTo((b['nome'] ?? '').toString().toLowerCase()),
-          );
+              return [
+                item['nome'],
+                item['categoria'],
+                item['ean'],
+                item['fornecedor'],
+                item['unidade'],
+              ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
+            }).toList()..sort(
+              (a, b) => (a['nome'] ?? '').toString().toLowerCase().compareTo(
+                (b['nome'] ?? '').toString().toLowerCase(),
+              ),
+            );
 
         final valorEstoque = todos.fold<double>(0, (total, item) {
           final custo = _double(item['custo_unitario_calculado']) > 0
@@ -753,8 +752,7 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                                 _double(item['custo_unitario_calculado']) > 0
                                 ? _double(item['custo_unitario_calculado'])
                                 : _double(item['custo_unitario']);
-                            final unidade =
-                                (item['unidade'] ?? '').toString();
+                            final unidade = (item['unidade'] ?? '').toString();
                             final ativo = item['ativo'] != false;
                             final baixo = minimo > 0 && saldo <= minimo;
 
@@ -803,9 +801,7 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                                     '${_numero(saldo)} $unidade',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w800,
-                                      color: baixo
-                                          ? Colors.orangeAccent
-                                          : null,
+                                      color: baixo ? Colors.orangeAccent : null,
                                     ),
                                   ),
                                 ),
@@ -873,12 +869,12 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                             ),
                             subtitle: Text(
                               [
-                                (item['categoria'] ?? '').toString(),
-                                'Saldo ${_numero(saldo)} $unidade',
-                                'Mínimo ${_numero(minimo)}',
-                                if (custo > 0) _moeda.format(custo),
-                                if (!ativo) 'Inativo',
-                              ]
+                                    (item['categoria'] ?? '').toString(),
+                                    'Saldo ${_numero(saldo)} $unidade',
+                                    'Mínimo ${_numero(minimo)}',
+                                    if (custo > 0) _moeda.format(custo),
+                                    if (!ativo) 'Inativo',
+                                  ]
                                   .where((texto) => texto.trim().isNotEmpty)
                                   .join(' · '),
                             ),
@@ -899,7 +895,6 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
       },
     );
   }
-
 }
 
 class _ProdutoResumoCard extends StatelessWidget {
