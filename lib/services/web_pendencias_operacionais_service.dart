@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_interpolation_to_compose_strings
+
 import '../database/app_database.dart';
 import '../domain/ordem_servico_valor.dart';
 import 'supabase_bootstrap.dart';
