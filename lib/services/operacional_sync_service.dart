@@ -14,6 +14,7 @@ import 'estoque_cloud_download_service.dart';
 import 'estoque_cloud_reserva_service.dart';
 import 'estoque_cloud_upload_service.dart';
 import 'financeiro_cloud_upload_service.dart';
+import 'fotos_servico_cloud_service.dart';
 import 'financeiro_cloud_v2_service.dart';
 import 'financeiro_cloud_v3_service.dart';
 import 'precificacao_cloud_service.dart';
@@ -440,6 +441,7 @@ class OperacionalSyncService {
     }
 
     await OsArquivosCloudService.instance.sincronizarDownload(empresaId);
+    await FotosServicoCloudService.instance.sincronizar(empresaId);
   }
 
   Future<void> _syncCrmOrcamentos(String empresaId) async {
