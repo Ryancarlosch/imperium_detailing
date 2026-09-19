@@ -167,10 +167,8 @@ class _WebServicosCatalogoPageState extends State<WebServicosCatalogoPage> {
               child: const Text('Cancelar'),
             ),
             FilledButton.icon(
-              onPressed: () => Navigator.pop(
-                context,
-                nome.text.trim().isNotEmpty,
-              ),
+              onPressed: () =>
+                  Navigator.pop(context, nome.text.trim().isNotEmpty),
               icon: const Icon(Icons.check_rounded),
               label: const Text('Salvar serviço'),
             ),
@@ -230,10 +228,9 @@ class _WebServicosCatalogoPageState extends State<WebServicosCatalogoPage> {
     }).toList();
 
     itens.sort(
-      (a, b) => (a['nome'] ?? '')
-          .toString()
-          .toLowerCase()
-          .compareTo((b['nome'] ?? '').toString().toLowerCase()),
+      (a, b) => (a['nome'] ?? '').toString().toLowerCase().compareTo(
+        (b['nome'] ?? '').toString().toLowerCase(),
+      ),
     );
     return itens;
   }
@@ -311,23 +308,24 @@ class _WebServicosCatalogoPageState extends State<WebServicosCatalogoPage> {
       );
     }
 
-    final categorias = _itens
-        .map((e) => (e['categoria'] ?? '').toString().trim())
-        .where((e) => e.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final categorias =
+        _itens
+            .map((e) => (e['categoria'] ?? '').toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     final ativos = _itens.where((e) => e['ativo'] != false).length;
     final inativos = _itens.length - ativos;
     final precoMedio = ativos == 0
         ? 0.0
         : _itens
-                .where((e) => e['ativo'] != false)
-                .fold<double>(
-                  0,
-                  (total, e) => total + _double(e['preco_padrao']),
-                ) /
-            ativos;
+                  .where((e) => e['ativo'] != false)
+                  .fold<double>(
+                    0,
+                    (total, e) => total + _double(e['preco_padrao']),
+                  ) /
+              ativos;
     final itens = _filtrados;
 
     return LayoutBuilder(
@@ -461,8 +459,7 @@ class _WebServicosCatalogoPageState extends State<WebServicosCatalogoPage> {
                       ),
                       FilterChip(
                         selected: _mostrarInativos,
-                        onSelected: (v) =>
-                            setState(() => _mostrarInativos = v),
+                        onSelected: (v) => setState(() => _mostrarInativos = v),
                         label: const Text('Mostrar inativos'),
                       ),
                       Text(
