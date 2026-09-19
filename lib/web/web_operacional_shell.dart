@@ -14,6 +14,7 @@ import 'web_dashboard_gerencial_page.dart';
 import 'web_dre_page.dart';
 import 'web_expansao_pages.dart';
 import 'web_financeiro_lancamentos_page.dart';
+import 'web_fotos_page.dart';
 import 'web_gestao_pages.dart';
 import 'web_marketing_page.dart';
 import 'web_ordens_v3_page.dart';
@@ -111,6 +112,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     21 => 'Serviços',
     22 => 'Pendências operacionais',
     23 => 'Configurações',
+    24 => 'Fotos',
     _ => 'Central Cloud',
   };
 
@@ -189,6 +191,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       23 => WebConfiguracoesEmpresaPage(
         key: ValueKey('configuracoes-${widget.empresaAtualId}-$_revisao'),
       ),
+      24 => WebFotosPage(key: ValueKey('fotos-$_revisao')),
       _ => WebCentralCloudPage(key: ValueKey('central-$_revisao')),
     };
   }
@@ -244,7 +247,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         _grupoMenu(
           titulo: 'Operação',
           icone: Icons.car_repair_outlined,
-          indices: const {1, 2, 3, 4, 5, 6, 7, 22},
+          indices: const {1, 2, 3, 4, 5, 6, 7, 22, 24},
           filhos: [
             _itemMenu(
               indice: 1,
@@ -280,6 +283,11 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
               indice: 7,
               titulo: 'Finalizar OS',
               icone: Icons.task_alt_outlined,
+            ),
+            _itemMenu(
+              indice: 24,
+              titulo: 'Fotos',
+              icone: Icons.photo_library_outlined,
             ),
             _itemMenu(
               indice: 22,
