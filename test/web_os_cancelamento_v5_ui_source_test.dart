@@ -15,6 +15,7 @@ void main() {
     expect(source, contains('Confirmar cancelamento'));
     expect(source, contains('liberadas e o'));
     expect(source, contains('editavel ? () => _cancelar(os) : null'));
-    expect(source, contains('V5 transacional com CAS'));
+    expect(source, contains('_cancelamento.cancelar'));
+    expect(source, contains('Cancelar OS com transação segura'));
   });
 }
