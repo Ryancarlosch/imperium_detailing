@@ -1248,6 +1248,134 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     ).showSnackBar(SnackBar(content: Text(e.toString())));
   }
 
+  DateTime? _parseDataOrcamento(dynamic raw) {
+    final texto = raw?.toString().trim() ?? '';
+    if (texto.isEmpty) return null;
+
+    final iso = DateTime.tryParse(texto);
+    if (iso != null) return iso.toLocal();
+
+    final partes = texto.split('/');
+    if (partes.length == 3) {
+      final dia = int.tryParse(partes[0]);
+      final mes = int.tryParse(partes[1]);
+      final ano = int.tryParse(partes[2]);
+      if (dia != null && mes != null && ano != null) {
+        return DateTime(ano, mes, dia);
+      }
+    }
+    return null;
+  }
+
+  Widget _resumoOrcamento({
+    required double width,
+    required String titulo,
+    required String valor,
+    required String detalhe,
+    required IconData icone,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusOrcamento(
+    Map<String, dynamic> item, {
+    bool compacto = false,
+  }) {
+    final atual = (item['status'] ?? 'Pendente').toString();
+    final color = switch (atual) {
+      'Aprovado' => Colors.greenAccent,
+      'Recusado' => Colors.redAccent,
+      _ => Colors.orangeAccent,
+    };
+
+    return PopupMenuButton<String>(
+      tooltip: 'Alterar status',
+      initialValue: atual,
+      onSelected: (v) => _alterarStatus(item, v),
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 'Pendente', child: Text('Pendente')),
+        PopupMenuItem(value: 'Aprovado', child: Text('Aprovado')),
+        PopupMenuItem(value: 'Recusado', child: Text('Recusado')),
+      ],
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compacto ? 8 : 10,
+          vertical: 5,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: color.withValues(alpha: 0.40)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              atual,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.expand_more_rounded, size: 15, color: color),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_carregando) {
@@ -1270,138 +1398,488 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     final filtrados = _orcamentos.where((item) {
       if (_status != 'Todos' && '${item['status']}' != _status) return false;
       if (termo.isEmpty) return true;
+
       return [
         nomes[item['cliente_id']?.toString()],
         carros[item['veiculo_id']?.toString()],
         item['servico'],
         item['status'],
+        item['observacoes'],
+        item['perfil_preco'],
       ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
-    }).toList();
+    }).toList()
+      ..sort((a, b) {
+        final da =
+            _parseDataOrcamento(a['data_emissao']) ??
+            _parseDataOrcamento(a['criado_em']) ??
+            DateTime(2000);
+        final db =
+            _parseDataOrcamento(b['data_emissao']) ??
+            _parseDataOrcamento(b['criado_em']) ??
+            DateTime(2000);
+        return db.compareTo(da);
+      });
 
     final pendentes = _orcamentos
         .where((e) => '${e['status']}' == 'Pendente')
-        .length;
+        .toList();
     final aprovados = _orcamentos
         .where((e) => '${e['status']}' == 'Aprovado')
-        .fold<double>(0, (s, e) => s + _double(e['valor']));
+        .toList();
+    final recusados = _orcamentos
+        .where((e) => '${e['status']}' == 'Recusado')
+        .length;
+    final valorAprovado = aprovados.fold<double>(
+      0,
+      (s, e) => s + _double(e['valor']),
+    );
+    final potencialPendente = pendentes.fold<double>(
+      0,
+      (s, e) => s + _double(e['valor']),
+    );
+    final encerrados = aprovados.length + recusados;
+    final conversao =
+        encerrados == 0 ? 0.0 : (aprovados.length / encerrados) * 100;
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Text(
-          'Orçamentos',
-          style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Criação multi-itens e alteração de status com controle de versão.',
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _ResumoExpansao('Total', '${_orcamentos.length}'),
-            _ResumoExpansao('Pendentes', '$pendentes'),
-            _ResumoExpansao('Aprovados', _moeda.format(aprovados)),
-          ],
-        ),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _busca,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Buscar cliente, veículo ou serviço',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+    final agora = DateTime.now();
+    final vencidos = pendentes.where((e) {
+      final validade = _parseDataOrcamento(e['validade']);
+      if (validade == null) return false;
+      final limite = DateTime(validade.year, validade.month, validade.day);
+      final hoje = DateTime(agora.year, agora.month, agora.day);
+      return limite.isBefore(hoje);
+    }).length;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compacto = constraints.maxWidth < 760;
+        final tabela = constraints.maxWidth >= 1000;
+        final larguraDisponivel =
+            constraints.maxWidth - (compacto ? 32 : 48);
+        final colunas = constraints.maxWidth >= 1180
+            ? 5
+            : constraints.maxWidth >= 720
+            ? 2
+            : 1;
+        final larguraCard =
+            (larguraDisponivel - (12 * (colunas - 1))) / colunas;
+
+        return RefreshIndicator(
+          onRefresh: _carregar,
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              compacto ? 16 : 24,
+              compacto ? 18 : 24,
+              compacto ? 16 : 24,
+              40,
             ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 170,
-              child: DropdownButtonFormField<String>(
-                initialValue: _status,
-                decoration: const InputDecoration(
-                  labelText: 'Status',
-                  border: OutlineInputBorder(),
-                ),
-                items: const ['Todos', 'Pendente', 'Aprovado', 'Recusado']
-                    .map(
-                      (item) =>
-                          DropdownMenuItem(value: item, child: Text(item)),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _status = v ?? 'Todos'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: _novo,
-              icon: const Icon(Icons.add),
-              label: const Text('Novo orçamento'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ...filtrados.map(
-          (item) => Card(
-            child: ListTile(
-              leading: const Icon(Icons.request_quote_outlined),
-              title: Text(nomes[item['cliente_id']?.toString()] ?? 'Cliente'),
-              subtitle: Text(
-                [
-                  carros[item['veiculo_id']?.toString()] ?? '',
-                  (item['servico'] ?? '').toString(),
-                  (item['data_emissao'] ?? '').toString(),
-                  (item['validade'] ?? '').toString(),
-                ].where((e) => e.trim().isNotEmpty).join(' · '),
-              ),
-              onTap: () => _detalhes(item),
-              trailing: SizedBox(
-                width: 240,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      _moeda.format(_double(item['valor'])),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(width: 8),
-                    PopupMenuButton<String>(
-                      tooltip: 'Alterar status',
-                      initialValue: (item['status'] ?? 'Pendente').toString(),
-                      onSelected: (v) => _alterarStatus(item, v),
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
-                          value: 'Pendente',
-                          child: Text('Pendente'),
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Orçamentos',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                        PopupMenuItem(
-                          value: 'Aprovado',
-                          child: Text('Aprovado'),
-                        ),
-                        PopupMenuItem(
-                          value: 'Recusado',
-                          child: Text('Recusado'),
+                        SizedBox(height: 5),
+                        Text(
+                          'Propostas comerciais, aprovações e potencial de vendas em uma visão única.',
+                          style: TextStyle(color: Color(0xFFAAB3BD)),
                         ),
                       ],
-                      child: Chip(
-                        label: Text((item['status'] ?? 'Pendente').toString()),
-                      ),
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: 14),
+                  IconButton(
+                    tooltip: 'Atualizar',
+                    onPressed: _carregar,
+                    icon: const Icon(Icons.refresh_rounded),
+                  ),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(
+                    onPressed: _novo,
+                    icon: const Icon(Icons.add_rounded),
+                    label: Text(compacto ? 'Novo' : 'Novo orçamento'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _resumoOrcamento(
+                    width: larguraCard,
+                    titulo: 'Pendentes',
+                    valor: '${pendentes.length}',
+                    detalhe: 'Aguardando decisão do cliente',
+                    icone: Icons.schedule_outlined,
+                  ),
+                  _resumoOrcamento(
+                    width: larguraCard,
+                    titulo: 'Potencial pendente',
+                    valor: _moeda.format(potencialPendente),
+                    detalhe: 'Valor ainda em negociação',
+                    icone: Icons.request_quote_outlined,
+                  ),
+                  _resumoOrcamento(
+                    width: larguraCard,
+                    titulo: 'Aprovados',
+                    valor: _moeda.format(valorAprovado),
+                    detalhe: '${aprovados.length} orçamento(s) aprovado(s)',
+                    icone: Icons.verified_outlined,
+                  ),
+                  _resumoOrcamento(
+                    width: larguraCard,
+                    titulo: 'Conversão',
+                    valor: '${conversao.toStringAsFixed(1)}%',
+                    detalhe: 'Aprovados sobre propostas encerradas',
+                    icone: Icons.analytics_outlined,
+                  ),
+                  _resumoOrcamento(
+                    width: larguraCard,
+                    titulo: 'Vencidos',
+                    valor: '$vencidos',
+                    detalhe: 'Pendentes com validade expirada',
+                    icone: Icons.event_busy_outlined,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: compacto ? larguraDisponivel - 28 : 430,
+                        child: TextField(
+                          controller: _busca,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            hintText:
+                                'Buscar cliente, veículo, serviço ou observação',
+                            suffixIcon: _busca.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Limpar busca',
+                                    onPressed: () {
+                                      _busca.clear();
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(Icons.close_rounded),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 180,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _status,
+                          decoration: const InputDecoration(
+                            labelText: 'Status',
+                          ),
+                          items: const [
+                            'Todos',
+                            'Pendente',
+                            'Aprovado',
+                            'Recusado',
+                          ]
+                              .map(
+                                (item) => DropdownMenuItem(
+                                  value: item,
+                                  child: Text(item),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _status = v ?? 'Todos'),
+                        ),
+                      ),
+                      Text(
+                        '${filtrados.length} resultado(s)',
+                        style: const TextStyle(
+                          color: Color(0xFF89939E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 14),
+              if (filtrados.isEmpty)
+                const Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 40,
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.request_quote_outlined,
+                          size: 42,
+                          color: Color(0xFF89939E),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Nenhum orçamento encontrado',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (tabela)
+                Card(
+                  margin: EdgeInsets.zero,
+                  clipBehavior: Clip.antiAlias,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowHeight: 52,
+                      dataRowMinHeight: 64,
+                      dataRowMaxHeight: 82,
+                      columns: const [
+                        DataColumn(label: Text('CLIENTE')),
+                        DataColumn(label: Text('VEÍCULO')),
+                        DataColumn(label: Text('EMISSÃO')),
+                        DataColumn(label: Text('VALIDADE')),
+                        DataColumn(label: Text('VALOR')),
+                        DataColumn(label: Text('STATUS')),
+                        DataColumn(label: Text('AÇÕES')),
+                      ],
+                      rows: filtrados.map((item) {
+                        final cliente =
+                            nomes[item['cliente_id']?.toString()] ?? 'Cliente';
+                        final veiculo =
+                            carros[item['veiculo_id']?.toString()] ?? '—';
+                        final validade =
+                            _parseDataOrcamento(item['validade']);
+                        final vencido =
+                            item['status'] == 'Pendente' &&
+                            validade != null &&
+                            DateTime(
+                              validade.year,
+                              validade.month,
+                              validade.day,
+                            ).isBefore(
+                              DateTime(
+                                agora.year,
+                                agora.month,
+                                agora.day,
+                              ),
+                            );
+
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              SizedBox(
+                                width: 240,
+                                child: Text(
+                                  cliente,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              SizedBox(
+                                width: 220,
+                                child: Text(
+                                  veiculo,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                (item['data_emissao'] ?? '—').toString(),
+                              ),
+                            ),
+                            DataCell(
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (vencido) ...[
+                                    const Icon(
+                                      Icons.warning_amber_rounded,
+                                      size: 17,
+                                      color: Colors.orangeAccent,
+                                    ),
+                                    const SizedBox(width: 5),
+                                  ],
+                                  Text(
+                                    (item['validade'] ?? '—').toString(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                _moeda.format(_double(item['valor'])),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            DataCell(_statusOrcamento(item)),
+                            DataCell(
+                              Wrap(
+                                spacing: 2,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Ver itens',
+                                    onPressed: () => _detalhes(item),
+                                    icon: const Icon(
+                                      Icons.visibility_outlined,
+                                    ),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    tooltip: 'Alterar status',
+                                    onSelected: (v) =>
+                                        _alterarStatus(item, v),
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(
+                                        value: 'Pendente',
+                                        child: Text('Marcar pendente'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'Aprovado',
+                                        child: Text('Aprovar'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'Recusado',
+                                        child: Text('Recusar'),
+                                      ),
+                                    ],
+                                    icon: const Icon(
+                                      Icons.more_horiz_rounded,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                )
+              else
+                ...filtrados.map((item) {
+                  final cliente =
+                      nomes[item['cliente_id']?.toString()] ?? 'Cliente';
+                  final veiculo =
+                      carros[item['veiculo_id']?.toString()] ?? '';
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _detalhes(item),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            14,
+                            13,
+                            10,
+                            13,
+                          ),
+                          child: Row(
+                            children: [
+                              const CircleAvatar(
+                                child: Icon(
+                                  Icons.request_quote_outlined,
+                                ),
+                              ),
+                              const SizedBox(width: 11),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      cliente,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      [
+                                        veiculo,
+                                        (item['data_emissao'] ?? '')
+                                            .toString(),
+                                        if ((item['validade'] ?? '')
+                                            .toString()
+                                            .trim()
+                                            .isNotEmpty)
+                                          'Validade ${item['validade']}',
+                                      ]
+                                          .where(
+                                            (e) => e.trim().isNotEmpty,
+                                          )
+                                          .join(' · '),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFFAAB3BD),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      _moeda.format(
+                                        _double(item['valor']),
+                                      ),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _statusOrcamento(item, compacto: true),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+            ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
+
 }
 
 class _NovoOrcamentoWebDialog extends StatefulWidget {
