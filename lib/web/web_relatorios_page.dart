@@ -6,7 +6,9 @@ import '../services/web_cloud_relatorios_service.dart';
 import 'imperium_web_theme.dart';
 
 class WebRelatoriosPage extends StatefulWidget {
-  const WebRelatoriosPage({super.key});
+  const WebRelatoriosPage({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<WebRelatoriosPage> createState() => _WebRelatoriosPageState();
@@ -75,6 +77,21 @@ class _WebRelatoriosPageState extends State<WebRelatoriosPage> {
 
   @override
   Widget build(BuildContext context) {
+    final body = Column(
+      children: [
+        _CabecalhoRelatorio(
+          periodo: _periodo,
+          data: _data,
+          carregando: _carregando,
+          onSelecionarPeriodo: _selecionarPeriodo,
+        ),
+        const Divider(),
+        Expanded(child: _conteudo()),
+      ],
+    );
+
+    if (widget.embedded) return body;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Relatórios gerenciais'),
@@ -87,18 +104,7 @@ class _WebRelatoriosPageState extends State<WebRelatoriosPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        children: [
-          _CabecalhoRelatorio(
-            periodo: _periodo,
-            data: _data,
-            carregando: _carregando,
-            onSelecionarPeriodo: _selecionarPeriodo,
-          ),
-          const Divider(),
-          Expanded(child: _conteudo()),
-        ],
-      ),
+      body: body,
     );
   }
 
