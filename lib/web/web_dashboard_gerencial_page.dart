@@ -100,6 +100,8 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
     final financeiro = resumo.financeiro;
     final contas = resumo.contas.take(4).toList();
     final executores = financeiro.executores.take(5).toList();
+    final agendaHoje = resumo.agendaHoje.take(6).toList();
+    final ordensAbertas = resumo.ordensAbertas.take(6).toList();
     final largura = MediaQuery.sizeOf(context).width;
     final compacto = largura < 760;
     final paddingHorizontal = compacto ? 16.0 : 28.0;
@@ -233,6 +235,34 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                 children: [
                   _QuickAction(
                     width: larguraAcao,
+                    icon: Icons.add_business_outlined,
+                    titulo: 'Nova OS',
+                    detalhe: 'Abra uma nova ordem de serviço',
+                    onTap: () => widget.onNavigate?.call(5),
+                  ),
+                  _QuickAction(
+                    width: larguraAcao,
+                    icon: Icons.calendar_month_outlined,
+                    titulo: 'Agenda',
+                    detalhe: 'Compromissos e serviços programados',
+                    onTap: () => widget.onNavigate?.call(3),
+                  ),
+                  _QuickAction(
+                    width: larguraAcao,
+                    icon: Icons.receipt_long_outlined,
+                    titulo: 'Ordens de serviço',
+                    detalhe: 'Execução, valores e situação das OS',
+                    onTap: () => widget.onNavigate?.call(4),
+                  ),
+                  _QuickAction(
+                    width: larguraAcao,
+                    icon: Icons.inventory_2_outlined,
+                    titulo: 'Estoque',
+                    detalhe: 'Produtos, reservas e movimentações',
+                    onTap: () => widget.onNavigate?.call(8),
+                  ),
+                  _QuickAction(
+                    width: larguraAcao,
                     icon: Icons.account_balance_wallet_outlined,
                     titulo: 'Contas e caixa',
                     detalhe: 'Saldos, extrato e movimentação financeira',
@@ -294,6 +324,44 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     onTap: () => widget.onNavigate?.call(19),
                   ),
                 ],
+              ),
+              const SizedBox(height: 30),
+              const _SectionTitle(
+                titulo: 'Operação de hoje',
+                subtitulo:
+                    'Agenda do dia e veículos que ainda estão em execução.',
+              ),
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final ladoALado = constraints.maxWidth >= 980;
+                  final larguraPainel = ladoALado
+                      ? (constraints.maxWidth - 12) / 2
+                      : constraints.maxWidth;
+
+                  final agendaCard = SizedBox(
+                    width: larguraPainel,
+                    child: _AgendaHojePainel(
+                      itens: agendaHoje,
+                      valor: _valor,
+                      onVerTodos: () => widget.onNavigate?.call(3),
+                    ),
+                  );
+                  final ordensCard = SizedBox(
+                    width: larguraPainel,
+                    child: _OrdensAbertasPainel(
+                      itens: ordensAbertas,
+                      valor: _valor,
+                      onVerTodos: () => widget.onNavigate?.call(4),
+                    ),
+                  );
+
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [agendaCard, ordensCard],
+                  );
+                },
               ),
               const SizedBox(height: 30),
               _SectionTitle(
@@ -396,6 +464,239 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
     return texto.trim().isEmpty
         ? 'Não foi possível carregar o painel gerencial.'
         : texto;
+  }
+}
+
+class _AgendaHojePainel extends StatelessWidget {
+  const _AgendaHojePainel({
+    required this.itens,
+    required this.valor,
+    required this.onVerTodos,
+  });
+
+  final List<Map<String, dynamic>> itens;
+  final String Function(double) valor;
+  final VoidCallback onVerTodos;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Agenda de hoje',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onVerTodos,
+                  child: const Text('Ver agenda'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            if (itens.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 22),
+                child: Center(
+                  child: Text(
+                    'Nenhum agendamento aberto para hoje.',
+                    style: TextStyle(color: Color(0xFF89939E)),
+                  ),
+                ),
+              )
+            else
+              ...itens.map((item) {
+                final numero = item['valor'];
+                final valorPrevisto = numero is num ? numero.toDouble() : 0.0;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 54,
+                        child: Text(
+                          (item['hora'] ?? '—').toString(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              (item['servico'] ?? 'Serviço').toString(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              [
+                                (item['_cliente_nome'] ?? '').toString(),
+                                (item['_veiculo_nome'] ?? '').toString(),
+                              ].where((e) => e.trim().isNotEmpty).join(' · '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF89939E),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (valorPrevisto > 0) ...[
+                        const SizedBox(width: 10),
+                        Text(
+                          valor(valorPrevisto),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrdensAbertasPainel extends StatelessWidget {
+  const _OrdensAbertasPainel({
+    required this.itens,
+    required this.valor,
+    required this.onVerTodos,
+  });
+
+  final List<Map<String, dynamic>> itens;
+  final String Function(double) valor;
+  final VoidCallback onVerTodos;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'OS em aberto',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onVerTodos,
+                  child: const Text('Ver ordens'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            if (itens.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 22),
+                child: Center(
+                  child: Text(
+                    'Nenhuma ordem aberta ou em andamento.',
+                    style: TextStyle(color: Color(0xFF89939E)),
+                  ),
+                ),
+              )
+            else
+              ...itens.map((item) {
+                final bruto = item['_valor_negociado'];
+                final negociado = bruto is num ? bruto.toDouble() : 0.0;
+                final status = (item['status'] ?? 'Aberta').toString();
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        child: Icon(
+                          status == 'Em andamento'
+                              ? Icons.pending_actions_outlined
+                              : Icons.edit_note_outlined,
+                          size: 17,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'OS ${item['numero'] ?? ''} · '
+                              '${item['_cliente_nome'] ?? 'Cliente'}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              [
+                                (item['_veiculo_nome'] ?? '').toString(),
+                                status,
+                                (item['funcionario_responsavel'] ?? '')
+                                    .toString(),
+                              ].where((e) => e.trim().isNotEmpty).join(' · '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF89939E),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (negociado > 0) ...[
+                        const SizedBox(width: 10),
+                        Text(
+                          valor(negociado),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
   }
 }
 
