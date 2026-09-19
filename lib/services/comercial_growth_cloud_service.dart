@@ -65,15 +65,11 @@ class GrowthPosVendaCliente {
   final DateTime? ultimoContato;
   final DateTime? proximoContato;
 
-  bool get precisaAcao =>
-      status == 'Hora do retorno' || status == 'Reativação';
+  bool get precisaAcao => status == 'Hora do retorno' || status == 'Reativação';
 }
 
 class GrowthPosVendaPainel {
-  const GrowthPosVendaPainel({
-    required this.config,
-    required this.clientes,
-  });
+  const GrowthPosVendaPainel({required this.config, required this.clientes});
 
   final GrowthPosVendaConfig config;
   final List<GrowthPosVendaCliente> clientes;
@@ -81,8 +77,7 @@ class GrowthPosVendaPainel {
   int get emDia => clientes.where((e) => e.status == 'Em dia').length;
   int get retorno =>
       clientes.where((e) => e.status == 'Hora do retorno').length;
-  int get reativacao =>
-      clientes.where((e) => e.status == 'Reativação').length;
+  int get reativacao => clientes.where((e) => e.status == 'Reativação').length;
   int get agendados => clientes.where((e) => e.status == 'Agendado').length;
   int get precisamAcao => clientes.where((e) => e.precisaAcao).length;
 }
@@ -110,7 +105,8 @@ class GrowthMarketingResumo {
   final int cliques;
   final int publicacoesPlanejadas;
 
-  double get roas => investimento <= 0 ? 0 : faturamentoAtribuido / investimento;
+  double get roas =>
+      investimento <= 0 ? 0 : faturamentoAtribuido / investimento;
 }
 
 class ComercialGrowthCloudService {
@@ -183,15 +179,12 @@ class ComercialGrowthCloudService {
     }
 
     final empresaId = await _empresaId();
-    await _client.from('imperium_pos_venda_config').upsert(
-      <String, dynamic>{
-        'empresa_id': empresaId,
-        'ativo': ativo,
-        'dias_retorno': diasRetorno,
-        'dias_reativacao': diasReativacao,
-      },
-      onConflict: 'empresa_id',
-    );
+    await _client.from('imperium_pos_venda_config').upsert(<String, dynamic>{
+      'empresa_id': empresaId,
+      'ativo': ativo,
+      'dias_retorno': diasRetorno,
+      'dias_reativacao': diasReativacao,
+    }, onConflict: 'empresa_id');
   }
 
   Future<GrowthPosVendaPainel> carregarPosVenda() async {
@@ -362,19 +355,19 @@ class ComercialGrowthCloudService {
     }
 
     final empresaId = await _empresaId();
-    await _client.from('imperium_pos_venda_interacoes').insert(
-      <String, dynamic>{
-        'empresa_id': empresaId,
-        'cliente_id': clienteId,
-        'ordem_servico_id': _textoNulo(ordemServicoId),
-        'tipo': tipo.trim().isEmpty ? 'Contato' : tipo.trim(),
-        'descricao': descricao.trim(),
-        'resultado': resultado.trim(),
-        'proximo_contato': proximoContato == null
-            ? null
-            : _dataIso(proximoContato),
-      },
-    );
+    await _client
+        .from('imperium_pos_venda_interacoes')
+        .insert(<String, dynamic>{
+          'empresa_id': empresaId,
+          'cliente_id': clienteId,
+          'ordem_servico_id': _textoNulo(ordemServicoId),
+          'tipo': tipo.trim().isEmpty ? 'Contato' : tipo.trim(),
+          'descricao': descricao.trim(),
+          'resultado': resultado.trim(),
+          'proximo_contato': proximoContato == null
+              ? null
+              : _dataIso(proximoContato),
+        });
   }
 
   Future<List<Map<String, dynamic>>> listarCampanhasMarketing() async {
@@ -543,18 +536,18 @@ class ComercialGrowthCloudService {
       if (existente != null) return;
     }
 
-    await _client.from('imperium_marketing_atribuicoes').insert(
-      <String, dynamic>{
-        'empresa_id': empresaId,
-        'campanha_id': campanhaId,
-        'lead_id': _textoNulo(leadId),
-        'cliente_id': _textoNulo(clienteId),
-        'ordem_servico_id': _textoNulo(ordemServicoId),
-        'origem': origem,
-        'modelo': modelo,
-        'observacoes': observacoes.trim(),
-      },
-    );
+    await _client
+        .from('imperium_marketing_atribuicoes')
+        .insert(<String, dynamic>{
+          'empresa_id': empresaId,
+          'campanha_id': campanhaId,
+          'lead_id': _textoNulo(leadId),
+          'cliente_id': _textoNulo(clienteId),
+          'ordem_servico_id': _textoNulo(ordemServicoId),
+          'origem': origem,
+          'modelo': modelo,
+          'observacoes': observacoes.trim(),
+        });
   }
 
   Future<GrowthMarketingResumo> carregarResumoMarketing() async {
