@@ -26,7 +26,8 @@ void main() {
     expect(source, contains('Reservado OS'));
     expect(source, contains('Disponível'));
     expect(source, contains('FIFO'));
-    expect(source, contains('Movimentações recentes'));
+    expect(source, contains('Saldo e movimentações'));
+    expect(source, contains('Movimentações'));
   });
 
   test('Menu Web aponta Estoque para pagina transacional', () {
