@@ -267,6 +267,8 @@ class _MarketingPageState extends State<MarketingPage> {
 
     try {
       final snapshot = await _service.carregarSnapshotParaAtribuicao();
+      if (!mounted) return;
+
       final clientes = _lista(snapshot['clientes']);
       final ordens = _lista(snapshot['ordens']);
 
