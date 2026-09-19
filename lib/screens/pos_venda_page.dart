@@ -13,7 +13,7 @@ class PosVendaPage extends StatefulWidget {
 class _PosVendaPageState extends State<PosVendaPage> {
   final _service = ComercialGrowthCloudService.instance;
   final _data = DateFormat('dd/MM/yyyy', 'pt_BR');
-  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R$');
+  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: r'R$');
 
   GrowthPosVendaPainel? _painel;
   bool _carregando = true;
