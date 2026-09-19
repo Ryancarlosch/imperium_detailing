@@ -266,7 +266,8 @@ class FiscalCloudSyncService {
         );
         await tx.delete(
           'imperium_sync_fiscal_itens',
-          where: 'empresa_id = ? AND local_id NOT IN '
+          where:
+              'empresa_id = ? AND local_id NOT IN '
               '(SELECT id FROM notas_fiscais_entrada_itens)',
           whereArgs: [empresaId],
         );
@@ -1017,8 +1018,7 @@ class FiscalCloudSyncService {
       'numero': _intNulo(remoto['numero']),
       'serie': _intNulo(remoto['serie']),
       'data_emissao': _textoNulo(remoto['data_emissao']),
-      'fornecedor_id':
-          fornecedorLocalId ?? _intNulo(preservarFornecedorLocal),
+      'fornecedor_id': fornecedorLocalId ?? _intNulo(preservarFornecedorLocal),
       'emitente_cnpj_cpf': _textoNulo(remoto['emitente_cnpj_cpf']),
       'emitente_nome': _textoNulo(remoto['emitente_nome']),
       'valor_produtos': _doubleNulo(remoto['valor_produtos']),
@@ -1029,8 +1029,14 @@ class FiscalCloudSyncService {
       'valor_ipi': _double(remoto['valor_ipi']),
       'valor_icms_st': _double(remoto['valor_icms_st']),
       'valor_total': _doubleNulo(remoto['valor_total']),
-      'situacao_fiscal': _textoPadrao(remoto['situacao_fiscal'], 'desconhecida'),
-      'status_importacao': _textoPadrao(remoto['status_importacao'], 'pendente'),
+      'situacao_fiscal': _textoPadrao(
+        remoto['situacao_fiscal'],
+        'desconhecida',
+      ),
+      'status_importacao': _textoPadrao(
+        remoto['status_importacao'],
+        'pendente',
+      ),
       'origem_importacao': _texto(remoto['origem_importacao']),
       'xml_original': _textoNulo(remoto['xml_original']),
       'xml_hash': _textoNulo(remoto['xml_hash']),
@@ -1166,7 +1172,8 @@ class FiscalCloudSyncService {
     final rows = await database.query(
       'imperium_sync_fiscal_conflitos',
       columns: ['id'],
-      where: "empresa_id = ? AND entidade = ? AND local_id = ? AND status = 'Pendente'",
+      where:
+          "empresa_id = ? AND entidade = ? AND local_id = ? AND status = 'Pendente'",
       whereArgs: [empresaId, entidade, localId],
       limit: 1,
     );
@@ -1275,10 +1282,7 @@ class FiscalCloudSyncService {
     return rows.isEmpty ? null : rows.first;
   }
 
-  Future<Map<String, Object?>> _localPorId(
-    String tabela,
-    int localId,
-  ) async {
+  Future<Map<String, Object?>> _localPorId(String tabela, int localId) async {
     final local = await _localPorIdOuNulo(tabela, localId);
     if (local == null) {
       throw StateError('Registro fiscal local nao encontrado.');
@@ -1310,17 +1314,13 @@ class FiscalCloudSyncService {
     String? remotoAtualizadoEm,
   }) async {
     final database = await _appDatabase.database;
-    await database.insert(
-      tabela,
-      {
-        'empresa_id': empresaId,
-        'local_id': localId,
-        'remoto_id': remotoId,
-        'local_hash': localHash,
-        'remoto_atualizado_em': remotoAtualizadoEm,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert(tabela, {
+      'empresa_id': empresaId,
+      'local_id': localId,
+      'remoto_id': remotoId,
+      'local_hash': localHash,
+      'remoto_atualizado_em': remotoAtualizadoEm,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> _removerMapa({
