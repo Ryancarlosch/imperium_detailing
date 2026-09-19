@@ -1864,7 +1864,7 @@ class _VeiculosPageState extends State<_VeiculosPage> {
   }
 }
 
-class _AgendaPage extends StatelessWidget {
+class _AgendaPage extends StatefulWidget {
   const _AgendaPage({
     super.key,
     required this.service,
@@ -1876,94 +1876,328 @@ class _AgendaPage extends StatelessWidget {
   final NumberFormat moeda;
   final VoidCallback onChanged;
 
-  Future<void> _novo(
-    BuildContext context,
+  @override
+  State<_AgendaPage> createState() => _AgendaPageState();
+}
+
+class _AgendaPageState extends State<_AgendaPage> {
+  final _busca = TextEditingController();
+  String _filtroStatus = 'Todos';
+
+  @override
+  void dispose() {
+    _busca.dispose();
+    super.dispose();
+  }
+
+  DateTime? _parseData(dynamic valor) {
+    final texto = valor?.toString().trim() ?? '';
+    if (texto.isEmpty) return null;
+
+    final iso = DateTime.tryParse(texto);
+    if (iso != null) return iso.toLocal();
+
+    final partes = texto.split('/');
+    if (partes.length == 3) {
+      final d = int.tryParse(partes[0]);
+      final m = int.tryParse(partes[1]);
+      final a = int.tryParse(partes[2]);
+      if (d != null && m != null && a != null) {
+        return DateTime(a, m, d);
+      }
+    }
+
+    final hifen = texto.split('-');
+    if (hifen.length == 3) {
+      final a = int.tryParse(hifen[0]);
+      final m = int.tryParse(hifen[1]);
+      final d = int.tryParse(hifen[2]);
+      if (d != null && m != null && a != null) {
+        return DateTime(a, m, d);
+      }
+    }
+    return null;
+  }
+
+  String _formatarData(DateTime data) {
+    final d = data.day.toString().padLeft(2, '0');
+    final m = data.month.toString().padLeft(2, '0');
+    return '$d/$m/${data.year}';
+  }
+
+  TimeOfDay? _parseHora(dynamic valor) {
+    final texto = valor?.toString().trim() ?? '';
+    if (texto.isEmpty) return null;
+    final partes = texto.split(':');
+    if (partes.length < 2) return null;
+    final h = int.tryParse(partes[0]);
+    final m = int.tryParse(partes[1]);
+    if (h == null || m == null || h < 0 || h > 23 || m < 0 || m > 59) {
+      return null;
+    }
+    return TimeOfDay(hour: h, minute: m);
+  }
+
+  String _formatarHora(TimeOfDay hora) {
+    return '${hora.hour.toString().padLeft(2, '0')}:${hora.minute.toString().padLeft(2, '0')}';
+  }
+
+  bool _statusAberto(dynamic status) {
+    final texto = (status ?? '').toString().trim().toLowerCase();
+    return !{
+      'cancelado',
+      'cancelada',
+      'concluído',
+      'concluido',
+      'finalizado',
+      'finalizada',
+    }.contains(texto);
+  }
+
+  Future<void> _editar(
+    Map<String, dynamic>? atual,
     List<Map<String, dynamic>> clientes,
     List<Map<String, dynamic>> veiculos,
   ) async {
-    if (clientes.isEmpty || veiculos.isEmpty) return;
+    final ativos = clientes.where((c) => c['ativo'] != false).toList();
+    if (ativos.isEmpty || veiculos.isEmpty) {
+      _snack('Cadastre cliente e veículo antes de criar um agendamento.');
+      return;
+    }
 
-    var clienteId = '${clientes.first['id']}';
-    var disponiveis = veiculos
+    var clienteId = '${atual?['cliente_id'] ?? ativos.first['id']}';
+    if (!ativos.any((c) => '${c['id']}' == clienteId)) {
+      clienteId = '${ativos.first['id']}';
+    }
+
+    List<Map<String, dynamic>> disponiveis() => veiculos
         .where((v) => '${v['cliente_id']}' == clienteId)
         .toList();
-    if (disponiveis.isEmpty) return;
-    var veiculoId = '${disponiveis.first['id']}';
 
-    final servico = TextEditingController();
-    final data = TextEditingController();
-    final hora = TextEditingController();
-    final valor = TextEditingController();
+    var lista = disponiveis();
+    if (lista.isEmpty) {
+      _snack('O cliente selecionado não possui veículo cadastrado.');
+      return;
+    }
+
+    var veiculoId = '${atual?['veiculo_id'] ?? lista.first['id']}';
+    if (!lista.any((v) => '${v['id']}' == veiculoId)) {
+      veiculoId = '${lista.first['id']}';
+    }
+
+    final servico = TextEditingController(
+      text: (atual?['servico'] ?? '').toString(),
+    );
+    final valor = TextEditingController(
+      text: _double(atual?['valor']).toStringAsFixed(2),
+    );
+    final observacoes = TextEditingController(
+      text: (atual?['observacoes'] ?? '').toString(),
+    );
+
+    DateTime dataSelecionada =
+        _parseData(atual?['data']) ?? DateTime.now();
+    TimeOfDay horaSelecionada =
+        _parseHora(atual?['hora']) ?? TimeOfDay.now();
+    var status = (atual?['status'] ?? 'Agendado').toString();
+    const statuses = [
+      'Agendado',
+      'Confirmado',
+      'Em andamento',
+      'Concluído',
+      'Cancelado',
+    ];
+    if (!statuses.contains(status)) status = 'Agendado';
 
     final salvar = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocal) {
-          disponiveis = veiculos
-              .where((v) => '${v['cliente_id']}' == clienteId)
-              .toList();
+          lista = disponiveis();
+          if (!lista.any((v) => '${v['id']}' == veiculoId)) {
+            veiculoId = lista.isEmpty ? '' : '${lista.first['id']}';
+          }
+
           return AlertDialog(
-            title: const Text('Novo agendamento'),
+            title: Text(
+              atual == null ? 'Novo agendamento' : 'Editar agendamento',
+            ),
             content: SizedBox(
-              width: 560,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: clienteId,
-                    items: clientes
-                        .map(
-                          (c) => DropdownMenuItem(
-                            value: '${c['id']}',
-                            child: Text('${c['nome']}'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setLocal(() {
-                      clienteId = v ?? clienteId;
-                      final lista = veiculos
-                          .where((x) => '${x['cliente_id']}' == clienteId)
-                          .toList();
-                      veiculoId = lista.isEmpty ? '' : '${lista.first['id']}';
-                    }),
-                    decoration: const InputDecoration(labelText: 'Cliente'),
-                  ),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey(clienteId),
-                    initialValue:
-                        disponiveis.any((v) => '${v['id']}' == veiculoId)
-                        ? veiculoId
-                        : null,
-                    items: disponiveis
-                        .map(
-                          (v) => DropdownMenuItem(
-                            value: '${v['id']}',
-                            child: Text(
-                              '${v['marca']} ${v['modelo']} ${v['placa']}',
+              width: 620,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: clienteId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Cliente *',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
+                      items: ativos
+                          .map(
+                            (c) => DropdownMenuItem<String>(
+                              value: '${c['id']}',
+                              child: Text(
+                                '${c['nome']}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        setLocal(() {
+                          clienteId = v;
+                          final novaLista = disponiveis();
+                          veiculoId = novaLista.isEmpty
+                              ? ''
+                              : '${novaLista.first['id']}';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      key: ValueKey('agenda-veiculo-$clienteId'),
+                      initialValue: lista.any((v) => '${v['id']}' == veiculoId)
+                          ? veiculoId
+                          : null,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Veículo *',
+                        prefixIcon: Icon(Icons.directions_car_outlined),
+                      ),
+                      items: lista
+                          .map(
+                            (v) => DropdownMenuItem<String>(
+                              value: '${v['id']}',
+                              child: Text(
+                                '${v['marca'] ?? ''} ${v['modelo'] ?? ''} ${v['placa'] ?? ''}'
+                                    .trim(),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) setLocal(() => veiculoId = v);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: servico,
+                      decoration: const InputDecoration(
+                        labelText: 'Serviço *',
+                        prefixIcon: Icon(Icons.design_services_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              final escolhida = await showDatePicker(
+                                context: context,
+                                initialDate: dataSelecionada,
+                                firstDate: DateTime.now().subtract(
+                                  const Duration(days: 365),
+                                ),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 1095),
+                                ),
+                              );
+                              if (escolhida != null) {
+                                setLocal(() => dataSelecionada = escolhida);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Data *',
+                                prefixIcon: Icon(Icons.calendar_month_outlined),
+                              ),
+                              child: Text(_formatarData(dataSelecionada)),
                             ),
                           ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setLocal(() => veiculoId = v ?? ''),
-                    decoration: const InputDecoration(labelText: 'Veículo'),
-                  ),
-                  TextField(
-                    controller: servico,
-                    decoration: const InputDecoration(labelText: 'Serviço *'),
-                  ),
-                  TextField(
-                    controller: data,
-                    decoration: const InputDecoration(labelText: 'Data *'),
-                  ),
-                  TextField(
-                    controller: hora,
-                    decoration: const InputDecoration(labelText: 'Hora *'),
-                  ),
-                  TextField(
-                    controller: valor,
-                    decoration: const InputDecoration(labelText: 'Valor'),
-                  ),
-                ],
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              final escolhida = await showTimePicker(
+                                context: context,
+                                initialTime: horaSelecionada,
+                              );
+                              if (escolhida != null) {
+                                setLocal(() => horaSelecionada = escolhida);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Hora *',
+                                prefixIcon: Icon(Icons.schedule_outlined),
+                              ),
+                              child: Text(_formatarHora(horaSelecionada)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: valor,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Valor previsto',
+                              prefixText: 'R\$ ',
+                              prefixIcon: Icon(Icons.payments_outlined),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: status,
+                            decoration: const InputDecoration(
+                              labelText: 'Status',
+                              prefixIcon: Icon(Icons.flag_outlined),
+                            ),
+                            items: statuses
+                                .map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(item),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) {
+                              if (v != null) setLocal(() => status = v);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: observacoes,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Observações',
+                        alignLabelWithHint: true,
+                        prefixIcon: Icon(Icons.notes_rounded),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [
@@ -1971,16 +2205,15 @@ class _AgendaPage extends StatelessWidget {
                 onPressed: () => Navigator.pop(context, false),
                 child: const Text('Cancelar'),
               ),
-              FilledButton(
+              FilledButton.icon(
                 onPressed: () => Navigator.pop(
                   context,
                   clienteId.isNotEmpty &&
                       veiculoId.isNotEmpty &&
-                      servico.text.trim().isNotEmpty &&
-                      data.text.trim().isNotEmpty &&
-                      hora.text.trim().isNotEmpty,
+                      servico.text.trim().isNotEmpty,
                 ),
-                child: const Text('Salvar'),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Salvar agendamento'),
               ),
             ],
           );
@@ -1990,26 +2223,142 @@ class _AgendaPage extends StatelessWidget {
 
     if (salvar != true) return;
 
-    await service.salvarAgendamento(
+    await widget.service.salvarAgendamento(
+      id: atual?['id']?.toString(),
       clienteId: clienteId,
       veiculoId: veiculoId,
       servico: servico.text,
-      data: data.text,
-      hora: hora.text,
+      data: _formatarData(dataSelecionada),
+      hora: _formatarHora(horaSelecionada),
       valor: _double(valor.text),
-      status: 'Agendado',
-      observacoes: '',
+      status: status,
+      observacoes: observacoes.text,
     );
-    onChanged();
+    widget.onChanged();
+  }
+
+  Future<void> _excluir(Map<String, dynamic> agendamento) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir agendamento?'),
+        content: Text(
+          'O agendamento de ${agendamento['data'] ?? ''} '
+          '${agendamento['hora'] ?? ''} será removido.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.tonalIcon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+    await widget.service.excluirAgendamento(agendamento['id'].toString());
+    widget.onChanged();
+  }
+
+  void _snack(String mensagem) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(mensagem)));
+  }
+
+  Widget _resumo({
+    required double width,
+    required String titulo,
+    required String valor,
+    required IconData icone,
+    required String detalhe,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(String status) {
+    final normalizado = status.toLowerCase();
+    IconData icone = Icons.event_outlined;
+    if (normalizado.contains('confirm')) {
+      icone = Icons.event_available_outlined;
+    } else if (normalizado.contains('conclu') ||
+        normalizado.contains('finaliz')) {
+      icone = Icons.task_alt_outlined;
+    } else if (normalizado.contains('cancel')) {
+      icone = Icons.event_busy_outlined;
+    } else if (normalizado.contains('andamento')) {
+      icone = Icons.pending_actions_outlined;
+    }
+    return Chip(
+      avatar: Icon(icone, size: 16),
+      label: Text(status.isEmpty ? 'Agendado' : status),
+      visualDensity: VisualDensity.compact,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<List<Map<String, dynamic>>>>(
       future: Future.wait([
-        service.listarAgendamentos(),
-        service.listarClientes(),
-        service.listarVeiculos(),
+        widget.service.listarAgendamentos(),
+        widget.service.listarClientes(),
+        widget.service.listarVeiculos(),
       ]),
       builder: (context, snapshot) {
         if (!snapshot.hasData && !snapshot.hasError) {
@@ -2020,58 +2369,402 @@ class _AgendaPage extends StatelessWidget {
         final agenda = snapshot.data![0];
         final clientes = snapshot.data![1];
         final veiculos = snapshot.data![2];
-        final nomes = {for (final c in clientes) '${c['id']}': '${c['nome']}'};
+        final nomes = {
+          for (final c in clientes) '${c['id']}': '${c['nome']}',
+        };
         final carros = {
           for (final v in veiculos)
-            '${v['id']}': '${v['marca']} ${v['modelo']} ${v['placa']}',
+            '${v['id']}':
+                '${v['marca'] ?? ''} ${v['modelo'] ?? ''} ${v['placa'] ?? ''}'
+                    .trim(),
         };
 
-        return Column(
-          children: [
-            _Topo(
-              campo: const Text(
-                'Agenda',
-                style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
+        final hojeAgora = DateTime.now();
+        final hoje = DateTime(
+          hojeAgora.year,
+          hojeAgora.month,
+          hojeAgora.day,
+        );
+        final termo = _busca.text.trim().toLowerCase();
+
+        final itens = agenda.where((e) {
+          final status = (e['status'] ?? 'Agendado').toString();
+          if (_filtroStatus == 'Abertos' && !_statusAberto(status)) {
+            return false;
+          }
+          if (_filtroStatus == 'Concluídos' &&
+              !status.toLowerCase().contains('conclu') &&
+              !status.toLowerCase().contains('finaliz')) {
+            return false;
+          }
+          if (_filtroStatus == 'Cancelados' &&
+              !status.toLowerCase().contains('cancel')) {
+            return false;
+          }
+
+          if (termo.isEmpty) return true;
+          return [
+            e['servico'],
+            e['data'],
+            e['hora'],
+            e['status'],
+            nomes['${e['cliente_id']}'] ?? '',
+            carros['${e['veiculo_id']}'] ?? '',
+          ].any((v) => '${v ?? ''}'.toLowerCase().contains(termo));
+        }).toList()
+          ..sort((a, b) {
+            final da = _parseData(a['data']) ?? DateTime(2099);
+            final db = _parseData(b['data']) ?? DateTime(2099);
+            final cmp = da.compareTo(db);
+            if (cmp != 0) return cmp;
+            return (a['hora'] ?? '').toString().compareTo(
+              (b['hora'] ?? '').toString(),
+            );
+          });
+
+        final abertos = agenda.where((e) => _statusAberto(e['status'])).toList();
+        final hojeQtd = abertos.where((e) {
+          final d = _parseData(e['data']);
+          return d != null &&
+              d.year == hoje.year &&
+              d.month == hoje.month &&
+              d.day == hoje.day;
+        }).length;
+        final proximos = abertos.where((e) {
+          final d = _parseData(e['data']);
+          if (d == null) return false;
+          final dia = DateTime(d.year, d.month, d.day);
+          return dia.isAfter(hoje);
+        }).length;
+        final valorPrevisto = abertos.fold<double>(
+          0,
+          (total, e) => total + _double(e['valor']),
+        );
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final compacto = constraints.maxWidth < 760;
+            final tabela = constraints.maxWidth >= 980;
+            final larguraDisponivel =
+                constraints.maxWidth - (compacto ? 32 : 48);
+            final colunas = constraints.maxWidth >= 1180
+                ? 4
+                : constraints.maxWidth >= 760
+                ? 2
+                : 1;
+            final larguraCard =
+                (larguraDisponivel - (12 * (colunas - 1))) / colunas;
+
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                compacto ? 16 : 24,
+                compacto ? 18 : 24,
+                compacto ? 16 : 24,
+                40,
               ),
-              botao: FilledButton.icon(
-                onPressed: () => _novo(context, clientes, veiculos),
-                icon: const Icon(Icons.add),
-                label: const Text('Novo agendamento'),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                itemCount: agenda.length,
-                itemBuilder: (context, i) {
-                  final e = agenda[i];
-                  return Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.event_rounded),
-                      title: Text(
-                        '${e['data']} ${e['hora']} · ${e['servico']}',
-                      ),
-                      subtitle: Text(
-                        [
-                          nomes['${e['cliente_id']}'] ?? '',
-                          carros['${e['veiculo_id']}'] ?? '',
-                          '${e['status'] ?? ''}',
-                          moeda.format(_double(e['valor'])),
-                        ].where((x) => x.trim().isNotEmpty).join(' · '),
-                      ),
-                      trailing: IconButton(
-                        onPressed: () async {
-                          await service.excluirAgendamento(e['id'].toString());
-                          onChanged();
-                        },
-                        icon: const Icon(Icons.delete_outline),
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Agenda',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          SizedBox(height: 5),
+                          Text(
+                            'Compromissos, retornos e serviços programados da operação.',
+                            style: TextStyle(color: Color(0xFFAAB3BD)),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-          ],
+                    const SizedBox(width: 14),
+                    FilledButton.icon(
+                      onPressed: () => _editar(null, clientes, veiculos),
+                      icon: const Icon(Icons.add_rounded),
+                      label: Text(compacto ? 'Novo' : 'Novo agendamento'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Hoje',
+                      valor: '$hojeQtd',
+                      icone: Icons.today_outlined,
+                      detalhe: 'Agendamentos abertos para hoje',
+                    ),
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Próximos',
+                      valor: '$proximos',
+                      icone: Icons.upcoming_outlined,
+                      detalhe: 'Compromissos futuros em aberto',
+                    ),
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Em aberto',
+                      valor: '${abertos.length}',
+                      icone: Icons.event_note_outlined,
+                      detalhe: 'Agendamentos ainda ativos',
+                    ),
+                    _resumo(
+                      width: larguraCard,
+                      titulo: 'Valor previsto',
+                      valor: widget.moeda.format(valorPrevisto),
+                      icone: Icons.payments_outlined,
+                      detalhe: 'Soma dos agendamentos em aberto',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: compacto ? larguraDisponivel - 28 : 430,
+                          child: TextField(
+                            controller: _busca,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search_rounded),
+                              hintText:
+                                  'Buscar por cliente, veículo, serviço ou data',
+                              suffixIcon: _busca.text.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      tooltip: 'Limpar busca',
+                                      onPressed: () {
+                                        _busca.clear();
+                                        setState(() {});
+                                      },
+                                      icon: const Icon(Icons.close_rounded),
+                                    ),
+                            ),
+                          ),
+                        ),
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(
+                              value: 'Todos',
+                              label: Text('Todos'),
+                            ),
+                            ButtonSegment(
+                              value: 'Abertos',
+                              label: Text('Abertos'),
+                            ),
+                            ButtonSegment(
+                              value: 'Concluídos',
+                              label: Text('Concluídos'),
+                            ),
+                            ButtonSegment(
+                              value: 'Cancelados',
+                              label: Text('Cancelados'),
+                            ),
+                          ],
+                          selected: <String>{_filtroStatus},
+                          showSelectedIcon: false,
+                          onSelectionChanged: (valor) {
+                            setState(() => _filtroStatus = valor.first);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (itens.isEmpty)
+                  const Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 42,
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.event_busy_outlined,
+                            size: 42,
+                            color: Color(0xFF89939E),
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Nenhum agendamento encontrado',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (tabela)
+                  Card(
+                    margin: EdgeInsets.zero,
+                    clipBehavior: Clip.antiAlias,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        headingRowHeight: 52,
+                        dataRowMinHeight: 60,
+                        dataRowMaxHeight: 76,
+                        columns: const [
+                          DataColumn(label: Text('DATA / HORA')),
+                          DataColumn(label: Text('CLIENTE')),
+                          DataColumn(label: Text('VEÍCULO')),
+                          DataColumn(label: Text('SERVIÇO')),
+                          DataColumn(label: Text('STATUS')),
+                          DataColumn(label: Text('VALOR')),
+                          DataColumn(label: Text('AÇÕES')),
+                        ],
+                        rows: itens.map((e) {
+                          final status =
+                              (e['status'] ?? 'Agendado').toString();
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                SizedBox(
+                                  width: 130,
+                                  child: Text(
+                                    '${e['data'] ?? ''}\n${e['hora'] ?? ''}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                SizedBox(
+                                  width: 210,
+                                  child: Text(
+                                    nomes['${e['cliente_id']}'] ?? '—',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                SizedBox(
+                                  width: 230,
+                                  child: Text(
+                                    carros['${e['veiculo_id']}'] ?? '—',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                SizedBox(
+                                  width: 220,
+                                  child: Text(
+                                    (e['servico'] ?? '—').toString(),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              DataCell(_statusChip(status)),
+                              DataCell(
+                                Text(
+                                  widget.moeda.format(_double(e['valor'])),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Wrap(
+                                  spacing: 2,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Editar agendamento',
+                                      onPressed: () =>
+                                          _editar(e, clientes, veiculos),
+                                      icon: const Icon(Icons.edit_outlined),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Excluir agendamento',
+                                      onPressed: () => _excluir(e),
+                                      icon: const Icon(Icons.delete_outline),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  )
+                else
+                  ...itens.map(
+                    (e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.event_outlined),
+                          ),
+                          title: Text(
+                            '${e['data'] ?? ''} ${e['hora'] ?? ''} · ${e['servico'] ?? ''}',
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          subtitle: Text(
+                            [
+                              nomes['${e['cliente_id']}'] ?? '',
+                              carros['${e['veiculo_id']}'] ?? '',
+                              widget.moeda.format(_double(e['valor'])),
+                            ]
+                                .where((x) => x.trim().isNotEmpty)
+                                .join(' · '),
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (acao) {
+                              if (acao == 'editar') {
+                                _editar(e, clientes, veiculos);
+                              } else if (acao == 'excluir') {
+                                _excluir(e);
+                              }
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'editar',
+                                child: Text('Editar'),
+                              ),
+                              PopupMenuItem(
+                                value: 'excluir',
+                                child: Text('Excluir'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         );
       },
     );
