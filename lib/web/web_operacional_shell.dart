@@ -13,7 +13,9 @@ import 'web_contas_financeiras_page.dart';
 import 'web_dashboard_gerencial_page.dart';
 import 'web_dre_page.dart';
 import 'web_expansao_pages.dart';
+import 'web_financeiro_administracao_page.dart';
 import 'web_financeiro_lancamentos_page.dart';
+import 'web_fiscal_page.dart';
 import 'web_fotos_page.dart';
 import 'web_gestao_pages.dart';
 import 'web_marketing_page.dart';
@@ -113,6 +115,8 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     22 => 'Pendências operacionais',
     23 => 'Configurações',
     24 => 'Fotos',
+    25 => 'Notas fiscais',
+    26 => 'Gestão financeira',
     _ => 'Central Cloud',
   };
 
@@ -192,6 +196,10 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         key: ValueKey('configuracoes-${widget.empresaAtualId}-$_revisao'),
       ),
       24 => WebFotosPage(key: ValueKey('fotos-$_revisao')),
+      25 => WebFiscalPage(key: ValueKey('fiscal-$_revisao')),
+      26 => WebFinanceiroAdministracaoPage(
+        key: ValueKey('financeiro-administracao-$_revisao'),
+      ),
       _ => WebCentralCloudPage(key: ValueKey('central-$_revisao')),
     };
   }
@@ -299,7 +307,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         _grupoMenu(
           titulo: 'Financeiro',
           icone: Icons.account_balance_wallet_outlined,
-          indices: const {9, 10, 11, 12},
+          indices: const {9, 10, 11, 12, 25, 26},
           filhos: [
             _itemMenu(
               indice: 9,
@@ -320,6 +328,16 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
               indice: 12,
               titulo: 'Relatórios',
               icone: Icons.analytics_outlined,
+            ),
+            _itemMenu(
+              indice: 26,
+              titulo: 'Gestão financeira',
+              icone: Icons.tune_rounded,
+            ),
+            _itemMenu(
+              indice: 25,
+              titulo: 'Notas fiscais',
+              icone: Icons.receipt_long_outlined,
             ),
           ],
         ),
