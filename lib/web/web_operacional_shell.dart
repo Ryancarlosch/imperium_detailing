@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../domain/ordem_servico_valor.dart';
+import '../screens/imperium_planos_page.dart';
+import '../screens/licenca_status_page.dart';
 import '../services/web_cloud_operacional_service.dart';
 import 'imperium_web_theme.dart';
 import 'web_contas_financeiras_page.dart';
@@ -41,8 +43,13 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  static const String _empresaImperiumId =
+      'dbbf4114-06fa-46b8-a2f6-50b3f3ead436';
+
   int _indice = 0;
   int _revisao = 0;
+
+  bool get _empresaImperium => widget.empresaAtualId == _empresaImperiumId;
 
   String get _nomeEmpresaAtual {
     for (final empresa in widget.empresas) {
@@ -52,6 +59,22 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       }
     }
     return 'Empresa';
+  }
+
+  Future<void> _abrirPlano() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => LicencaStatusPage(empresaId: widget.empresaAtualId),
+      ),
+    );
+  }
+
+  Future<void> _abrirGerenciarPlanos() async {
+    if (!_empresaImperium) return;
+
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => const ImperiumPlanosPage()));
   }
 
   String get _tituloAtual => switch (_indice) {
@@ -488,7 +511,13 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
           PopupMenuButton<String>(
             tooltip: widget.usuarioEmail,
             onSelected: (valor) async {
-              if (valor == 'sair') await widget.onSair();
+              if (valor == 'plano') {
+                await _abrirPlano();
+              } else if (valor == 'planos_admin') {
+                await _abrirGerenciarPlanos();
+              } else if (valor == 'sair') {
+                await widget.onSair();
+              }
             },
             itemBuilder: (context) => [
               PopupMenuItem<String>(
@@ -496,14 +525,45 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
                 value: 'email',
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 260),
-                  child: Text(
-                    widget.usuarioEmail,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Conta conectada',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        widget.usuarioEmail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ),
               const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'plano',
+                child: Row(
+                  children: [
+                    Icon(Icons.payments_outlined, size: 18),
+                    SizedBox(width: 10),
+                    Text('Plano e assinatura'),
+                  ],
+                ),
+              ),
+              if (_empresaImperium)
+                const PopupMenuItem<String>(
+                  value: 'planos_admin',
+                  child: Row(
+                    children: [
+                      Icon(Icons.sell_outlined, size: 18),
+                      SizedBox(width: 10),
+                      Text('Gerenciar planos'),
+                    ],
+                  ),
+                ),
               const PopupMenuItem<String>(
                 value: 'sair',
                 child: Row(
