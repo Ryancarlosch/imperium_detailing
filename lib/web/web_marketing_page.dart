@@ -54,8 +54,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
       ]);
 
       if (!mounted) return;
-      final desempenho =
-          dados[3] as List<GrowthMarketingCampanhaDesempenho>;
+      final desempenho = dados[3] as List<GrowthMarketingCampanhaDesempenho>;
 
       setState(() {
         _resumo = dados[0] as GrowthMarketingResumo;
@@ -74,24 +73,16 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
   }
 
   Future<void> _editarCampanha([Map<String, dynamic>? atual]) async {
-    final nome = TextEditingController(
-      text: (atual?['nome'] ?? '').toString(),
-    );
+    final nome = TextEditingController(text: (atual?['nome'] ?? '').toString());
     final objetivo = TextEditingController(
       text: (atual?['objetivo'] ?? '').toString(),
     );
     final investimento = TextEditingController(
       text: _double(atual?['investimento']).toStringAsFixed(2),
     );
-    final leads = TextEditingController(
-      text: '${_int(atual?['leads'])}',
-    );
-    final cliques = TextEditingController(
-      text: '${_int(atual?['cliques'])}',
-    );
-    final alcance = TextEditingController(
-      text: '${_int(atual?['alcance'])}',
-    );
+    final leads = TextEditingController(text: '${_int(atual?['leads'])}');
+    final cliques = TextEditingController(text: '${_int(atual?['cliques'])}');
+    final alcance = TextEditingController(text: '${_int(atual?['alcance'])}');
     final impressoes = TextEditingController(
       text: '${_int(atual?['impressoes'])}',
     );
@@ -110,9 +101,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
-          title: Text(
-            atual == null ? 'Nova campanha' : 'Editar campanha',
-          ),
+          title: Text(atual == null ? 'Nova campanha' : 'Editar campanha'),
           content: SizedBox(
             width: 720,
             child: SingleChildScrollView(
@@ -134,20 +123,21 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           decoration: const InputDecoration(
                             labelText: 'Plataforma',
                           ),
-                          items: const [
-                            'Instagram',
-                            'Facebook',
-                            'Google',
-                            'TikTok',
-                            'Outro',
-                          ]
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
+                          items:
+                              const [
+                                    'Instagram',
+                                    'Facebook',
+                                    'Google',
+                                    'TikTok',
+                                    'Outro',
+                                  ]
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (v) {
                             if (v != null) {
                               setLocal(() => plataforma = v);
@@ -159,22 +149,21 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           initialValue: tipo,
-                          decoration: const InputDecoration(
-                            labelText: 'Tipo',
-                          ),
-                          items: const [
-                            'Pago',
-                            'Orgânico',
-                            'Impulsionado',
-                            'Outro',
-                          ]
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
+                          decoration: const InputDecoration(labelText: 'Tipo'),
+                          items:
+                              const [
+                                    'Pago',
+                                    'Orgânico',
+                                    'Impulsionado',
+                                    'Outro',
+                                  ]
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (v) {
                             if (v != null) setLocal(() => tipo = v);
                           },
@@ -187,19 +176,20 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           decoration: const InputDecoration(
                             labelText: 'Status',
                           ),
-                          items: const [
-                            'Rascunho',
-                            'Ativa',
-                            'Pausada',
-                            'Finalizada',
-                          ]
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
+                          items:
+                              const [
+                                    'Rascunho',
+                                    'Ativa',
+                                    'Pausada',
+                                    'Finalizada',
+                                  ]
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (v) {
                             if (v != null) setLocal(() => status = v);
                           },
@@ -210,9 +200,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: objetivo,
-                    decoration: const InputDecoration(
-                      labelText: 'Objetivo',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Objetivo'),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -220,10 +208,9 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                       Expanded(
                         child: TextField(
                           controller: investimento,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           decoration: const InputDecoration(
                             labelText: 'Investimento',
                             prefixText: r'R$ ',
@@ -278,9 +265,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                         child: TextField(
                           controller: leads,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Leads',
-                          ),
+                          decoration: const InputDecoration(labelText: 'Leads'),
                         ),
                       ),
                     ],
@@ -305,10 +290,8 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
               child: const Text('Cancelar'),
             ),
             FilledButton.icon(
-              onPressed: () => Navigator.pop(
-                context,
-                nome.text.trim().isNotEmpty,
-              ),
+              onPressed: () =>
+                  Navigator.pop(context, nome.text.trim().isNotEmpty),
               icon: const Icon(Icons.check_rounded),
               label: const Text('Salvar campanha'),
             ),
@@ -338,9 +321,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
         observacoes: observacoes.text,
       );
       await _carregar();
-      _snack(
-        atual == null ? 'Campanha criada.' : 'Campanha atualizada.',
-      );
+      _snack(atual == null ? 'Campanha criada.' : 'Campanha atualizada.');
     } catch (e) {
       _snack(_textoErro(e), erro: true);
     }
@@ -366,9 +347,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
-          title: Text(
-            atual == null ? 'Nova publicação' : 'Editar publicação',
-          ),
+          title: Text(atual == null ? 'Nova publicação' : 'Editar publicação'),
           content: SizedBox(
             width: 680,
             child: SingleChildScrollView(
@@ -388,14 +367,11 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                       ..._campanhas.map(
                         (item) => DropdownMenuItem(
                           value: item['id'].toString(),
-                          child: Text(
-                            (item['nome'] ?? 'Campanha').toString(),
-                          ),
+                          child: Text((item['nome'] ?? 'Campanha').toString()),
                         ),
                       ),
                     ],
-                    onChanged: (v) =>
-                        setLocal(() => campanhaId = v ?? ''),
+                    onChanged: (v) => setLocal(() => campanhaId = v ?? ''),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -406,19 +382,15 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           decoration: const InputDecoration(
                             labelText: 'Plataforma',
                           ),
-                          items: const [
-                            'Instagram',
-                            'Facebook',
-                            'TikTok',
-                            'Outro',
-                          ]
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
+                          items:
+                              const ['Instagram', 'Facebook', 'TikTok', 'Outro']
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (v) {
                             if (v != null) {
                               setLocal(() => plataforma = v);
@@ -433,12 +405,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           decoration: const InputDecoration(
                             labelText: 'Conteúdo',
                           ),
-                          items: const [
-                            'Post',
-                            'Reel',
-                            'Story',
-                            'Carrossel',
-                          ]
+                          items: const ['Post', 'Reel', 'Story', 'Carrossel']
                               .map(
                                 (item) => DropdownMenuItem(
                                   value: item,
@@ -460,11 +427,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           decoration: const InputDecoration(
                             labelText: 'Status',
                           ),
-                          items: const [
-                            'Rascunho',
-                            'Planejado',
-                            'Publicado',
-                          ]
+                          items: const ['Rascunho', 'Planejado', 'Publicado']
                               .map(
                                 (item) => DropdownMenuItem(
                                   value: item,
@@ -558,10 +521,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Por enquanto esta agenda organiza o conteúdo. A conexão Meta futura reutilizará estes registros.',
-                      style: TextStyle(
-                        color: Color(0xFF89939E),
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
                     ),
                   ),
                 ],
@@ -576,8 +536,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
             FilledButton.icon(
               onPressed: () => Navigator.pop(
                 context,
-                titulo.text.trim().isNotEmpty ||
-                    legenda.text.trim().isNotEmpty,
+                titulo.text.trim().isNotEmpty || legenda.text.trim().isNotEmpty,
               ),
               icon: const Icon(Icons.check_rounded),
               label: const Text('Salvar publicação'),
@@ -602,9 +561,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
       );
       await _carregar();
       _snack(
-        atual == null
-            ? 'Publicação planejada.'
-            : 'Publicação atualizada.',
+        atual == null ? 'Publicação planejada.' : 'Publicação atualizada.',
       );
     } catch (e) {
       _snack(_textoErro(e), erro: true);
@@ -630,8 +587,8 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
 
       final nomes = <String, String>{
         for (final cliente in clientes)
-          (cliente['id'] ?? '').toString():
-              (cliente['nome'] ?? 'Cliente').toString(),
+          (cliente['id'] ?? '').toString(): (cliente['nome'] ?? 'Cliente')
+              .toString(),
       };
 
       var campanhaId = _campanhas.first['id'].toString();
@@ -649,9 +606,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                 children: [
                   DropdownButtonFormField<String>(
                     initialValue: campanhaId,
-                    decoration: const InputDecoration(
-                      labelText: 'Campanha',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Campanha'),
                     items: _campanhas
                         .map(
                           (item) => DropdownMenuItem(
@@ -678,9 +633,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           'Cliente';
                       return DropdownMenuItem(
                         value: ordem['id'].toString(),
-                        child: Text(
-                          'OS ${ordem['numero'] ?? ''} · $cliente',
-                        ),
+                        child: Text('OS ${ordem['numero'] ?? ''} · $cliente'),
                       );
                     }).toList(),
                     onChanged: (v) {
@@ -742,15 +695,10 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: ImperiumWebTheme.accentStrong.withValues(
-                    alpha: 0.10,
-                  ),
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icone,
-                  color: ImperiumWebTheme.accentStrong,
-                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -853,8 +801,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
             final desempenho =
                 _desempenhoPorCampanha[(item['id'] ?? '').toString()];
             final investimento = _double(item['investimento']);
-            final faturamento =
-                desempenho?.faturamentoAtribuido ?? 0;
+            final faturamento = desempenho?.faturamentoAtribuido ?? 0;
             final roas = desempenho?.roas ?? 0;
 
             return DataRow(
@@ -870,9 +817,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           (item['nome'] ?? 'Campanha').toString(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
                         Text(
                           (item['objetivo'] ?? '').toString(),
@@ -890,26 +835,18 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                 DataCell(Text((item['plataforma'] ?? '—').toString())),
                 DataCell(Text((item['status'] ?? '—').toString())),
                 DataCell(Text(_moeda.format(investimento))),
-                DataCell(
-                  Text(
-                    '${desempenho?.leads ?? _int(item['leads'])}',
-                  ),
-                ),
+                DataCell(Text('${desempenho?.leads ?? _int(item['leads'])}')),
                 DataCell(Text('${desempenho?.ordens ?? 0}')),
                 DataCell(
                   Text(
                     _moeda.format(faturamento),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
                 DataCell(
                   Text(
                     roas > 0 ? '${roas.toStringAsFixed(2)}x' : '—',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
                 DataCell(
@@ -950,19 +887,14 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
             final agendado = DateTime.tryParse(
               (item['agendado_para'] ?? '').toString(),
             )?.toLocal();
-            final titulo =
-                (item['titulo'] ?? '').toString().trim().isEmpty
+            final titulo = (item['titulo'] ?? '').toString().trim().isEmpty
                 ? (item['legenda'] ?? 'Publicação').toString()
                 : (item['titulo'] ?? 'Publicação').toString();
 
             return DataRow(
               cells: [
                 DataCell(
-                  Text(
-                    agendado == null
-                        ? '—'
-                        : _dataHora.format(agendado),
-                  ),
+                  Text(agendado == null ? '—' : _dataHora.format(agendado)),
                 ),
                 DataCell(
                   SizedBox(
@@ -971,9 +903,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                       titulo,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -984,8 +914,8 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                     width: 180,
                     child: Text(
                       _campanhaNome(
-                        (item['campanha_id'] ?? '').toString(),
-                      ).isEmpty
+                            (item['campanha_id'] ?? '').toString(),
+                          ).isEmpty
                           ? '—'
                           : _campanhaNome(
                               (item['campanha_id'] ?? '').toString(),
@@ -1048,8 +978,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final desktop = constraints.maxWidth >= 1050;
-        final larguraDisponivel =
-            constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1180
             ? 6
             : constraints.maxWidth >= 720
@@ -1086,9 +1015,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                         SizedBox(height: 5),
                         Text(
                           'Campanhas, conteúdo e atribuição de vendas em uma visão única.',
-                          style: TextStyle(
-                            color: Color(0xFFAAB3BD),
-                          ),
+                          style: TextStyle(color: Color(0xFFAAB3BD)),
                         ),
                       ],
                     ),
@@ -1136,9 +1063,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           children: [
                             Text(
                               'Integração social preparada',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.w900),
                             ),
                             SizedBox(height: 3),
                             Text(
@@ -1171,9 +1096,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                   _resumoCard(
                     width: larguraCard,
                     titulo: 'Faturamento',
-                    valor: _moeda.format(
-                      resumo.faturamentoAtribuido,
-                    ),
+                    valor: _moeda.format(resumo.faturamentoAtribuido),
                     detalhe: 'Receita de OS atribuídas',
                     icone: Icons.trending_up_rounded,
                   ),
@@ -1271,11 +1194,8 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
               else
                 ...campanhas.map((item) {
                   final desempenho =
-                      _desempenhoPorCampanha[
-                        (item['id'] ?? '').toString()
-                      ];
-                  final faturamento =
-                      desempenho?.faturamentoAtribuido ?? 0;
+                      _desempenhoPorCampanha[(item['id'] ?? '').toString()];
+                  final faturamento = desempenho?.faturamentoAtribuido ?? 0;
                   final roas = desempenho?.roas ?? 0;
 
                   return Padding(
@@ -1288,25 +1208,17 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                         ),
                         title: Text(
                           (item['nome'] ?? 'Campanha').toString(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
                         subtitle: Text(
                           [
                             (item['plataforma'] ?? '').toString(),
                             (item['status'] ?? '').toString(),
-                            _moeda.format(
-                              _double(item['investimento']),
-                            ),
+                            _moeda.format(_double(item['investimento'])),
                             '${desempenho?.ordens ?? 0} venda(s)',
-                            if (faturamento > 0)
-                              _moeda.format(faturamento),
-                            if (roas > 0)
-                              'ROAS ${roas.toStringAsFixed(2)}x',
-                          ]
-                              .where((e) => e.trim().isNotEmpty)
-                              .join(' · '),
+                            if (faturamento > 0) _moeda.format(faturamento),
+                            if (roas > 0) 'ROAS ${roas.toStringAsFixed(2)}x',
+                          ].where((e) => e.trim().isNotEmpty).join(' · '),
                         ),
                         trailing: IconButton(
                           tooltip: 'Editar',
@@ -1392,8 +1304,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                       child: ListTile(
                         leading: CircleAvatar(
                           child: Icon(
-                            (item['tipo_conteudo'] ?? '').toString() ==
-                                    'Reel'
+                            (item['tipo_conteudo'] ?? '').toString() == 'Reel'
                                 ? Icons.play_circle_outline_rounded
                                 : Icons.photo_camera_outlined,
                           ),
@@ -1402,20 +1313,15 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           titulo,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
                         subtitle: Text(
                           [
                             (item['plataforma'] ?? '').toString(),
                             (item['tipo_conteudo'] ?? '').toString(),
                             (item['status'] ?? '').toString(),
-                            if (agendado != null)
-                              _dataHora.format(agendado),
-                          ]
-                              .where((e) => e.trim().isNotEmpty)
-                              .join(' · '),
+                            if (agendado != null) _dataHora.format(agendado),
+                          ].where((e) => e.trim().isNotEmpty).join(' · '),
                         ),
                         trailing: IconButton(
                           tooltip: 'Editar',
@@ -1460,10 +1366,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
 
   static double _double(dynamic value) {
     if (value is num) return value.toDouble();
-    return double.tryParse(
-          value?.toString().replaceAll(',', '.') ?? '',
-        ) ??
-        0;
+    return double.tryParse(value?.toString().replaceAll(',', '.') ?? '') ?? 0;
   }
 
   static String _textoErro(Object erro) {
