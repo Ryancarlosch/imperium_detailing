@@ -1419,50 +1419,50 @@ class _ClientesPageState extends State<_ClientesPage> {
               borderRadius: BorderRadius.circular(12),
               onTap: () => _abrirDetalhes(cliente),
               child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: ImperiumWebTheme.accentStrong.withValues(
-                      alpha: 0.10,
+                padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: ImperiumWebTheme.accentStrong.withValues(
+                        alpha: 0.10,
+                      ),
+                      child: const Icon(
+                        Icons.person_outline_rounded,
+                        color: ImperiumWebTheme.accentStrong,
+                        size: 20,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.person_outline_rounded,
-                      color: ImperiumWebTheme.accentStrong,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          (cliente['nome'] ?? 'Cliente').toString(),
-                          style: const TextStyle(fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          [
-                            (cliente['telefone'] ?? '').toString(),
-                            (cliente['email'] ?? '').toString(),
-                            if (cliente['ativo'] == false) 'Arquivado',
-                          ].where((e) => e.trim().isNotEmpty).join(' · '),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFFAAB3BD),
-                            fontSize: 12,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            (cliente['nome'] ?? 'Cliente').toString(),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            [
+                              (cliente['telefone'] ?? '').toString(),
+                              (cliente['email'] ?? '').toString(),
+                              if (cliente['ativo'] == false) 'Arquivado',
+                            ].where((e) => e.trim().isNotEmpty).join(' · '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFFAAB3BD),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  _acoesCliente(cliente),
-                ],
+                    _acoesCliente(cliente),
+                  ],
+                ),
               ),
-            ),
             ),
           ),
           const SizedBox(height: 8),

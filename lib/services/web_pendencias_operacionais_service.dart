@@ -78,10 +78,7 @@ class WebPendenciasOperacionaisService {
           .select()
           .eq('empresa_id', empresaId)
           .isFilter('excluido_em', null),
-      client
-          .from('ponto_registros')
-          .select()
-          .eq('empresa_id', empresaId),
+      client.from('ponto_registros').select().eq('empresa_id', empresaId),
       client
           .from('ponto_colaboradores')
           .select()
@@ -200,11 +197,10 @@ class WebPendenciasOperacionaisService {
         acrescimoNegociacao: _double(ordem['acrescimo_negociacao']),
         jurosParcelamento: _double(ordem['juros_parcelamento']),
       );
-      final pendente =
-          (negociado - _double(ordem['valor_recebido'])).clamp(
-            0,
-            double.infinity,
-          );
+      final pendente = (negociado - _double(ordem['valor_recebido'])).clamp(
+        0,
+        double.infinity,
+      );
       if (pendente <= 0.001) continue;
 
       final numero = _texto(ordem['numero']).isEmpty
@@ -292,8 +288,9 @@ class WebPendenciasOperacionaisService {
       );
       if (base == null) continue;
 
-      final dias =
-          hoje.difference(DateTime(base.year, base.month, base.day)).inDays;
+      final dias = hoje
+          .difference(DateTime(base.year, base.month, base.day))
+          .inDays;
       if (dias <= 7) continue;
 
       final numero = _texto(ordem['numero']).isEmpty
@@ -369,9 +366,7 @@ class WebPendenciasOperacionaisService {
         WebPendenciaOperacional(
           tipo: 'Estoque',
           nivel: zerado ? 'Crítica' : 'Atenção',
-          titulo: zerado
-              ? 'Estoque zerado: ' + nome
-              : 'Estoque baixo: ' + nome,
+          titulo: zerado ? 'Estoque zerado: ' + nome : 'Estoque baixo: ' + nome,
           descricao: zerado
               ? 'Saldo atual: 0' + (unidade.isEmpty ? '' : ' ' + unidade)
               : 'Saldo ' +

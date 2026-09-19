@@ -5,10 +5,7 @@ import '../services/web_pendencias_operacionais_service.dart';
 import 'imperium_web_theme.dart';
 
 class WebPendenciasOperacionaisPage extends StatefulWidget {
-  const WebPendenciasOperacionaisPage({
-    super.key,
-    required this.onNavigate,
-  });
+  const WebPendenciasOperacionaisPage({super.key, required this.onNavigate});
 
   final ValueChanged<int> onNavigate;
 
@@ -220,10 +217,7 @@ class _WebPendenciasOperacionaisPageState
                 const Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 40,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                     child: Column(
                       children: [
                         Icon(
@@ -260,10 +254,11 @@ class _WebPendenciasOperacionaisPageState
                                 width: 42,
                                 height: 42,
                                 decoration: BoxDecoration(
-                                  color: (item.critica
-                                          ? Colors.redAccent
-                                          : Colors.orangeAccent)
-                                      .withValues(alpha: 0.10),
+                                  color:
+                                      (item.critica
+                                              ? Colors.redAccent
+                                              : Colors.orangeAccent)
+                                          .withValues(alpha: 0.10),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(
