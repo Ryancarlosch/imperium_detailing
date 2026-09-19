@@ -853,8 +853,7 @@ class _BuscaGlobalDialogState extends State<_BuscaGlobalDialog> {
       ...agenda.map(
         (item) => _BuscaGlobalResultado(
           tipo: 'Agenda',
-          titulo:
-              nomes[(item['cliente_id'] ?? '').toString()] ?? 'Agendamento',
+          titulo: nomes[(item['cliente_id'] ?? '').toString()] ?? 'Agendamento',
           subtitulo: [
             (item['data'] ?? '').toString(),
             (item['hora'] ?? '').toString(),
@@ -868,7 +867,8 @@ class _BuscaGlobalDialogState extends State<_BuscaGlobalDialog> {
       ...ordens.map(
         (item) => _BuscaGlobalResultado(
           tipo: 'OS',
-          titulo: 'OS ${item['numero'] ?? ''} · '
+          titulo:
+              'OS ${item['numero'] ?? ''} · '
               '${nomes[(item['cliente_id'] ?? '').toString()] ?? 'Cliente'}',
           subtitulo: [
             carros[(item['veiculo_id'] ?? '').toString()] ?? '',
@@ -882,21 +882,22 @@ class _BuscaGlobalDialogState extends State<_BuscaGlobalDialog> {
     ];
   }
 
-  List<_BuscaGlobalResultado> _filtrar(
-    List<_BuscaGlobalResultado> resultados,
-  ) {
+  List<_BuscaGlobalResultado> _filtrar(List<_BuscaGlobalResultado> resultados) {
     final termo = _busca.text.trim().toLowerCase();
     if (termo.isEmpty) {
       return resultados.where((item) => item.tipo == 'Módulo').toList();
     }
 
-    return resultados.where((item) {
-      return [
-        item.tipo,
-        item.titulo,
-        item.subtitulo,
-      ].any((texto) => texto.toLowerCase().contains(termo));
-    }).take(30).toList();
+    return resultados
+        .where((item) {
+          return [
+            item.tipo,
+            item.titulo,
+            item.subtitulo,
+          ].any((texto) => texto.toLowerCase().contains(termo));
+        })
+        .take(30)
+        .toList();
   }
 
   @override
@@ -1030,10 +1031,7 @@ class _BuscaGlobalDialogState extends State<_BuscaGlobalDialog> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Os resultados levam ao módulo correspondente; as buscas internas continuam disponíveis para filtros detalhados.',
-                  style: TextStyle(
-                    color: Color(0xFF89939E),
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: Color(0xFF89939E), fontSize: 11),
                 ),
               ),
             ],
