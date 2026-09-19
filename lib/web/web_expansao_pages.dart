@@ -2173,7 +2173,7 @@ class WebPrecificacaoPage extends StatefulWidget {
 
 class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
   final _service = WebCloudExpansaoService.instance;
-  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\
 
   bool _carregando = true;
   String? _erro;
@@ -2186,6 +2186,12 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
   void initState() {
     super.initState();
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _buscaPrecificacao.dispose();
+    super.dispose();
   }
 
   Future<void> _carregar() async {
@@ -2468,6 +2474,96 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
     ).showSnackBar(SnackBar(content: Text(e.toString())));
   }
 
+  Widget _resumoPrecificacao({
+    required double width,
+    required String titulo,
+    required String valor,
+    required String detalhe,
+    required IconData icone,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusPreco({
+    required bool abaixoEquilibrio,
+    required bool margemBaixa,
+  }) {
+    final alerta = abaixoEquilibrio || margemBaixa;
+    final texto = abaixoEquilibrio
+        ? 'Abaixo do equilíbrio'
+        : margemBaixa
+        ? 'Margem baixa'
+        : 'Saudável';
+    final cor = alerta ? Colors.orangeAccent : Colors.greenAccent;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: cor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cor.withValues(alpha: 0.40)),
+      ),
+      child: Text(
+        texto,
+        style: TextStyle(
+          color: cor,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_carregando) {
@@ -2480,130 +2576,428 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
       for (final item in _catalogo)
         item['id'].toString(): (item['nome'] ?? 'Serviço').toString(),
     };
+    final margemMinima = _double(config?['margem_minima']);
 
-    final abaixoMinimo = _snapshots.where((s) {
-      return _double(s['margem_atual']) < _double(config?['margem_minima']) ||
-          _double(s['preco_atual']) < _double(s['preco_equilibrio']);
-    }).length;
+    bool alerta(Map<String, dynamic> item) {
+      return _double(item['margem_atual']) < margemMinima ||
+          _double(item['preco_atual']) < _double(item['preco_equilibrio']);
+    }
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Text(
-          'Precificação',
-          style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Configuração oficial, preços sugeridos e cenários compartilhados.',
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _ResumoExpansao(
-              'Horas da empresa',
-              '${ImperiumRegrasNegocio.horasMensaisPadrao.toInt()} h/mês',
+    final alertas = _snapshots.where(alerta).length;
+    final margemMedia = _snapshots.isEmpty
+        ? 0.0
+        : _snapshots.fold<double>(
+              0,
+              (total, item) => total + _double(item['margem_atual']),
+            ) /
+            _snapshots.length;
+
+    final termo = _buscaPrecificacao.text.trim().toLowerCase();
+    final filtrados = _snapshots.where((item) {
+      final temAlerta = alerta(item);
+      if (_filtroPrecificacao == 'Alertas' && !temAlerta) return false;
+      if (_filtroPrecificacao == 'Saudáveis' && temAlerta) return false;
+      if (termo.isEmpty) return true;
+      final nome = nomes[item['servico_id']?.toString()] ?? 'Serviço';
+      return nome.toLowerCase().contains(termo);
+    }).toList()
+      ..sort((a, b) {
+        final na = nomes[a['servico_id']?.toString()] ?? '';
+        final nb = nomes[b['servico_id']?.toString()] ?? '';
+        return na.toLowerCase().compareTo(nb.toLowerCase());
+      });
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compacto = constraints.maxWidth < 760;
+        final tabela = constraints.maxWidth >= 980;
+        final larguraDisponivel =
+            constraints.maxWidth - (compacto ? 32 : 48);
+        final colunas = constraints.maxWidth >= 1180
+            ? 5
+            : constraints.maxWidth >= 720
+            ? 2
+            : 1;
+        final larguraCard =
+            (larguraDisponivel - (12 * (colunas - 1))) / colunas;
+
+        return RefreshIndicator(
+          onRefresh: _carregar,
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              compacto ? 16 : 24,
+              compacto ? 18 : 24,
+              compacto ? 16 : 24,
+              40,
             ),
-            _ResumoExpansao('Serviços calculados', '${_snapshots.length}'),
-            _ResumoExpansao('Alertas de preço', '$abaixoMinimo'),
-            _ResumoExpansao('Cenários', '${_simulacoes.length}'),
-          ],
-        ),
-        const SizedBox(height: 18),
-        if (config != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Wrap(
-                spacing: 24,
-                runSpacing: 12,
-                crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Margem cliente: ${config['margem_cliente']}%'),
-                  Text('Revenda 1–4: ${config['margem_revenda_1_4']}%'),
-                  Text('Revenda 5–9: ${config['margem_revenda_5_9']}%'),
-                  Text('Revenda 10+: ${config['margem_revenda_10_mais']}%'),
-                  Text('Mínima: ${config['margem_minima']}%'),
-                  Text('Média: ${config['meses_media']} meses'),
-                  FilledButton.tonalIcon(
-                    onPressed: _editarConfig,
-                    icon: const Icon(Icons.tune),
-                    label: const Text('Editar margens'),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Precificação',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          'Custos, margem e preço sugerido para proteger a rentabilidade dos serviços.',
+                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                        ),
+                      ],
+                    ),
                   ),
-                  FilledButton.tonalIcon(
-                    onPressed: _novaSimulacao,
-                    icon: const Icon(Icons.science_outlined),
-                    label: const Text('Novo cenário'),
+                  IconButton(
+                    tooltip: 'Atualizar',
+                    onPressed: _carregar,
+                    icon: const Icon(Icons.refresh_rounded),
+                  ),
+                  if (config != null) ...[
+                    const SizedBox(width: 6),
+                    OutlinedButton.icon(
+                      onPressed: _editarConfig,
+                      icon: const Icon(Icons.tune_rounded),
+                      label: Text(compacto ? 'Regras' : 'Editar regras'),
+                    ),
+                    const SizedBox(width: 6),
+                    FilledButton.icon(
+                      onPressed: _novaSimulacao,
+                      icon: const Icon(Icons.science_outlined),
+                      label: Text(compacto ? 'Cenário' : 'Novo cenário'),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _resumoPrecificacao(
+                    width: larguraCard,
+                    titulo: 'Horas da empresa',
+                    valor:
+                        '${ImperiumRegrasNegocio.horasMensaisPadrao.toInt()} h/mês',
+                    detalhe: 'Base oficial sem multiplicar por funcionário',
+                    icone: Icons.schedule_outlined,
+                  ),
+                  _resumoPrecificacao(
+                    width: larguraCard,
+                    titulo: 'Serviços calculados',
+                    valor: '${_snapshots.length}',
+                    detalhe: 'Serviços com cálculo disponível',
+                    icone: Icons.design_services_outlined,
+                  ),
+                  _resumoPrecificacao(
+                    width: larguraCard,
+                    titulo: 'Alertas de preço',
+                    valor: '$alertas',
+                    detalhe: 'Margem baixa ou abaixo do equilíbrio',
+                    icone: Icons.warning_amber_rounded,
+                  ),
+                  _resumoPrecificacao(
+                    width: larguraCard,
+                    titulo: 'Margem média',
+                    valor: '${margemMedia.toStringAsFixed(1)}%',
+                    detalhe: 'Média dos serviços calculados',
+                    icone: Icons.percent_rounded,
+                  ),
+                  _resumoPrecificacao(
+                    width: larguraCard,
+                    titulo: 'Cenários',
+                    valor: '${_simulacoes.length}',
+                    detalhe: 'Simulações comerciais salvas',
+                    icone: Icons.science_outlined,
                   ),
                 ],
               ),
-            ),
-          ),
-        const SizedBox(height: 20),
-        const Text(
-          'Serviços',
-          style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        ..._snapshots.map((s) {
-          final atual = _double(s['preco_atual']);
-          final sugerido = _double(s['preco_sugerido']);
-          final equilibrio = _double(s['preco_equilibrio']);
-          final margem = _double(s['margem_atual']);
-          final alerta =
-              margem < _double(config?['margem_minima']) || atual < equilibrio;
-
-          return Card(
-            child: ListTile(
-              leading: Icon(
-                alerta ? Icons.warning_amber_rounded : Icons.price_check,
-              ),
-              title: Text(nomes[s['servico_id']?.toString()] ?? 'Serviço'),
-              subtitle: Text(
-                'Atual ${_moeda.format(atual)} · '
-                'Equilíbrio ${_moeda.format(equilibrio)} · '
-                'Margem ${margem.toStringAsFixed(1)}%',
-              ),
-              trailing: Text(
-                'Sugerido\n${_moeda.format(sugerido)}',
-                textAlign: TextAlign.right,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          );
-        }),
-        if (_simulacoes.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          const Text(
-            'Cenários salvos',
-            style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          ..._simulacoes
-              .take(20)
-              .map(
-                (s) => Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.science_outlined),
-                    title: Text((s['nome'] ?? 'Cenário').toString()),
-                    subtitle: Text(
-                      'Margem cliente ${s['margem_cliente']}% · '
-                      'Taxa ${s['taxa_cartao_percentual']}% · '
-                      '${s['criado_em'] ?? ''}',
-                    ),
-                    trailing: Text(
-                      _moeda.format(_double(s['meta_faturamento'])),
+              if (config != null) ...[
+                const SizedBox(height: 22),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Wrap(
+                      spacing: 22,
+                      runSpacing: 10,
+                      children: [
+                        Text('Cliente final: ${config['margem_cliente']}%'),
+                        Text(
+                          'Revenda 1–4: ${config['margem_revenda_1_4']}%',
+                        ),
+                        Text(
+                          'Revenda 5–9: ${config['margem_revenda_5_9']}%',
+                        ),
+                        Text(
+                          'Revenda 10+: ${config['margem_revenda_10_mais']}%',
+                        ),
+                        Text('Mínima: ${config['margem_minima']}%'),
+                        Text('Média: ${config['meses_media']} meses'),
+                      ],
                     ),
                   ),
                 ),
+              ],
+              const SizedBox(height: 22),
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: compacto ? larguraDisponivel - 28 : 430,
+                        child: TextField(
+                          controller: _buscaPrecificacao,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            hintText: 'Buscar serviço',
+                            suffixIcon: _buscaPrecificacao.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Limpar busca',
+                                    onPressed: () {
+                                      _buscaPrecificacao.clear();
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(Icons.close_rounded),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(value: 'Todos', label: Text('Todos')),
+                          ButtonSegment(
+                            value: 'Alertas',
+                            label: Text('Alertas'),
+                          ),
+                          ButtonSegment(
+                            value: 'Saudáveis',
+                            label: Text('Saudáveis'),
+                          ),
+                        ],
+                        selected: <String>{_filtroPrecificacao},
+                        showSelectedIcon: false,
+                        onSelectionChanged: (valor) {
+                          setState(
+                            () => _filtroPrecificacao = valor.first,
+                          );
+                        },
+                      ),
+                      Text(
+                        '${filtrados.length} resultado(s)',
+                        style: const TextStyle(
+                          color: Color(0xFF89939E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-        ],
-      ],
+              const SizedBox(height: 14),
+              if (filtrados.isEmpty)
+                const Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: EdgeInsets.all(28),
+                    child: Center(child: Text('Nenhum serviço encontrado.')),
+                  ),
+                )
+              else if (tabela)
+                Card(
+                  margin: EdgeInsets.zero,
+                  clipBehavior: Clip.antiAlias,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowHeight: 52,
+                      dataRowMinHeight: 60,
+                      dataRowMaxHeight: 76,
+                      columns: const [
+                        DataColumn(label: Text('SERVIÇO')),
+                        DataColumn(label: Text('PREÇO ATUAL')),
+                        DataColumn(label: Text('EQUILÍBRIO')),
+                        DataColumn(label: Text('SUGERIDO')),
+                        DataColumn(label: Text('MARGEM')),
+                        DataColumn(label: Text('STATUS')),
+                      ],
+                      rows: filtrados.map((item) {
+                        final nome =
+                            nomes[item['servico_id']?.toString()] ?? 'Serviço';
+                        final atual = _double(item['preco_atual']);
+                        final equilibrio =
+                            _double(item['preco_equilibrio']);
+                        final sugerido = _double(item['preco_sugerido']);
+                        final margem = _double(item['margem_atual']);
+                        final abaixoEquilibrio = atual < equilibrio;
+                        final margemBaixa = margem < margemMinima;
+
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              SizedBox(
+                                width: 280,
+                                child: Text(
+                                  nome,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            DataCell(Text(_moeda.format(atual))),
+                            DataCell(Text(_moeda.format(equilibrio))),
+                            DataCell(
+                              Text(
+                                _moeda.format(sugerido),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                '${margem.toStringAsFixed(1)}%',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              _statusPreco(
+                                abaixoEquilibrio: abaixoEquilibrio,
+                                margemBaixa: margemBaixa,
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                )
+              else
+                ...filtrados.map((item) {
+                  final nome =
+                      nomes[item['servico_id']?.toString()] ?? 'Serviço';
+                  final atual = _double(item['preco_atual']);
+                  final equilibrio = _double(item['preco_equilibrio']);
+                  final sugerido = _double(item['preco_sugerido']);
+                  final margem = _double(item['margem_atual']);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        leading: Icon(
+                          alerta(item)
+                              ? Icons.warning_amber_rounded
+                              : Icons.price_check_outlined,
+                        ),
+                        title: Text(
+                          nome,
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        subtitle: Text(
+                          'Atual ${_moeda.format(atual)} · '
+                          'Equilíbrio ${_moeda.format(equilibrio)} · '
+                          'Margem ${margem.toStringAsFixed(1)}%',
+                        ),
+                        trailing: Text(
+                          'Sugerido\n${_moeda.format(sugerido)}',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              if (_simulacoes.isNotEmpty) ...[
+                const SizedBox(height: 26),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Cenários salvos',
+                        style: TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _novaSimulacao,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Novo cenário'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: _simulacoes.take(20).map((item) {
+                    return SizedBox(
+                      width: compacto
+                          ? larguraDisponivel
+                          : (larguraDisponivel - 12) / 2,
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.science_outlined),
+                          ),
+                          title: Text(
+                            (item['nome'] ?? 'Cenário').toString(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Margem ${item['margem_cliente']}% · '
+                            'Taxa ${item['taxa_cartao_percentual']}% · '
+                            'Custo-hora ${_moeda.format(_double(item['custo_hora']))}',
+                          ),
+                          trailing: Text(
+                            _double(item['meta_faturamento']) > 0
+                                ? _moeda.format(
+                                    _double(item['meta_faturamento']),
+                                  )
+                                : 'Sem meta',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
+
 
 class WebCentralCloudPage extends StatefulWidget {
   const WebCentralCloudPage({super.key});
