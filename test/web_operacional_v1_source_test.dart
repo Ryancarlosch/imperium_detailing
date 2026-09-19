@@ -54,19 +54,28 @@ void main() {
     }
   });
 
-  test('Sistema completo fecha somente drawer e roteia modulos com AppBar', () {
+  test('Sistema completo mantém módulos gerenciais dentro do workspace', () {
     final source = File(
       'lib/web/web_operacional_shell.dart',
     ).readAsStringSync();
+    final dre = File('lib/web/web_dre_page.dart').readAsStringSync();
+    final contas = File(
+      'lib/web/web_contas_financeiras_page.dart',
+    ).readAsStringSync();
+    final relatorios = File(
+      'lib/web/web_relatorios_page.dart',
+    ).readAsStringSync();
 
-    expect(source, contains('_paginaRoteada'));
     expect(source, contains('isDrawerOpen == true'));
-    expect(source, contains('MaterialPageRoute<void>'));
-    expect(source, contains("tooltip: 'Voltar ao painel'"));
-    expect(source, contains("10 => WebDrePage"));
-    expect(source, contains("11 => WebContasFinanceirasPage"));
-    expect(source, contains("12 => WebRelatoriosPage"));
-    expect(source, contains("16 => WebPontoPage"));
+    expect(source, isNot(contains('_paginaRoteada')));
+    expect(source, contains('10 => WebDrePage('));
+    expect(source, contains('11 => WebContasFinanceirasPage('));
+    expect(source, contains('12 => WebRelatoriosPage('));
+    expect(source, contains('16 => WebPontoPage('));
+    expect(source, contains('embedded: true'));
+    expect(dre, contains('this.embedded = false'));
+    expect(contas, contains('this.embedded = false'));
+    expect(relatorios, contains('this.embedded = false'));
     expect(source, isNot(contains('fecharMenu && Navigator.canPop(context)')));
   });
 
