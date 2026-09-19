@@ -104,7 +104,8 @@ class WebFotosService {
 
     final empresaId = await _empresaId();
     final origem = await WebOrigemService.instance.proxima();
-    final base = empresaId +
+    final base =
+        empresaId +
         '/galeria/web/' +
         origem.dispositivoId +
         '/' +
@@ -114,11 +115,13 @@ class WebFotosService {
     final antesPath = base + '/antes.' + antesExt;
     final antesMime = _mime(antesExt);
 
-    await _client.storage.from(bucketGaleria).uploadBinary(
-      antesPath,
-      antesBytes,
-      fileOptions: FileOptions(upsert: true, contentType: antesMime),
-    );
+    await _client.storage
+        .from(bucketGaleria)
+        .uploadBinary(
+          antesPath,
+          antesBytes,
+          fileOptions: FileOptions(upsert: true, contentType: antesMime),
+        );
 
     String? depoisPath;
     String? depoisMime;
@@ -129,11 +132,13 @@ class WebFotosService {
       depoisMime = _mime(depoisExt);
       depoisSha = sha256.convert(depoisBytes).toString();
 
-      await _client.storage.from(bucketGaleria).uploadBinary(
-        depoisPath,
-        depoisBytes,
-        fileOptions: FileOptions(upsert: true, contentType: depoisMime),
-      );
+      await _client.storage
+          .from(bucketGaleria)
+          .uploadBinary(
+            depoisPath,
+            depoisBytes,
+            fileOptions: FileOptions(upsert: true, contentType: depoisMime),
+          );
     }
 
     await _client.from('imperium_fotos_servico').insert({
