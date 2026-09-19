@@ -3022,6 +3022,90 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
     });
   }
 
+  Widget _resumoCentral({
+    required double width,
+    required String titulo,
+    required String valor,
+    required String detalhe,
+    required IconData icone,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusCentral(String status) {
+    final disponivel = status == 'Disponível';
+    final bloqueado = status == 'Sem permissão';
+    final cor = disponivel
+        ? Colors.greenAccent
+        : bloqueado
+        ? Colors.orangeAccent
+        : Colors.redAccent;
+
+    return Chip(
+      avatar: Icon(
+        disponivel
+            ? Icons.cloud_done_outlined
+            : bloqueado
+            ? Icons.lock_outline
+            : Icons.cloud_off_outlined,
+        size: 16,
+        color: cor,
+      ),
+      label: Text(status),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, Object?>>(
@@ -3038,69 +3122,264 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
         final modulos = (dados['modulos'] as List)
             .map((e) => Map<String, Object?>.from(e as Map))
             .toList();
+        final disponiveis = modulos
+            .where((item) => item['status'] == 'Disponível')
+            .length;
+        final bloqueados = modulos
+            .where((item) => item['status'] == 'Sem permissão')
+            .length;
+        final registros = modulos.fold<int>(0, (total, item) {
+          final valor = item['registros'];
+          if (valor is num) return total + valor.toInt();
+          return total + (int.tryParse(valor?.toString() ?? '') ?? 0);
+        });
 
-        return ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Central Web',
-                    style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
-                  ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final compacto = constraints.maxWidth < 760;
+            final tabela = constraints.maxWidth >= 900;
+            final larguraDisponivel =
+                constraints.maxWidth - (compacto ? 32 : 48);
+            final colunas = constraints.maxWidth >= 1100
+                ? 4
+                : constraints.maxWidth >= 700
+                ? 2
+                : 1;
+            final larguraCard =
+                (larguraDisponivel - (12 * (colunas - 1))) / colunas;
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                _atualizar();
+                await _future;
+              },
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(
+                  compacto ? 16 : 24,
+                  compacto ? 18 : 24,
+                  compacto ? 16 : 24,
+                  40,
                 ),
-                FilledButton.tonalIcon(
-                  onPressed: _atualizar,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Atualizar'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text('${dados['plataforma']} · Tenant ${dados['empresa_id']}'),
-            Text('Usuário: ${dados['usuario']}'),
-            Text('Base de horas: ${dados['horas_mensais_empresa']} h/mês'),
-            if (dados['ultima_atualizacao'] != null)
-              Text('Última alteração: ${dados['ultima_atualizacao']}'),
-            const SizedBox(height: 18),
-            ...modulos.map(
-              (item) => Card(
-                child: ListTile(
-                  leading: Icon(
-                    item['status'] == 'Disponível'
-                        ? Icons.cloud_done_outlined
-                        : item['status'] == 'Sem permissão'
-                        ? Icons.lock_outline
-                        : Icons.cloud_off_outlined,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Central Cloud',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            SizedBox(height: 5),
+                            Text(
+                              'Diagnóstico do tenant, permissões e disponibilidade dos módulos em nuvem.',
+                              style: TextStyle(color: Color(0xFFAAB3BD)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Atualizar diagnóstico',
+                        onPressed: _atualizar,
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                    ],
                   ),
-                  title: Text('${item['nome']}'),
-                  subtitle: Text(
-                    [
-                      '${item['status']}',
-                      if (item['ultima_atualizacao'] != null)
-                        'Atualizado ${item['ultima_atualizacao']}',
-                    ].join(' · '),
+                  const SizedBox(height: 16),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Wrap(
+                        spacing: 22,
+                        runSpacing: 8,
+                        children: [
+                          Text(
+                            'Plataforma: ${dados['plataforma'] ?? 'Web'}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text('Usuário: ${dados['usuario'] ?? '—'}'),
+                          Text('Tenant: ${dados['empresa_id'] ?? '—'}'),
+                          if (dados['ultima_atualizacao'] != null)
+                            Text(
+                              'Última alteração: ${dados['ultima_atualizacao']}',
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                  trailing: Text(
-                    item['registros'] == null
-                        ? '—'
-                        : '${item['registros']} registros*',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _resumoCentral(
+                        width: larguraCard,
+                        titulo: 'Módulos disponíveis',
+                        valor: '$disponiveis',
+                        detalhe: 'Acessíveis para o usuário atual',
+                        icone: Icons.cloud_done_outlined,
+                      ),
+                      _resumoCentral(
+                        width: larguraCard,
+                        titulo: 'Sem permissão',
+                        valor: '$bloqueados',
+                        detalhe: 'Módulos bloqueados pela política de acesso',
+                        icone: Icons.lock_outline,
+                      ),
+                      _resumoCentral(
+                        width: larguraCard,
+                        titulo: 'Registros lidos',
+                        valor: '$registros',
+                        detalhe: 'Amostra diagnóstica dos módulos',
+                        icone: Icons.storage_outlined,
+                      ),
+                      _resumoCentral(
+                        width: larguraCard,
+                        titulo: 'Base produtiva',
+                        valor: '${dados['horas_mensais_empresa'] ?? '—'} h/mês',
+                        detalhe: 'Configuração de horas da empresa',
+                        icone: Icons.schedule_outlined,
+                      ),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Módulos Cloud',
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  if (modulos.isEmpty)
+                    const Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: EdgeInsets.all(22),
+                        child: Text('Nenhum módulo retornado pelo diagnóstico.'),
+                      ),
+                    )
+                  else if (tabela)
+                    Card(
+                      margin: EdgeInsets.zero,
+                      clipBehavior: Clip.antiAlias,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          headingRowHeight: 52,
+                          dataRowMinHeight: 58,
+                          dataRowMaxHeight: 72,
+                          columns: const [
+                            DataColumn(label: Text('MÓDULO')),
+                            DataColumn(label: Text('STATUS')),
+                            DataColumn(label: Text('REGISTROS')),
+                            DataColumn(label: Text('ÚLTIMA ATUALIZAÇÃO')),
+                          ],
+                          rows: modulos.map((item) {
+                            final status =
+                                (item['status'] ?? 'Indisponível').toString();
+                            return DataRow(
+                              cells: [
+                                DataCell(
+                                  SizedBox(
+                                    width: 260,
+                                    child: Text(
+                                      '${item['nome'] ?? 'Módulo'}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                DataCell(_statusCentral(status)),
+                                DataCell(
+                                  Text(
+                                    item['registros'] == null
+                                        ? '—'
+                                        : '${item['registros']}',
+                                  ),
+                                ),
+                                DataCell(
+                                  SizedBox(
+                                    width: 220,
+                                    child: Text(
+                                      item['ultima_atualizacao'] == null
+                                          ? '—'
+                                          : '${item['ultima_atualizacao']}',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    )
+                  else
+                    ...modulos.map((item) {
+                      final status =
+                          (item['status'] ?? 'Indisponível').toString();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          child: ListTile(
+                            leading: Icon(
+                              status == 'Disponível'
+                                  ? Icons.cloud_done_outlined
+                                  : status == 'Sem permissão'
+                                  ? Icons.lock_outline
+                                  : Icons.cloud_off_outlined,
+                            ),
+                            title: Text(
+                              '${item['nome'] ?? 'Módulo'}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            subtitle: Text(
+                              item['ultima_atualizacao'] == null
+                                  ? status
+                                  : '$status · ${item['ultima_atualizacao']}',
+                            ),
+                            trailing: Text(
+                              item['registros'] == null
+                                  ? '—'
+                                  : '${item['registros']}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'O diagnóstico limita a leitura a 500 registros por módulo para manter a Central leve.',
+                    style: TextStyle(
+                      color: Color(0xFF89939E),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              '* A Central Web limita a leitura diagnóstica a 500 registros '
-              'por módulo para manter a página leve.',
-            ),
-          ],
+            );
+          },
         );
       },
     );
   }
+
 }
 
 class _ResumoExpansao extends StatelessWidget {
