@@ -897,39 +897,6 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
   }
 }
 
-class _ProdutoResumoCard extends StatelessWidget {
-  const _ProdutoResumoCard({required this.titulo, required this.valor});
-
-  final String titulo;
-  final String valor;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 180,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(titulo),
-              const SizedBox(height: 5),
-              Text(
-                valor,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 List<String> _unidadesCompra(String base) {
   switch (_unidadeBase(base)) {
     case 'ml':
