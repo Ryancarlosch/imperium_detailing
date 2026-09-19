@@ -213,10 +213,9 @@ class WebFiscalService {
         'excluido_em': null,
       };
 
-      await _client.from('imperium_fiscal_notas_itens').upsert(
-        itemPayload,
-        onConflict: 'nota_fiscal_id,numero_item',
-      );
+      await _client
+          .from('imperium_fiscal_notas_itens')
+          .upsert(itemPayload, onConflict: 'nota_fiscal_id,numero_item');
     }
 
     await _registrarTentativa(
@@ -240,8 +239,9 @@ class WebFiscalService {
     await _client
         .from('imperium_fiscal_notas_itens')
         .update({
-          'estoque_item_id':
-              (estoqueItemId ?? '').trim().isEmpty ? null : estoqueItemId,
+          'estoque_item_id': (estoqueItemId ?? '').trim().isEmpty
+              ? null
+              : estoqueItemId,
         })
         .eq('empresa_id', empresaId)
         .eq('id', itemFiscalId);
@@ -317,8 +317,7 @@ class WebFiscalService {
         unidadeOriginal: (item['unidade'] ?? 'unidade').toString(),
         valorTotalPago: valorPago,
         fornecedor: (nota['emitente_nome'] ?? '').toString(),
-        observacoes:
-            'Entrada fiscal NF ' + (nota['numero'] ?? '').toString(),
+        observacoes: 'Entrada fiscal NF ' + (nota['numero'] ?? '').toString(),
       );
 
       final movimentoId = (resultado['movimento_id'] ?? '').toString();
@@ -368,11 +367,11 @@ class WebFiscalService {
     final valor = _double(nota['valor_total']);
     if (valor <= 0) throw StateError('A nota não possui valor total válido.');
 
-    final statusNormalizado =
-        status.toLowerCase() == 'realizado' ? 'Realizado' : 'Previsto';
+    final statusNormalizado = status.toLowerCase() == 'realizado'
+        ? 'Realizado'
+        : 'Previsto';
 
-    if (statusNormalizado == 'Realizado' &&
-        (contaId ?? '').trim().isEmpty) {
+    if (statusNormalizado == 'Realizado' && (contaId ?? '').trim().isEmpty) {
       throw StateError('Selecione a conta para o pagamento realizado.');
     }
 
@@ -400,24 +399,22 @@ class WebFiscalService {
       'descricao':
           'Nota fiscal ' + (nota['numero'] ?? nota['chave_acesso']).toString(),
       'valor': valor,
-      'forma_pagamento':
-          formaPagamento.trim().isEmpty ? null : formaPagamento.trim(),
-      'data': statusNormalizado == 'Realizado'
-          ? competenciaIso
-          : vencimentoIso,
+      'forma_pagamento': formaPagamento.trim().isEmpty
+          ? null
+          : formaPagamento.trim(),
+      'data': statusNormalizado == 'Realizado' ? competenciaIso : vencimentoIso,
       'plano_conta_id': plano?['id'],
-      'conta_id':
-          (contaId ?? '').trim().isEmpty ? null : contaId!.trim(),
+      'conta_id': (contaId ?? '').trim().isEmpty ? null : contaId!.trim(),
       'natureza': (plano?['natureza'] ?? 'Despesa').toString(),
       'origem': 'Nota fiscal',
       'status': statusNormalizado,
       'data_competencia': competenciaIso,
       'data_vencimento': vencimentoIso,
-      'data_pagamento':
-          statusNormalizado == 'Realizado' ? competenciaIso : null,
+      'data_pagamento': statusNormalizado == 'Realizado'
+          ? competenciaIso
+          : null,
       'numero_documento': (nota['numero'] ?? '').toString(),
-      'observacoes':
-          'Emitente: ' + (nota['emitente_nome'] ?? '').toString(),
+      'observacoes': 'Emitente: ' + (nota['emitente_nome'] ?? '').toString(),
       'impacta_dre': (plano?['grupo_dre'] ?? '').toString() != 'Não DRE',
       'fiscal_nota_id': notaId,
       'excluido_em': null,
