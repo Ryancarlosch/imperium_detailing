@@ -463,7 +463,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
                   ? _tituloAtual
                   : compacto
                   ? _tituloAtual
-                  : 'Imperium Manager · $_tituloAtual',
+                  : '${AppBranding.productName} · $_tituloAtual',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
