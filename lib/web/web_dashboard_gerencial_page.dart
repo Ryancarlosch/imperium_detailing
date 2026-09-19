@@ -457,6 +457,20 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                   ),
                   _QuickAction(
                     width: larguraAcao,
+                    icon: Icons.tune_rounded,
+                    titulo: 'Gestão financeira',
+                    detalhe: 'Taxas, fornecedores, custos, metas e transferências',
+                    onTap: () => widget.onNavigate?.call(26),
+                  ),
+                  _QuickAction(
+                    width: larguraAcao,
+                    icon: Icons.receipt_long_outlined,
+                    titulo: 'Notas fiscais',
+                    detalhe: 'Importação XML e integração fiscal com estoque',
+                    onTap: () => widget.onNavigate?.call(25),
+                  ),
+                  _QuickAction(
+                    width: larguraAcao,
                     icon: Icons.badge_outlined,
                     titulo: 'Ponto e equipe',
                     detalhe: 'Funcionários, jornada, batidas e ajustes',
