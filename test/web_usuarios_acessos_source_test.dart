@@ -77,7 +77,13 @@ void main() {
     expect(shell, contains('20 => WebUsuariosAcessosPage('));
     expect(shell, contains('empresaId: widget.empresaAtualId'));
     expect(shell, contains("titulo: 'Administração'"));
-    expect(shell, contains("indices: const {17, 20}"));
+    final administracao = RegExp(
+      r"titulo: 'Administração',[\s\S]*?indices: const \{([^}]*)\}",
+    ).firstMatch(shell)?.group(1);
+
+    expect(administracao, isNotNull);
+    expect(administracao, contains('17'));
+    expect(administracao, contains('20'));
     expect(shell, contains("titulo: 'Usuários e acessos'"));
   });
 }

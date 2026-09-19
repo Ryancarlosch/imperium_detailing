@@ -100,9 +100,9 @@
 - ⬜ homologação segunda empresa ponta a ponta
 
 ### 9. Arquivos
-- ⬜ fotos da OS via Storage
-- ⬜ assinatura via Storage
-- ⬜ comprovantes financeiros
+- 🟢 fotos da OS via Storage privado
+- 🟢 assinatura via Storage privado
+- 🟢 comprovantes financeiros via Storage privado
 - ⬜ documentos fiscais necessários
 
 ### 10. Motor de sincronização
@@ -174,7 +174,7 @@
 - 🟢 painel na Central Cloud
 - ⬜ homologação multiaparelho
 - ⬜ retry visual de arquivos
-- ⬜ adaptação Web
+- 🟢 adaptação Web para leitura e escrita de fotos, checklist e assinatura
 
 ### 10. Isolamento local multiempresa
 - ⬜ separar SQLite por empresa/tenant
@@ -211,9 +211,9 @@
 - 🟢 AppDatabase sem `dart:io` direto
 - 🟢 build Web release de fundação
 - 🟢 Dashboard Web V1
-- ⬜ módulos operacionais
-- ⬜ arquivos via bytes/Storage
-- ⬜ PDF/download browser
+- 🟢 módulos operacionais
+- 🟢 arquivos via bytes/Storage privado
+- 🟢 PDF/download browser
 - ⬜ homologação completa
 
 ### 13. Web Operacional V1
@@ -225,13 +225,13 @@
 - 🟢 OS Web: consulta, valor negociado e pendente
 - 🟢 troca de empresa no shell Web
 - 🟢 Android permanece offline-first com Motor Unificado
-- ⬜ OS Web completa
-- ⬜ Estoque Web
-- ⬜ Financeiro/DRE Web
-- ⬜ Precificação Web
-- ⬜ CRM/Orçamentos Web
-- ⬜ arquivos/assinatura Web
-- ⬜ PDF/download browser
+- 🟢 OS Web completa
+- 🟢 Estoque Web
+- 🟢 Financeiro/DRE Web
+- 🟢 Precificação Web
+- 🟢 CRM/Orçamentos Web
+- 🟢 arquivos/assinatura Web
+- 🟢 PDF/download browser
 ### 14. Web Gestão V2
 - 🟢 criação de OS aberta no Web
 - 🟢 múltiplos serviços na nova OS Web
@@ -243,10 +243,10 @@
 - 🟢 saldos por conta a partir de movimentos realizados
 - 🟢 entradas/saídas e resultado de caixa do mês
 - 🟢 valores a receber via pagamentos Cloud
-- ⬜ edição concorrente de OS existente Web ↔ Android
-- ⬜ finalização transacional de OS no Web
-- ⬜ lançamentos financeiros pelo Web
-- ⬜ movimentações de estoque pelo Web
+- 🟢 edição concorrente de OS existente Web ↔ Android
+- 🟢 finalização transacional de OS no Web
+- 🟢 lançamentos financeiros pelo Web
+- 🟢 movimentações de estoque pelo Web
 ### 15. Web Comercial e Gestão V3
 - 🟢 navegação Web escalável com sidebar desktop e drawer mobile
 - 🟢 origem Web persistente/idempotente
@@ -259,12 +259,12 @@
 - 🟢 snapshots de preço e cenários Web
 - 🟢 Central Web por tenant com diagnóstico de módulos/permissões
 - 🟢 RLS existente continua sendo a autoridade de acesso
-- ⬜ edição concorrente de OS existente Web ↔ Android
-- ⬜ finalização transacional de OS pelo Web
-- ⬜ movimentações de estoque pelo Web
-- ⬜ lançamentos financeiros pelo Web
-- ⬜ arquivos/checklist/assinatura Web
-- ⬜ PDF/download browser
+- 🟢 edição concorrente de OS existente Web ↔ Android
+- 🟢 finalização transacional de OS pelo Web
+- 🟢 movimentações de estoque pelo Web
+- 🟢 lançamentos financeiros pelo Web
+- 🟢 arquivos/checklist/assinatura Web
+- 🟢 PDF/download browser
 
 ### 16. OS Cloud V3 + edição Web segura
 - 🟢 CAS no upload Android de OS e itens já mapeados
@@ -280,9 +280,9 @@
 - 🟢 RPC trava OS/itens e valida `atualizado_em`
 - 🟢 `valor_total` recalculado no servidor
 - 🟢 assinatura existente fica desatualizada após edição
-- ⬜ finalização Web transacional (estoque + financeiro + pagamento)
-- ⬜ cancelamento Web com efeitos de negócio
-- ⬜ arquivos/checklist/assinatura no navegador
+- 🟢 finalização Web transacional (estoque + financeiro + pagamento)
+- 🟢 cancelamento Web com efeitos de negócio
+- 🟢 arquivos/checklist/assinatura no navegador
 
 ### 17. OS Cloud V4 - finalização transacional Web
 - 🟢 contrato Cloud de produtos consumidos pela OS
@@ -306,5 +306,23 @@
 - 🟢 Central Cloud Android mostra saúde/conflitos do V4
 - 🟢 Web ganha página dedicada `Finalizar OS`
 - ⬜ homologação real Android ↔ Web em dois dispositivos
-- ⬜ cancelamento Web transacional
-- ⬜ checklist/fotos/assinatura no navegador
+- 🟢 cancelamento Web transacional
+- 🟢 checklist/fotos/assinatura no navegador
+
+### 18. Paridade funcional Mobile → Web
+- 🟢 workspace Web profissional e responsivo
+- 🟢 clientes, veículos, agenda e histórico operacional
+- 🟢 OS: criação, edição concorrente, cancelamento e finalização transacional
+- 🟢 OS: produtos, PDF, fotos, checklist, avarias e assinatura
+- 🟢 estoque: produtos, lotes, movimentações, reservas e alertas
+- 🟢 financeiro: fluxo de caixa, contas, DRE, relatórios, lançamentos e estornos
+- 🟢 gestão financeira: fornecedores, taxas, custos fixos, metas, plano de contas, mão de obra, previsto x realizado e transferências
+- 🟢 comercial: CRM, orçamentos, precificação, serviços, pós-venda e marketing
+- 🟢 equipe: ponto, funcionários, solicitações e pagamentos
+- 🟢 administração: usuários, acessos, empresa, Central Cloud e pendências
+- 🟢 fotos e galeria no navegador
+- 🟢 fiscal Web com XML Cloud e integração operacional
+- 🟡 homologação real Android ↔ Web em dois dispositivos
+- 🟡 validação final de todos os perfis/RLS em tenant de homologação
+
+Funções dependentes de hardware ou do sistema operacional continuam nativas por definição: câmera/scanner, notificações locais, backup/restauração do banco local e instalação/atualização do aplicativo. No Web, os resultados sincronizados dessas funções permanecem disponíveis nos módulos correspondentes.

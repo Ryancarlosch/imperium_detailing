@@ -100,11 +100,17 @@ Nenhuma alteração deste lote mexe em:
 
 O Web apenas lê arquivos já sincronizados e autorizados pelas políticas existentes da empresa.
 
+## Evolução V2 — 2026-09-19
+
+O fluxo deixou de ser somente leitura. O Web agora também envia fotos, cria/edita checklist e avarias e captura assinatura, sempre no bucket privado, com isolamento por empresa, origem idempotente e proteção concorrente por `atualizado_em`.
+
+OS finalizada ou cancelada permanece somente para consulta.
+
 ## Estado do lote
 
-✅ **Arquivos da OS Web V1 — implementado e validado localmente.**
+✅ **Arquivos da OS Web V2 — leitura e escrita implementadas.**
 
-A lista Web de Ordens de Serviço já permite acessar fotos, avarias e assinatura sincronizadas, respeitando `empresa_id`, soft delete e Storage privado.
+A lista Web de Ordens de Serviço permite acessar e, enquanto a OS estiver editável, registrar fotos, avarias, checklist e assinatura sincronizados, respeitando `empresa_id`, concorrência, soft delete e Storage privado.
 
 ## Próximo passo exato
 
