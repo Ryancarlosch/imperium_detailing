@@ -109,6 +109,27 @@ class GrowthMarketingResumo {
       investimento <= 0 ? 0 : faturamentoAtribuido / investimento;
 }
 
+class GrowthMarketingCampanhaDesempenho {
+  const GrowthMarketingCampanhaDesempenho({
+    required this.campanhaId,
+    required this.investimento,
+    required this.faturamentoAtribuido,
+    required this.leads,
+    required this.clientes,
+    required this.ordens,
+  });
+
+  final String campanhaId;
+  final double investimento;
+  final double faturamentoAtribuido;
+  final int leads;
+  final int clientes;
+  final int ordens;
+
+  double get roas =>
+      investimento <= 0 ? 0 : faturamentoAtribuido / investimento;
+}
+
 class ComercialGrowthCloudService {
   ComercialGrowthCloudService._();
 
@@ -619,6 +640,79 @@ class ComercialGrowthCloudService {
           .where((e) => (e['status'] ?? '').toString() != 'Publicado')
           .length,
     );
+  }
+
+  Future<List<GrowthMarketingCampanhaDesempenho>>
+  carregarDesempenhoCampanhas() async {
+    final resultados = await Future.wait<dynamic>([
+      listarCampanhasMarketing(),
+      listarAtribuicoesMarketing(),
+      _snapshotGrowth(),
+    ]);
+
+    final campanhas = resultados[0] as List<Map<String, dynamic>>;
+    final atribuicoes = resultados[1] as List<Map<String, dynamic>>;
+    final snapshot = resultados[2] as Map<String, dynamic>;
+    final ordens = _lista(snapshot['ordens']);
+
+    final ordensPorId = <String, Map<String, dynamic>>{
+      for (final ordem in ordens) (ordem['id'] ?? '').toString(): ordem,
+    };
+
+    final atribuicoesPorCampanha =
+        <String, List<Map<String, dynamic>>>{};
+    for (final atribuicao in atribuicoes) {
+      final campanhaId = (atribuicao['campanha_id'] ?? '').toString();
+      if (campanhaId.isEmpty) continue;
+      atribuicoesPorCampanha
+          .putIfAbsent(campanhaId, () => <Map<String, dynamic>>[])
+          .add(atribuicao);
+    }
+
+    final resultado = <GrowthMarketingCampanhaDesempenho>[];
+
+    for (final campanha in campanhas) {
+      final campanhaId = (campanha['id'] ?? '').toString();
+      if (campanhaId.isEmpty) continue;
+
+      final itens = atribuicoesPorCampanha[campanhaId] ?? const [];
+      final idsOrdens = <String>{};
+      final idsClientes = <String>{};
+      final idsLeads = <String>{};
+
+      for (final item in itens) {
+        final ordemId = (item['ordem_servico_id'] ?? '').toString();
+        final clienteId = (item['cliente_id'] ?? '').toString();
+        final leadId = (item['lead_id'] ?? '').toString();
+
+        if (ordemId.isNotEmpty) idsOrdens.add(ordemId);
+        if (clienteId.isNotEmpty) idsClientes.add(clienteId);
+        if (leadId.isNotEmpty) idsLeads.add(leadId);
+      }
+
+      var faturamento = 0.0;
+      for (final ordemId in idsOrdens) {
+        final ordem = ordensPorId[ordemId];
+        if (ordem != null) {
+          faturamento += _valorNegociado(ordem);
+        }
+      }
+
+      final leadsInformados = _int(campanha['leads']);
+
+      resultado.add(
+        GrowthMarketingCampanhaDesempenho(
+          campanhaId: campanhaId,
+          investimento: _double(campanha['investimento']),
+          faturamentoAtribuido: faturamento,
+          leads: max(leadsInformados, idsLeads.length).toInt(),
+          clientes: idsClientes.length,
+          ordens: idsOrdens.length,
+        ),
+      );
+    }
+
+    return resultado;
   }
 
   Future<Map<String, dynamic>> carregarSnapshotParaAtribuicao() {
