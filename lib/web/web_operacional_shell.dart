@@ -7,6 +7,8 @@ import '../screens/imperium_planos_page.dart';
 import '../screens/licenca_status_page.dart';
 import '../services/web_cloud_operacional_service.dart';
 import 'imperium_web_theme.dart';
+import 'web_cliente_detalhes_page.dart';
+import 'web_configuracoes_empresa_page.dart';
 import 'web_contas_financeiras_page.dart';
 import 'web_dashboard_gerencial_page.dart';
 import 'web_dre_page.dart';
@@ -18,9 +20,11 @@ import 'web_ordens_v3_page.dart';
 import 'web_estoque_gestao_page.dart';
 import 'web_os_arquivos_page.dart';
 import 'web_os_finalizacao_v4_page.dart';
+import 'web_pendencias_operacionais_page.dart';
 import 'web_ponto_page.dart';
 import 'web_pos_venda_page.dart';
 import 'web_relatorios_page.dart';
+import 'web_servicos_catalogo_page.dart';
 import 'web_usuarios_acessos_page.dart';
 
 // Workspace Web profissional: navegação, busca global e módulos gerenciais.
@@ -104,6 +108,9 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     18 => 'Pós-venda',
     19 => 'Marketing',
     20 => 'Usuários e acessos',
+    21 => 'Serviços',
+    22 => 'Pendências operacionais',
+    23 => 'Configurações',
     _ => 'Central Cloud',
   };
 
@@ -172,6 +179,16 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         key: ValueKey('usuarios-acessos-${widget.empresaAtualId}-$_revisao'),
         empresaId: widget.empresaAtualId,
       ),
+      21 => WebServicosCatalogoPage(
+        key: ValueKey('servicos-catalogo-$_revisao'),
+      ),
+      22 => WebPendenciasOperacionaisPage(
+        key: ValueKey('pendencias-$_revisao'),
+        onNavigate: (indice) => _selecionar(indice, fecharMenu: false),
+      ),
+      23 => WebConfiguracoesEmpresaPage(
+        key: ValueKey('configuracoes-${widget.empresaAtualId}-$_revisao'),
+      ),
       _ => WebCentralCloudPage(key: ValueKey('central-$_revisao')),
     };
   }
@@ -227,7 +244,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         _grupoMenu(
           titulo: 'Operação',
           icone: Icons.car_repair_outlined,
-          indices: const {1, 2, 3, 4, 5, 6, 7},
+          indices: const {1, 2, 3, 4, 5, 6, 7, 22},
           filhos: [
             _itemMenu(
               indice: 1,
@@ -263,6 +280,11 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
               indice: 7,
               titulo: 'Finalizar OS',
               icone: Icons.task_alt_outlined,
+            ),
+            _itemMenu(
+              indice: 22,
+              titulo: 'Pendências',
+              icone: Icons.notification_important_outlined,
             ),
           ],
         ),
@@ -301,7 +323,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         _grupoMenu(
           titulo: 'Comercial',
           icone: Icons.storefront_outlined,
-          indices: const {13, 14, 15, 18, 19},
+          indices: const {13, 14, 15, 18, 19, 21},
           filhos: [
             _itemMenu(indice: 13, titulo: 'CRM', icone: Icons.hub_outlined),
             _itemMenu(
@@ -318,6 +340,11 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
               indice: 14,
               titulo: 'Orçamentos',
               icone: Icons.request_quote_outlined,
+            ),
+            _itemMenu(
+              indice: 21,
+              titulo: 'Serviços',
+              icone: Icons.design_services_outlined,
             ),
             _itemMenu(
               indice: 15,
@@ -341,12 +368,17 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         _grupoMenu(
           titulo: 'Administração',
           icone: Icons.admin_panel_settings_outlined,
-          indices: const {17, 20},
+          indices: const {17, 20, 23},
           filhos: [
             _itemMenu(
               indice: 20,
               titulo: 'Usuários e acessos',
               icone: Icons.manage_accounts_outlined,
+            ),
+            _itemMenu(
+              indice: 23,
+              titulo: 'Configurações',
+              icone: Icons.settings_outlined,
             ),
             _itemMenu(
               indice: 17,
@@ -1083,6 +1115,14 @@ class _ClientesPageState extends State<_ClientesPage> {
     super.dispose();
   }
 
+  Future<void> _abrirDetalhes(Map<String, dynamic> cliente) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => WebClienteDetalhesPage(cliente: cliente),
+      ),
+    );
+  }
+
   Future<void> _editar(Map<String, dynamic>? atual) async {
     final nome = TextEditingController(text: '${atual?['nome'] ?? ''}');
     final telefone = TextEditingController(text: '${atual?['telefone'] ?? ''}');
@@ -1188,6 +1228,11 @@ class _ClientesPageState extends State<_ClientesPage> {
     return Wrap(
       spacing: 2,
       children: [
+        IconButton(
+          tooltip: 'Ver cliente',
+          onPressed: () => _abrirDetalhes(cliente),
+          icon: const Icon(Icons.visibility_outlined),
+        ),
         IconButton(
           tooltip: 'Editar cliente',
           onPressed: () => _editar(cliente),
@@ -1370,7 +1415,10 @@ class _ClientesPageState extends State<_ClientesPage> {
         for (final cliente in itens) ...[
           Card(
             margin: EdgeInsets.zero,
-            child: Padding(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _abrirDetalhes(cliente),
+              child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
               child: Row(
                 children: [
@@ -1414,6 +1462,7 @@ class _ClientesPageState extends State<_ClientesPage> {
                   _acoesCliente(cliente),
                 ],
               ),
+            ),
             ),
           ),
           const SizedBox(height: 8),
