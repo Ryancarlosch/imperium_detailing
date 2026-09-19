@@ -99,6 +99,11 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
     final operacional = resumo.operacional;
     final financeiro = resumo.financeiro;
     final comercial = resumo.comercial;
+    final alertasGestor =
+        (financeiro.aReceber > 0 ? 1 : 0) +
+        (((operacional['os_abertas'] as num?)?.toInt() ?? 0) > 0 ? 1 : 0) +
+        (comercial.posVendaAcoes > 0 ? 1 : 0) +
+        (resumo.estoqueAlertas > 0 ? 1 : 0);
     final contas = resumo.contas.take(4).toList();
     final executores = financeiro.executores.take(5).toList();
     final agendaHoje = resumo.agendaHoje.take(6).toList();
@@ -154,6 +159,69 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     financeiro.competencia.resultadoGerencial < 0,
               ),
               const SizedBox(height: 24),
+              _SectionTitle(
+                titulo: 'Atenções do gestor',
+                subtitulo:
+                    alertasGestor == 0
+                    ? 'Nenhum alerta prioritário identificado neste momento.'
+                    : '$alertasGestor ponto(s) pedem acompanhamento.',
+              ),
+              const SizedBox(height: 12),
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 6,
+                  ),
+                  child: Column(
+                    children: [
+                      _AtencaoLinha(
+                        icon: Icons.schedule_rounded,
+                        titulo: 'Recebimentos pendentes',
+                        detalhe: financeiro.aReceber > 0
+                            ? '${_valor(financeiro.aReceber)} ainda a receber no período'
+                            : 'Nenhum saldo pendente no período',
+                        alerta: financeiro.aReceber > 0,
+                        onTap: () => widget.onNavigate?.call(9),
+                      ),
+                      const Divider(height: 1),
+                      _AtencaoLinha(
+                        icon: Icons.car_repair_outlined,
+                        titulo: 'Ordens em aberto',
+                        detalhe:
+                            '${operacional['os_abertas'] ?? 0} OS aberta(s) ou em andamento',
+                        alerta:
+                            ((operacional['os_abertas'] as num?)?.toInt() ??
+                                0) >
+                            0,
+                        onTap: () => widget.onNavigate?.call(4),
+                      ),
+                      const Divider(height: 1),
+                      _AtencaoLinha(
+                        icon: Icons.replay_circle_filled_outlined,
+                        titulo: 'Clientes para contato',
+                        detalhe: comercial.posVendaAcoes > 0
+                            ? '${comercial.posVendaAcoes} cliente(s) precisam de ação no pós-venda'
+                            : 'Nenhum cliente exige ação imediata no pós-venda',
+                        alerta: comercial.posVendaAcoes > 0,
+                        onTap: () => widget.onNavigate?.call(18),
+                      ),
+                      const Divider(height: 1),
+                      _AtencaoLinha(
+                        icon: Icons.inventory_2_outlined,
+                        titulo: 'Alertas de estoque',
+                        detalhe: resumo.estoqueAlertas > 0
+                            ? '${resumo.estoqueAlertas} alerta(s) ativo(s) no estoque'
+                            : 'Nenhum alerta ativo de estoque',
+                        alerta: resumo.estoqueAlertas > 0,
+                        onTap: () => widget.onNavigate?.call(8),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
               const _SectionTitle(
                 titulo: 'Indicadores do mês',
                 subtitulo:
@@ -1314,6 +1382,76 @@ class _ExecutorLinha extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AtencaoLinha extends StatelessWidget {
+  const _AtencaoLinha({
+    required this.icon,
+    required this.titulo,
+    required this.detalhe,
+    required this.alerta,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String titulo;
+  final String detalhe;
+  final bool alerta;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cor = alerta ? Colors.orangeAccent : Colors.greenAccent;
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: cor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, color: cor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titulo,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    detalhe,
+                    style: const TextStyle(
+                      color: Color(0xFF89939E),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              alerta
+                  ? Icons.warning_amber_rounded
+                  : Icons.check_circle_outline_rounded,
+              color: cor,
+              size: 20,
+            ),
+            const SizedBox(width: 5),
+            const Icon(Icons.chevron_right_rounded, size: 20),
           ],
         ),
       ),
