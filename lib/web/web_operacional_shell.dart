@@ -2994,9 +2994,7 @@ class _OrdensPageState extends State<_OrdensPage> {
         final ordens = snapshot.data![0];
         final clientes = snapshot.data![1];
         final veiculos = snapshot.data![2];
-        final nomes = {
-          for (final c in clientes) '${c['id']}': '${c['nome']}',
-        };
+        final nomes = {for (final c in clientes) '${c['id']}': '${c['nome']}'};
         final carros = {
           for (final v in veiculos)
             '${v['id']}':
@@ -3005,38 +3003,38 @@ class _OrdensPageState extends State<_OrdensPage> {
         };
 
         final termo = _busca.text.trim().toLowerCase();
-        final filtradas = ordens.where((os) {
-          final status = (os['status'] ?? '').toString();
-          final statusPagamento = (os['status_pagamento'] ?? '').toString();
+        final filtradas =
+            ordens.where((os) {
+              final status = (os['status'] ?? '').toString();
+              final statusPagamento = (os['status_pagamento'] ?? '').toString();
 
-          if (_status != 'Todos' && status != _status) return false;
-          if (_pagamento != 'Todos' && statusPagamento != _pagamento) {
-            return false;
-          }
-          if (!_estaNoPeriodo(os)) return false;
+              if (_status != 'Todos' && status != _status) return false;
+              if (_pagamento != 'Todos' && statusPagamento != _pagamento) {
+                return false;
+              }
+              if (!_estaNoPeriodo(os)) return false;
 
-          if (termo.isEmpty) return true;
+              if (termo.isEmpty) return true;
 
-          return [
-            os['numero'],
-            nomes['${os['cliente_id']}'] ?? '',
-            carros['${os['veiculo_id']}'] ?? '',
-            os['funcionario_responsavel'],
-            status,
-            statusPagamento,
-          ].any((v) => '${v ?? ''}'.toLowerCase().contains(termo));
-        }).toList()
-          ..sort((a, b) {
-            final da =
-                _parseData(a['data_finalizacao']) ??
-                _parseData(a['data_abertura']) ??
-                DateTime(2000);
-            final db =
-                _parseData(b['data_finalizacao']) ??
-                _parseData(b['data_abertura']) ??
-                DateTime(2000);
-            return db.compareTo(da);
-          });
+              return [
+                os['numero'],
+                nomes['${os['cliente_id']}'] ?? '',
+                carros['${os['veiculo_id']}'] ?? '',
+                os['funcionario_responsavel'],
+                status,
+                statusPagamento,
+              ].any((v) => '${v ?? ''}'.toLowerCase().contains(termo));
+            }).toList()..sort((a, b) {
+              final da =
+                  _parseData(a['data_finalizacao']) ??
+                  _parseData(a['data_abertura']) ??
+                  DateTime(2000);
+              final db =
+                  _parseData(b['data_finalizacao']) ??
+                  _parseData(b['data_abertura']) ??
+                  DateTime(2000);
+              return db.compareTo(da);
+            });
 
         final abertas = ordens.where((e) => e['status'] == 'Aberta').length;
         final emAndamento = ordens
@@ -3054,12 +3052,13 @@ class _OrdensPageState extends State<_OrdensPage> {
           (total, e) => total + _pendente(e),
         );
 
-        final statusesPagamento = ordens
-            .map((e) => (e['status_pagamento'] ?? '').toString().trim())
-            .where((e) => e.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+        final statusesPagamento =
+            ordens
+                .map((e) => (e['status_pagamento'] ?? '').toString().trim())
+                .where((e) => e.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -3202,20 +3201,21 @@ class _OrdensPageState extends State<_OrdensPage> {
                             decoration: const InputDecoration(
                               labelText: 'Status',
                             ),
-                            items: const [
-                              'Todos',
-                              'Aberta',
-                              'Em andamento',
-                              'Finalizada',
-                              'Cancelada',
-                            ]
-                                .map(
-                                  (item) => DropdownMenuItem(
-                                    value: item,
-                                    child: Text(item),
-                                  ),
-                                )
-                                .toList(),
+                            items:
+                                const [
+                                      'Todos',
+                                      'Aberta',
+                                      'Em andamento',
+                                      'Finalizada',
+                                      'Cancelada',
+                                    ]
+                                    .map(
+                                      (item) => DropdownMenuItem(
+                                        value: item,
+                                        child: Text(item),
+                                      ),
+                                    )
+                                    .toList(),
                             onChanged: (v) =>
                                 setState(() => _status = v ?? 'Todos'),
                           ),
@@ -3339,8 +3339,8 @@ class _OrdensPageState extends State<_OrdensPage> {
                           final recebido = _double(e['valor_recebido']);
                           final pendente = _pendente(e);
                           final status = (e['status'] ?? '').toString();
-                          final statusPagamento =
-                              (e['status_pagamento'] ?? '').toString();
+                          final statusPagamento = (e['status_pagamento'] ?? '')
+                              .toString();
 
                           return DataRow(
                             cells: [
@@ -3442,10 +3442,11 @@ class _OrdensPageState extends State<_OrdensPage> {
                                     const SizedBox(height: 4),
                                     Text(
                                       [
-                                        carros['${e['veiculo_id']}'] ?? '',
-                                        (e['status'] ?? '').toString(),
-                                        (e['status_pagamento'] ?? '').toString(),
-                                      ]
+                                            carros['${e['veiculo_id']}'] ?? '',
+                                            (e['status'] ?? '').toString(),
+                                            (e['status_pagamento'] ?? '')
+                                                .toString(),
+                                          ]
                                           .where((x) => x.trim().isNotEmpty)
                                           .join(' · '),
                                       maxLines: 2,
@@ -3481,7 +3482,6 @@ class _OrdensPageState extends State<_OrdensPage> {
     );
   }
 }
-
 
 class _Erro extends StatelessWidget {
   const _Erro(this.texto);
