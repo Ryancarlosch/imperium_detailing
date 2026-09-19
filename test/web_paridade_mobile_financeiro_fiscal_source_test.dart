@@ -50,8 +50,7 @@ void main() {
       expect(service, contains(tabela));
     }
 
-    expect(service, contains("rpc(
-      'imperium_financeiro_transferir_web'"));
+    expect(service, contains("'imperium_financeiro_transferir_web'"));
   });
 
   test('Transferencia web e atomica, invoker e nao impacta DRE', () {
