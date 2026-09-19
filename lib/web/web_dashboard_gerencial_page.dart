@@ -459,7 +459,8 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     width: larguraAcao,
                     icon: Icons.tune_rounded,
                     titulo: 'Gestão financeira',
-                    detalhe: 'Taxas, fornecedores, custos, metas e transferências',
+                    detalhe:
+                        'Taxas, fornecedores, custos, metas e transferências',
                     onTap: () => widget.onNavigate?.call(26),
                   ),
                   _QuickAction(

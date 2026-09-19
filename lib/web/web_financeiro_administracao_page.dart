@@ -105,12 +105,21 @@ class _WebFinanceiroAdministracaoPageState
               isScrollable: true,
               tabs: [
                 Tab(icon: Icon(Icons.insights_outlined), text: 'Visão geral'),
-                Tab(icon: Icon(Icons.local_shipping_outlined), text: 'Fornecedores'),
+                Tab(
+                  icon: Icon(Icons.local_shipping_outlined),
+                  text: 'Fornecedores',
+                ),
                 Tab(icon: Icon(Icons.credit_card_outlined), text: 'Maquininha'),
                 Tab(icon: Icon(Icons.home_work_outlined), text: 'Custos fixos'),
                 Tab(icon: Icon(Icons.track_changes_outlined), text: 'Metas'),
-                Tab(icon: Icon(Icons.account_tree_outlined), text: 'Plano de contas'),
-                Tab(icon: Icon(Icons.engineering_outlined), text: 'Mão de obra'),
+                Tab(
+                  icon: Icon(Icons.account_tree_outlined),
+                  text: 'Plano de contas',
+                ),
+                Tab(
+                  icon: Icon(Icons.engineering_outlined),
+                  text: 'Mão de obra',
+                ),
               ],
             ),
           ),
@@ -125,21 +134,28 @@ class _WebFinanceiroAdministracaoPageState
                       _visaoGeral(),
                       _lista(
                         titulo: 'Fornecedores',
-                        subtitulo: 'Cadastro usado nas despesas e integrações fiscais.',
+                        subtitulo:
+                            'Cadastro usado nas despesas e integrações fiscais.',
                         onNovo: () => _editarFornecedor(),
                         itens: _fornecedores,
-                        tituloItem: (e) => (e['nome'] ?? 'Fornecedor').toString(),
-                        detalheItem: (e) => [
-                          e['documento'],
-                          e['telefone'],
-                          e['email'],
-                          e['categoria'],
-                        ].map((v) => (v ?? '').toString()).where((v) => v.trim().isNotEmpty).join(' · '),
+                        tituloItem: (e) =>
+                            (e['nome'] ?? 'Fornecedor').toString(),
+                        detalheItem: (e) =>
+                            [
+                                  e['documento'],
+                                  e['telefone'],
+                                  e['email'],
+                                  e['categoria'],
+                                ]
+                                .map((v) => (v ?? '').toString())
+                                .where((v) => v.trim().isNotEmpty)
+                                .join(' · '),
                         onEditar: _editarFornecedor,
                       ),
                       _lista(
                         titulo: 'Regras da maquininha',
-                        subtitulo: 'Taxas por forma e parcelamento, conta de recebimento e repasse ao cliente.',
+                        subtitulo:
+                            'Taxas por forma e parcelamento, conta de recebimento e repasse ao cliente.',
                         onNovo: () => _editarRegra(),
                         itens: _regras,
                         tituloItem: (e) => (e['nome'] ?? 'Regra').toString(),
@@ -151,10 +167,12 @@ class _WebFinanceiroAdministracaoPageState
                       ),
                       _lista(
                         titulo: 'Custos fixos',
-                        subtitulo: 'Base mensal usada na gestão e na precificação.',
+                        subtitulo:
+                            'Base mensal usada na gestão e na precificação.',
                         onNovo: () => _editarCusto(),
                         itens: _custos,
-                        tituloItem: (e) => (e['nome'] ?? 'Custo fixo').toString(),
+                        tituloItem: (e) =>
+                            (e['nome'] ?? 'Custo fixo').toString(),
                         detalheItem: (e) =>
                             '${_moeda.format(_double(e['valor_mensal']))}/mês · ${e['categoria'] ?? 'Despesa fixa'}',
                         onEditar: _editarCusto,
@@ -171,22 +189,27 @@ class _WebFinanceiroAdministracaoPageState
                       ),
                       _lista(
                         titulo: 'Plano de contas',
-                        subtitulo: 'Classificação financeira compartilhada entre Web e mobile.',
+                        subtitulo:
+                            'Classificação financeira compartilhada entre Web e mobile.',
                         onNovo: () => _editarPlano(),
                         itens: _planos,
-                        tituloItem: (e) => '${e['codigo'] ?? ''} · ${e['nome'] ?? ''}',
+                        tituloItem: (e) =>
+                            '${e['codigo'] ?? ''} · ${e['nome'] ?? ''}',
                         detalheItem: (e) =>
                             '${e['tipo'] ?? ''} · ${e['natureza'] ?? ''} · ${e['grupo_dre'] ?? 'Não DRE'}',
                         onEditar: _editarPlano,
                       ),
                       _lista(
                         titulo: 'Custos de mão de obra',
-                        subtitulo: 'Remuneração, encargos, outros custos e horas produtivas usados na precificação.',
+                        subtitulo:
+                            'Remuneração, encargos, outros custos e horas produtivas usados na precificação.',
                         onNovo: () => _editarColaborador(),
                         itens: _colaboradores,
-                        tituloItem: (e) => (e['nome'] ?? 'Funcionário').toString(),
+                        tituloItem: (e) =>
+                            (e['nome'] ?? 'Funcionário').toString(),
                         detalheItem: (e) {
-                          final mensal = _double(e['remuneracao_mensal']) +
+                          final mensal =
+                              _double(e['remuneracao_mensal']) +
                               _double(e['encargos_mensais']) +
                               _double(e['outros_custos_mensais']);
                           final horas = _double(e['horas_produtivas_mes']);
@@ -225,16 +248,20 @@ class _WebFinanceiroAdministracaoPageState
         continue;
       }
       final data = DateTime.tryParse(
-        (item['data_pagamento'] ?? item['data_vencimento'] ?? item['data'] ?? '')
+        (item['data_pagamento'] ??
+                item['data_vencimento'] ??
+                item['data'] ??
+                '')
             .toString(),
       );
-      if (data == null || data.year != agora.year || data.month != agora.month) {
+      if (data == null ||
+          data.year != agora.year ||
+          data.month != agora.month) {
         continue;
       }
-      final entrada = (item['tipo'] ?? '')
-          .toString()
-          .toLowerCase()
-          .contains('entrada');
+      final entrada = (item['tipo'] ?? '').toString().toLowerCase().contains(
+        'entrada',
+      );
       final status = (item['status'] ?? '').toString().toLowerCase();
       final valor = _double(item['valor']);
       if (status == 'realizado') {
@@ -280,7 +307,10 @@ class _WebFinanceiroAdministracaoPageState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Gestão financeira', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+                  Text(
+                    'Gestão financeira',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                  ),
                   SizedBox(height: 4),
                   Text(
                     'Fornecedores, taxas, custos, metas, plano de contas, mão de obra e transferências.',
@@ -322,20 +352,64 @@ class _WebFinanceiroAdministracaoPageState
               spacing: 12,
               runSpacing: 12,
               children: [
-                _Kpi(width: largura, titulo: 'Entradas realizadas', valor: _moeda.format(entradaRealizada), detalhe: 'Mês atual'),
-                _Kpi(width: largura, titulo: 'Saídas realizadas', valor: _moeda.format(saidaRealizada), detalhe: 'Mês atual'),
-                _Kpi(width: largura, titulo: 'Entradas previstas', valor: _moeda.format(entradaPrevista), detalhe: 'Mês atual'),
-                _Kpi(width: largura, titulo: 'Saídas previstas', valor: _moeda.format(saidaPrevista), detalhe: 'Mês atual'),
-                _Kpi(width: largura, titulo: 'Custos fixos ativos', valor: _moeda.format(custoFixo), detalhe: 'Base mensal'),
-                _Kpi(width: largura, titulo: 'Mão de obra ativa', valor: _moeda.format(maoObra), detalhe: 'Remuneração + encargos'),
-                _Kpi(width: largura, titulo: 'Fornecedores ativos', valor: '${_fornecedores.where((e) => _bool(e['ativo'])).length}', detalhe: 'Cadastros disponíveis'),
-                _Kpi(width: largura, titulo: 'Transferências', valor: '${_transferencias.length}', detalhe: 'Histórico Cloud'),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Entradas realizadas',
+                  valor: _moeda.format(entradaRealizada),
+                  detalhe: 'Mês atual',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Saídas realizadas',
+                  valor: _moeda.format(saidaRealizada),
+                  detalhe: 'Mês atual',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Entradas previstas',
+                  valor: _moeda.format(entradaPrevista),
+                  detalhe: 'Mês atual',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Saídas previstas',
+                  valor: _moeda.format(saidaPrevista),
+                  detalhe: 'Mês atual',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Custos fixos ativos',
+                  valor: _moeda.format(custoFixo),
+                  detalhe: 'Base mensal',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Mão de obra ativa',
+                  valor: _moeda.format(maoObra),
+                  detalhe: 'Remuneração + encargos',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Fornecedores ativos',
+                  valor:
+                      '${_fornecedores.where((e) => _bool(e['ativo'])).length}',
+                  detalhe: 'Cadastros disponíveis',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Transferências',
+                  valor: '${_transferencias.length}',
+                  detalhe: 'Histórico Cloud',
+                ),
               ],
             );
           },
         ),
         const SizedBox(height: 22),
-        const Text('Previsto x realizado', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+        const Text(
+          'Previsto x realizado',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+        ),
         const SizedBox(height: 8),
         Card(
           margin: EdgeInsets.zero,
@@ -345,8 +419,18 @@ class _WebFinanceiroAdministracaoPageState
               spacing: 30,
               runSpacing: 16,
               children: [
-                _Comparacao(titulo: 'Entradas', previsto: entradaPrevista, realizado: entradaRealizada, moeda: _moeda),
-                _Comparacao(titulo: 'Saídas', previsto: saidaPrevista, realizado: saidaRealizada, moeda: _moeda),
+                _Comparacao(
+                  titulo: 'Entradas',
+                  previsto: entradaPrevista,
+                  realizado: entradaRealizada,
+                  moeda: _moeda,
+                ),
+                _Comparacao(
+                  titulo: 'Saídas',
+                  previsto: saidaPrevista,
+                  realizado: saidaRealizada,
+                  moeda: _moeda,
+                ),
               ],
             ),
           ),
@@ -378,9 +462,18 @@ class _WebFinanceiroAdministracaoPageState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(titulo, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+                  Text(
+                    titulo,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitulo, style: const TextStyle(color: Color(0xFF89939E))),
+                  Text(
+                    subtitulo,
+                    style: const TextStyle(color: Color(0xFF89939E)),
+                  ),
                 ],
               ),
             ),
@@ -405,8 +498,15 @@ class _WebFinanceiroAdministracaoPageState
             (item) => Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
-                leading: Icon(_bool(item['ativo']) ? Icons.check_circle_outline : Icons.archive_outlined),
-                title: Text(tituloItem(item), style: const TextStyle(fontWeight: FontWeight.w800)),
+                leading: Icon(
+                  _bool(item['ativo'])
+                      ? Icons.check_circle_outline
+                      : Icons.archive_outlined,
+                ),
+                title: Text(
+                  tituloItem(item),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
                 subtitle: Text(
                   detalheItem(item).trim().isEmpty
                       ? 'Sem detalhes adicionais'
@@ -424,7 +524,10 @@ class _WebFinanceiroAdministracaoPageState
     );
   }
 
-  Future<bool?> _dialogo(String titulo, List<Widget> Function(StateSetter) campos) {
+  Future<bool?> _dialogo(
+    String titulo,
+    List<Widget> Function(StateSetter) campos,
+  ) {
     return showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -440,7 +543,10 @@ class _WebFinanceiroAdministracaoPageState
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
             FilledButton.icon(
               onPressed: () => Navigator.pop(context, true),
               icon: const Icon(Icons.save_outlined),
@@ -454,14 +560,20 @@ class _WebFinanceiroAdministracaoPageState
 
   Future<void> _editarFornecedor([Map<String, dynamic>? atual]) async {
     final nome = TextEditingController(text: '${atual?['nome'] ?? ''}');
-    final documento = TextEditingController(text: '${atual?['documento'] ?? ''}');
+    final documento = TextEditingController(
+      text: '${atual?['documento'] ?? ''}',
+    );
     final telefone = TextEditingController(text: '${atual?['telefone'] ?? ''}');
     final email = TextEditingController(text: '${atual?['email'] ?? ''}');
-    final categoria = TextEditingController(text: '${atual?['categoria'] ?? ''}');
+    final categoria = TextEditingController(
+      text: '${atual?['categoria'] ?? ''}',
+    );
     final endereco = TextEditingController(text: '${atual?['endereco'] ?? ''}');
     final cidade = TextEditingController(text: '${atual?['cidade'] ?? ''}');
     final estado = TextEditingController(text: '${atual?['estado'] ?? ''}');
-    final observacoes = TextEditingController(text: '${atual?['observacoes'] ?? ''}');
+    final observacoes = TextEditingController(
+      text: '${atual?['observacoes'] ?? ''}',
+    );
     var ativo = atual == null || _bool(atual['ativo']);
 
     final ok = await _dialogo(
@@ -502,13 +614,25 @@ class _WebFinanceiroAdministracaoPageState
 
   Future<void> _editarRegra([Map<String, dynamic>? atual]) async {
     final nome = TextEditingController(text: '${atual?['nome'] ?? ''}');
-    final forma = TextEditingController(text: '${atual?['forma_pagamento'] ?? 'Cartão de crédito'}');
+    final forma = TextEditingController(
+      text: '${atual?['forma_pagamento'] ?? 'Cartão de crédito'}',
+    );
     final parcelas = TextEditingController(text: '${atual?['parcelas'] ?? 1}');
-    final percentual = TextEditingController(text: _double(atual?['taxa_percentual']).toStringAsFixed(2));
-    final fixa = TextEditingController(text: _double(atual?['taxa_fixa']).toStringAsFixed(2));
-    final prazo = TextEditingController(text: '${atual?['prazo_recebimento_dias'] ?? 0}');
-    final prioridade = TextEditingController(text: '${atual?['prioridade'] ?? 0}');
-    final observacoes = TextEditingController(text: '${atual?['observacoes'] ?? ''}');
+    final percentual = TextEditingController(
+      text: _double(atual?['taxa_percentual']).toStringAsFixed(2),
+    );
+    final fixa = TextEditingController(
+      text: _double(atual?['taxa_fixa']).toStringAsFixed(2),
+    );
+    final prazo = TextEditingController(
+      text: '${atual?['prazo_recebimento_dias'] ?? 0}',
+    );
+    final prioridade = TextEditingController(
+      text: '${atual?['prioridade'] ?? 0}',
+    );
+    final observacoes = TextEditingController(
+      text: '${atual?['observacoes'] ?? ''}',
+    );
     String? contaId = atual?['conta_id']?.toString();
     var repassar = _bool(atual?['repassar_cliente']);
     var ativo = atual == null || _bool(atual['ativo']);
@@ -517,20 +641,33 @@ class _WebFinanceiroAdministracaoPageState
       atual == null ? 'Nova regra de taxa' : 'Editar regra de taxa',
       (setLocal) => [
         _campo(nome, 'Nome da regra *'),
-        _linha([_campo(forma, 'Forma de pagamento *'), _campo(parcelas, 'Parcelas')]),
+        _linha([
+          _campo(forma, 'Forma de pagamento *'),
+          _campo(parcelas, 'Parcelas'),
+        ]),
         _linha([_campo(percentual, 'Taxa %'), _campo(fixa, 'Taxa fixa')]),
-        _linha([_campo(prazo, 'Prazo (dias)'), _campo(prioridade, 'Prioridade')]),
+        _linha([
+          _campo(prazo, 'Prazo (dias)'),
+          _campo(prioridade, 'Prioridade'),
+        ]),
         DropdownButtonFormField<String?>(
-          initialValue: _contas.any((e) => e['id']?.toString() == contaId) ? contaId : null,
+          initialValue: _contas.any((e) => e['id']?.toString() == contaId)
+              ? contaId
+              : null,
           decoration: const InputDecoration(labelText: 'Conta da maquininha'),
           items: [
-            const DropdownMenuItem<String?>(value: null, child: Text('Sem conta específica')),
-            ..._contas.where((e) => _bool(e['ativo'])).map(
-              (e) => DropdownMenuItem<String?>(
-                value: e['id']?.toString(),
-                child: Text((e['nome'] ?? 'Conta').toString()),
-              ),
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Sem conta específica'),
             ),
+            ..._contas
+                .where((e) => _bool(e['ativo']))
+                .map(
+                  (e) => DropdownMenuItem<String?>(
+                    value: e['id']?.toString(),
+                    child: Text((e['nome'] ?? 'Conta').toString()),
+                  ),
+                ),
           ],
           onChanged: (v) => contaId = v,
         ),
@@ -571,10 +708,18 @@ class _WebFinanceiroAdministracaoPageState
 
   Future<void> _editarCusto([Map<String, dynamic>? atual]) async {
     final nome = TextEditingController(text: '${atual?['nome'] ?? ''}');
-    final valor = TextEditingController(text: _double(atual?['valor_mensal']).toStringAsFixed(2));
-    final categoria = TextEditingController(text: '${atual?['categoria'] ?? 'Despesa fixa'}');
-    final dia = TextEditingController(text: atual?['dia_vencimento']?.toString() ?? '');
-    final observacoes = TextEditingController(text: '${atual?['observacoes'] ?? ''}');
+    final valor = TextEditingController(
+      text: _double(atual?['valor_mensal']).toStringAsFixed(2),
+    );
+    final categoria = TextEditingController(
+      text: '${atual?['categoria'] ?? 'Despesa fixa'}',
+    );
+    final dia = TextEditingController(
+      text: atual?['dia_vencimento']?.toString() ?? '',
+    );
+    final observacoes = TextEditingController(
+      text: '${atual?['observacoes'] ?? ''}',
+    );
     String? planoId = atual?['plano_conta_id']?.toString();
     var ativo = atual == null || _bool(atual['ativo']);
 
@@ -582,7 +727,10 @@ class _WebFinanceiroAdministracaoPageState
       atual == null ? 'Novo custo fixo' : 'Editar custo fixo',
       (setLocal) => [
         _campo(nome, 'Nome *'),
-        _linha([_campo(valor, 'Valor mensal'), _campo(dia, 'Dia do vencimento')]),
+        _linha([
+          _campo(valor, 'Valor mensal'),
+          _campo(dia, 'Dia do vencimento'),
+        ]),
         _campo(categoria, 'Categoria'),
         _planoDropdown(planoId, (v) => planoId = v),
         _campo(observacoes, 'Observações', linhas: 2),
@@ -614,9 +762,15 @@ class _WebFinanceiroAdministracaoPageState
     final agora = DateTime.now();
     final ano = TextEditingController(text: '${atual?['ano'] ?? agora.year}');
     final mes = TextEditingController(text: '${atual?['mes'] ?? agora.month}');
-    final tipo = TextEditingController(text: '${atual?['tipo'] ?? 'Faturamento'}');
-    final valor = TextEditingController(text: _double(atual?['valor_meta']).toStringAsFixed(2));
-    final observacoes = TextEditingController(text: '${atual?['observacoes'] ?? ''}');
+    final tipo = TextEditingController(
+      text: '${atual?['tipo'] ?? 'Faturamento'}',
+    );
+    final valor = TextEditingController(
+      text: _double(atual?['valor_meta']).toStringAsFixed(2),
+    );
+    final observacoes = TextEditingController(
+      text: '${atual?['observacoes'] ?? ''}',
+    );
     String? planoId = atual?['plano_conta_id']?.toString();
     var ativo = atual == null || _bool(atual['ativo']);
 
@@ -655,9 +809,15 @@ class _WebFinanceiroAdministracaoPageState
     final codigo = TextEditingController(text: '${atual?['codigo'] ?? ''}');
     final nome = TextEditingController(text: '${atual?['nome'] ?? ''}');
     final tipo = TextEditingController(text: '${atual?['tipo'] ?? 'Saída'}');
-    final natureza = TextEditingController(text: '${atual?['natureza'] ?? 'Não classificado'}');
-    final grupo = TextEditingController(text: '${atual?['grupo_dre'] ?? 'Não DRE'}');
-    final parent = TextEditingController(text: '${atual?['parent_codigo'] ?? ''}');
+    final natureza = TextEditingController(
+      text: '${atual?['natureza'] ?? 'Não classificado'}',
+    );
+    final grupo = TextEditingController(
+      text: '${atual?['grupo_dre'] ?? 'Não DRE'}',
+    );
+    final parent = TextEditingController(
+      text: '${atual?['parent_codigo'] ?? ''}',
+    );
     final ordem = TextEditingController(text: '${atual?['ordem'] ?? 0}');
     var ativo = atual == null || _bool(atual['ativo']);
 
@@ -696,19 +856,35 @@ class _WebFinanceiroAdministracaoPageState
   Future<void> _editarColaborador([Map<String, dynamic>? atual]) async {
     final nome = TextEditingController(text: '${atual?['nome'] ?? ''}');
     final funcao = TextEditingController(text: '${atual?['funcao'] ?? ''}');
-    final remuneracao = TextEditingController(text: _double(atual?['remuneracao_mensal']).toStringAsFixed(2));
-    final encargos = TextEditingController(text: _double(atual?['encargos_mensais']).toStringAsFixed(2));
-    final outros = TextEditingController(text: _double(atual?['outros_custos_mensais']).toStringAsFixed(2));
-    final horas = TextEditingController(text: _double(atual?['horas_produtivas_mes']).toStringAsFixed(1));
-    final observacoes = TextEditingController(text: '${atual?['observacoes'] ?? ''}');
+    final remuneracao = TextEditingController(
+      text: _double(atual?['remuneracao_mensal']).toStringAsFixed(2),
+    );
+    final encargos = TextEditingController(
+      text: _double(atual?['encargos_mensais']).toStringAsFixed(2),
+    );
+    final outros = TextEditingController(
+      text: _double(atual?['outros_custos_mensais']).toStringAsFixed(2),
+    );
+    final horas = TextEditingController(
+      text: _double(atual?['horas_produtivas_mes']).toStringAsFixed(1),
+    );
+    final observacoes = TextEditingController(
+      text: '${atual?['observacoes'] ?? ''}',
+    );
     var ativo = atual == null || _bool(atual['ativo']);
 
     final ok = await _dialogo(
       atual == null ? 'Novo custo de mão de obra' : 'Editar mão de obra',
       (setLocal) => [
         _linha([_campo(nome, 'Nome *'), _campo(funcao, 'Função')]),
-        _linha([_campo(remuneracao, 'Remuneração mensal'), _campo(encargos, 'Encargos mensais')]),
-        _linha([_campo(outros, 'Outros custos mensais'), _campo(horas, 'Horas produtivas/mês')]),
+        _linha([
+          _campo(remuneracao, 'Remuneração mensal'),
+          _campo(encargos, 'Encargos mensais'),
+        ]),
+        _linha([
+          _campo(outros, 'Outros custos mensais'),
+          _campo(horas, 'Horas produtivas/mês'),
+        ]),
         _campo(observacoes, 'Observações', linhas: 2),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
@@ -752,14 +928,32 @@ class _WebFinanceiroAdministracaoPageState
         DropdownButtonFormField<String>(
           initialValue: origemId,
           decoration: const InputDecoration(labelText: 'Conta de origem'),
-          items: ativas.map((e) => DropdownMenuItem(value: e['id'].toString(), child: Text((e['nome'] ?? 'Conta').toString()))).toList(),
-          onChanged: (v) { if (v != null) setLocal(() => origemId = v); },
+          items: ativas
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e['id'].toString(),
+                  child: Text((e['nome'] ?? 'Conta').toString()),
+                ),
+              )
+              .toList(),
+          onChanged: (v) {
+            if (v != null) setLocal(() => origemId = v);
+          },
         ),
         DropdownButtonFormField<String>(
           initialValue: destinoId,
           decoration: const InputDecoration(labelText: 'Conta de destino'),
-          items: ativas.map((e) => DropdownMenuItem(value: e['id'].toString(), child: Text((e['nome'] ?? 'Conta').toString()))).toList(),
-          onChanged: (v) { if (v != null) setLocal(() => destinoId = v); },
+          items: ativas
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e['id'].toString(),
+                  child: Text((e['nome'] ?? 'Conta').toString()),
+                ),
+              )
+              .toList(),
+          onChanged: (v) {
+            if (v != null) setLocal(() => destinoId = v);
+          },
         ),
         _campo(valor, 'Valor *'),
         ListTile(
@@ -786,40 +980,48 @@ class _WebFinanceiroAdministracaoPageState
     );
     if (ok != true) return;
 
-    await _executar(
-      () async {
-        await _service.transferir(
-          contaOrigemId: origemId,
-          contaDestinoId: destinoId,
-          valor: _numero(valor.text),
-          data: data,
-          descricao: descricao.text,
-          observacoes: observacoes.text,
-        );
-      },
-      'Transferência realizada e sincronizada.',
-    );
+    await _executar(() async {
+      await _service.transferir(
+        contaOrigemId: origemId,
+        contaDestinoId: destinoId,
+        valor: _numero(valor.text),
+        data: data,
+        descricao: descricao.text,
+        observacoes: observacoes.text,
+      );
+    }, 'Transferência realizada e sincronizada.');
   }
 
   Widget _planoDropdown(String? valor, ValueChanged<String?> onChanged) {
-    final atual = _planos.any((e) => e['id']?.toString() == valor) ? valor : null;
+    final atual = _planos.any((e) => e['id']?.toString() == valor)
+        ? valor
+        : null;
     return DropdownButtonFormField<String?>(
       initialValue: atual,
       decoration: const InputDecoration(labelText: 'Plano de contas'),
       items: [
-        const DropdownMenuItem<String?>(value: null, child: Text('Sem classificação específica')),
-        ..._planos.where((e) => _bool(e['ativo'])).map(
-          (e) => DropdownMenuItem<String?>(
-            value: e['id']?.toString(),
-            child: Text('${e['codigo'] ?? ''} · ${e['nome'] ?? ''}'),
-          ),
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('Sem classificação específica'),
         ),
+        ..._planos
+            .where((e) => _bool(e['ativo']))
+            .map(
+              (e) => DropdownMenuItem<String?>(
+                value: e['id']?.toString(),
+                child: Text('${e['codigo'] ?? ''} · ${e['nome'] ?? ''}'),
+              ),
+            ),
       ],
       onChanged: onChanged,
     );
   }
 
-  Widget _campo(TextEditingController controller, String label, {int linhas = 1}) {
+  Widget _campo(
+    TextEditingController controller,
+    String label, {
+    int linhas = 1,
+  }) {
     return TextField(
       controller: controller,
       minLines: linhas,
@@ -857,7 +1059,12 @@ class _WebFinanceiroAdministracaoPageState
 }
 
 class _Kpi extends StatelessWidget {
-  const _Kpi({required this.width, required this.titulo, required this.valor, required this.detalhe});
+  const _Kpi({
+    required this.width,
+    required this.titulo,
+    required this.valor,
+    required this.detalhe,
+  });
   final double width;
   final String titulo;
   final String valor;
@@ -874,10 +1081,19 @@ class _Kpi extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(valor, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+              Text(
+                valor,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               const SizedBox(height: 4),
               Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
-              Text(detalhe, style: const TextStyle(color: Color(0xFF89939E), fontSize: 11)),
+              Text(
+                detalhe,
+                style: const TextStyle(color: Color(0xFF89939E), fontSize: 11),
+              ),
             ],
           ),
         ),
@@ -887,7 +1103,12 @@ class _Kpi extends StatelessWidget {
 }
 
 class _Comparacao extends StatelessWidget {
-  const _Comparacao({required this.titulo, required this.previsto, required this.realizado, required this.moeda});
+  const _Comparacao({
+    required this.titulo,
+    required this.previsto,
+    required this.realizado,
+    required this.moeda,
+  });
   final String titulo;
   final double previsto;
   final double realizado;
@@ -906,7 +1127,9 @@ class _Comparacao extends StatelessWidget {
           Text('Realizado: ${moeda.format(realizado)}'),
           const SizedBox(height: 8),
           LinearProgressIndicator(
-            value: previsto <= 0 ? 0 : (realizado / previsto).clamp(0.0, 1.0).toDouble(),
+            value: previsto <= 0
+                ? 0
+                : (realizado / previsto).clamp(0.0, 1.0).toDouble(),
           ),
         ],
       ),

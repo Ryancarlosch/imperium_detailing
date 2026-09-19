@@ -6,7 +6,9 @@ void main() {
   test('Web fiscal esta conectado ao workspace e usa XML cloud', () {
     final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
     final fiscal = File('lib/web/web_fiscal_page.dart').readAsStringSync();
-    final service = File('lib/services/web_fiscal_service.dart').readAsStringSync();
+    final service = File(
+      'lib/services/web_fiscal_service.dart',
+    ).readAsStringSync();
 
     expect(shell, contains("import 'web_fiscal_page.dart';"));
     expect(shell, contains('25 => WebFiscalPage('));
