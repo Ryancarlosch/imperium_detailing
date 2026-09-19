@@ -51,6 +51,8 @@ void main() {
     expect(login, contains('AppBranding.productName'));
     expect(branding, contains('loginTagline'));
     expect(login, contains('AppBranding.loginTagline'));
+    expect(branding, contains('loginHeadline'));
+    expect(login, contains('AppBranding.loginHeadline'));
   });
 
   test('Manifesto PWA preserva identidade Imperium', () {
