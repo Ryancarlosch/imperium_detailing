@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_interpolation_to_compose_strings
+
 import '../database/app_database.dart';
 import '../services/nota_fiscal_entrada_xml_service.dart';
 import 'supabase_bootstrap.dart';
