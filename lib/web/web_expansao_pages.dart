@@ -1327,10 +1327,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     );
   }
 
-  Widget _statusOrcamento(
-    Map<String, dynamic> item, {
-    bool compacto = false,
-  }) {
+  Widget _statusOrcamento(Map<String, dynamic> item, {bool compacto = false}) {
     final atual = (item['status'] ?? 'Pendente').toString();
     final color = switch (atual) {
       'Aprovado' => Colors.greenAccent,
@@ -1395,30 +1392,31 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     };
 
     final termo = _busca.text.trim().toLowerCase();
-    final filtrados = _orcamentos.where((item) {
-      if (_status != 'Todos' && '${item['status']}' != _status) return false;
-      if (termo.isEmpty) return true;
+    final filtrados =
+        _orcamentos.where((item) {
+          if (_status != 'Todos' && '${item['status']}' != _status)
+            return false;
+          if (termo.isEmpty) return true;
 
-      return [
-        nomes[item['cliente_id']?.toString()],
-        carros[item['veiculo_id']?.toString()],
-        item['servico'],
-        item['status'],
-        item['observacoes'],
-        item['perfil_preco'],
-      ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
-    }).toList()
-      ..sort((a, b) {
-        final da =
-            _parseDataOrcamento(a['data_emissao']) ??
-            _parseDataOrcamento(a['criado_em']) ??
-            DateTime(2000);
-        final db =
-            _parseDataOrcamento(b['data_emissao']) ??
-            _parseDataOrcamento(b['criado_em']) ??
-            DateTime(2000);
-        return db.compareTo(da);
-      });
+          return [
+            nomes[item['cliente_id']?.toString()],
+            carros[item['veiculo_id']?.toString()],
+            item['servico'],
+            item['status'],
+            item['observacoes'],
+            item['perfil_preco'],
+          ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
+        }).toList()..sort((a, b) {
+          final da =
+              _parseDataOrcamento(a['data_emissao']) ??
+              _parseDataOrcamento(a['criado_em']) ??
+              DateTime(2000);
+          final db =
+              _parseDataOrcamento(b['data_emissao']) ??
+              _parseDataOrcamento(b['criado_em']) ??
+              DateTime(2000);
+          return db.compareTo(da);
+        });
 
     final pendentes = _orcamentos
         .where((e) => '${e['status']}' == 'Pendente')
@@ -1438,8 +1436,9 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
       (s, e) => s + _double(e['valor']),
     );
     final encerrados = aprovados.length + recusados;
-    final conversao =
-        encerrados == 0 ? 0.0 : (aprovados.length / encerrados) * 100;
+    final conversao = encerrados == 0
+        ? 0.0
+        : (aprovados.length / encerrados) * 100;
 
     final agora = DateTime.now();
     final vencidos = pendentes.where((e) {
@@ -1454,8 +1453,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1000;
-        final larguraDisponivel =
-            constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1180
             ? 5
             : constraints.maxWidth >= 720
@@ -1592,19 +1590,20 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                           decoration: const InputDecoration(
                             labelText: 'Status',
                           ),
-                          items: const [
-                            'Todos',
-                            'Pendente',
-                            'Aprovado',
-                            'Recusado',
-                          ]
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
+                          items:
+                              const [
+                                    'Todos',
+                                    'Pendente',
+                                    'Aprovado',
+                                    'Recusado',
+                                  ]
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (v) =>
                               setState(() => _status = v ?? 'Todos'),
                         ),
@@ -1626,10 +1625,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                 const Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 40,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                     child: Column(
                       children: [
                         Icon(
@@ -1673,8 +1669,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                             nomes[item['cliente_id']?.toString()] ?? 'Cliente';
                         final veiculo =
                             carros[item['veiculo_id']?.toString()] ?? '—';
-                        final validade =
-                            _parseDataOrcamento(item['validade']);
+                        final validade = _parseDataOrcamento(item['validade']);
                         final vencido =
                             item['status'] == 'Pendente' &&
                             validade != null &&
@@ -1683,11 +1678,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                               validade.month,
                               validade.day,
                             ).isBefore(
-                              DateTime(
-                                agora.year,
-                                agora.month,
-                                agora.day,
-                              ),
+                              DateTime(agora.year, agora.month, agora.day),
                             );
 
                         return DataRow(
@@ -1716,9 +1707,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                               ),
                             ),
                             DataCell(
-                              Text(
-                                (item['data_emissao'] ?? '—').toString(),
-                              ),
+                              Text((item['data_emissao'] ?? '—').toString()),
                             ),
                             DataCell(
                               Row(
@@ -1732,9 +1721,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                                     ),
                                     const SizedBox(width: 5),
                                   ],
-                                  Text(
-                                    (item['validade'] ?? '—').toString(),
-                                  ),
+                                  Text((item['validade'] ?? '—').toString()),
                                 ],
                               ),
                             ),
@@ -1754,14 +1741,11 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                                   IconButton(
                                     tooltip: 'Ver itens',
                                     onPressed: () => _detalhes(item),
-                                    icon: const Icon(
-                                      Icons.visibility_outlined,
-                                    ),
+                                    icon: const Icon(Icons.visibility_outlined),
                                   ),
                                   PopupMenuButton<String>(
                                     tooltip: 'Alterar status',
-                                    onSelected: (v) =>
-                                        _alterarStatus(item, v),
+                                    onSelected: (v) => _alterarStatus(item, v),
                                     itemBuilder: (_) => const [
                                       PopupMenuItem(
                                         value: 'Pendente',
@@ -1776,9 +1760,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                                         child: Text('Recusar'),
                                       ),
                                     ],
-                                    icon: const Icon(
-                                      Icons.more_horiz_rounded,
-                                    ),
+                                    icon: const Icon(Icons.more_horiz_rounded),
                                   ),
                                 ],
                               ),
@@ -1793,8 +1775,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                 ...filtrados.map((item) {
                   final cliente =
                       nomes[item['cliente_id']?.toString()] ?? 'Cliente';
-                  final veiculo =
-                      carros[item['veiculo_id']?.toString()] ?? '';
+                  final veiculo = carros[item['veiculo_id']?.toString()] ?? '';
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -1804,24 +1785,16 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                         borderRadius: BorderRadius.circular(12),
                         onTap: () => _detalhes(item),
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            14,
-                            13,
-                            10,
-                            13,
-                          ),
+                          padding: const EdgeInsets.fromLTRB(14, 13, 10, 13),
                           child: Row(
                             children: [
                               const CircleAvatar(
-                                child: Icon(
-                                  Icons.request_quote_outlined,
-                                ),
+                                child: Icon(Icons.request_quote_outlined),
                               ),
                               const SizedBox(width: 11),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       cliente,
@@ -1832,18 +1805,16 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                                     const SizedBox(height: 4),
                                     Text(
                                       [
-                                        veiculo,
-                                        (item['data_emissao'] ?? '')
-                                            .toString(),
-                                        if ((item['validade'] ?? '')
-                                            .toString()
-                                            .trim()
-                                            .isNotEmpty)
-                                          'Validade ${item['validade']}',
-                                      ]
-                                          .where(
-                                            (e) => e.trim().isNotEmpty,
-                                          )
+                                            veiculo,
+                                            (item['data_emissao'] ?? '')
+                                                .toString(),
+                                            if ((item['validade'] ?? '')
+                                                .toString()
+                                                .trim()
+                                                .isNotEmpty)
+                                              'Validade ${item['validade']}',
+                                          ]
+                                          .where((e) => e.trim().isNotEmpty)
                                           .join(' · '),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
@@ -1854,9 +1825,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      _moeda.format(
-                                        _double(item['valor']),
-                                      ),
+                                      _moeda.format(_double(item['valor'])),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w900,
                                       ),
@@ -1879,7 +1848,6 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
       },
     );
   }
-
 }
 
 class _NovoOrcamentoWebDialog extends StatefulWidget {
