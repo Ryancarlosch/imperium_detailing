@@ -2,6 +2,7 @@ import '../domain/ordem_servico_valor.dart';
 import 'web_cloud_contas_service.dart';
 import 'comercial_growth_cloud_service.dart';
 import 'web_cloud_expansao_service.dart';
+import 'web_estoque_cloud_service.dart';
 import 'web_cloud_operacional_service.dart';
 import 'web_cloud_relatorios_service.dart';
 
@@ -50,6 +51,7 @@ class WebDashboardGerencialResumo {
     required this.agendaHoje,
     required this.ordensAbertas,
     required this.comercial,
+    required this.estoqueAlertas,
   });
 
   final Map<String, Object?> operacional;
@@ -59,6 +61,7 @@ class WebDashboardGerencialResumo {
   final List<Map<String, dynamic>> agendaHoje;
   final List<Map<String, dynamic>> ordensAbertas;
   final WebDashboardComercialResumo comercial;
+  final int estoqueAlertas;
 }
 
 class WebCloudDashboardService {
@@ -234,6 +237,14 @@ class WebCloudDashboardService {
       // CRM é complementar ao resumo operacional/financeiro.
     }
 
+    var estoqueAlertas = 0;
+    try {
+      estoqueAlertas =
+          (await WebEstoqueCloudService.instance.listarAlertas()).length;
+    } catch (_) {
+      // Estoque é complementar ao resumo principal do dashboard.
+    }
+
     return WebDashboardGerencialResumo(
       operacional: Map<String, Object?>.from(
         resultados[0] as Map<String, Object?>,
@@ -244,6 +255,7 @@ class WebCloudDashboardService {
       agendaHoje: agendaHoje,
       ordensAbertas: ordensAbertas,
       comercial: comercial,
+      estoqueAlertas: estoqueAlertas,
     );
   }
 
