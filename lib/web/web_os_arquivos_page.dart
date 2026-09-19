@@ -121,9 +121,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
               final larguraResumo =
                   (larguraDisponivel - (12 * (colunasResumo - 1))) /
                   colunasResumo;
-              final colunasArquivos = constraints.maxWidth >= 1180
-                  ? 2
-                  : 1;
+              final colunasArquivos = constraints.maxWidth >= 1180 ? 2 : 1;
               final larguraArquivo =
                   (larguraDisponivel - (12 * (colunasArquivos - 1))) /
                   colunasArquivos;
@@ -156,9 +154,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                               SizedBox(height: 5),
                               Text(
                                 'Arquivos privados da OS, protegidos pelas permissões da empresa.',
-                                style: TextStyle(
-                                  color: Color(0xFFAAB3BD),
-                                ),
+                                style: TextStyle(color: Color(0xFFAAB3BD)),
                               ),
                             ],
                           ),
@@ -167,9 +163,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                           const SizedBox(width: 14),
                           OutlinedButton.icon(
                             onPressed: _baixarPdf,
-                            icon: const Icon(
-                              Icons.picture_as_pdf_outlined,
-                            ),
+                            icon: const Icon(Icons.picture_as_pdf_outlined),
                             label: const Text('Gerar PDF'),
                           ),
                         ],
@@ -279,9 +273,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                               Text(
                                 'Quando fotos, avarias ou assinatura forem sincronizadas, elas aparecerão aqui.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Color(0xFFAAB3BD),
-                                ),
+                                style: TextStyle(color: Color(0xFFAAB3BD)),
                               ),
                             ],
                           ),
