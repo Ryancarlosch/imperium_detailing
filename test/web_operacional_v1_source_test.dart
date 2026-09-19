@@ -100,13 +100,11 @@ void main() {
       expect(source, contains('EmpresaCloudService.instance'));
       expect(source, contains('WebWorkspaceShell'));
 
-      expect(workspace, contains('WebDashboardGerencialPage'));
       expect(workspace, contains('WebOperacionalShell'));
-      expect(workspace, contains('_abrirSistemaCompleto'));
-      expect(workspace, contains('Abrir sistema completo'));
-      expect(workspace, contains('abrir-sistema-completo-marca'));
-      expect(workspace, contains('dashboard-premium-'));
-      expect(workspace, contains('Trocar empresa'));
+      expect(workspace, contains("ValueKey('workspace-$empresaAtualId')"));
+      expect(workspace, isNot(contains('WebDashboardGerencialPage')));
+      expect(workspace, isNot(contains('_abrirSistemaCompleto')));
+      expect(workspace, isNot(contains('Abrir sistema completo')));
 
       expect(shell, contains('WebDashboardGerencialPage'));
       expect(shell, contains('Icons.menu_rounded'));
