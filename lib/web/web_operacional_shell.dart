@@ -21,6 +21,7 @@ import 'web_os_finalizacao_v4_page.dart';
 import 'web_ponto_page.dart';
 import 'web_pos_venda_page.dart';
 import 'web_relatorios_page.dart';
+import 'web_usuarios_acessos_page.dart';
 
 class WebOperacionalShell extends StatefulWidget {
   const WebOperacionalShell({
@@ -101,6 +102,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
     16 => 'Ponto e funcionários',
     18 => 'Pós-venda',
     19 => 'Marketing',
+    20 => 'Usuários e acessos',
     _ => 'Central Cloud',
   };
 
@@ -165,6 +167,10 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       16 => WebPontoPage(key: ValueKey('ponto-$_revisao')),
       18 => WebPosVendaPage(key: ValueKey('pos-venda-$_revisao')),
       19 => WebMarketingPage(key: ValueKey('marketing-$_revisao')),
+      20 => WebUsuariosAcessosPage(
+        key: ValueKey('usuarios-acessos-${widget.empresaAtualId}-$_revisao'),
+        empresaId: widget.empresaAtualId,
+      ),
       _ => WebCentralCloudPage(key: ValueKey('central-$_revisao')),
     };
   }
@@ -334,8 +340,13 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         _grupoMenu(
           titulo: 'Administração',
           icone: Icons.admin_panel_settings_outlined,
-          indices: const {17},
+          indices: const {17, 20},
           filhos: [
+            _itemMenu(
+              indice: 20,
+              titulo: 'Usuários e acessos',
+              icone: Icons.manage_accounts_outlined,
+            ),
             _itemMenu(
               indice: 17,
               titulo: 'Central Cloud',
