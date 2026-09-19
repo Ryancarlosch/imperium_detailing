@@ -177,8 +177,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
 
   double get _totalPrevisto {
     return _itens.fold<double>(0, (total, item) {
-      return total +
-          (_double(item.quantidade.text) * _double(item.valor.text));
+      return total + (_double(item.quantidade.text) * _double(item.valor.text));
     });
   }
 
@@ -196,7 +195,12 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
         final largura = constraints.maxWidth - (padding * 2);
 
         return ListView(
-          padding: EdgeInsets.fromLTRB(padding, compacto ? 18 : 24, padding, 40),
+          padding: EdgeInsets.fromLTRB(
+            padding,
+            compacto ? 18 : 24,
+            padding,
+            40,
+          ),
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,10 +343,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    SizedBox(
-                      width: 310,
-                      child: _resumoCard(),
-                    ),
+                    SizedBox(width: 310, child: _resumoCard()),
                   ],
                 )
               else ...[
@@ -373,10 +374,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                 SizedBox(width: 8),
                 Text(
                   'Dados da OS',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                 ),
               ],
             ),
@@ -433,11 +431,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
 
                 if (!ladoALado) {
                   return Column(
-                    children: [
-                      cliente,
-                      const SizedBox(height: 12),
-                      veiculo,
-                    ],
+                    children: [cliente, const SizedBox(height: 12), veiculo],
                   );
                 }
                 return Row(
@@ -536,10 +530,8 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                       children: [
                         CircleAvatar(
                           radius: 17,
-                          backgroundColor:
-                              ImperiumWebTheme.accentStrong.withValues(
-                            alpha: 0.10,
-                          ),
+                          backgroundColor: ImperiumWebTheme.accentStrong
+                              .withValues(alpha: 0.10),
                           child: Text(
                             '${indice + 1}',
                             style: const TextStyle(
@@ -556,9 +548,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                                 : item.servico.text.trim(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
                         ),
                         if (subtotal > 0)
@@ -604,10 +594,9 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                         final quantidade = TextField(
                           controller: item.quantidade,
                           onChanged: (_) => setState(() {}),
-                          keyboardType:
-                              const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           decoration: const InputDecoration(
                             labelText: 'Quantidade *',
                             prefixIcon: Icon(Icons.numbers_rounded),
@@ -616,10 +605,9 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                         final valor = TextField(
                           controller: item.valor,
                           onChanged: (_) => setState(() {}),
-                          keyboardType:
-                              const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           decoration: const InputDecoration(
                             labelText: 'Valor unitário *',
                             prefixText: 'R\$ ',
@@ -669,21 +657,12 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
             children: [
               const Text(
                 'Resumo da OS',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 16),
-              _linhaResumo(
-                'Cliente',
-                _nomeClienteSelecionado(),
-              ),
+              _linhaResumo('Cliente', _nomeClienteSelecionado()),
               const SizedBox(height: 8),
-              _linhaResumo(
-                'Serviços',
-                '${_itens.length}',
-              ),
+              _linhaResumo('Serviços', '${_itens.length}'),
               const SizedBox(height: 8),
               _linhaResumo(
                 'Valor previsto',
@@ -693,10 +672,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
               const Divider(height: 28),
               const Text(
                 'O valor final ainda poderá receber descontos, acréscimos e condições de pagamento no fluxo de edição/finalização.',
-                style: TextStyle(
-                  color: Color(0xFF89939E),
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -727,18 +703,11 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
     return '—';
   }
 
-  Widget _linhaResumo(
-    String titulo,
-    String valor, {
-    bool destaque = false,
-  }) {
+  Widget _linhaResumo(String titulo, String valor, {bool destaque = false}) {
     return Row(
       children: [
         Expanded(
-          child: Text(
-            titulo,
-            style: const TextStyle(color: Color(0xFFAAB3BD)),
-          ),
+          child: Text(titulo, style: const TextStyle(color: Color(0xFFAAB3BD))),
         ),
         const SizedBox(width: 12),
         Flexible(
@@ -755,7 +724,6 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
     );
   }
 }
-
 
 class _ItemOsDraft {
   final servico = TextEditingController();

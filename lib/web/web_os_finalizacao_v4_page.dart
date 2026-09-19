@@ -374,19 +374,19 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
         .toList();
 
     final termo = _busca.text.trim().toLowerCase();
-    final ordens = todasEmAndamento.where((os) {
-      if (termo.isEmpty) return true;
+    final ordens =
+        todasEmAndamento.where((os) {
+          if (termo.isEmpty) return true;
 
-      return <dynamic>[
-        os['numero'],
-        clientes[os['cliente_id']?.toString()],
-        veiculos[os['veiculo_id']?.toString()],
-        os['funcionario_responsavel'],
-      ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
-    }).toList()
-      ..sort(
-        (a, b) => '${b['data_abertura']}'.compareTo('${a['data_abertura']}'),
-      );
+          return <dynamic>[
+            os['numero'],
+            clientes[os['cliente_id']?.toString()],
+            veiculos[os['veiculo_id']?.toString()],
+            os['funcionario_responsavel'],
+          ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
+        }).toList()..sort(
+          (a, b) => '${b['data_abertura']}'.compareTo('${a['data_abertura']}'),
+        );
 
     final valorEmAndamento = todasEmAndamento.fold<double>(
       0,
@@ -402,8 +402,10 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
     );
     final comResponsavel = todasEmAndamento
         .where(
-          (os) =>
-              (os['funcionario_responsavel'] ?? '').toString().trim().isNotEmpty,
+          (os) => (os['funcionario_responsavel'] ?? '')
+              .toString()
+              .trim()
+              .isNotEmpty,
         )
         .length;
     final semResponsavel = todasEmAndamento.length - comResponsavel;
@@ -412,8 +414,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1020;
-        final larguraDisponivel =
-            constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1080
             ? 3
             : constraints.maxWidth >= 720
@@ -562,10 +563,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                 const Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 40,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                     child: Column(
                       children: [
                         Icon(
@@ -613,12 +611,13 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                         final valor = OrdemServicoValor.valorNegociado(
                           valorTotal: _double(os['valor_total']),
                           desconto: _double(os['desconto']),
-                          descontoNegociacao:
-                              _double(os['desconto_negociacao']),
-                          acrescimoNegociacao:
-                              _double(os['acrescimo_negociacao']),
-                          jurosParcelamento:
-                              _double(os['juros_parcelamento']),
+                          descontoNegociacao: _double(
+                            os['desconto_negociacao'],
+                          ),
+                          acrescimoNegociacao: _double(
+                            os['acrescimo_negociacao'],
+                          ),
+                          jurosParcelamento: _double(os['juros_parcelamento']),
                         );
 
                         return DataRow(
@@ -628,8 +627,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                                 width: 250,
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       'OS ${os['numero'] ?? ''}',
@@ -693,12 +691,9 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                   final valor = OrdemServicoValor.valorNegociado(
                     valorTotal: _double(os['valor_total']),
                     desconto: _double(os['desconto']),
-                    descontoNegociacao:
-                        _double(os['desconto_negociacao']),
-                    acrescimoNegociacao:
-                        _double(os['acrescimo_negociacao']),
-                    jurosParcelamento:
-                        _double(os['juros_parcelamento']),
+                    descontoNegociacao: _double(os['desconto_negociacao']),
+                    acrescimoNegociacao: _double(os['acrescimo_negociacao']),
+                    jurosParcelamento: _double(os['juros_parcelamento']),
                   );
 
                   return Padding(
@@ -729,11 +724,12 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                                   const SizedBox(height: 4),
                                   Text(
                                     [
-                                      veiculos[os['veiculo_id']?.toString()] ??
-                                          '',
-                                      (os['funcionario_responsavel'] ?? '')
-                                          .toString(),
-                                    ]
+                                          veiculos[os['veiculo_id']
+                                                  ?.toString()] ??
+                                              '',
+                                          (os['funcionario_responsavel'] ?? '')
+                                              .toString(),
+                                        ]
                                         .where((e) => e.trim().isNotEmpty)
                                         .join(' · '),
                                     maxLines: 2,
@@ -767,7 +763,6 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
     );
   }
 }
-
 
 class _ProdutosOsDialog extends StatefulWidget {
   const _ProdutosOsDialog({required this.contexto});

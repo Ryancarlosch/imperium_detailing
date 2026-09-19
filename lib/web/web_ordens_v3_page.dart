@@ -324,11 +324,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
       ),
       child: Text(
         status.trim().isEmpty ? 'Sem status' : status,
-        style: TextStyle(
-          color: cor,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
+        style: TextStyle(color: cor, fontSize: 11, fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -423,8 +419,9 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
         );
 
     final abertas = _ordens.where((e) => e['status'] == 'Aberta').length;
-    final andamento =
-        _ordens.where((e) => e['status'] == 'Em andamento').length;
+    final andamento = _ordens
+        .where((e) => e['status'] == 'Em andamento')
+        .length;
     final bloqueadas = _ordens
         .where((e) => e['status'] != 'Aberta' && e['status'] != 'Em andamento')
         .length;
@@ -447,8 +444,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1050;
-        final larguraDisponivel =
-            constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1180
             ? 4
             : constraints.maxWidth >= 720
@@ -571,20 +567,21 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                           decoration: const InputDecoration(
                             labelText: 'Status',
                           ),
-                          items: const [
-                            'Todos',
-                            'Aberta',
-                            'Em andamento',
-                            'Finalizada',
-                            'Cancelada',
-                          ]
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
+                          items:
+                              const [
+                                    'Todos',
+                                    'Aberta',
+                                    'Em andamento',
+                                    'Finalizada',
+                                    'Cancelada',
+                                  ]
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (v) =>
                               setState(() => _status = v ?? 'Todos'),
                         ),
@@ -606,10 +603,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                 const Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 40,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                     child: Column(
                       children: [
                         Icon(
@@ -652,12 +646,13 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                         final negociado = OrdemServicoValor.valorNegociado(
                           valorTotal: _double(os['valor_total']),
                           desconto: _double(os['desconto']),
-                          descontoNegociacao:
-                              _double(os['desconto_negociacao']),
-                          acrescimoNegociacao:
-                              _double(os['acrescimo_negociacao']),
-                          jurosParcelamento:
-                              _double(os['juros_parcelamento']),
+                          descontoNegociacao: _double(
+                            os['desconto_negociacao'],
+                          ),
+                          acrescimoNegociacao: _double(
+                            os['acrescimo_negociacao'],
+                          ),
+                          jurosParcelamento: _double(os['juros_parcelamento']),
                         );
                         final editavel =
                             os['status'] == 'Aberta' ||
@@ -670,8 +665,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                                 width: 250,
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       'OS ${os['numero'] ?? ''}',
@@ -718,9 +712,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                               ),
                             ),
                             DataCell(
-                              Text(
-                                (os['data_abertura'] ?? '—').toString(),
-                              ),
+                              Text((os['data_abertura'] ?? '—').toString()),
                             ),
                             DataCell(
                               Text(
@@ -742,12 +734,9 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                   final negociado = OrdemServicoValor.valorNegociado(
                     valorTotal: _double(os['valor_total']),
                     desconto: _double(os['desconto']),
-                    descontoNegociacao:
-                        _double(os['desconto_negociacao']),
-                    acrescimoNegociacao:
-                        _double(os['acrescimo_negociacao']),
-                    jurosParcelamento:
-                        _double(os['juros_parcelamento']),
+                    descontoNegociacao: _double(os['desconto_negociacao']),
+                    acrescimoNegociacao: _double(os['acrescimo_negociacao']),
+                    jurosParcelamento: _double(os['juros_parcelamento']),
                   );
                   final editavel =
                       os['status'] == 'Aberta' ||
@@ -785,12 +774,14 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                                   const SizedBox(height: 4),
                                   Text(
                                     [
-                                      carros[os['veiculo_id']?.toString()] ??
-                                          '',
-                                      (os['funcionario_responsavel'] ?? '')
-                                          .toString(),
-                                      (os['data_abertura'] ?? '').toString(),
-                                    ]
+                                          carros[os['veiculo_id']
+                                                  ?.toString()] ??
+                                              '',
+                                          (os['funcionario_responsavel'] ?? '')
+                                              .toString(),
+                                          (os['data_abertura'] ?? '')
+                                              .toString(),
+                                        ]
                                         .where((e) => e.trim().isNotEmpty)
                                         .join(' · '),
                                     maxLines: 2,
@@ -833,7 +824,6 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
     );
   }
 }
-
 
 class _WebOsEditDialog extends StatefulWidget {
   const _WebOsEditDialog({required this.original});
