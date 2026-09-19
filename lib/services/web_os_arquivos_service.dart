@@ -10,6 +10,7 @@ import 'web_origem_service.dart';
 /// Gestão Web dos arquivos sincronizados da Ordem de Serviço.
 ///
 /// Mantém o Storage privado e reutiliza as políticas RLS existentes.
+/// As gravações ficam disponíveis ao Mobile no próximo ciclo de sincronização.
 /// Não depende de `dart:io`: no navegador os arquivos são baixados como bytes.
 class WebOsArquivosService {
   WebOsArquivosService._();
