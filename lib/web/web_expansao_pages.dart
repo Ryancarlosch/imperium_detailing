@@ -494,10 +494,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
               child: Text(
                 (lead['nome'] ?? '?').toString().trim().isEmpty
                     ? '?'
-                    : (lead['nome'] ?? '?')
-                          .toString()
-                          .trim()[0]
-                          .toUpperCase(),
+                    : (lead['nome'] ?? '?').toString().trim()[0].toUpperCase(),
                 style: const TextStyle(
                   color: ImperiumWebTheme.accentStrong,
                   fontWeight: FontWeight.w900,
@@ -643,13 +640,13 @@ class _WebCrmPageState extends State<WebCrmPage> {
                                         const SizedBox(height: 5),
                                         Text(
                                           [
-                                            (lead['servico_interesse'] ?? '')
-                                                .toString(),
-                                            (lead['origem'] ?? '').toString(),
-                                          ]
-                                              .where(
-                                                (e) => e.trim().isNotEmpty,
-                                              )
+                                                (lead['servico_interesse'] ??
+                                                        '')
+                                                    .toString(),
+                                                (lead['origem'] ?? '')
+                                                    .toString(),
+                                              ]
+                                              .where((e) => e.trim().isNotEmpty)
                                               .join(' · '),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
@@ -742,8 +739,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final desktop = constraints.maxWidth >= 1080;
-        final larguraDisponivel =
-            constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1180
             ? 4
             : constraints.maxWidth >= 720
@@ -877,8 +873,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                               ),
                             )
                             .toList(),
-                        onChanged: (v) =>
-                            setState(() => _etapa = v ?? 'Todos'),
+                        onChanged: (v) => setState(() => _etapa = v ?? 'Todos'),
                       ),
                     ),
                     SizedBox(
@@ -934,10 +929,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
               const Card(
                 margin: EdgeInsets.zero,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 40,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                   child: Column(
                     children: [
                       Icon(
@@ -1091,7 +1083,6 @@ class _WebCrmPageState extends State<WebCrmPage> {
       },
     );
   }
-
 }
 
 class WebOrcamentosPage extends StatefulWidget {
