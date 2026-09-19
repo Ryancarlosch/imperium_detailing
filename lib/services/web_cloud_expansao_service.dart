@@ -415,6 +415,81 @@ class WebCloudExpansaoService {
   Future<List<Map<String, dynamic>>> listarCatalogoPrecificacao() {
     return _listar('imperium_precificacao_servicos_catalogo', orderBy: 'nome');
   }
+  Future<List<Map<String, dynamic>>> listarCatalogoServicos() {
+    return listarCatalogoPrecificacao();
+  }
+
+  Future<Map<String, dynamic>> salvarServicoCatalogo({
+    String? id,
+    String? atualizadoEmEsperado,
+    required String nome,
+    required String categoria,
+    required String descricao,
+    required String observacoesPadrao,
+    required double precoPadrao,
+    required int duracaoMinutos,
+    required bool ativo,
+  }) async {
+    final nomeLimpo = nome.trim();
+    if (nomeLimpo.isEmpty) {
+      throw ArgumentError('Informe o nome do serviço.');
+    }
+
+    final empresaId = await _empresaId();
+    final agora = DateTime.now().toUtc().toIso8601String();
+    final payload = <String, dynamic>{
+      'nome': nomeLimpo,
+      'categoria': categoria.trim(),
+      'descricao': descricao.trim(),
+      'observacoes_padrao': observacoesPadrao.trim(),
+      'preco_padrao': max(0, precoPadrao),
+      'duracao_minutos': max(0, duracaoMinutos),
+      'ativo': ativo,
+      'origem_atualizado_em': agora,
+      'excluido_em': null,
+    };
+
+    if ((id ?? '').trim().isEmpty) {
+      final origem = await WebOrigemService.instance.proxima();
+      final resposta = await _client
+          .from('imperium_precificacao_servicos_catalogo')
+          .insert(<String, dynamic>{
+            'empresa_id': empresaId,
+            'origem_dispositivo': origem.dispositivoId,
+            'origem_local_id': origem.localId,
+            'origem_criado_em': agora,
+            ...payload,
+          })
+          .select()
+          .single();
+
+      return Map<String, dynamic>.from(resposta);
+    }
+
+    return _atualizarCas(
+      tabela: 'imperium_precificacao_servicos_catalogo',
+      id: id!.trim(),
+      atualizadoEmEsperado: atualizadoEmEsperado ?? '',
+      payload: payload,
+    );
+  }
+
+  Future<Map<String, dynamic>> alterarAtivoServicoCatalogo({
+    required String id,
+    required String atualizadoEmEsperado,
+    required bool ativo,
+  }) {
+    return _atualizarCas(
+      tabela: 'imperium_precificacao_servicos_catalogo',
+      id: id,
+      atualizadoEmEsperado: atualizadoEmEsperado,
+      payload: <String, dynamic>{
+        'ativo': ativo,
+        'origem_atualizado_em': DateTime.now().toUtc().toIso8601String(),
+      },
+    );
+  }
+
 
   Future<List<Map<String, dynamic>>> listarSnapshotsPrecificacao() {
     return _listar(
