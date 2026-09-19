@@ -27,6 +27,8 @@ void main() {
     expect(service, contains('listarPublicacoesMarketing'));
     expect(service, contains('salvarPublicacaoMarketing'));
     expect(service, contains('registrarAtribuicaoMarketing'));
+    expect(service, contains('carregarDesempenhoCampanhas'));
+    expect(service, contains('GrowthMarketingCampanhaDesempenho'));
     expect(service, contains('imperium_marketing_publicacoes'));
     expect(service, contains('imperium_marketing_atribuicoes'));
 
