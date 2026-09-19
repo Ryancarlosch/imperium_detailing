@@ -613,7 +613,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                         : ListView.separated(
                             padding: const EdgeInsets.all(10),
                             itemCount: itens.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(height: 8),
                             itemBuilder: (context, index) {
                               final lead = itens[index];
