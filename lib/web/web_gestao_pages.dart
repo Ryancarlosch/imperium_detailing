@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../services/web_cloud_gestao_service.dart';
 import '../services/web_cloud_operacional_service.dart';
+import 'imperium_web_theme.dart';
 
 class WebNovaOrdemPage extends StatefulWidget {
   const WebNovaOrdemPage({super.key, required this.onCreated});
@@ -16,6 +17,7 @@ class WebNovaOrdemPage extends StatefulWidget {
 class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
   final _gestao = WebCloudGestaoService.instance;
   final _operacional = WebCloudOperacionalService.instance;
+  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\
   final _responsavel = TextEditingController();
   final _observacoes = TextEditingController();
 
@@ -173,46 +175,229 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
     }
   }
 
+  double get _totalPrevisto {
+    return _itens.fold<double>(0, (total, item) {
+      return total +
+          (_double(item.quantidade.text) * _double(item.valor.text));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_carregando) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Text(
-          'Nova ordem de serviço',
-          style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Cria uma OS aberta na nuvem. O Android a importa no próximo ciclo '
-          'de sincronização, preservando o fluxo transacional de finalização.',
-        ),
-        const SizedBox(height: 22),
-        if (_erro != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Text(
-              _erro!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compacto = constraints.maxWidth < 760;
+        final desktop = constraints.maxWidth >= 1040;
+        final padding = compacto ? 16.0 : 24.0;
+        final largura = constraints.maxWidth - (padding * 2);
+
+        return ListView(
+          padding: EdgeInsets.fromLTRB(padding, compacto ? 18 : 24, padding, 40),
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DropdownButtonFormField<String>(
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nova ordem de serviço',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        'Abra a OS na nuvem e organize cliente, veículo, responsável e serviços antes da execução.',
+                        style: TextStyle(color: Color(0xFFAAB3BD)),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!compacto) ...[
+                  const SizedBox(width: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: ImperiumWebTheme.accentStrong.withValues(
+                        alpha: 0.10,
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: ImperiumWebTheme.accentStrong.withValues(
+                          alpha: 0.25,
+                        ),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.cloud_done_outlined,
+                          size: 17,
+                          color: ImperiumWebTheme.accentStrong,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Cloud',
+                          style: TextStyle(
+                            color: ImperiumWebTheme.accentStrong,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 20),
+            if (_erro != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _erro!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            if (_clientes.isEmpty)
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 34,
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.person_off_outlined,
+                        size: 42,
+                        color: Color(0xFF89939E),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Nenhum cliente ativo encontrado',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      const Text(
+                        'Cadastre um cliente antes de abrir uma ordem de serviço.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFFAAB3BD)),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else ...[
+              if (desktop)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 7,
+                      child: Column(
+                        children: [
+                          _dadosOsCard(),
+                          const SizedBox(height: 16),
+                          _servicosCard(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 310,
+                      child: _resumoCard(),
+                    ),
+                  ],
+                )
+              else ...[
+                _dadosOsCard(),
+                const SizedBox(height: 16),
+                _servicosCard(),
+                const SizedBox(height: 16),
+                _resumoCard(width: largura),
+              ],
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _dadosOsCard() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.assignment_ind_outlined, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Dados da OS',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final ladoALado = constraints.maxWidth >= 680;
+                final cliente = DropdownButtonFormField<String>(
                   initialValue: _clienteId,
-                  decoration: const InputDecoration(labelText: 'Cliente *'),
+                  decoration: const InputDecoration(
+                    labelText: 'Cliente *',
+                    prefixIcon: Icon(Icons.person_outline_rounded),
+                  ),
                   items: _clientes
                       .map(
                         (item) => DropdownMenuItem<String>(
                           value: item['id'].toString(),
-                          child: Text((item['nome'] ?? 'Cliente').toString()),
+                          child: Text(
+                            (item['nome'] ?? 'Cliente').toString(),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       )
                       .toList(),
@@ -222,11 +407,14 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                       _ajustarVeiculo();
                     });
                   },
-                ),
-                DropdownButtonFormField<String>(
+                );
+                final veiculo = DropdownButtonFormField<String>(
                   key: ValueKey(_clienteId),
                   initialValue: _veiculoId,
-                  decoration: const InputDecoration(labelText: 'Veículo'),
+                  decoration: const InputDecoration(
+                    labelText: 'Veículo',
+                    prefixIcon: Icon(Icons.directions_car_outlined),
+                  ),
                   items: _veiculosDoCliente
                       .map(
                         (item) => DropdownMenuItem<String>(
@@ -235,118 +423,334 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                             '${item['marca'] ?? ''} ${item['modelo'] ?? ''} '
                                     '${item['placa'] ?? ''}'
                                 .trim(),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       )
                       .toList(),
                   onChanged: (valor) => setState(() => _veiculoId = valor),
-                ),
-                TextField(
-                  controller: _responsavel,
-                  decoration: const InputDecoration(labelText: 'Responsável'),
-                ),
-                TextField(
-                  controller: _observacoes,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Observações'),
-                ),
-              ],
+                );
+
+                if (!ladoALado) {
+                  return Column(
+                    children: [
+                      cliente,
+                      const SizedBox(height: 12),
+                      veiculo,
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: cliente),
+                    const SizedBox(width: 12),
+                    Expanded(child: veiculo),
+                  ],
+                );
+              },
             ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Serviços',
-                style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _responsavel,
+              decoration: const InputDecoration(
+                labelText: 'Responsável pela execução',
+                prefixIcon: Icon(Icons.badge_outlined),
+                helperText:
+                    'A OS mostra apenas quem executa o serviço, sem custo/hora.',
               ),
             ),
-            FilledButton.tonalIcon(
-              onPressed: _adicionarItem,
-              icon: const Icon(Icons.add),
-              label: const Text('Adicionar serviço'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _observacoes,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Observações',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.notes_rounded),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        ...List.generate(_itens.length, (indice) {
-          final item = _itens[indice];
+      ),
+    );
+  }
 
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
+  Widget _servicosCard() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: Text('Serviço ${indice + 1}')),
-                      IconButton(
-                        tooltip: 'Remover',
-                        onPressed: _itens.length == 1
-                            ? null
-                            : () => _removerItem(indice),
-                        icon: const Icon(Icons.delete_outline),
+                      Text(
+                        'Serviços',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Adicione todos os serviços que farão parte desta OS.',
+                        style: TextStyle(
+                          color: Color(0xFF89939E),
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
-                  TextField(
-                    controller: item.servico,
-                    decoration: const InputDecoration(labelText: 'Serviço *'),
-                  ),
-                  TextField(
-                    controller: item.descricao,
-                    decoration: const InputDecoration(labelText: 'Descrição'),
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: item.quantidade,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: _adicionarItem,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Adicionar serviço'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...List.generate(_itens.length, (indice) {
+              final item = _itens[indice];
+              final subtotal =
+                  _double(item.quantidade.text) * _double(item.valor.text);
+
+              return Container(
+                margin: EdgeInsets.only(
+                  bottom: indice == _itens.length - 1 ? 0 : 12,
+                ),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  border: Border.all(color: ImperiumWebTheme.border),
+                  borderRadius: BorderRadius.circular(12),
+                  color: ImperiumWebTheme.surface,
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 17,
+                          backgroundColor:
+                              ImperiumWebTheme.accentStrong.withValues(
+                            alpha: 0.10,
                           ),
+                          child: Text(
+                            '${indice + 1}',
+                            style: const TextStyle(
+                              color: ImperiumWebTheme.accentStrong,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            item.servico.text.trim().isEmpty
+                                ? 'Serviço ${indice + 1}'
+                                : item.servico.text.trim(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        if (subtotal > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Text(
+                              _moeda.format(subtotal),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        IconButton(
+                          tooltip: 'Remover serviço',
+                          onPressed: _itens.length == 1
+                              ? null
+                              : () => _removerItem(indice),
+                          icon: const Icon(Icons.delete_outline_rounded),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: item.servico,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        labelText: 'Serviço *',
+                        prefixIcon: Icon(Icons.design_services_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: item.descricao,
+                      decoration: const InputDecoration(
+                        labelText: 'Descrição',
+                        prefixIcon: Icon(Icons.subject_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final ladoALado = constraints.maxWidth >= 520;
+                        final quantidade = TextField(
+                          controller: item.quantidade,
+                          onChanged: (_) => setState(() {}),
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
                           decoration: const InputDecoration(
                             labelText: 'Quantidade *',
+                            prefixIcon: Icon(Icons.numbers_rounded),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
+                        );
+                        final valor = TextField(
                           controller: item.valor,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
+                          onChanged: (_) => setState(() {}),
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
                           decoration: const InputDecoration(
                             labelText: 'Valor unitário *',
+                            prefixText: 'R\$ ',
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                        );
+
+                        if (!ladoALado) {
+                          return Column(
+                            children: [
+                              quantidade,
+                              const SizedBox(height: 10),
+                              valor,
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(child: quantidade),
+                            const SizedBox(width: 12),
+                            Expanded(child: valor),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _resumoCard({double? width}) {
+    final total = _totalPrevisto;
+
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Resumo da OS',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
+              const SizedBox(height: 16),
+              _linhaResumo(
+                'Cliente',
+                _clientes
+                        .where((e) => e['id'].toString() == _clienteId)
+                        .map((e) => (e['nome'] ?? 'Cliente').toString())
+                        .cast<String?>()
+                        .firstOrNull ??
+                    '—',
+              ),
+              const SizedBox(height: 8),
+              _linhaResumo(
+                'Serviços',
+                '${_itens.length}',
+              ),
+              const SizedBox(height: 8),
+              _linhaResumo(
+                'Valor previsto',
+                _moeda.format(total),
+                destaque: true,
+              ),
+              const Divider(height: 28),
+              const Text(
+                'O valor final ainda poderá receber descontos, acréscimos e condições de pagamento no fluxo de edição/finalização.',
+                style: TextStyle(
+                  color: Color(0xFF89939E),
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _salvando ? null : _salvar,
+                icon: _salvando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_rounded),
+                label: const Text('Criar OS aberta'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _linhaResumo(
+    String titulo,
+    String valor, {
+    bool destaque = false,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            titulo,
+            style: const TextStyle(color: Color(0xFFAAB3BD)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            valor,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontWeight: destaque ? FontWeight.w900 : FontWeight.w800,
+              fontSize: destaque ? 18 : 14,
             ),
-          );
-        }),
-        const SizedBox(height: 18),
-        FilledButton.icon(
-          onPressed: _salvando ? null : _salvar,
-          icon: _salvando
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.save_rounded),
-          label: const Text('Criar OS aberta'),
+          ),
         ),
       ],
     );
   }
 }
+
 
 class _ItemOsDraft {
   final servico = TextEditingController();
