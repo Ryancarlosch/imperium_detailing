@@ -59,6 +59,8 @@ create table if not exists public.imperium_marketing_campanhas (
   excluido_em timestamptz,
   criado_em timestamptz not null default now(),
   atualizado_em timestamptz not null default now(),
+  constraint imperium_marketing_campanhas_empresa_id_id_uq
+    unique (empresa_id, id),
   constraint imperium_marketing_campanhas_investimento_ck
     check (investimento >= 0),
   constraint imperium_marketing_campanhas_metricas_ck
