@@ -2423,3 +2423,44 @@ Validação:
 - flutter test;
 - flutter build web --target lib/main_web.dart --release;
 - git diff --check.
+
+
+---
+
+## 2026-09-19 — Web workspace profissional / checkpoint
+
+Módulo: Flutter Web / Workspace / Gestão
+Status: 🟡 Implementado; validação final do HEAD formatado em andamento
+
+Concluído neste ciclo:
+- workspace desktop consolidado com sidebar fixa, grupos por área e navegação interna;
+- Clientes, Veículos e Agenda com busca, filtros e apresentação desktop;
+- Ordens de Serviço transformadas em central gerencial com valores negociado,
+  recebido e pendente, status, filtros e atalhos para edição, arquivos e finalização;
+- Fluxo de caixa profissionalizado com KPIs, contas, filtros e tabela desktop;
+- Estoque profissionalizado em Cadastro de produtos e Saldo/Movimentações;
+- CRM com pipeline visual, filtros, indicadores e visão em tabela;
+- Pós-venda Web próprio dentro do workspace;
+- Marketing Web próprio com campanhas, conteúdo, atribuição e ROAS;
+- Orçamentos com indicadores comerciais, validade, conversão e tabela desktop;
+- Precificação com alertas de preço e regra oficial preservada de 220 h/mês
+  da empresa sem multiplicar por funcionário;
+- Ponto e funcionários integrado ao workspace com equipe e registros mensais;
+- Administração com Usuários e acessos, permissões e dispositivos;
+- Central Cloud com diagnóstico por tenant;
+- Dashboard ampliado com Operação, Financeiro, Comercial, Pós-venda, Marketing,
+  alertas de estoque e quadro Atenções do gestor;
+- busca global no topo para módulos, clientes, veículos, agenda e OS;
+- identidade visual continua centralizada para permitir rebrand futuro.
+
+Proteções preservadas:
+- regras de negócio e serviços Cloud compartilhados com Mobile;
+- multiempresa/tenant ativo;
+- CAS e fluxos transacionais já existentes;
+- salários/custos internos não expostos na OS;
+- Android não foi substituído por telas Web.
+
+Validação:
+- último HEAD antes deste checkpoint foi formatado automaticamente pelo CI;
+- Flutter Quality e Web Preview serão usados como gate deste checkpoint;
+- falha recente do APK foi externa ao código: HTTP 500 ao baixar Gradle 9.1.0.
