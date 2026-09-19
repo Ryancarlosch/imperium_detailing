@@ -20,7 +20,6 @@ void main() {
     }
 
     expect(source, contains('criarOrdemAberta'));
-    expect(source, contains("'status': 'Aberta'") | contains('criarOrdemAberta'));
   });
 
   test('Editar OS Web preserva CAS cancelamento e layout desktop', () {
