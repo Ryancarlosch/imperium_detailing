@@ -358,6 +358,17 @@ class _LoginEmailSenhaPageState extends State<LoginEmailSenhaPage> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                const SizedBox(height: 13),
+                const Text(
+                  AppBranding.loginHeadline,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: 11,
+                    letterSpacing: 0.4,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
