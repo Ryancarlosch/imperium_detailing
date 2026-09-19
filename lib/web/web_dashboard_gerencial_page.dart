@@ -153,7 +153,9 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
               ),
               const SizedBox(height: 18),
               _HeroGestao(
-                saldo: semContaFinanceira ? '—' : _valor(resumo.saldoConsolidado),
+                saldo: semContaFinanceira
+                    ? '—'
+                    : _valor(resumo.saldoConsolidado),
                 faturamento: _valor(financeiro.vendas),
                 resultado: _valor(financeiro.competencia.resultadoGerencial),
                 aReceber: _valor(financeiro.aReceber),
