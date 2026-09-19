@@ -677,12 +677,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
               const SizedBox(height: 16),
               _linhaResumo(
                 'Cliente',
-                _clientes
-                        .where((e) => e['id'].toString() == _clienteId)
-                        .map((e) => (e['nome'] ?? 'Cliente').toString())
-                        .cast<String?>()
-                        .firstOrNull ??
-                    '—',
+                _nomeClienteSelecionado(),
               ),
               const SizedBox(height: 8),
               _linhaResumo(
@@ -720,6 +715,16 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
         ),
       ),
     );
+  }
+
+  String _nomeClienteSelecionado() {
+    for (final cliente in _clientes) {
+      if (cliente['id'].toString() == _clienteId) {
+        final nome = (cliente['nome'] ?? '').toString().trim();
+        return nome.isEmpty ? 'Cliente' : nome;
+      }
+    }
+    return '—';
   }
 
   Widget _linhaResumo(
