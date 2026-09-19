@@ -2173,7 +2173,9 @@ class WebPrecificacaoPage extends StatefulWidget {
 
 class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
   final _service = WebCloudExpansaoService.instance;
-  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\
+  final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: r'R$');
+  final _buscaPrecificacao = TextEditingController();
+  String _filtroPrecificacao = 'Todos';
 
   bool _carregando = true;
   String? _erro;
