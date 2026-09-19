@@ -10,7 +10,12 @@ import 'web_ponto_page.dart';
 import 'web_relatorios_page.dart';
 
 class WebDashboardGerencialPage extends StatefulWidget {
-  const WebDashboardGerencialPage({super.key});
+  const WebDashboardGerencialPage({
+    super.key,
+    this.onNavigate,
+  });
+
+  final ValueChanged<int>? onNavigate;
 
   @override
   State<WebDashboardGerencialPage> createState() =>
@@ -68,6 +73,19 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
       ),
     );
     if (mounted) await _carregar();
+  }
+
+  Future<void> _irParaModulo(
+    int indice,
+    String titulo,
+    Widget fallback,
+  ) async {
+    final onNavigate = widget.onNavigate;
+    if (onNavigate != null) {
+      onNavigate(indice);
+      return;
+    }
+    await _abrirModulo(titulo, fallback);
   }
 
   @override
@@ -225,7 +243,8 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     icon: Icons.account_balance_wallet_outlined,
                     titulo: 'Contas e caixa',
                     detalhe: 'Saldos, extrato e movimentação financeira',
-                    onTap: () => _abrirModulo(
+                    onTap: () => _irParaModulo(
+                      11,
                       'Contas e caixa',
                       const WebContasFinanceirasPage(),
                     ),
@@ -236,15 +255,18 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     titulo: 'DRE gerencial',
                     detalhe: 'Resultado por competência e por caixa',
                     onTap: () =>
-                        _abrirModulo('DRE gerencial', const WebDrePage()),
+                        _irParaModulo(10, 'DRE gerencial', const WebDrePage()),
                   ),
                   _QuickAction(
                     width: larguraAcao,
                     icon: Icons.analytics_outlined,
                     titulo: 'Relatórios',
                     detalhe: 'Vendas, executores e indicadores detalhados',
-                    onTap: () =>
-                        _abrirModulo('Relatórios', const WebRelatoriosPage()),
+                    onTap: () => _irParaModulo(
+                      12,
+                      'Relatórios',
+                      const WebRelatoriosPage(),
+                    ),
                   ),
                   _QuickAction(
                     width: larguraAcao,
@@ -252,7 +274,28 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     titulo: 'Ponto e equipe',
                     detalhe: 'Funcionários, jornada, batidas e ajustes',
                     onTap: () =>
-                        _abrirModulo('Ponto e equipe', const WebPontoPage()),
+                        _irParaModulo(16, 'Ponto e equipe', const WebPontoPage()),
+                  ),
+                  _QuickAction(
+                    width: larguraAcao,
+                    icon: Icons.handshake_outlined,
+                    titulo: 'CRM',
+                    detalhe: 'Leads, oportunidades e pipeline comercial',
+                    onTap: () => widget.onNavigate?.call(13),
+                  ),
+                  _QuickAction(
+                    width: larguraAcao,
+                    icon: Icons.replay_circle_filled_outlined,
+                    titulo: 'Pós-venda',
+                    detalhe: 'Retorno, reativação e histórico de contatos',
+                    onTap: () => widget.onNavigate?.call(18),
+                  ),
+                  _QuickAction(
+                    width: larguraAcao,
+                    icon: Icons.campaign_outlined,
+                    titulo: 'Marketing',
+                    detalhe: 'Campanhas, conteúdo, atribuição e ROAS',
+                    onTap: () => widget.onNavigate?.call(19),
                   ),
                 ],
               ),
@@ -262,7 +305,8 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                 subtitulo:
                     'Contas ativas usando o snapshot financeiro oficial.',
                 trailing: TextButton.icon(
-                  onPressed: () => _abrirModulo(
+                  onPressed: () => _irParaModulo(
+                    11,
                     'Contas e caixa',
                     const WebContasFinanceirasPage(),
                   ),
@@ -306,8 +350,11 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                 subtitulo:
                     'Ranking comercial das OS sem expor salário ou custo interno.',
                 trailing: TextButton.icon(
-                  onPressed: () =>
-                      _abrirModulo('Relatórios', const WebRelatoriosPage()),
+                  onPressed: () => _irParaModulo(
+                    12,
+                    'Relatórios',
+                    const WebRelatoriosPage(),
+                  ),
                   icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                   label: const Text('Ver relatório'),
                 ),
