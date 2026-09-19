@@ -5,6 +5,7 @@ import '../config/imperium_regras_negocio.dart';
 import '../models/crm_lead.dart';
 import '../services/web_cloud_expansao_service.dart';
 import '../services/web_cloud_operacional_service.dart';
+import 'imperium_web_theme.dart';
 
 class WebCrmPage extends StatefulWidget {
   const WebCrmPage({super.key});
@@ -21,6 +22,8 @@ class _WebCrmPageState extends State<WebCrmPage> {
   bool _carregando = true;
   String? _erro;
   String _etapa = 'Todos';
+  String _origem = 'Todos';
+  bool _modoPipeline = true;
   List<Map<String, dynamic>> _leads = const [];
   List<Map<String, dynamic>> _campanhas = const [];
   List<Map<String, dynamic>> _cupons = const [];
@@ -392,6 +395,313 @@ class _WebCrmPageState extends State<WebCrmPage> {
     ).showSnackBar(SnackBar(content: Text(e.toString())));
   }
 
+  Widget _resumoCrm({
+    required double width,
+    required String titulo,
+    required String valor,
+    required String detalhe,
+    required IconData icone,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: ImperiumWebTheme.accentStrong),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      valor,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      titulo,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalhe,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _acoesLead(Map<String, dynamic> lead) {
+    return Wrap(
+      spacing: 2,
+      children: [
+        IconButton(
+          tooltip: 'Nova interação',
+          onPressed: () => _interagir(lead),
+          icon: const Icon(Icons.add_comment_outlined),
+        ),
+        IconButton(
+          tooltip: 'Histórico',
+          onPressed: () => _historico(lead),
+          icon: const Icon(Icons.history_rounded),
+        ),
+        IconButton(
+          tooltip: 'Editar lead',
+          onPressed: () => _editarLead(lead),
+          icon: const Icon(Icons.edit_outlined),
+        ),
+      ],
+    );
+  }
+
+  Widget _leadCardCompacto(Map<String, dynamic> lead) {
+    final potencial = _double(lead['valor_potencial']);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 13, 8, 13),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 19,
+              backgroundColor: ImperiumWebTheme.accentStrong.withValues(
+                alpha: 0.10,
+              ),
+              child: Text(
+                (lead['nome'] ?? '?').toString().trim().isEmpty
+                    ? '?'
+                    : (lead['nome'] ?? '?')
+                          .toString()
+                          .trim()[0]
+                          .toUpperCase(),
+                style: const TextStyle(
+                  color: ImperiumWebTheme.accentStrong,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (lead['nome'] ?? 'Lead').toString(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      (lead['etapa'] ?? '').toString(),
+                      (lead['origem'] ?? '').toString(),
+                      (lead['servico_interesse'] ?? '').toString(),
+                      if (potencial > 0) _moeda.format(potencial),
+                    ].where((e) => e.trim().isNotEmpty).join(' · '),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFFAAB3BD),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _acoesLead(lead),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pipeline(List<Map<String, dynamic>> leads) {
+    final etapas = CrmLead.etapas;
+    return SizedBox(
+      height: 620,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: etapas.map((etapa) {
+            final itens = leads
+                .where((lead) => (lead['etapa'] ?? '').toString() == etapa)
+                .toList();
+            final potencial = itens.fold<double>(
+              0,
+              (total, item) => total + _double(item['valor_potencial']),
+            );
+
+            return Container(
+              width: 310,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: ImperiumWebTheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: ImperiumWebTheme.border),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                etapa,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            Chip(
+                              label: Text('${itens.length}'),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          potencial > 0
+                              ? _moeda.format(potencial)
+                              : 'Sem valor potencial',
+                          style: const TextStyle(
+                            color: Color(0xFF89939E),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: itens.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Text(
+                                'Nenhum lead',
+                                style: TextStyle(color: Color(0xFF89939E)),
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(10),
+                            itemCount: itens.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final lead = itens[index];
+                              final valor = _double(lead['valor_potencial']);
+                              return Card(
+                                margin: EdgeInsets.zero,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () => _editarLead(lead),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          (lead['nome'] ?? 'Lead').toString(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          [
+                                            (lead['servico_interesse'] ?? '')
+                                                .toString(),
+                                            (lead['origem'] ?? '').toString(),
+                                          ]
+                                              .where(
+                                                (e) => e.trim().isNotEmpty,
+                                              )
+                                              .join(' · '),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Color(0xFFAAB3BD),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        if (valor > 0) ...[
+                                          const SizedBox(height: 7),
+                                          Text(
+                                            _moeda.format(valor),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ],
+                                        if ((lead['proximo_contato'] ?? '')
+                                            .toString()
+                                            .trim()
+                                            .isNotEmpty) ...[
+                                          const SizedBox(height: 5),
+                                          Text(
+                                            'Próximo: ${lead['proximo_contato']}',
+                                            style: const TextStyle(
+                                              color: Color(0xFF89939E),
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                        const SizedBox(height: 4),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: _acoesLead(lead),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_carregando) {
@@ -402,133 +712,386 @@ class _WebCrmPageState extends State<WebCrmPage> {
     final termo = _busca.text.trim().toLowerCase();
     final filtrados = _leads.where((lead) {
       if (_etapa != 'Todos' && '${lead['etapa']}' != _etapa) return false;
+      if (_origem != 'Todos' && '${lead['origem']}' != _origem) {
+        return false;
+      }
       if (termo.isEmpty) return true;
       return [
         lead['nome'],
         lead['telefone'],
         lead['email'],
         lead['servico_interesse'],
+        lead['veiculo_interesse'],
         lead['responsavel'],
+        lead['origem'],
       ].any((v) => (v ?? '').toString().toLowerCase().contains(termo));
     }).toList();
 
     final abertos = _leads
         .where((e) => e['etapa'] != 'Ganho' && e['etapa'] != 'Perdido')
         .length;
+    final ganhos = _leads.where((e) => e['etapa'] == 'Ganho').length;
+    final perdidos = _leads.where((e) => e['etapa'] == 'Perdido').length;
     final potencial = _leads
         .where((e) => e['etapa'] != 'Perdido')
         .fold<double>(0, (s, e) => s + _double(e['valor_potencial']));
+    final encerrados = ganhos + perdidos;
+    final conversao = encerrados == 0 ? 0.0 : (ganhos / encerrados) * 100;
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Text(
-          'CRM',
-          style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Pipeline compartilhado com proteção contra sobrescrita concorrente.',
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _ResumoExpansao('Leads abertos', '$abertos'),
-            _ResumoExpansao('Potencial', _moeda.format(potencial)),
-            _ResumoExpansao(
-              'Campanhas ativas',
-              '${_campanhas.where((e) => e['ativo'] != false).length}',
-            ),
-            _ResumoExpansao(
-              'Cupons ativos',
-              '${_cupons.where((e) => '${e['status']}' == 'Ativo').length}',
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _busca,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Buscar lead',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 190,
-              child: DropdownButtonFormField<String>(
-                initialValue: _etapa,
-                decoration: const InputDecoration(
-                  labelText: 'Etapa',
-                  border: OutlineInputBorder(),
-                ),
-                items: ['Todos', ...CrmLead.etapas]
-                    .map(
-                      (item) =>
-                          DropdownMenuItem(value: item, child: Text(item)),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _etapa = v ?? 'Todos'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: () => _editarLead(),
-              icon: const Icon(Icons.person_add_alt_1),
-              label: const Text('Novo lead'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ...filtrados.map(
-          (lead) => Card(
-            child: ListTile(
-              leading: const CircleAvatar(
-                child: Icon(Icons.person_search_outlined),
-              ),
-              title: Text((lead['nome'] ?? 'Lead').toString()),
-              subtitle: Text(
-                [
-                  (lead['etapa'] ?? '').toString(),
-                  (lead['servico_interesse'] ?? '').toString(),
-                  if (_double(lead['valor_potencial']) > 0)
-                    _moeda.format(_double(lead['valor_potencial'])),
-                  (lead['responsavel'] ?? '').toString(),
-                ].where((e) => e.trim().isNotEmpty).join(' · '),
-              ),
-              trailing: Wrap(
-                children: [
-                  IconButton(
-                    tooltip: 'Nova interação',
-                    onPressed: () => _interagir(lead),
-                    icon: const Icon(Icons.add_comment_outlined),
-                  ),
-                  IconButton(
-                    tooltip: 'Histórico',
-                    onPressed: () => _historico(lead),
-                    icon: const Icon(Icons.history),
-                  ),
-                  IconButton(
-                    tooltip: 'Editar',
-                    onPressed: () => _editarLead(lead),
-                    icon: const Icon(Icons.edit_outlined),
-                  ),
-                ],
-              ),
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compacto = constraints.maxWidth < 760;
+        final desktop = constraints.maxWidth >= 1080;
+        final larguraDisponivel =
+            constraints.maxWidth - (compacto ? 32 : 48);
+        final colunas = constraints.maxWidth >= 1180
+            ? 4
+            : constraints.maxWidth >= 720
+            ? 2
+            : 1;
+        final larguraResumo =
+            (larguraDisponivel - (12 * (colunas - 1))) / colunas;
+
+        return ListView(
+          padding: EdgeInsets.fromLTRB(
+            compacto ? 16 : 24,
+            compacto ? 18 : 24,
+            compacto ? 16 : 24,
+            40,
           ),
-        ),
-      ],
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'CRM',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        'Pipeline comercial para acompanhar novos contatos até ganho ou perda.',
+                        style: TextStyle(color: Color(0xFFAAB3BD)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                IconButton(
+                  tooltip: 'Atualizar',
+                  onPressed: _carregar,
+                  icon: const Icon(Icons.refresh_rounded),
+                ),
+                const SizedBox(width: 6),
+                FilledButton.icon(
+                  onPressed: () => _editarLead(),
+                  icon: const Icon(Icons.person_add_alt_1_rounded),
+                  label: Text(compacto ? 'Novo' : 'Novo lead'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _resumoCrm(
+                  width: larguraResumo,
+                  titulo: 'Leads abertos',
+                  valor: '$abertos',
+                  detalhe: 'Oportunidades ainda em negociação',
+                  icone: Icons.person_search_outlined,
+                ),
+                _resumoCrm(
+                  width: larguraResumo,
+                  titulo: 'Potencial',
+                  valor: _moeda.format(potencial),
+                  detalhe: 'Valor potencial fora das perdas',
+                  icone: Icons.trending_up_rounded,
+                ),
+                _resumoCrm(
+                  width: larguraResumo,
+                  titulo: 'Ganhos',
+                  valor: '$ganhos',
+                  detalhe: 'Leads marcados como ganho',
+                  icone: Icons.verified_outlined,
+                ),
+                _resumoCrm(
+                  width: larguraResumo,
+                  titulo: 'Conversão',
+                  valor: '${conversao.toStringAsFixed(1)}%',
+                  detalhe: 'Ganhos sobre oportunidades encerradas',
+                  icone: Icons.analytics_outlined,
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: compacto ? larguraDisponivel - 28 : 380,
+                      child: TextField(
+                        controller: _busca,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          hintText:
+                              'Buscar nome, telefone, serviço, veículo ou responsável',
+                          suffixIcon: _busca.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Limpar busca',
+                                  onPressed: () {
+                                    _busca.clear();
+                                    setState(() {});
+                                  },
+                                  icon: const Icon(Icons.close_rounded),
+                                ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 185,
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _etapa,
+                        decoration: const InputDecoration(labelText: 'Etapa'),
+                        items: ['Todos', ...CrmLead.etapas]
+                            .map(
+                              (item) => DropdownMenuItem(
+                                value: item,
+                                child: Text(item),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _etapa = v ?? 'Todos'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 175,
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _origem,
+                        decoration: const InputDecoration(labelText: 'Origem'),
+                        items: ['Todos', ...CrmLead.origens]
+                            .map(
+                              (item) => DropdownMenuItem(
+                                value: item,
+                                child: Text(item),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _origem = v ?? 'Todos'),
+                      ),
+                    ),
+                    if (desktop)
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment(
+                            value: true,
+                            icon: Icon(Icons.view_kanban_outlined),
+                            label: Text('Pipeline'),
+                          ),
+                          ButtonSegment(
+                            value: false,
+                            icon: Icon(Icons.table_rows_outlined),
+                            label: Text('Lista'),
+                          ),
+                        ],
+                        selected: <bool>{_modoPipeline},
+                        onSelectionChanged: (value) {
+                          setState(() => _modoPipeline = value.first);
+                        },
+                      ),
+                    Text(
+                      '${filtrados.length} resultado(s)',
+                      style: const TextStyle(
+                        color: Color(0xFF89939E),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (filtrados.isEmpty)
+              const Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 40,
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.person_search_outlined,
+                        size: 42,
+                        color: Color(0xFF89939E),
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        'Nenhum lead encontrado',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (desktop && _modoPipeline)
+              _pipeline(filtrados)
+            else if (desktop)
+              Card(
+                margin: EdgeInsets.zero,
+                clipBehavior: Clip.antiAlias,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowHeight: 52,
+                    dataRowMinHeight: 60,
+                    dataRowMaxHeight: 78,
+                    columns: const [
+                      DataColumn(label: Text('LEAD')),
+                      DataColumn(label: Text('ETAPA')),
+                      DataColumn(label: Text('ORIGEM')),
+                      DataColumn(label: Text('INTERESSE')),
+                      DataColumn(label: Text('POTENCIAL')),
+                      DataColumn(label: Text('RESPONSÁVEL')),
+                      DataColumn(label: Text('PRÓXIMO CONTATO')),
+                      DataColumn(label: Text('AÇÕES')),
+                    ],
+                    rows: filtrados.map((lead) {
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            SizedBox(
+                              width: 230,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    (lead['nome'] ?? 'Lead').toString(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  Text(
+                                    (lead['telefone'] ?? '').toString(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(0xFFAAB3BD),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          DataCell(Text((lead['etapa'] ?? '—').toString())),
+                          DataCell(Text((lead['origem'] ?? '—').toString())),
+                          DataCell(
+                            SizedBox(
+                              width: 210,
+                              child: Text(
+                                (lead['servico_interesse'] ?? '—').toString(),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              _double(lead['valor_potencial']) > 0
+                                  ? _moeda.format(
+                                      _double(lead['valor_potencial']),
+                                    )
+                                  : '—',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 150,
+                              child: Text(
+                                (lead['responsavel'] ?? '—').toString(),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 170,
+                              child: Text(
+                                (lead['proximo_contato'] ?? '—').toString(),
+                              ),
+                            ),
+                          ),
+                          DataCell(_acoesLead(lead)),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              )
+            else
+              ...filtrados.map(
+                (lead) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _leadCardCompacto(lead),
+                ),
+              ),
+            const SizedBox(height: 20),
+            if (_campanhas.isNotEmpty || _cupons.isNotEmpty)
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Wrap(
+                    spacing: 20,
+                    runSpacing: 10,
+                    children: [
+                      Text(
+                        'Campanhas CRM ativas: '
+                        '${_campanhas.where((e) => e['ativo'] != false).length}',
+                      ),
+                      Text(
+                        'Cupons ativos: '
+                        '${_cupons.where((e) => '${e['status']}' == 'Ativo').length}',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
+
 }
 
 class WebOrcamentosPage extends StatefulWidget {
