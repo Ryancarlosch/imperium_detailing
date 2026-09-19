@@ -1394,8 +1394,9 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     final termo = _busca.text.trim().toLowerCase();
     final filtrados =
         _orcamentos.where((item) {
-          if (_status != 'Todos' && '${item['status']}' != _status)
+          if (_status != 'Todos' && '${item['status']}' != _status) {
             return false;
+          }
           if (termo.isEmpty) return true;
 
           return [
@@ -3356,39 +3357,6 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
           },
         );
       },
-    );
-  }
-}
-
-class _ResumoExpansao extends StatelessWidget {
-  const _ResumoExpansao(this.titulo, this.valor);
-
-  final String titulo;
-  final String valor;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 230,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(titulo),
-              const SizedBox(height: 6),
-              Text(
-                valor,
-                style: const TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
