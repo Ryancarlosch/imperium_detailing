@@ -90,7 +90,9 @@ class WebFolhaPontoService {
 
       final nome = _normalizarNome(item['nome']);
       if (nome.isNotEmpty) {
-        pontoPorNome.putIfAbsent(nome, () => <Map<String, dynamic>>[]).add(item);
+        pontoPorNome
+            .putIfAbsent(nome, () => <Map<String, dynamic>>[])
+            .add(item);
       }
     }
 
@@ -98,16 +100,16 @@ class WebFolhaPontoService {
       for (final item in jornada) _int(item['dia_semana']): item,
     };
 
-    final registrosPorColaborador = <String, Map<String, Map<String, dynamic>>>{};
+    final registrosPorColaborador =
+        <String, Map<String, Map<String, dynamic>>>{};
     for (final item in registros) {
       final colaboradorId = (item['colaborador_id'] ?? '').toString();
       final data = (item['data'] ?? '').toString();
       if (colaboradorId.isEmpty || data.isEmpty) continue;
-      registrosPorColaborador
-          .putIfAbsent(
-            colaboradorId,
-            () => <String, Map<String, dynamic>>{},
-          )[data] = item;
+      registrosPorColaborador.putIfAbsent(
+        colaboradorId,
+        () => <String, Map<String, dynamic>>{},
+      )[data] = item;
     }
 
     final fechamentoPorColaborador = <String, Map<String, dynamic>>{
@@ -163,12 +165,10 @@ class WebFolhaPontoService {
           (minutosExtras / 60.0) *
           valorHora *
           (1 + adicionalPercentual / 100.0);
-      final descontoHorasFaltantes =
-          (minutosFaltantes / 60.0) * valorHora;
-      final valorEstimado =
-          (salarioBase - descontoHorasFaltantes + valorExtras)
-              .clamp(0.0, double.infinity)
-              .toDouble();
+      final descontoHorasFaltantes = (minutosFaltantes / 60.0) * valorHora;
+      final valorEstimado = (salarioBase - descontoHorasFaltantes + valorExtras)
+          .clamp(0.0, double.infinity)
+          .toDouble();
 
       var jaPago = 0.0;
       for (final pagamento in pagamentos) {
@@ -454,9 +454,9 @@ class WebFolhaPontoService {
 
   static String _normalizarNome(dynamic valor) {
     return valor?.toString().trim().toLowerCase().replaceAll(
-              RegExp(r'\s+'),
-              ' ',
-            ) ??
+          RegExp(r'\s+'),
+          ' ',
+        ) ??
         '';
   }
 
