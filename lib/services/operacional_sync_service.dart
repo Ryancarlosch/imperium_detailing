@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/app_database.dart';
 import 'configuracao_arquivos_cloud_service.dart';
 import 'configuracao_cloud_service.dart';
+import 'colaborador_historico_cloud_service.dart';
 import 'crm_orcamentos_cloud_service.dart';
 import 'crm_orcamentos_cloud_v2_service.dart';
 import 'estoque_cloud_conflito_service.dart';
@@ -556,6 +557,10 @@ class OperacionalSyncService {
     await PrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload(
       empresaId,
     );
+
+    // Histórico salarial/situação depende do mapa do colaborador já
+    // reconciliado pela Precificação.
+    await ColaboradorHistoricoCloudService.instance.sincronizar(empresaId);
 
     // O pagamento depende dos mapas de colaborador da Precificação e dos
     // mapas de conta/movimento já fechados pelo Financeiro.
