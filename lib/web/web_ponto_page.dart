@@ -56,9 +56,7 @@ class _WebPontoPageState extends State<WebPontoPage>
         _service.listarRegistros(inicio: inicio, fim: fim),
         _service.listarJornada(),
         _service.obterConfig(),
-        _service.listarSolicitacoesAjusteAdmin(
-          status: _statusSolicitacoes,
-        ),
+        _service.listarSolicitacoesAjusteAdmin(status: _statusSolicitacoes),
       ]);
 
       if (!mounted) return;
@@ -446,10 +444,7 @@ class _WebPontoPageState extends State<WebPontoPage>
             tabs: const [
               Tab(icon: Icon(Icons.groups_2_outlined), text: 'Equipe e ponto'),
               Tab(icon: Icon(Icons.schedule_outlined), text: 'Jornada'),
-              Tab(
-                icon: Icon(Icons.rule_folder_outlined),
-                text: 'Solicitações',
-              ),
+              Tab(icon: Icon(Icons.rule_folder_outlined), text: 'Solicitações'),
             ],
           ),
         ),
@@ -894,9 +889,7 @@ class _WebPontoPageState extends State<WebPontoPage>
     final confirmou = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(
-          aprovar ? 'Aprovar solicitação?' : 'Rejeitar solicitação?',
-        ),
+        title: Text(aprovar ? 'Aprovar solicitação?' : 'Rejeitar solicitação?'),
         content: SizedBox(
           width: 560,
           child: TextField(
@@ -992,14 +985,8 @@ class _WebPontoPageState extends State<WebPontoPage>
                 initialValue: _statusSolicitacoes,
                 decoration: const InputDecoration(labelText: 'Exibir'),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Pendente',
-                    child: Text('Pendentes'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Aprovada',
-                    child: Text('Aprovadas'),
-                  ),
+                  DropdownMenuItem(value: 'Pendente', child: Text('Pendentes')),
+                  DropdownMenuItem(value: 'Aprovada', child: Text('Aprovadas')),
                   DropdownMenuItem(
                     value: 'Rejeitada',
                     child: Text('Rejeitadas'),
@@ -1121,18 +1108,14 @@ class _WebPontoPageState extends State<WebPontoPage>
                             spacing: 8,
                             children: [
                               OutlinedButton.icon(
-                                onPressed: () => _decidirSolicitacao(
-                                  item,
-                                  aprovar: false,
-                                ),
+                                onPressed: () =>
+                                    _decidirSolicitacao(item, aprovar: false),
                                 icon: const Icon(Icons.close_rounded),
                                 label: const Text('Rejeitar'),
                               ),
                               FilledButton.icon(
-                                onPressed: () => _decidirSolicitacao(
-                                  item,
-                                  aprovar: true,
-                                ),
+                                onPressed: () =>
+                                    _decidirSolicitacao(item, aprovar: true),
                                 icon: const Icon(Icons.check_rounded),
                                 label: const Text('Aprovar'),
                               ),
