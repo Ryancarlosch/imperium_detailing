@@ -95,6 +95,25 @@ class WebFinanceiroAdministracaoService {
     ordenarPor: 'data_pagamento',
   );
 
+  Future<List<Map<String, dynamic>>> listarHistoricoColaboradores({
+    String? colaboradorId,
+  }) async {
+    final empresaId = await _empresaId();
+    var query = _client
+        .from('imperium_precificacao_colaboradores_historico')
+        .select()
+        .eq('empresa_id', empresaId);
+    final id = colaboradorId?.trim() ?? '';
+    if (id.isNotEmpty) {
+      query = query.eq('colaborador_id', id);
+    }
+    final resposta = await query.order('vigencia_em', ascending: false);
+    return (resposta as List)
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
   Future<void> _salvar({
     required String tabela,
     required Map<String, Object?> valores,
@@ -313,7 +332,7 @@ class WebFinanceiroAdministracaoService {
     );
   }
 
-  Future<void> salvarColaboradorCusto({
+  Future<Map<String, dynamic>> salvarColaboradorCusto({
     String? id,
     required String nome,
     String funcao = '',
@@ -323,6 +342,9 @@ class WebFinanceiroAdministracaoService {
     required double horasProdutivasMes,
     String observacoes = '',
     bool ativo = true,
+    DateTime? vigencia,
+    String motivo = '',
+    String? atualizadoEmBase,
   }) async {
     if (nome.trim().length < 2) {
       throw ArgumentError('Informe o nome do funcionário.');
@@ -336,21 +358,42 @@ class WebFinanceiroAdministracaoService {
       throw ArgumentError('Informe as horas produtivas mensais.');
     }
 
-    await _salvar(
-      tabela: 'imperium_precificacao_colaboradores_custo',
-      id: id,
-      valores: <String, Object?>{
-        'nome': nome.trim(),
-        'funcao': funcao.trim(),
-        'remuneracao_mensal': remuneracaoMensal,
-        'encargos_mensais': encargosMensais,
-        'outros_custos_mensais': outrosCustosMensais,
-        'horas_produtivas_mes': horasProdutivasMes,
-        'observacoes': observacoes.trim(),
-        'ativo': ativo,
-        'excluido_em': null,
+    final empresaId = await _empresaId();
+    final historicoOrigem = await _origem.proxima();
+    final idLimpo = id?.trim() ?? '';
+    final colaboradorOrigem = idLimpo.isEmpty
+        ? await _origem.proxima()
+        : historicoOrigem;
+    final base = atualizadoEmBase?.trim() ?? '';
+
+    final raw = await _client.rpc(
+      'imperium_precificacao_salvar_colaborador_web',
+      params: <String, Object?>{
+        'p_empresa_id': empresaId,
+        'p_colaborador_id': idLimpo.isEmpty ? null : idLimpo,
+        'p_nome': nome.trim(),
+        'p_funcao': funcao.trim(),
+        'p_remuneracao_mensal': remuneracaoMensal,
+        'p_encargos_mensais': encargosMensais,
+        'p_outros_custos_mensais': outrosCustosMensais,
+        'p_horas_produtivas_mes': horasProdutivasMes,
+        'p_observacoes': observacoes.trim(),
+        'p_ativo': ativo,
+        'p_origem_dispositivo': historicoOrigem.dispositivoId,
+        'p_colaborador_local_id': idLimpo.isEmpty
+            ? colaboradorOrigem.localId
+            : 0,
+        'p_historico_local_id': historicoOrigem.localId,
+        'p_vigencia_em': (vigencia ?? DateTime.now()).toIso8601String(),
+        'p_motivo': motivo.trim(),
+        'p_atualizado_em_base': base.isEmpty ? null : base,
       },
     );
+
+    if (raw is! Map) {
+      throw StateError('O funcionário não retornou um resultado válido.');
+    }
+    return Map<String, dynamic>.from(raw);
   }
 
   Future<Map<String, dynamic>> registrarPagamentoColaborador({
