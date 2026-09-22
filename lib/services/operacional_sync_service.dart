@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
+import 'configuracao_arquivos_cloud_service.dart';
 import 'configuracao_cloud_service.dart';
 import 'crm_orcamentos_cloud_service.dart';
 import 'crm_orcamentos_cloud_v2_service.dart';
@@ -373,6 +374,14 @@ class OperacionalSyncService {
 
   Future<void> _syncConfiguracoes(String empresaId) async {
     await ConfiguracaoCloudService.instance.sincronizar(empresaId);
+    await ConfiguracaoArquivosCloudService.instance.sincronizar(empresaId);
+
+    if (await ConfiguracaoArquivosCloudService.instance
+        .possuiConflitosPendentes(empresaId)) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes em logo/assinatura da empresa.',
+      );
+    }
   }
 
   Future<void> _syncOperacionalBase(String empresaId) async {
