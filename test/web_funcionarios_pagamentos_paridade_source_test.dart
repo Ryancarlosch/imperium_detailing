@@ -14,11 +14,17 @@ void main() {
     expect(page, contains("text: 'Folha e pagamentos'"));
     expect(page, contains("label: const Text('Registrar pagamento')"));
     expect(page, contains('Remuneração base'));
-    expect(page, contains('Pago no mês'));
-    expect(page, contains('fechamento de ponto'));
+    expect(page, contains('Já pago'));
+    expect(page, contains('Mesma regra do Android'));
+    expect(page, contains('Fechar competência'));
+    expect(page, contains('Reabrir competência'));
+    expect(page, contains('Horas extras'));
+    expect(page, contains('Descontos por horas'));
 
     expect(service, contains('listarPagamentosColaboradores'));
     expect(service, contains('registrarPagamentoColaborador'));
+    expect(service, contains('listarHistoricoColaboradores'));
+    expect(service, contains('imperium_precificacao_salvar_colaborador_web'));
     expect(service, contains("'imperium_financeiro_pagar_colaborador_web'"));
   });
 
