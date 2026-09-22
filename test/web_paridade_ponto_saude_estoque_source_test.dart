@@ -38,7 +38,9 @@ void main() {
   });
 
   test('Configuracao do estoque e compartilhada entre Web e Android', () {
-    final page = File('lib/web/web_estoque_config_page.dart').readAsStringSync();
+    final page = File(
+      'lib/web/web_estoque_config_page.dart',
+    ).readAsStringSync();
     final webService = File(
       'lib/services/web_estoque_config_service.dart',
     ).readAsStringSync();

@@ -831,7 +831,9 @@ class WebCloudExpansaoService {
 
       final notasSemItens = (notasRaw as List).where((raw) {
         final nota = Map<String, dynamic>.from(raw as Map);
-        final status = (nota['status_importacao'] ?? '').toString().toLowerCase();
+        final status = (nota['status_importacao'] ?? '')
+            .toString()
+            .toLowerCase();
         final processada = status == 'processada' || status == 'processado';
         return processada &&
             !notasComItens.contains((nota['id'] ?? '').toString());
