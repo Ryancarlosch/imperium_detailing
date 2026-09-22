@@ -1194,9 +1194,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     }
   }
 
-  Map<String, dynamic> _clienteOrcamento(
-    Map<String, dynamic> orcamento,
-  ) {
+  Map<String, dynamic> _clienteOrcamento(Map<String, dynamic> orcamento) {
     final id = (orcamento['cliente_id'] ?? '').toString();
     for (final item in _clientes) {
       if ((item['id'] ?? '').toString() == id) return item;
@@ -1204,9 +1202,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     return const <String, dynamic>{};
   }
 
-  Map<String, dynamic> _veiculoOrcamento(
-    Map<String, dynamic> orcamento,
-  ) {
+  Map<String, dynamic> _veiculoOrcamento(Map<String, dynamic> orcamento) {
     final id = (orcamento['veiculo_id'] ?? '').toString();
     for (final item in _veiculos) {
       if ((item['id'] ?? '').toString() == id) return item;
@@ -1246,9 +1242,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                 onTap: () => Navigator.pop(bottomContext, 'visualizar'),
               ),
               ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.share_outlined),
-                ),
+                leading: const CircleAvatar(child: Icon(Icons.share_outlined)),
                 title: const Text('Compartilhar orçamento'),
                 onTap: () => Navigator.pop(bottomContext, 'compartilhar'),
               ),
@@ -1290,9 +1284,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     }
   }
 
-  Future<void> _abrirWhatsAppOrcamento(
-    Map<String, dynamic> orcamento,
-  ) async {
+  Future<void> _abrirWhatsAppOrcamento(Map<String, dynamic> orcamento) async {
     final cliente = _clienteOrcamento(orcamento);
     final telefone = (cliente['telefone'] ?? '').toString().trim();
     final nome = (cliente['nome'] ?? 'Cliente').toString();
@@ -1347,7 +1339,8 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
 
     if (acao == null) return;
 
-    final numero = 'Orçamento #${orcamento['origem_local_id'] ?? orcamento['id']}';
+    final numero =
+        'Orçamento #${orcamento['origem_local_id'] ?? orcamento['id']}';
     final valor = _moeda.format(_double(orcamento['valor']));
     final observacoes = (orcamento['observacoes'] ?? '').toString();
 
@@ -1393,10 +1386,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
               FilledButton.icon(
                 onPressed: () {
                   final texto = controller.text.trim();
-                  Navigator.pop(
-                    dialogContext,
-                    texto.isEmpty ? null : texto,
-                  );
+                  Navigator.pop(dialogContext, texto.isEmpty ? null : texto);
                 },
                 icon: const Icon(Icons.send_outlined),
                 label: const Text('Enviar'),
@@ -1417,9 +1407,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     }
   }
 
-  Future<void> _excluirOrcamentoWeb(
-    Map<String, dynamic> orcamento,
-  ) async {
+  Future<void> _excluirOrcamentoWeb(Map<String, dynamic> orcamento) async {
     final confirmou = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1454,9 +1442,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     }
   }
 
-  PopupMenuButton<String> _menuOrcamento(
-    Map<String, dynamic> orcamento,
-  ) {
+  PopupMenuButton<String> _menuOrcamento(Map<String, dynamic> orcamento) {
     return PopupMenuButton<String>(
       tooltip: 'Mais ações',
       onSelected: (acao) {
