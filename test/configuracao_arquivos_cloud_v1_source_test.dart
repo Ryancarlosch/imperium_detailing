@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('Logo e assinatura usam Storage privado com conflito e tenant', () {
-    final service = File(
+    final facade = File(
       'lib/services/configuracao_arquivos_cloud_service.dart',
+    ).readAsStringSync();
+    final service = File(
+      'lib/services/configuracao_arquivos_cloud_service_io.dart',
     ).readAsStringSync();
     final gate = File('lib/widgets/licenca_gate.dart').readAsStringSync();
     final realtime = File(
@@ -14,6 +17,10 @@ void main() {
     final sql = File(
       'supabase/migrations/20260917001000_configuracao_arquivos_storage_v1.sql',
     ).readAsStringSync();
+
+    expect(facade, contains("if (dart.library.io)"));
+    expect(facade, contains('configuracao_arquivos_cloud_service_io.dart'));
+    expect(facade, contains('configuracao_arquivos_cloud_service_stub.dart'));
 
     for (final marker in <String>[
       'imperium-configuracoes-arquivos',
