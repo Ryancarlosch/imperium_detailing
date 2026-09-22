@@ -377,9 +377,8 @@ class _WebFinanceiroAdministracaoPageState
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'Histórico salarial e de situação',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
@@ -1766,24 +1765,21 @@ class _WebFinanceiroAdministracaoPageState
       ],
     );
     if (ok != true) return;
-    await _executar(
-      () async {
-        await _service.salvarColaboradorCusto(
-          id: atual?['id']?.toString(),
-          nome: nome.text,
-          funcao: funcao.text,
-          remuneracaoMensal: _numero(remuneracao.text),
-          encargosMensais: _numero(encargos.text),
-          outrosCustosMensais: _numero(outros.text),
-          horasProdutivasMes: _numero(horas.text),
-          observacoes: observacoes.text,
-          ativo: ativo,
-          motivo: atual == null ? 'Cadastro inicial' : 'Atualização de custos',
-          atualizadoEmBase: atual?['atualizado_em']?.toString(),
-        );
-      },
-      'Funcionário salvo e histórico sincronizado.',
-    );
+    await _executar(() async {
+      await _service.salvarColaboradorCusto(
+        id: atual?['id']?.toString(),
+        nome: nome.text,
+        funcao: funcao.text,
+        remuneracaoMensal: _numero(remuneracao.text),
+        encargosMensais: _numero(encargos.text),
+        outrosCustosMensais: _numero(outros.text),
+        horasProdutivasMes: _numero(horas.text),
+        observacoes: observacoes.text,
+        ativo: ativo,
+        motivo: atual == null ? 'Cadastro inicial' : 'Atualização de custos',
+        atualizadoEmBase: atual?['atualizado_em']?.toString(),
+      );
+    }, 'Funcionário salvo e histórico sincronizado.');
   }
 
   Future<void> _reajustarColaborador(Map<String, dynamic> atual) async {
@@ -1820,38 +1816,31 @@ class _WebFinanceiroAdministracaoPageState
     );
     if (ok != true) return;
 
-    await _executar(
-      () async {
-        await _service.salvarColaboradorCusto(
-          id: atual['id']?.toString(),
-          nome: (atual['nome'] ?? '').toString(),
-          funcao: (atual['funcao'] ?? '').toString(),
-          remuneracaoMensal: _numero(valor.text),
-          encargosMensais: _double(atual['encargos_mensais']),
-          outrosCustosMensais: _double(atual['outros_custos_mensais']),
-          horasProdutivasMes: _double(atual['horas_produtivas_mes']),
-          observacoes: (atual['observacoes'] ?? '').toString(),
-          ativo: _bool(atual['ativo']),
-          vigencia: vigencia,
-          motivo: motivo.text,
-          atualizadoEmBase: atual['atualizado_em']?.toString(),
-        );
-      },
-      'Reajuste registrado no histórico e sincronizado.',
-    );
+    await _executar(() async {
+      await _service.salvarColaboradorCusto(
+        id: atual['id']?.toString(),
+        nome: (atual['nome'] ?? '').toString(),
+        funcao: (atual['funcao'] ?? '').toString(),
+        remuneracaoMensal: _numero(valor.text),
+        encargosMensais: _double(atual['encargos_mensais']),
+        outrosCustosMensais: _double(atual['outros_custos_mensais']),
+        horasProdutivasMes: _double(atual['horas_produtivas_mes']),
+        observacoes: (atual['observacoes'] ?? '').toString(),
+        ativo: _bool(atual['ativo']),
+        vigencia: vigencia,
+        motivo: motivo.text,
+        atualizadoEmBase: atual['atualizado_em']?.toString(),
+      );
+    }, 'Reajuste registrado no histórico e sincronizado.');
   }
 
-  Future<void> _alterarSituacaoColaborador(
-    Map<String, dynamic> atual,
-  ) async {
+  Future<void> _alterarSituacaoColaborador(Map<String, dynamic> atual) async {
     final ativoAtual = _bool(atual['ativo']);
     final motivo = TextEditingController();
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(
-          ativoAtual ? 'Inativar funcionário' : 'Ativar funcionário',
-        ),
+        title: Text(ativoAtual ? 'Inativar funcionário' : 'Ativar funcionário'),
         content: SizedBox(
           width: 520,
           child: TextField(
