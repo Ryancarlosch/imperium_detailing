@@ -284,9 +284,9 @@ class _WebFinanceiroAdministracaoPageState
     );
     final resumos = _resumosFolha.values.toList()
       ..sort(
-        (a, b) => (a['nome'] ?? '')
-            .toString()
-            .compareTo((b['nome'] ?? '').toString()),
+        (a, b) => (a['nome'] ?? '').toString().compareTo(
+          (b['nome'] ?? '').toString(),
+        ),
       );
     final estimadoMes = resumos.fold<double>(
       0,
@@ -556,9 +556,7 @@ class _WebFinanceiroAdministracaoPageState
                             ),
                             _folhaValor(
                               'Restante',
-                              _moeda.format(
-                                _double(item['restante_estimado']),
-                              ),
+                              _moeda.format(_double(item['restante_estimado'])),
                               destaque: true,
                             ),
                           ],
@@ -643,11 +641,7 @@ class _WebFinanceiroAdministracaoPageState
     );
   }
 
-  Widget _folhaValor(
-    String titulo,
-    String valor, {
-    bool destaque = false,
-  }) {
+  Widget _folhaValor(String titulo, String valor, {bool destaque = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
