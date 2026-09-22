@@ -182,6 +182,71 @@ class WebCloudPontoService {
     );
   }
 
+
+  Future<void> fecharCompetencia({
+    required String colaboradorId,
+    required DateTime competencia,
+    required Map<String, dynamic> snapshot,
+  }) async {
+    final pendencias = _int(snapshot['pendencias']);
+    final incompletos = _int(snapshot['incompletos']);
+    if (pendencias > 0 || incompletos > 0) {
+      throw StateError(
+        'Resolva as pendências e pontos incompletos antes de fechar o mês.',
+      );
+    }
+
+    final fim = DateTime(competencia.year, competencia.month + 1, 0);
+    final hoje = DateTime.now();
+    final hojeDia = DateTime(hoje.year, hoje.month, hoje.day);
+    if (!hojeDia.isAfter(fim)) {
+      throw StateError(
+        'O mês só pode ser fechado depois que a competência terminar.',
+      );
+    }
+
+    final empresaId = await _empresaId();
+    await _client.rpc(
+      'ponto_fechar_competencia_admin',
+      params: {
+        'p_empresa_id': empresaId,
+        'p_colaborador_id': colaboradorId,
+        'p_competencia': _data(DateTime(competencia.year, competencia.month, 1)),
+        'p_snapshot': snapshot,
+      },
+    );
+  }
+
+  Future<void> reabrirCompetencia({
+    required String colaboradorId,
+    required DateTime competencia,
+    required String motivo,
+  }) async {
+    final motivoLimpo = motivo.trim();
+    if (motivoLimpo.length < 5) {
+      throw ArgumentError(
+        'Informe o motivo da reabertura com pelo menos 5 caracteres.',
+      );
+    }
+
+    final empresaId = await _empresaId();
+    await _client.rpc(
+      'ponto_reabrir_competencia_admin',
+      params: {
+        'p_empresa_id': empresaId,
+        'p_colaborador_id': colaboradorId,
+        'p_competencia': _data(DateTime(competencia.year, competencia.month, 1)),
+        'p_motivo': motivoLimpo,
+      },
+    );
+  }
+
+  static int _int(dynamic valor) {
+    if (valor is int) return valor;
+    if (valor is num) return valor.toInt();
+    return int.tryParse(valor?.toString() ?? '') ?? 0;
+  }
+
   static List<Map<String, dynamic>> _mapas(dynamic dados) {
     if (dados is! List) return const [];
     return dados
