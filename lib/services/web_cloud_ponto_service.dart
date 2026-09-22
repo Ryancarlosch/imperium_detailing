@@ -182,6 +182,59 @@ class WebCloudPontoService {
     );
   }
 
+  Future<List<Map<String, dynamic>>> listarSolicitacoesAjusteAdmin({
+    String status = 'Pendente',
+    int limite = 100,
+  }) async {
+    final empresaId = await _empresaId();
+    const permitidos = <String>{
+      'Pendente',
+      'Aprovada',
+      'Rejeitada',
+      'Cancelada',
+      'Todos',
+    };
+    if (!permitidos.contains(status)) {
+      throw ArgumentError('Status de solicitação inválido.');
+    }
+
+    final dados = await _client.rpc(
+      'ponto_listar_solicitacoes_ajuste_admin',
+      params: {
+        'p_empresa_id': empresaId,
+        'p_status': status,
+        'p_limite': limite.clamp(1, 300),
+      },
+    );
+    return _mapas(dados);
+  }
+
+  Future<void> decidirSolicitacaoAjuste({
+    required String solicitacaoId,
+    required bool aprovar,
+    String motivo = '',
+  }) async {
+    final id = solicitacaoId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('Solicitação de ajuste inválida.');
+    }
+    final motivoLimpo = motivo.trim();
+    if (!aprovar && motivoLimpo.length < 5) {
+      throw ArgumentError(
+        'Informe o motivo da rejeição com pelo menos 5 caracteres.',
+      );
+    }
+
+    await _client.rpc(
+      'ponto_decidir_solicitacao_ajuste',
+      params: {
+        'p_solicitacao_id': id,
+        'p_aprovar': aprovar,
+        'p_motivo': motivoLimpo,
+      },
+    );
+  }
+
   Future<void> fecharCompetencia({
     required String colaboradorId,
     required DateTime competencia,
