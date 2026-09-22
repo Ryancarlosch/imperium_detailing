@@ -27,6 +27,7 @@ class FiscalCloudSyncService {
     for (final tabela in <String>[
       'imperium_sync_fiscal_notas',
       'imperium_sync_fiscal_itens',
+      'imperium_sync_fiscal_tentativas',
     ]) {
       await database.execute('''
         CREATE TABLE IF NOT EXISTS $tabela (
@@ -69,9 +70,11 @@ class FiscalCloudSyncService {
       // versao remota mais nova.
       await _baixarNotas(empresaId);
       await _baixarItens(empresaId);
+      await _baixarTentativas(empresaId);
 
       await _publicarNotas(empresaId);
       await _publicarItens(empresaId);
+      await _publicarTentativas(empresaId);
       await _publicarExclusoesLocais(empresaId);
 
       if (await possuiConflitosPendentes(empresaId)) {
@@ -82,6 +85,133 @@ class FiscalCloudSyncService {
     } on PostgrestException catch (error) {
       if (error.code == '42501') return;
       rethrow;
+    }
+  }
+
+  Future<void> _baixarTentativas(String empresaId) async {
+    final client = _client;
+    if (client == null) return;
+
+    final remotosRaw = await client
+        .from('imperium_fiscal_importacao_tentativas')
+        .select()
+        .eq('empresa_id', empresaId)
+        .order('criado_em');
+
+    final database = await _appDatabase.database;
+    for (final raw in remotosRaw) {
+      final remoto = Map<String, dynamic>.from(raw);
+      final remotoId = _texto(remoto['id']);
+      if (remotoId.isEmpty) continue;
+
+      final mapa = await _mapaPorRemoto(
+        tabela: 'imperium_sync_fiscal_tentativas',
+        empresaId: empresaId,
+        remotoId: remotoId,
+      );
+      if (mapa != null) continue;
+
+      final notaLocalId = await _localPorRemotoOuNulo(
+        tabelaMapa: 'imperium_sync_fiscal_notas',
+        empresaId: empresaId,
+        remotoId: _textoNulo(remoto['nota_fiscal_id']),
+      );
+
+      final localId = await database.insert(
+        'nota_fiscal_importacao_tentativas',
+        <String, Object?>{
+          'nota_fiscal_id': notaLocalId,
+          'chave_acesso': _texto(remoto['chave_acesso']),
+          'modelo': _intNulo(remoto['modelo']),
+          'canal': _texto(remoto['canal']),
+          'resultado': _texto(remoto['resultado']),
+          'codigo': _texto(remoto['codigo']),
+          'mensagem': _texto(remoto['mensagem']),
+          'url': _textoNulo(remoto['url']),
+          'criado_em': _textoPreferido(
+            remoto['criado_em'],
+            null,
+            DateTime.now().toIso8601String(),
+          ),
+        },
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+
+      final local = await _localPorId(
+        'nota_fiscal_importacao_tentativas',
+        localId,
+      );
+      await _salvarMapa(
+        tabela: 'imperium_sync_fiscal_tentativas',
+        empresaId: empresaId,
+        localId: localId,
+        remotoId: remotoId,
+        localHash: _hashTentativa(local),
+        remotoAtualizadoEm: remoto['criado_em']?.toString(),
+      );
+    }
+  }
+
+  Future<void> _publicarTentativas(String empresaId) async {
+    final client = _client;
+    if (client == null) return;
+
+    final database = await _appDatabase.database;
+    final locais = await database.query(
+      'nota_fiscal_importacao_tentativas',
+      orderBy: 'id ASC',
+    );
+
+    for (final local in locais) {
+      final localId = _int(local['id']);
+      if (localId <= 0) continue;
+
+      final mapa = await _mapaLocal(
+        tabela: 'imperium_sync_fiscal_tentativas',
+        empresaId: empresaId,
+        localId: localId,
+      );
+      if (mapa != null) continue;
+
+      final notaRemotaId = await _remotoPorLocalOuNulo(
+        tabelaMapa: 'imperium_sync_fiscal_notas',
+        empresaId: empresaId,
+        localId: _intNulo(local['nota_fiscal_id']),
+      );
+
+      final raw = await client
+          .from('imperium_fiscal_importacao_tentativas')
+          .insert(<String, Object?>{
+            'empresa_id': empresaId,
+            'nota_fiscal_id': notaRemotaId,
+            'chave_acesso': _texto(local['chave_acesso']),
+            'modelo': _intNulo(local['modelo']),
+            'canal': _texto(local['canal']),
+            'resultado': _texto(local['resultado']),
+            'codigo': _texto(local['codigo']),
+            'mensagem': _texto(local['mensagem']),
+            'url': _textoNulo(local['url']),
+            'criado_em': _textoPreferido(
+              local['criado_em'],
+              null,
+              DateTime.now().toIso8601String(),
+            ),
+          })
+          .select('id,criado_em')
+          .single();
+
+      final remoto = Map<String, dynamic>.from(raw);
+      final remotoId = _texto(remoto['id']);
+      if (remotoId.isEmpty) continue;
+
+      await _salvarMapa(
+        tabela: 'imperium_sync_fiscal_tentativas',
+        empresaId: empresaId,
+        localId: localId,
+        remotoId: remotoId,
+        localHash: _hashTentativa(local),
+        remotoAtualizadoEm: remoto['criado_em']?.toString(),
+      );
     }
   }
 
@@ -1380,6 +1510,20 @@ class FiscalCloudSyncService {
       local['ultimo_erro_mensagem'],
       local['importada_em'],
       local['observacoes'],
+    ]);
+  }
+
+  String _hashTentativa(Map<String, Object?> local) {
+    return _hash([
+      _intNulo(local['nota_fiscal_id']),
+      local['chave_acesso'],
+      _intNulo(local['modelo']),
+      local['canal'],
+      local['resultado'],
+      local['codigo'],
+      local['mensagem'],
+      local['url'],
+      local['criado_em'],
     ]);
   }
 
