@@ -391,9 +391,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
               onTap: () => Navigator.pop(bottomContext, 'resumo'),
             ),
             ListTile(
-              leading: const CircleAvatar(
-                child: Icon(Icons.payments_outlined),
-              ),
+              leading: const CircleAvatar(child: Icon(Icons.payments_outlined)),
               title: const Text('Enviar cobrança'),
               subtitle: const Text('Enviar o valor da Ordem de Serviço'),
               onTap: () => Navigator.pop(bottomContext, 'cobranca'),
