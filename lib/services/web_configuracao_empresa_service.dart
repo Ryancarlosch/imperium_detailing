@@ -47,6 +47,10 @@ class WebConfiguracaoEmpresaService {
         'cidade': '',
         'estado': '',
         'cep': '',
+        'nome_aplicativo': 'Imperium Detailing',
+        'cor_principal': 0xFFD6A84B,
+        'cor_secundaria': 0xFF1A1A1A,
+        'tema': 'escuro',
         'validade_orcamento_dias': 15,
         'rodape_documentos': '',
         'termos_orcamento': '',
@@ -92,6 +96,19 @@ class WebConfiguracaoEmpresaService {
       'cidade': _texto(valores['cidade']),
       'estado': _texto(valores['estado']),
       'cep': _texto(valores['cep']),
+      'nome_aplicativo': _textoOu(
+        valores['nome_aplicativo'],
+        'Imperium Detailing',
+      ),
+      'cor_principal': _inteiro(
+        valores['cor_principal'],
+        padrao: 0xFFD6A84B,
+      ),
+      'cor_secundaria': _inteiro(
+        valores['cor_secundaria'],
+        padrao: 0xFF1A1A1A,
+      ),
+      'tema': _tema(valores['tema']),
       'validade_orcamento_dias': _inteiro(
         valores['validade_orcamento_dias'],
         padrao: 15,
@@ -140,6 +157,16 @@ class WebConfiguracaoEmpresaService {
   }
 
   static String _texto(dynamic valor) => (valor ?? '').toString().trim();
+
+  static String _textoOu(dynamic valor, String padrao) {
+    final texto = _texto(valor);
+    return texto.isEmpty ? padrao : texto;
+  }
+
+  static String _tema(dynamic valor) {
+    final tema = _texto(valor).toLowerCase();
+    return tema == 'claro' ? 'claro' : 'escuro';
+  }
 
   static int _inteiro(dynamic valor, {int padrao = 0}) {
     if (valor is num) return valor.toInt();
