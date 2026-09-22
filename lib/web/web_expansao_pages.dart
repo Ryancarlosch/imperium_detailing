@@ -5,6 +5,8 @@ import '../config/imperium_regras_negocio.dart';
 import '../models/crm_lead.dart';
 import '../services/web_cloud_expansao_service.dart';
 import '../services/web_cloud_operacional_service.dart';
+import '../services/web_orcamento_pdf_service.dart';
+import '../services/whatsapp_service.dart';
 import 'imperium_web_theme.dart';
 
 class WebCrmPage extends StatefulWidget {
@@ -1094,6 +1096,7 @@ class WebOrcamentosPage extends StatefulWidget {
 
 class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
   final _service = WebCloudExpansaoService.instance;
+  final _pdfService = WebOrcamentoPdfService.instance;
   final _operacional = WebCloudOperacionalService.instance;
   final _busca = TextEditingController();
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
@@ -1189,6 +1192,314 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     } catch (e) {
       _mostrarErro(e);
     }
+  }
+
+  Map<String, dynamic> _clienteOrcamento(
+    Map<String, dynamic> orcamento,
+  ) {
+    final id = (orcamento['cliente_id'] ?? '').toString();
+    for (final item in _clientes) {
+      if ((item['id'] ?? '').toString() == id) return item;
+    }
+    return const <String, dynamic>{};
+  }
+
+  Map<String, dynamic> _veiculoOrcamento(
+    Map<String, dynamic> orcamento,
+  ) {
+    final id = (orcamento['veiculo_id'] ?? '').toString();
+    for (final item in _veiculos) {
+      if ((item['id'] ?? '').toString() == id) return item;
+    }
+    return const <String, dynamic>{};
+  }
+
+  Future<void> _abrirPdfOrcamento(Map<String, dynamic> orcamento) async {
+    try {
+      final itens = await _service.listarItensOrcamento(
+        orcamento['id'].toString(),
+      );
+      if (!mounted) return;
+
+      final acao = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        useSafeArea: true,
+        builder: (bottomContext) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text(
+                  'Documento do orçamento',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+                ),
+                subtitle: Text(
+                  'Gerado com os dados e identidade da empresa sincronizados.',
+                ),
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.picture_as_pdf_outlined),
+                ),
+                title: const Text('Visualizar PDF'),
+                onTap: () => Navigator.pop(bottomContext, 'visualizar'),
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.share_outlined),
+                ),
+                title: const Text('Compartilhar orçamento'),
+                onTap: () => Navigator.pop(bottomContext, 'compartilhar'),
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.receipt_long_outlined),
+                ),
+                title: const Text('Gerar e compartilhar recibo'),
+                onTap: () => Navigator.pop(bottomContext, 'recibo'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (acao == null) return;
+
+      final cliente = _clienteOrcamento(orcamento);
+      final veiculo = _veiculoOrcamento(orcamento);
+
+      if (acao == 'visualizar') {
+        await _pdfService.visualizar(
+          orcamento: orcamento,
+          itens: itens,
+          cliente: cliente,
+          veiculo: veiculo,
+        );
+      } else {
+        await _pdfService.compartilhar(
+          orcamento: orcamento,
+          itens: itens,
+          cliente: cliente,
+          veiculo: veiculo,
+          recibo: acao == 'recibo',
+        );
+      }
+    } catch (e) {
+      _mostrarErro('Não foi possível gerar o documento. $e');
+    }
+  }
+
+  Future<void> _abrirWhatsAppOrcamento(
+    Map<String, dynamic> orcamento,
+  ) async {
+    final cliente = _clienteOrcamento(orcamento);
+    final telefone = (cliente['telefone'] ?? '').toString().trim();
+    final nome = (cliente['nome'] ?? 'Cliente').toString();
+
+    if (telefone.isEmpty) {
+      _mostrarErro('O cliente $nome não possui telefone cadastrado.');
+      return;
+    }
+
+    final acao = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (bottomContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text(
+                'Enviar pelo WhatsApp',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+              ),
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.description_outlined),
+              ),
+              title: const Text('Enviar orçamento'),
+              subtitle: const Text('Número, valor e observações'),
+              onTap: () => Navigator.pop(bottomContext, 'orcamento'),
+            ),
+            if ((orcamento['status'] ?? '').toString() == 'Aprovado')
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.check_circle_outline),
+                ),
+                title: const Text('Enviar aprovação'),
+                subtitle: const Text('Confirmação de aprovação ao cliente'),
+                onTap: () => Navigator.pop(bottomContext, 'aprovacao'),
+              ),
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.edit_note_outlined),
+              ),
+              title: const Text('Mensagem personalizada'),
+              onTap: () => Navigator.pop(bottomContext, 'personalizada'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (acao == null) return;
+
+    final numero = 'Orçamento #${orcamento['origem_local_id'] ?? orcamento['id']}';
+    final valor = _moeda.format(_double(orcamento['valor']));
+    final observacoes = (orcamento['observacoes'] ?? '').toString();
+
+    try {
+      if (acao == 'orcamento') {
+        await WhatsAppService.enviarOrcamento(
+          telefone: telefone,
+          cliente: nome,
+          numeroOrcamento: numero,
+          valorTotal: valor,
+          observacoes: observacoes,
+        );
+      } else if (acao == 'aprovacao') {
+        await WhatsAppService.enviarAprovacaoOrcamento(
+          telefone: telefone,
+          cliente: nome,
+          numeroOrcamento: numero,
+          valorTotal: valor,
+        );
+      } else {
+        final controller = TextEditingController();
+        final mensagem = await showDialog<String>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Mensagem personalizada'),
+            content: SizedBox(
+              width: 560,
+              child: TextField(
+                controller: controller,
+                autofocus: true,
+                minLines: 4,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  hintText: 'Digite a mensagem para o cliente',
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton.icon(
+                onPressed: () {
+                  final texto = controller.text.trim();
+                  Navigator.pop(
+                    dialogContext,
+                    texto.isEmpty ? null : texto,
+                  );
+                },
+                icon: const Icon(Icons.send_outlined),
+                label: const Text('Enviar'),
+              ),
+            ],
+          ),
+        );
+        controller.dispose();
+        if (mensagem == null) return;
+
+        await WhatsAppService.enviarMensagemPersonalizada(
+          telefone: telefone,
+          mensagem: mensagem,
+        );
+      }
+    } catch (e) {
+      _mostrarErro('Não foi possível abrir o WhatsApp. $e');
+    }
+  }
+
+  Future<void> _excluirOrcamentoWeb(
+    Map<String, dynamic> orcamento,
+  ) async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir orçamento?'),
+        content: const Text(
+          'O orçamento será removido da operação e sincronizado como excluído '
+          'para os outros dispositivos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true) return;
+
+    try {
+      await _service.excluirOrcamento(
+        id: orcamento['id'].toString(),
+        atualizadoEmEsperado: (orcamento['atualizado_em'] ?? '').toString(),
+      );
+      await _carregar();
+    } catch (e) {
+      _mostrarErro(e);
+    }
+  }
+
+  PopupMenuButton<String> _menuOrcamento(
+    Map<String, dynamic> orcamento,
+  ) {
+    return PopupMenuButton<String>(
+      tooltip: 'Mais ações',
+      onSelected: (acao) {
+        switch (acao) {
+          case 'pdf':
+            _abrirPdfOrcamento(orcamento);
+            break;
+          case 'whatsapp':
+            _abrirWhatsAppOrcamento(orcamento);
+            break;
+          case 'excluir':
+            _excluirOrcamentoWeb(orcamento);
+            break;
+        }
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: 'pdf',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.picture_as_pdf_outlined),
+            title: Text('PDF / recibo'),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'whatsapp',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.chat_outlined),
+            title: Text('WhatsApp'),
+          ),
+        ),
+        PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'excluir',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.delete_outline),
+            title: Text('Excluir orçamento'),
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _detalhes(Map<String, dynamic> orcamento) async {
@@ -1744,6 +2055,19 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                                     onPressed: () => _detalhes(item),
                                     icon: const Icon(Icons.visibility_outlined),
                                   ),
+                                  IconButton(
+                                    tooltip: 'PDF / recibo',
+                                    onPressed: () => _abrirPdfOrcamento(item),
+                                    icon: const Icon(
+                                      Icons.picture_as_pdf_outlined,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'WhatsApp',
+                                    onPressed: () =>
+                                        _abrirWhatsAppOrcamento(item),
+                                    icon: const Icon(Icons.chat_outlined),
+                                  ),
                                   PopupMenuButton<String>(
                                     tooltip: 'Alterar status',
                                     onSelected: (v) => _alterarStatus(item, v),
@@ -1836,6 +2160,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                               ),
                               const SizedBox(width: 8),
                               _statusOrcamento(item, compacto: true),
+                              _menuOrcamento(item),
                             ],
                           ),
                         ),
