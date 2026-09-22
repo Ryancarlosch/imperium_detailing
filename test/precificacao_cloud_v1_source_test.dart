@@ -51,11 +51,13 @@ void main() {
     final compact = source.replaceAll(RegExp(r'\s+'), '');
 
     expect(compact, contains("modulo:'financeiro',prioridade:70"));
-    expect(compact, contains("modulo:'precificacao',prioridade:80"));
+    expect(compact, contains("modulo:'fiscal',prioridade:80"));
+    expect(compact, contains("modulo:'precificacao',prioridade:90"));
     expect(
       compact,
       contains("dependencias:const<String>['financeiro','estoque']"),
     );
+    expect(compact, contains('executar:()=>_syncFiscal(empresaId)'));
     expect(compact, contains('executar:()=>_syncPrecificacao(empresaId)'));
 
     final precUpload = compact.indexOf(
