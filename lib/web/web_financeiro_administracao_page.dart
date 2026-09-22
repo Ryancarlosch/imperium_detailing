@@ -28,11 +28,7 @@ class _WebFinanceiroAdministracaoPageState
   List<Map<String, dynamic>> _transferencias = const [];
   List<Map<String, dynamic>> _colaboradores = const [];
   List<Map<String, dynamic>> _pagamentosColaboradores = const [];
-  DateTime _mesFolha = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-    1,
-  );
+  DateTime _mesFolha = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
   @override
   void initState() {
@@ -569,19 +565,16 @@ class _WebFinanceiroAdministracaoPageState
 
     if (ok != true) return;
 
-    await _executar(
-      () async {
-        await _service.registrarPagamentoColaborador(
-          colaboradorId: colaboradorId,
-          contaId: contaId,
-          valor: _numero(valor.text),
-          dataPagamento: data,
-          formaPagamento: forma.text,
-          observacoes: observacoes.text,
-        );
-      },
-      'Pagamento registrado e sincronizado.',
-    );
+    await _executar(() async {
+      await _service.registrarPagamentoColaborador(
+        colaboradorId: colaboradorId,
+        contaId: contaId,
+        valor: _numero(valor.text),
+        dataPagamento: data,
+        formaPagamento: forma.text,
+        observacoes: observacoes.text,
+      );
+    }, 'Pagamento registrado e sincronizado.');
 
     valor.dispose();
     forma.dispose();

@@ -63,9 +63,9 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
       text: (atual?['instituicao'] ?? '').toString(),
     );
     final saldo = TextEditingController(
-      text: _double(atual?['saldo_inicial'])
-          .toStringAsFixed(2)
-          .replaceAll('.', ','),
+      text: _double(
+        atual?['saldo_inicial'],
+      ).toStringAsFixed(2).replaceAll('.', ','),
     );
     final observacoes = TextEditingController(
       text: (atual?['observacoes'] ?? '').toString(),
@@ -90,22 +90,28 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
                   TextField(
                     controller: nome,
                     autofocus: conta == null,
-                    decoration: const InputDecoration(labelText: 'Nome da conta *'),
+                    decoration: const InputDecoration(
+                      labelText: 'Nome da conta *',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: const <String>{
-                      'Dinheiro',
-                      'Conta bancária',
-                      'Carteira digital',
-                      'Maquininha',
-                      'Outro',
-                    }.contains(tipo)
+                    initialValue:
+                        const <String>{
+                          'Dinheiro',
+                          'Conta bancária',
+                          'Carteira digital',
+                          'Maquininha',
+                          'Outro',
+                        }.contains(tipo)
                         ? tipo
                         : 'Outro',
                     decoration: const InputDecoration(labelText: 'Tipo'),
                     items: const [
-                      DropdownMenuItem(value: 'Dinheiro', child: Text('Dinheiro')),
+                      DropdownMenuItem(
+                        value: 'Dinheiro',
+                        child: Text('Dinheiro'),
+                      ),
                       DropdownMenuItem(
                         value: 'Conta bancária',
                         child: Text('Conta bancária'),
@@ -230,7 +236,9 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
         ativo: ativa,
       );
       await _carregar();
-      _mensagem(conta == null ? 'Conta criada e sincronizada.' : 'Conta atualizada.');
+      _mensagem(
+        conta == null ? 'Conta criada e sincronizada.' : 'Conta atualizada.',
+      );
     } catch (e) {
       _mensagem(_textoErro(e), erro: true);
     } finally {
@@ -327,7 +335,9 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
                       ),
                       const SizedBox(width: 12),
                       FilledButton.icon(
-                        onPressed: _carregando ? null : () => _abrirFormulario(),
+                        onPressed: _carregando
+                            ? null
+                            : () => _abrirFormulario(),
                         icon: const Icon(Icons.add_rounded),
                         label: const Text('Nova conta'),
                       ),
@@ -369,7 +379,8 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
                                   conta: conta,
                                   moeda: _moeda,
                                   onTap: () => _abrirConta(conta),
-                                  onEditar: () => _abrirFormulario(conta: conta),
+                                  onEditar: () =>
+                                      _abrirFormulario(conta: conta),
                                   onAlternar: () => _alternarConta(conta),
                                 ),
                               ),
@@ -644,9 +655,7 @@ class _WebExtratoContaPageState extends State<WebExtratoContaPage> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(
-              '$status. Diferença: ${_moeda.format(diferenca)}.',
-            ),
+            content: Text('$status. Diferença: ${_moeda.format(diferenca)}.'),
           ),
         );
     } catch (e) {

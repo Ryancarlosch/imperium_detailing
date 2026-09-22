@@ -100,14 +100,8 @@ class WebConfiguracaoEmpresaService {
         valores['nome_aplicativo'],
         'Imperium Detailing',
       ),
-      'cor_principal': _inteiro(
-        valores['cor_principal'],
-        padrao: 0xFFD6A84B,
-      ),
-      'cor_secundaria': _inteiro(
-        valores['cor_secundaria'],
-        padrao: 0xFF1A1A1A,
-      ),
+      'cor_principal': _inteiro(valores['cor_principal'], padrao: 0xFFD6A84B),
+      'cor_secundaria': _inteiro(valores['cor_secundaria'], padrao: 0xFF1A1A1A),
       'tema': _tema(valores['tema']),
       'validade_orcamento_dias': _inteiro(
         valores['validade_orcamento_dias'],

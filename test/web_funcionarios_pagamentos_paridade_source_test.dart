@@ -19,10 +19,7 @@ void main() {
 
     expect(service, contains('listarPagamentosColaboradores'));
     expect(service, contains('registrarPagamentoColaborador'));
-    expect(
-      service,
-      contains("'imperium_financeiro_pagar_colaborador_web'"),
-    );
+    expect(service, contains("'imperium_financeiro_pagar_colaborador_web'"));
   });
 
   test('Pagamento Web cria movimento e vinculo de forma atomica', () {
@@ -51,16 +48,10 @@ void main() {
     ).readAsStringSync();
 
     expect(sync, contains('financeiro_pagamentos_colaboradores'));
-    expect(
-      sync,
-      contains('imperium_financeiro_pagamentos_colaboradores'),
-    );
+    expect(sync, contains('imperium_financeiro_pagamentos_colaboradores'));
     expect(sync, contains('imperium_sync_financeiro_pagamentos_colaboradores'));
     expect(sync, contains('imperium_sync_financeiro_movimentos'));
-    expect(
-      sync,
-      contains('evitando criar uma segunda saída financeira'),
-    );
+    expect(sync, contains('evitando criar uma segunda saída financeira'));
 
     expect(
       motor,

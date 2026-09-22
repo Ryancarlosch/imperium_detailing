@@ -95,7 +95,6 @@ class WebFinanceiroAdministracaoService {
     ordenarPor: 'data_pagamento',
   );
 
-
   Future<void> _salvar({
     required String tabela,
     required Map<String, Object?> valores,

@@ -155,14 +155,8 @@ class _WebConfiguracoesEmpresaPageState
     _tema = _texto(item['tema'], padrao: 'escuro') == 'claro'
         ? 'claro'
         : 'escuro';
-    _corPrincipal = _inteiro(
-      item['cor_principal'],
-      padrao: 0xFFD6A84B,
-    );
-    _corSecundaria = _inteiro(
-      item['cor_secundaria'],
-      padrao: 0xFF1A1A1A,
-    );
+    _corPrincipal = _inteiro(item['cor_principal'], padrao: 0xFFD6A84B);
+    _corSecundaria = _inteiro(item['cor_secundaria'], padrao: 0xFF1A1A1A);
     _validadeOrcamento.text = _texto(
       item['validade_orcamento_dias'],
       padrao: '15',
@@ -773,10 +767,7 @@ class _WebConfiguracoesEmpresaPageState
                 _linha([
                   TextField(
                     controller: _nomeAplicativo,
-                    decoration: _dec(
-                      'Nome do aplicativo',
-                      Icons.apps_outlined,
-                    ),
+                    decoration: _dec('Nome do aplicativo', Icons.apps_outlined),
                   ),
                   DropdownButtonFormField<String>(
                     initialValue: _tema,
@@ -926,8 +917,9 @@ class _WebConfiguracoesEmpresaPageState
                   fallbackIcon: Icons.draw_outlined,
                   actions: [
                     FilledButton.tonalIcon(
-                      onPressed:
-                          _processandoArquivo ? null : _desenharAssinatura,
+                      onPressed: _processandoArquivo
+                          ? null
+                          : _desenharAssinatura,
                       icon: const Icon(Icons.draw_outlined),
                       label: Text(
                         _assinaturaBytes == null ? 'Desenhar' : 'Redesenhar',

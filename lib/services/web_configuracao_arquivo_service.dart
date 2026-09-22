@@ -124,32 +124,31 @@ class WebConfiguracaoArquivoService {
     final storagePath =
         '$empresaId/configuracoes/$tipoNormalizado/$hash.$extensao';
 
-    await _client.storage.from(bucket).uploadBinary(
-      storagePath,
-      bytes,
-      fileOptions: FileOptions(
-        cacheControl: '3600',
-        upsert: true,
-        contentType: mimeNormalizado,
-      ),
-    );
+    await _client.storage
+        .from(bucket)
+        .uploadBinary(
+          storagePath,
+          bytes,
+          fileOptions: FileOptions(
+            cacheControl: '3600',
+            upsert: true,
+            contentType: mimeNormalizado,
+          ),
+        );
 
     final raw = await _client
         .from('imperium_configuracao_arquivos')
-        .upsert(
-          <String, dynamic>{
-            'empresa_id': empresaId,
-            'tipo': tipoNormalizado,
-            'storage_bucket': bucket,
-            'storage_path': storagePath,
-            'nome_original': nomeOriginal.trim(),
-            'sha256': hash,
-            'tamanho': bytes.length,
-            'mime': mimeNormalizado,
-            'excluido_em': null,
-          },
-          onConflict: 'empresa_id,tipo',
-        )
+        .upsert(<String, dynamic>{
+          'empresa_id': empresaId,
+          'tipo': tipoNormalizado,
+          'storage_bucket': bucket,
+          'storage_path': storagePath,
+          'nome_original': nomeOriginal.trim(),
+          'sha256': hash,
+          'tamanho': bytes.length,
+          'mime': mimeNormalizado,
+          'excluido_em': null,
+        }, onConflict: 'empresa_id,tipo')
         .select()
         .single();
 
