@@ -110,7 +110,19 @@ class WebOsPdfService {
     return documento.save();
   }
 
-  Future<void> baixarPdf({required String ordemId, String numero = ''}) async {
+  Future<void> visualizarPdf({required String ordemId}) async {
+    final bytes = await gerarPdf(ordemId: ordemId);
+
+    await Printing.layoutPdf(
+      name: 'Ordem de Serviço',
+      onLayout: (_) async => bytes,
+    );
+  }
+
+  Future<void> compartilharPdf({
+    required String ordemId,
+    String numero = '',
+  }) async {
     final bytes = await gerarPdf(ordemId: ordemId);
     final identificador = _arquivoSeguro(numero.isEmpty ? ordemId : numero);
 
@@ -118,6 +130,10 @@ class WebOsPdfService {
       bytes: bytes,
       filename: 'ordem_servico_$identificador.pdf',
     );
+  }
+
+  Future<void> baixarPdf({required String ordemId, String numero = ''}) {
+    return compartilharPdf(ordemId: ordemId, numero: numero);
   }
 
   pw.Widget _cabecalho({required String numero, required String status}) {
