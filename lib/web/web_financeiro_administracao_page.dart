@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/web_financeiro_administracao_service.dart';
+import '../services/web_folha_ponto_service.dart';
 
 class WebFinanceiroAdministracaoPage extends StatefulWidget {
   const WebFinanceiroAdministracaoPage({super.key});
@@ -28,6 +29,7 @@ class _WebFinanceiroAdministracaoPageState
   List<Map<String, dynamic>> _transferencias = const [];
   List<Map<String, dynamic>> _colaboradores = const [];
   List<Map<String, dynamic>> _pagamentosColaboradores = const [];
+  Map<String, Map<String, dynamic>> _resumosFolha = const {};
   DateTime _mesFolha = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
   @override
@@ -56,6 +58,13 @@ class _WebFinanceiroAdministracaoPageState
         _service.listarColaboradoresCusto(),
         _service.listarPagamentosColaboradores(),
       ]);
+      final colaboradores = dados[8] as List<Map<String, dynamic>>;
+      final pagamentos = dados[9] as List<Map<String, dynamic>>;
+      final resumosFolha = await WebFolhaPontoService.instance.obterResumos(
+        mes: _mesFolha,
+        colaboradores: colaboradores,
+        pagamentos: pagamentos,
+      );
       if (!mounted) return;
       setState(() {
         _fornecedores = dados[0] as List<Map<String, dynamic>>;
@@ -66,8 +75,9 @@ class _WebFinanceiroAdministracaoPageState
         _contas = dados[5] as List<Map<String, dynamic>>;
         _movimentos = dados[6] as List<Map<String, dynamic>>;
         _transferencias = dados[7] as List<Map<String, dynamic>>;
-        _colaboradores = dados[8] as List<Map<String, dynamic>>;
-        _pagamentosColaboradores = dados[9] as List<Map<String, dynamic>>;
+        _colaboradores = colaboradores;
+        _pagamentosColaboradores = pagamentos;
+        _resumosFolha = resumosFolha;
       });
     } catch (e) {
       if (mounted) setState(() => _erro = _textoErro(e));
@@ -272,6 +282,33 @@ class _WebFinanceiroAdministracaoPageState
       0,
       (total, item) => total + _double(item['valor']),
     );
+    final resumos = _resumosFolha.values.toList()
+      ..sort(
+        (a, b) => (a['nome'] ?? '')
+            .toString()
+            .compareTo((b['nome'] ?? '').toString()),
+      );
+    final estimadoMes = resumos.fold<double>(
+      0,
+      (total, item) => total + _double(item['valor_estimado_pagar']),
+    );
+    final restanteMes = resumos.fold<double>(
+      0,
+      (total, item) => total + _double(item['restante_estimado']),
+    );
+    final valorExtrasMes = resumos.fold<double>(
+      0,
+      (total, item) => total + _double(item['valor_horas_extras']),
+    );
+    final descontosMes = resumos.fold<double>(
+      0,
+      (total, item) => total + _double(item['desconto_horas_faltantes']),
+    );
+    final pendenciasPonto = resumos.fold<int>(
+      0,
+      (total, item) =>
+          total + _int(item['pendencias']) + _int(item['incompletos']),
+    );
     final agora = DateTime.now();
     final podeAvancar =
         _mesFolha.year < agora.year ||
@@ -331,6 +368,7 @@ class _WebFinanceiroAdministracaoPageState
                         1,
                       );
                     });
+                    _carregar();
                   },
                   icon: const Icon(Icons.chevron_left_rounded),
                 ),
@@ -352,6 +390,7 @@ class _WebFinanceiroAdministracaoPageState
                               1,
                             );
                           });
+                          _carregar();
                         }
                       : null,
                   icon: const Icon(Icons.chevron_right_rounded),
@@ -363,9 +402,9 @@ class _WebFinanceiroAdministracaoPageState
         const SizedBox(height: 14),
         LayoutBuilder(
           builder: (context, constraints) {
-            final colunas = constraints.maxWidth >= 900
-                ? 4
-                : constraints.maxWidth >= 560
+            final colunas = constraints.maxWidth >= 1100
+                ? 3
+                : constraints.maxWidth >= 620
                 ? 2
                 : 1;
             final largura =
@@ -376,43 +415,182 @@ class _WebFinanceiroAdministracaoPageState
               children: [
                 _Kpi(
                   width: largura,
-                  titulo: 'Remuneração base',
-                  valor: _moeda.format(remuneracaoBase),
-                  detalhe: 'Funcionários ativos',
+                  titulo: 'Estimado a pagar',
+                  valor: _moeda.format(estimadoMes),
+                  detalhe: 'Salário ajustado pelo ponto',
                 ),
                 _Kpi(
                   width: largura,
-                  titulo: 'Encargos + outros',
-                  valor: _moeda.format(encargosOutros),
-                  detalhe: 'Base mensal cadastrada',
-                ),
-                _Kpi(
-                  width: largura,
-                  titulo: 'Custo base da equipe',
-                  valor: _moeda.format(remuneracaoBase + encargosOutros),
-                  detalhe: 'Referência para precificação',
-                ),
-                _Kpi(
-                  width: largura,
-                  titulo: 'Pago no mês',
+                  titulo: 'Já pago',
                   valor: _moeda.format(pagoMes),
-                  detalhe: '${pagamentos.length} pagamento(s)',
+                  detalhe: '${pagamentos.length} pagamento(s) no mês',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Falta pagar',
+                  valor: _moeda.format(restanteMes),
+                  detalhe: 'Estimado menos pagamentos',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Horas extras',
+                  valor: _moeda.format(valorExtrasMes),
+                  detalhe: 'Adicional conforme configuração do Ponto',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Descontos por horas',
+                  valor: _moeda.format(descontosMes),
+                  detalhe: 'Horas faltantes registradas',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Pendências de ponto',
+                  valor: '$pendenciasPonto',
+                  detalhe: 'Dias pendentes + pontos incompletos',
                 ),
               ],
             );
           },
         ),
         const SizedBox(height: 16),
-        const Card(
+        Card(
           margin: EdgeInsets.zero,
           child: Padding(
-            padding: EdgeInsets.all(14),
-            child: Text(
-              'A base mensal acima é cadastral. O fechamento de ponto continua sendo a referência para faltas, horas extras e valor estimado a pagar.',
-              style: TextStyle(color: Color(0xFF89939E)),
+            padding: const EdgeInsets.all(14),
+            child: Wrap(
+              spacing: 24,
+              runSpacing: 8,
+              children: [
+                Text('Remuneração base: ${_moeda.format(remuneracaoBase)}'),
+                Text('Encargos + outros: ${_moeda.format(encargosOutros)}'),
+                Text(
+                  'Custo cadastral da equipe: '
+                  '${_moeda.format(remuneracaoBase + encargosOutros)}',
+                ),
+              ],
             ),
           ),
         ),
+        const SizedBox(height: 22),
+        const Text(
+          'Resumo por funcionário',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Mesma regra do Android: base de 220h, faltas, horas extras, '
+          'pagamentos e fechamento mensal do Ponto.',
+          style: TextStyle(color: Color(0xFF89939E)),
+        ),
+        const SizedBox(height: 10),
+        if (resumos.isEmpty)
+          const Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: EdgeInsets.all(22),
+              child: Text('Nenhum funcionário disponível para esta folha.'),
+            ),
+          )
+        else
+          ...resumos.map((item) {
+            final vinculado = _bool(item['ponto_vinculado']);
+            final status = (item['fechamento_status'] ?? 'Aberto').toString();
+            final extras = _int(item['minutos_extras']);
+            final faltantes = _int(item['minutos_faltantes']);
+            final pendencias = _int(item['pendencias']);
+            final incompletos = _int(item['incompletos']);
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        SizedBox(
+                          width: 390,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (item['nome'] ?? 'Funcionário').toString(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              Text(
+                                [
+                                  (item['funcao'] ?? '').toString(),
+                                  status,
+                                  if (!vinculado) 'Ponto aguardando vínculo',
+                                ].where((e) => e.trim().isNotEmpty).join(' · '),
+                                style: TextStyle(
+                                  color: vinculado
+                                      ? const Color(0xFF89939E)
+                                      : Colors.orangeAccent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Wrap(
+                          spacing: 18,
+                          runSpacing: 6,
+                          children: [
+                            _folhaValor(
+                              'Estimado',
+                              _moeda.format(
+                                _double(item['valor_estimado_pagar']),
+                              ),
+                            ),
+                            _folhaValor(
+                              'Pago',
+                              _moeda.format(_double(item['ja_pago_mes'])),
+                            ),
+                            _folhaValor(
+                              'Restante',
+                              _moeda.format(
+                                _double(item['restante_estimado']),
+                              ),
+                              destaque: true,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 22),
+                    Wrap(
+                      spacing: 18,
+                      runSpacing: 8,
+                      children: [
+                        Text('Extras: ${_horasMinutos(extras)}'),
+                        Text('Faltantes: ${_horasMinutos(faltantes)}'),
+                        Text('Faltas: ${_int(item['faltas'])}'),
+                        Text('Atestados: ${_int(item['atestados'])}'),
+                        Text('Pendências: $pendencias'),
+                        Text('Incompletos: $incompletos'),
+                        Text(
+                          'Valor extras: '
+                          '${_moeda.format(_double(item['valor_horas_extras']))}',
+                        ),
+                        Text(
+                          'Desconto: '
+                          '${_moeda.format(_double(item['desconto_horas_faltantes']))}',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
         const SizedBox(height: 22),
         const Text(
           'Pagamentos do mês',
@@ -463,6 +641,35 @@ class _WebFinanceiroAdministracaoPageState
           }),
       ],
     );
+  }
+
+  Widget _folhaValor(
+    String titulo,
+    String valor, {
+    bool destaque = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          titulo,
+          style: const TextStyle(color: Color(0xFF89939E), fontSize: 11),
+        ),
+        Text(
+          valor,
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            color: destaque ? Colors.amberAccent : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _horasMinutos(int minutos) {
+    final horas = minutos ~/ 60;
+    final resto = minutos % 60;
+    return '${horas}h ${resto.toString().padLeft(2, '0')}min';
   }
 
   String _nomeColaborador(String id) {
