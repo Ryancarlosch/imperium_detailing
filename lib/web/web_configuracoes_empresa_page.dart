@@ -1,5 +1,10 @@
-import 'package:flutter/material.dart';
+import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:signature/signature.dart';
+
+import '../services/web_configuracao_arquivo_service.dart';
 import '../services/web_configuracao_empresa_service.dart';
 import 'imperium_web_theme.dart';
 
@@ -14,11 +19,16 @@ class WebConfiguracoesEmpresaPage extends StatefulWidget {
 class _WebConfiguracoesEmpresaPageState
     extends State<WebConfiguracoesEmpresaPage> {
   final _service = WebConfiguracaoEmpresaService.instance;
+  final _arquivoService = WebConfiguracaoArquivoService.instance;
 
   bool _carregando = true;
   bool _salvando = false;
+  bool _processandoArquivo = false;
   String? _erro;
   Map<String, dynamic> _atual = const {};
+  Map<String, WebConfiguracaoArquivo> _arquivos = const {};
+  Uint8List? _logoBytes;
+  Uint8List? _assinaturaBytes;
 
   final _nomeFantasia = TextEditingController();
   final _razaoSocial = TextEditingController();
@@ -106,6 +116,12 @@ class _WebConfiguracoesEmpresaPageState
       if (!mounted) return;
       _atual = atual;
       _preencher(atual);
+      try {
+        await _carregarArquivos();
+      } catch (_) {
+        // Configurações textuais continuam disponíveis mesmo se o Storage
+        // estiver temporariamente indisponível.
+      }
     } catch (e) {
       if (!mounted) return;
       _erro = _textoErro(e);
@@ -160,6 +176,260 @@ class _WebConfiguracoesEmpresaPageState
     _mensagemConfirmacao.text = _texto(item['mensagem_confirmacao']);
     _mensagemEntrega.text = _texto(item['mensagem_entrega']);
     _mensagemCobranca.text = _texto(item['mensagem_cobranca']);
+  }
+
+  Future<void> _carregarArquivos() async {
+    final arquivos = await _arquivoService.listarAtivos();
+    final imagens = await Future.wait<Uint8List?>([
+      _arquivoService.baixar(arquivos['logo']),
+      _arquivoService.baixar(arquivos['assinatura_empresa']),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _arquivos = arquivos;
+      _logoBytes = imagens[0];
+      _assinaturaBytes = imagens[1];
+    });
+  }
+
+  Future<void> _selecionarImagem(String tipo) async {
+    if (_processandoArquivo) return;
+
+    final resultado = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+      allowMultiple: false,
+      dialogTitle: tipo == 'logo'
+          ? 'Selecionar logo da empresa'
+          : 'Selecionar assinatura da empresa',
+    );
+    if (resultado == null || resultado.files.isEmpty) return;
+
+    final arquivo = resultado.files.single;
+    final bytes = arquivo.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      _snack('Não foi possível ler o arquivo selecionado.', erro: true);
+      return;
+    }
+
+    await _salvarArquivoVisual(
+      tipo: tipo,
+      bytes: bytes,
+      nomeOriginal: arquivo.name,
+    );
+  }
+
+  Future<void> _salvarArquivoVisual({
+    required String tipo,
+    required Uint8List bytes,
+    required String nomeOriginal,
+  }) async {
+    if (_processandoArquivo) return;
+    setState(() => _processandoArquivo = true);
+
+    try {
+      await _arquivoService.salvar(
+        tipo: tipo,
+        bytes: bytes,
+        nomeOriginal: nomeOriginal,
+        mime: '',
+      );
+      await _carregarArquivos();
+      _snack(
+        tipo == 'logo'
+            ? 'Logo salva no Cloud.'
+            : 'Assinatura da empresa salva no Cloud.',
+      );
+    } catch (e) {
+      _snack(_textoErro(e), erro: true);
+    } finally {
+      if (mounted) setState(() => _processandoArquivo = false);
+    }
+  }
+
+  Future<void> _desenharAssinatura() async {
+    if (_processandoArquivo) return;
+
+    final controller = SignatureController(
+      penStrokeWidth: 3.5,
+      penColor: Colors.black,
+      exportBackgroundColor: Colors.transparent,
+    );
+
+    final bytes = await showDialog<Uint8List>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Assinatura da empresa'),
+        content: SizedBox(
+          width: 720,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Desenhe com o mouse ou toque. A assinatura será salva em PNG no Storage privado da empresa.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                height: 260,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.black26),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Signature(
+                  controller: controller,
+                  backgroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: controller.clear,
+            icon: const Icon(Icons.cleaning_services_outlined),
+            label: const Text('Limpar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              if (controller.isEmpty) return;
+              final png = await controller.toPngBytes();
+              if (png != null && dialogContext.mounted) {
+                Navigator.pop(dialogContext, png);
+              }
+            },
+            icon: const Icon(Icons.save_outlined),
+            label: const Text('Salvar assinatura'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+    if (bytes == null || bytes.isEmpty) return;
+
+    await _salvarArquivoVisual(
+      tipo: 'assinatura_empresa',
+      bytes: bytes,
+      nomeOriginal:
+          'assinatura_empresa_${DateTime.now().millisecondsSinceEpoch}.png',
+    );
+  }
+
+  Future<void> _removerArquivo(String tipo) async {
+    if (_processandoArquivo) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(tipo == 'logo' ? 'Remover logo' : 'Remover assinatura'),
+        content: Text(
+          tipo == 'logo'
+              ? 'Deseja remover a logo ativa da empresa?'
+              : 'Deseja remover a assinatura ativa da empresa?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+
+    setState(() => _processandoArquivo = true);
+    try {
+      await _arquivoService.remover(tipo);
+      await _carregarArquivos();
+      _snack(tipo == 'logo' ? 'Logo removida.' : 'Assinatura removida.');
+    } catch (e) {
+      _snack(_textoErro(e), erro: true);
+    } finally {
+      if (mounted) setState(() => _processandoArquivo = false);
+    }
+  }
+
+  Widget _arquivoVisualCard({
+    required String titulo,
+    required String subtitulo,
+    required Uint8List? bytes,
+    required WebConfiguracaoArquivo? arquivo,
+    required IconData fallbackIcon,
+    required List<Widget> actions,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 118,
+              height: 84,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white10),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: bytes == null
+                  ? Icon(fallbackIcon, size: 38, color: Colors.white54)
+                  : Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Image.memory(bytes, fit: BoxFit.contain),
+                    ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titulo,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitulo,
+                    style: const TextStyle(
+                      color: Color(0xFF89939E),
+                      fontSize: 12,
+                    ),
+                  ),
+                  if (arquivo != null) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      '${arquivo.nomeOriginal} · '
+                      '${(arquivo.tamanho / 1024).toStringAsFixed(1)} KB',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Wrap(spacing: 8, runSpacing: 8, children: actions),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _salvar() async {
@@ -611,6 +881,79 @@ class _WebConfiguracoesEmpresaPageState
                   'A identidade é salva no Cloud e aplicada pelo Android no próximo ciclo de sincronização. A interface Web mantém o tema administrativo próprio por enquanto.',
                   style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
                 ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _secao(
+              titulo: 'Logo e assinatura',
+              subtitulo:
+                  'Arquivos privados compartilhados entre Web, Android e documentos da empresa.',
+              children: [
+                _arquivoVisualCard(
+                  titulo: 'Logo da empresa',
+                  subtitulo:
+                      'Usada na identidade e nos documentos que suportam a logo sincronizada.',
+                  bytes: _logoBytes,
+                  arquivo: _arquivos['logo'],
+                  fallbackIcon: Icons.image_outlined,
+                  actions: [
+                    OutlinedButton.icon(
+                      onPressed: _processandoArquivo
+                          ? null
+                          : () => _selecionarImagem('logo'),
+                      icon: const Icon(Icons.upload_file_outlined),
+                      label: Text(
+                        _logoBytes == null ? 'Enviar logo' : 'Substituir',
+                      ),
+                    ),
+                    if (_logoBytes != null)
+                      TextButton.icon(
+                        onPressed: _processandoArquivo
+                            ? null
+                            : () => _removerArquivo('logo'),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        label: const Text('Remover'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _arquivoVisualCard(
+                  titulo: 'Assinatura da empresa',
+                  subtitulo:
+                      'Pode ser desenhada no navegador ou importada como imagem.',
+                  bytes: _assinaturaBytes,
+                  arquivo: _arquivos['assinatura_empresa'],
+                  fallbackIcon: Icons.draw_outlined,
+                  actions: [
+                    FilledButton.tonalIcon(
+                      onPressed:
+                          _processandoArquivo ? null : _desenharAssinatura,
+                      icon: const Icon(Icons.draw_outlined),
+                      label: Text(
+                        _assinaturaBytes == null ? 'Desenhar' : 'Redesenhar',
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _processandoArquivo
+                          ? null
+                          : () => _selecionarImagem('assinatura_empresa'),
+                      icon: const Icon(Icons.upload_file_outlined),
+                      label: const Text('Importar imagem'),
+                    ),
+                    if (_assinaturaBytes != null)
+                      TextButton.icon(
+                        onPressed: _processandoArquivo
+                            ? null
+                            : () => _removerArquivo('assinatura_empresa'),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        label: const Text('Remover'),
+                      ),
+                  ],
+                ),
+                if (_processandoArquivo) ...[
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(minHeight: 2),
+                ],
               ],
             ),
             const SizedBox(height: 14),
