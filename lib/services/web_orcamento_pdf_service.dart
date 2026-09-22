@@ -424,9 +424,9 @@ class WebOrcamentoPdfService {
     if (local.isNotEmpty) return 'Orçamento #$local';
 
     final id = _texto(orcamento['id']);
-    return id.isEmpty
-        ? 'Orçamento'
-        : 'Orçamento ${id.substring(0, id.length.clamp(0, 8))}';
+    if (id.isEmpty) return 'Orçamento';
+    final fim = id.length < 8 ? id.length : 8;
+    return 'Orçamento ${id.substring(0, fim)}';
   }
 
   String _nomeEmpresa(Map<String, dynamic> config) {
