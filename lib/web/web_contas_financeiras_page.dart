@@ -264,7 +264,21 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
   }
 
   double _numero(String valor) {
-    var texto = valor.trim().replaceAll(r'R
+    var texto = valor.trim().replaceAll('R\$', '').replaceAll(' ', '');
+    if (texto.contains(',')) {
+      texto = texto.replaceAll('.', '').replaceAll(',', '.');
+    }
+    final numero = double.tryParse(texto);
+    if (numero == null) throw ArgumentError('Informe um saldo válido.');
+    return numero;
+  }
+
+  static double _double(dynamic valor) {
+    if (valor is num) return valor.toDouble();
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final visiveis = _contas
         .where((conta) => _mostrarInativas || conta.ativa)
