@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../services/web_cloud_ponto_service.dart';
 import '../services/web_financeiro_administracao_service.dart';
 import '../services/web_folha_ponto_service.dart';
 
@@ -15,6 +16,7 @@ class WebFinanceiroAdministracaoPage extends StatefulWidget {
 class _WebFinanceiroAdministracaoPageState
     extends State<WebFinanceiroAdministracaoPage> {
   final _service = WebFinanceiroAdministracaoService.instance;
+  final _pontoService = WebCloudPontoService.instance;
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: r'R$');
 
   bool _carregando = true;
@@ -584,6 +586,18 @@ class _WebFinanceiroAdministracaoPageState
                         ),
                       ],
                     ),
+                    if (vinculado) ...[
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _acaoFechamento(
+                          item: item,
+                          status: status,
+                          pendencias: pendencias,
+                          incompletos: incompletos,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -638,6 +652,141 @@ class _WebFinanceiroAdministracaoPageState
             );
           }),
       ],
+    );
+  }
+
+  Widget _acaoFechamento({
+    required Map<String, dynamic> item,
+    required String status,
+    required int pendencias,
+    required int incompletos,
+  }) {
+    if (status == 'Fechado') {
+      return OutlinedButton.icon(
+        onPressed: () => _reabrirCompetencia(item),
+        icon: const Icon(Icons.lock_open_rounded),
+        label: const Text('Reabrir competência'),
+      );
+    }
+
+    final agora = DateTime.now();
+    final fimMes = DateTime(_mesFolha.year, _mesFolha.month + 1, 0);
+    final hoje = DateTime(agora.year, agora.month, agora.day);
+    final mesTerminou = hoje.isAfter(fimMes);
+    final pronto = pendencias == 0 && incompletos == 0;
+
+    if (!mesTerminou) {
+      return const Text(
+        'O fechamento será liberado após o fim do mês.',
+        style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
+      );
+    }
+
+    return FilledButton.icon(
+      onPressed: pronto ? () => _fecharCompetencia(item) : null,
+      icon: const Icon(Icons.lock_outline_rounded),
+      label: Text(
+        pronto
+            ? 'Fechar competência'
+            : 'Resolva pendências antes de fechar',
+      ),
+    );
+  }
+
+  Future<void> _fecharCompetencia(Map<String, dynamic> item) async {
+    final pontoId = (item['ponto_colaborador_id'] ?? '').toString();
+    if (pontoId.isEmpty) return;
+
+    final nome = (item['nome'] ?? 'Funcionário').toString();
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Fechar competência'),
+        content: Text(
+          'Confirmar o fechamento de '
+          '${DateFormat('MMMM yyyy', 'pt_BR').format(_mesFolha)} '
+          'para $nome? O snapshot ficará congelado como no Android.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Fechar mês'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true) return;
+
+    final snapshot = Map<String, dynamic>.from(item);
+    final origemLocal = _int(snapshot['origem_colaborador_local_id']);
+    if (origemLocal > 0) snapshot['colaborador_id'] = origemLocal;
+    snapshot.remove('ponto_colaborador_id');
+    snapshot.remove('ponto_vinculado');
+    snapshot.remove('origem_colaborador_local_id');
+
+    await _executar(
+      () => _pontoService.fecharCompetencia(
+        colaboradorId: pontoId,
+        competencia: _mesFolha,
+        snapshot: snapshot,
+      ),
+      'Competência fechada e sincronizada com o aplicativo.',
+    );
+  }
+
+  Future<void> _reabrirCompetencia(Map<String, dynamic> item) async {
+    final pontoId = (item['ponto_colaborador_id'] ?? '').toString();
+    if (pontoId.isEmpty) return;
+
+    final motivo = TextEditingController();
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reabrir competência'),
+        content: SizedBox(
+          width: 520,
+          child: TextField(
+            controller: motivo,
+            autofocus: true,
+            minLines: 2,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Motivo da reabertura *',
+              helperText: 'Informe pelo menos 5 caracteres.',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Reabrir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmou != true) {
+      motivo.dispose();
+      return;
+    }
+
+    final texto = motivo.text;
+    motivo.dispose();
+    await _executar(
+      () => _pontoService.reabrirCompetencia(
+        colaboradorId: pontoId,
+        competencia: _mesFolha,
+        motivo: texto,
+      ),
+      'Competência reaberta e sincronizada com o aplicativo.',
     );
   }
 
