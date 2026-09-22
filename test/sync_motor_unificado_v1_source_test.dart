@@ -17,7 +17,7 @@ void main() {
     expect(source, contains('liberarBackoff'));
   });
 
-  test('Operacional usa nove modulos no motor', () {
+  test('Operacional usa dez modulos no motor', () {
     final source = File(
       'lib/services/operacional_sync_service.dart',
     ).readAsStringSync();
@@ -30,6 +30,7 @@ void main() {
       'crm_orcamentos',
       'estoque',
       'financeiro',
+      'fiscal',
       'precificacao',
       'ponto',
     ]) {
@@ -56,7 +57,14 @@ void main() {
     expect(
       compact,
       contains(
-        "modulo:'precificacao',prioridade:80,"
+        "modulo:'fiscal',prioridade:80,"
+        "dependencias:const<String>['financeiro','estoque']",
+      ),
+    );
+    expect(
+      compact,
+      contains(
+        "modulo:'precificacao',prioridade:90,"
         "dependencias:const<String>['financeiro','estoque']",
       ),
     );
@@ -71,6 +79,7 @@ void main() {
     expect(source, contains('Conflitos pendentes nos arquivos da OS.'));
     expect(source, contains('Conflitos pendentes em CRM/Orçamentos.'));
     expect(source, contains('Conflitos pendentes no Financeiro.'));
+    expect(source, contains('Conflitos pendentes no Fiscal.'));
     expect(source, contains('Conflitos pendentes na Precificação.'));
   });
 
