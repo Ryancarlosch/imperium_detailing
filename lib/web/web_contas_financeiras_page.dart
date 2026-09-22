@@ -673,7 +673,21 @@ class _WebExtratoContaPageState extends State<WebExtratoContaPage> {
   }
 
   double _numero(String valor) {
-    var texto = valor.trim().replaceAll(r'R
+    var texto = valor.trim().replaceAll('R\$', '').replaceAll(' ', '');
+    if (texto.contains(',')) {
+      texto = texto.replaceAll('.', '').replaceAll(',', '.');
+    }
+    final numero = double.tryParse(texto);
+    if (numero == null) throw ArgumentError('Informe um saldo válido.');
+    return numero;
+  }
+
+  double _doubleValor(dynamic valor) {
+    if (valor is num) return valor.toDouble();
+    return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0;
+  }
+
+  void _mudarMes(int delta) {
     setState(() {
       _mes = DateTime(_mes.year, _mes.month + delta, 1);
     });
