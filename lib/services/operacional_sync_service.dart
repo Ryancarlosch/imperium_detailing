@@ -15,6 +15,7 @@ import 'estoque_cloud_conflito_service.dart';
 import 'estoque_cloud_download_service.dart';
 import 'estoque_cloud_reserva_service.dart';
 import 'estoque_cloud_upload_service.dart';
+import 'estoque_config_cloud_service.dart';
 import 'financeiro_cloud_upload_service.dart';
 import 'fotos_servico_cloud_service.dart';
 import 'financeiro_cloud_v2_service.dart';
@@ -490,6 +491,7 @@ class OperacionalSyncService {
   }
 
   Future<void> _syncEstoque(String empresaId) async {
+    await EstoqueConfigCloudService.instance.sincronizar(empresaId);
     await EstoqueCloudReservaService.instance.sincronizarReservas(empresaId);
     await EstoqueCloudConflitoService.instance.reconciliarAntesDoUpload(
       empresaId,
