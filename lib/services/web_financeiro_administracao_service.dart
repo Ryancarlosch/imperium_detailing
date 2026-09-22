@@ -36,6 +36,7 @@ class WebFinanceiroAdministracaoService {
         .from(tabela)
         .select()
         .eq('empresa_id', empresaId)
+        .isFilter('excluido_em', null)
         .order(ordenarPor, ascending: crescente);
 
     return (resposta as List)
