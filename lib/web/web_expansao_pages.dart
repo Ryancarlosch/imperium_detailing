@@ -3119,6 +3119,15 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
           if (valor is num) return total + valor.toInt();
           return total + (int.tryParse(valor?.toString() ?? '') ?? 0);
         });
+        final alertasSaudeRaw = dados['saude_alertas'];
+        final alertasSaude = alertasSaudeRaw is List
+            ? alertasSaudeRaw
+                  .whereType<Map>()
+                  .map((e) => Map<String, Object?>.from(e))
+                  .toList()
+            : <Map<String, Object?>>[];
+        final criticos = (dados['saude_criticos'] as num?)?.toInt() ?? 0;
+        final atencoes = (dados['saude_atencoes'] as num?)?.toInt() ?? 0;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -3233,8 +3242,82 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                         detalhe: 'Configuração de horas da empresa',
                         icone: Icons.schedule_outlined,
                       ),
+                      _resumoCentral(
+                        width: larguraCard,
+                        titulo: 'Saúde operacional',
+                        valor: criticos == 0 ? 'OK' : '$criticos crítico(s)',
+                        detalhe: criticos == 0
+                            ? '$atencoes atenção(ões), sem bloqueio crítico'
+                            : 'Inconsistências que exigem revisão',
+                        icone: criticos == 0
+                            ? Icons.health_and_safety_outlined
+                            : Icons.warning_amber_rounded,
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Saúde operacional',
+                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Validações Cloud equivalentes às verificações de negócio do Android. '
+                    'Integridade de SQLite e foreign keys continua sendo diagnóstico exclusivo do aparelho.',
+                    style: TextStyle(color: Color(0xFF89939E)),
+                  ),
+                  const SizedBox(height: 10),
+                  if (alertasSaude.isEmpty)
+                    const Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.verified_outlined,
+                          color: Colors.greenAccent,
+                        ),
+                        title: Text(
+                          'Nenhuma inconsistência Cloud detectada',
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        subtitle: Text(
+                          'Estoque, financeiro, fiscal e solicitações de ponto sem alertas nas verificações disponíveis.',
+                        ),
+                      ),
+                    )
+                  else
+                    ...alertasSaude.map((alerta) {
+                      final nivel = (alerta['nivel'] ?? 'Atenção').toString();
+                      final critico = nivel == 'Crítico';
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          child: ListTile(
+                            leading: Icon(
+                              critico
+                                  ? Icons.error_outline_rounded
+                                  : Icons.warning_amber_rounded,
+                              color: critico
+                                  ? Colors.redAccent
+                                  : Colors.orangeAccent,
+                            ),
+                            title: Text(
+                              (alerta['titulo'] ?? 'Alerta').toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            subtitle: Text(
+                              (alerta['detalhe'] ?? '').toString(),
+                            ),
+                            trailing: Chip(
+                              label: Text(nivel),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                   const SizedBox(height: 24),
                   const Text(
                     'Módulos Cloud',
