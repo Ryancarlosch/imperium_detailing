@@ -686,9 +686,7 @@ class _WebFinanceiroAdministracaoPageState
       onPressed: pronto ? () => _fecharCompetencia(item) : null,
       icon: const Icon(Icons.lock_outline_rounded),
       label: Text(
-        pronto
-            ? 'Fechar competência'
-            : 'Resolva pendências antes de fechar',
+        pronto ? 'Fechar competência' : 'Resolva pendências antes de fechar',
       ),
     );
   }

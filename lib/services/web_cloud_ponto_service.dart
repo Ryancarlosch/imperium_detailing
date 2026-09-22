@@ -182,7 +182,6 @@ class WebCloudPontoService {
     );
   }
 
-
   Future<void> fecharCompetencia({
     required String colaboradorId,
     required DateTime competencia,
@@ -211,7 +210,9 @@ class WebCloudPontoService {
       params: {
         'p_empresa_id': empresaId,
         'p_colaborador_id': colaboradorId,
-        'p_competencia': _data(DateTime(competencia.year, competencia.month, 1)),
+        'p_competencia': _data(
+          DateTime(competencia.year, competencia.month, 1),
+        ),
         'p_snapshot': snapshot,
       },
     );
@@ -235,7 +236,9 @@ class WebCloudPontoService {
       params: {
         'p_empresa_id': empresaId,
         'p_colaborador_id': colaboradorId,
-        'p_competencia': _data(DateTime(competencia.year, competencia.month, 1)),
+        'p_competencia': _data(
+          DateTime(competencia.year, competencia.month, 1),
+        ),
         'p_motivo': motivoLimpo,
       },
     );
