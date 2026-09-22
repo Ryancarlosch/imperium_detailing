@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../domain/ordem_servico_valor.dart';
 import '../services/web_cloud_operacional_service.dart';
 import '../services/web_os_cancelamento_v5_service.dart';
+import '../services/web_os_pdf_service.dart';
 import '../services/web_os_v3_service.dart';
 import '../services/whatsapp_service.dart';
 import 'imperium_web_theme.dart';
@@ -20,6 +21,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
   final _operacional = WebCloudOperacionalService.instance;
   final _service = WebOsV3Service.instance;
   final _cancelamento = WebOsCancelamentoV5Service.instance;
+  final _pdf = WebOsPdfService.instance;
   final _moeda = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
   final _busca = TextEditingController();
 
@@ -513,10 +515,76 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
     return resultado;
   }
 
+  Future<void> _abrirPdf(Map<String, dynamic> os) async {
+    final ordemId = (os['id'] ?? '').toString().trim();
+    if (ordemId.isEmpty) {
+      _mensagem('Não foi possível identificar esta OS.', erro: true);
+      return;
+    }
+
+    final acao = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (bottomContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text(
+                'Documento da Ordem de Serviço',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+              ),
+              subtitle: Text(
+                'Gerado direto dos dados e arquivos sincronizados na nuvem.',
+              ),
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.picture_as_pdf_outlined),
+              ),
+              title: const Text('Visualizar PDF'),
+              subtitle: const Text('Abrir a visualização/impressão no navegador'),
+              onTap: () => Navigator.pop(bottomContext, 'visualizar'),
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.share_outlined),
+              ),
+              title: const Text('Compartilhar PDF'),
+              subtitle: const Text('Baixar ou compartilhar o documento gerado'),
+              onTap: () => Navigator.pop(bottomContext, 'compartilhar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (acao == null) return;
+
+    try {
+      if (acao == 'visualizar') {
+        await _pdf.visualizarPdf(ordemId: ordemId);
+      } else {
+        await _pdf.compartilharPdf(
+          ordemId: ordemId,
+          numero: (os['numero'] ?? '').toString(),
+        );
+      }
+    } catch (e) {
+      _mensagem('Não foi possível gerar o PDF. $e', erro: true);
+    }
+  }
+
   Widget _acoesOs(Map<String, dynamic> os, bool editavel) {
     return Wrap(
       spacing: 2,
       children: [
+        IconButton(
+          tooltip: 'PDF da Ordem de Serviço',
+          onPressed: () => _abrirPdf(os),
+          icon: const Icon(Icons.picture_as_pdf_outlined),
+        ),
         IconButton(
           tooltip: 'WhatsApp',
           onPressed: () => _abrirWhatsApp(os),
