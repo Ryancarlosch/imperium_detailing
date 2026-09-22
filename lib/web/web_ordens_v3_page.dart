@@ -544,13 +544,13 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                 child: Icon(Icons.picture_as_pdf_outlined),
               ),
               title: const Text('Visualizar PDF'),
-              subtitle: const Text('Abrir a visualização/impressão no navegador'),
+              subtitle: const Text(
+                'Abrir a visualização/impressão no navegador',
+              ),
               onTap: () => Navigator.pop(bottomContext, 'visualizar'),
             ),
             ListTile(
-              leading: const CircleAvatar(
-                child: Icon(Icons.share_outlined),
-              ),
+              leading: const CircleAvatar(child: Icon(Icons.share_outlined)),
               title: const Text('Compartilhar PDF'),
               subtitle: const Text('Baixar ou compartilhar o documento gerado'),
               onTap: () => Navigator.pop(bottomContext, 'compartilhar'),

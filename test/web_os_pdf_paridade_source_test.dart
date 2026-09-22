@@ -7,9 +7,7 @@ void main() {
     final service = File(
       'lib/services/web_os_pdf_service.dart',
     ).readAsStringSync();
-    final page = File(
-      'lib/web/web_ordens_v3_page.dart',
-    ).readAsStringSync();
+    final page = File('lib/web/web_ordens_v3_page.dart').readAsStringSync();
 
     expect(service, isNot(contains("import 'dart:io'")));
     expect(service, contains("import 'dart:typed_data'"));
