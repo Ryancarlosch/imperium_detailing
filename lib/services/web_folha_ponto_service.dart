@@ -185,6 +185,7 @@ class WebFolhaPontoService {
       var base = <String, dynamic>{
         ...espelho,
         'colaborador_id': id,
+        'origem_colaborador_local_id': origemLocal > 0 ? origemLocal : null,
         'ponto_colaborador_id': pontoId.isEmpty ? null : pontoId,
         'ponto_vinculado': pontoId.isNotEmpty,
         'nome': (colaborador['nome'] ?? '').toString(),
@@ -210,6 +211,7 @@ class WebFolhaPontoService {
             ...base,
             ...snapshot,
             'colaborador_id': id,
+            'origem_colaborador_local_id': origemLocal > 0 ? origemLocal : null,
             'ponto_colaborador_id': pontoId,
             'ponto_vinculado': true,
             'nome': (colaborador['nome'] ?? '').toString(),
