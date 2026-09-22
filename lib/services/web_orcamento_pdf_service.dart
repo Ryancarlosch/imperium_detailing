@@ -13,8 +13,10 @@ class WebOrcamentoPdfService {
 
   static final WebOrcamentoPdfService instance = WebOrcamentoPdfService._();
 
-  final NumberFormat _moeda =
-      NumberFormat.currency(locale: 'pt_BR', symbol: r'R$');
+  final NumberFormat _moeda = NumberFormat.currency(
+    locale: 'pt_BR',
+    symbol: r'R$',
+  );
 
   Future<Uint8List> gerar({
     required Map<String, dynamic> orcamento,
@@ -28,8 +30,7 @@ class WebOrcamentoPdfService {
       WebConfiguracaoArquivoService.instance.listarAtivos(),
     ]);
     final config = Map<String, dynamic>.from(dados[0] as Map);
-    final arquivos =
-        dados[1] as Map<String, WebConfiguracaoArquivo>;
+    final arquivos = dados[1] as Map<String, WebConfiguracaoArquivo>;
     final logo = await _baixar(arquivos['logo']);
 
     final subtotal = itens.fold<double>(
@@ -97,19 +98,13 @@ class WebOrcamentoPdfService {
               spacing: 14,
               runSpacing: 8,
               children: [
-                _campo(
-                  'Emissão',
-                  _textoOu(orcamento['data_emissao'], '—'),
-                ),
+                _campo('Emissão', _textoOu(orcamento['data_emissao'], '—')),
                 _campo('Validade', _textoOu(orcamento['validade'], '—')),
                 _campo(
                   'Perfil de preço',
                   _perfil(_texto(orcamento['perfil_preco'])),
                 ),
-                _campo(
-                  'Status',
-                  _textoOu(orcamento['status'], 'Pendente'),
-                ),
+                _campo('Status', _textoOu(orcamento['status'], 'Pendente')),
               ],
             ),
           ),
@@ -122,25 +117,15 @@ class WebOrcamentoPdfService {
               children: [
                 _linhaValor('Subtotal', _moeda.format(subtotal)),
                 if (desconto > 0)
-                  _linhaValor(
-                    'Desconto',
-                    '- ${_moeda.format(desconto)}',
-                  ),
+                  _linhaValor('Desconto', '- ${_moeda.format(desconto)}'),
                 pw.Divider(),
-                _linhaValor(
-                  'Total',
-                  _moeda.format(total),
-                  destaque: true,
-                ),
+                _linhaValor('Total', _moeda.format(total), destaque: true),
               ],
             ),
           ),
           if (_texto(orcamento['observacoes']).isNotEmpty) ...[
             pw.SizedBox(height: 10),
-            _secao(
-              'OBSERVAÇÕES',
-              pw.Text(_texto(orcamento['observacoes'])),
-            ),
+            _secao('OBSERVAÇÕES', pw.Text(_texto(orcamento['observacoes']))),
           ],
           if (!recibo && _texto(config['termos_orcamento']).isNotEmpty) ...[
             pw.SizedBox(height: 10),
@@ -262,10 +247,7 @@ class WebOrcamentoPdfService {
           children: [
             pw.Text(
               titulo,
-              style: pw.TextStyle(
-                fontSize: 15,
-                fontWeight: pw.FontWeight.bold,
-              ),
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
             ),
             pw.Text(numero, style: const pw.TextStyle(fontSize: 10)),
             pw.Text(status, style: const pw.TextStyle(fontSize: 9)),
@@ -288,10 +270,7 @@ class WebOrcamentoPdfService {
         children: [
           pw.Text(
             titulo,
-            style: pw.TextStyle(
-              fontSize: 10,
-              fontWeight: pw.FontWeight.bold,
-            ),
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 7),
           conteudo,
@@ -332,17 +311,11 @@ class WebOrcamentoPdfService {
         children: [
           pw.Text(
             titulo,
-            style: const pw.TextStyle(
-              fontSize: 7,
-              color: PdfColors.grey700,
-            ),
+            style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
           ),
           pw.Text(
             valor,
-            style: pw.TextStyle(
-              fontSize: 9,
-              fontWeight: pw.FontWeight.bold,
-            ),
+            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
           ),
         ],
       ),
@@ -360,10 +333,12 @@ class WebOrcamentoPdfService {
         3: pw.FlexColumnWidth(1.5),
       },
       children: [
-        _linhaTabela(
-          const ['Serviço', 'Qtd.', 'Unitário', 'Total'],
-          cabecalho: true,
-        ),
+        _linhaTabela(const [
+          'Serviço',
+          'Qtd.',
+          'Unitário',
+          'Total',
+        ], cabecalho: true),
         ...itens.map((item) {
           final qtd = _numero(item['quantidade']);
           final unitario = _numero(item['valor_unitario']);
@@ -378,26 +353,19 @@ class WebOrcamentoPdfService {
     );
   }
 
-  pw.TableRow _linhaTabela(
-    List<String> valores, {
-    bool cabecalho = false,
-  }) {
+  pw.TableRow _linhaTabela(List<String> valores, {bool cabecalho = false}) {
     return pw.TableRow(
       decoration: cabecalho
           ? const pw.BoxDecoration(color: PdfColors.grey200)
           : null,
       children: valores.map((valor) {
         return pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(
-            horizontal: 5,
-            vertical: 5,
-          ),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
           child: pw.Text(
             valor,
             style: pw.TextStyle(
               fontSize: 8,
-              fontWeight:
-                  cabecalho ? pw.FontWeight.bold : pw.FontWeight.normal,
+              fontWeight: cabecalho ? pw.FontWeight.bold : pw.FontWeight.normal,
             ),
           ),
         );
@@ -405,11 +373,7 @@ class WebOrcamentoPdfService {
     );
   }
 
-  pw.Widget _linhaValor(
-    String titulo,
-    String valor, {
-    bool destaque = false,
-  }) {
+  pw.Widget _linhaValor(String titulo, String valor, {bool destaque = false}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 2),
       child: pw.Row(
@@ -419,8 +383,7 @@ class WebOrcamentoPdfService {
           pw.Text(
             valor,
             style: pw.TextStyle(
-              fontWeight:
-                  destaque ? pw.FontWeight.bold : pw.FontWeight.normal,
+              fontWeight: destaque ? pw.FontWeight.bold : pw.FontWeight.normal,
               fontSize: destaque ? 11 : 9,
             ),
           ),
@@ -439,9 +402,7 @@ class WebOrcamentoPdfService {
           children: [
             pw.Expanded(
               child: pw.Text(
-                personalizado.isEmpty
-                    ? _nomeEmpresa(config)
-                    : personalizado,
+                personalizado.isEmpty ? _nomeEmpresa(config) : personalizado,
                 style: const pw.TextStyle(
                   fontSize: 7,
                   color: PdfColors.grey700,
@@ -450,10 +411,7 @@ class WebOrcamentoPdfService {
             ),
             pw.Text(
               'Página ${context.pageNumber}/${context.pagesCount}',
-              style: const pw.TextStyle(
-                fontSize: 7,
-                color: PdfColors.grey700,
-              ),
+              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
             ),
           ],
         ),
@@ -466,7 +424,9 @@ class WebOrcamentoPdfService {
     if (local.isNotEmpty) return 'Orçamento #$local';
 
     final id = _texto(orcamento['id']);
-    return id.isEmpty ? 'Orçamento' : 'Orçamento ${id.substring(0, id.length.clamp(0, 8))}';
+    return id.isEmpty
+        ? 'Orçamento'
+        : 'Orçamento ${id.substring(0, id.length.clamp(0, 8))}';
   }
 
   String _nomeEmpresa(Map<String, dynamic> config) {
