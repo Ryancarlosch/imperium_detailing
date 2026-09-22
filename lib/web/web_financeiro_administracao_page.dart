@@ -31,6 +31,7 @@ class _WebFinanceiroAdministracaoPageState
   List<Map<String, dynamic>> _transferencias = const [];
   List<Map<String, dynamic>> _colaboradores = const [];
   List<Map<String, dynamic>> _pagamentosColaboradores = const [];
+  List<Map<String, dynamic>> _historicoColaboradores = const [];
   Map<String, Map<String, dynamic>> _resumosFolha = const {};
   DateTime _mesFolha = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
@@ -59,6 +60,7 @@ class _WebFinanceiroAdministracaoPageState
         _service.listarTransferencias(),
         _service.listarColaboradoresCusto(),
         _service.listarPagamentosColaboradores(),
+        _service.listarHistoricoColaboradores(),
       ]);
       final colaboradores = dados[8] as List<Map<String, dynamic>>;
       final pagamentos = dados[9] as List<Map<String, dynamic>>;
@@ -79,6 +81,7 @@ class _WebFinanceiroAdministracaoPageState
         _transferencias = dados[7] as List<Map<String, dynamic>>;
         _colaboradores = colaboradores;
         _pagamentosColaboradores = pagamentos;
+        _historicoColaboradores = dados[10] as List<Map<String, dynamic>>;
         _resumosFolha = resumosFolha;
       });
     } catch (e) {
@@ -219,26 +222,7 @@ class _WebFinanceiroAdministracaoPageState
                             '${e['tipo'] ?? ''} · ${e['natureza'] ?? ''} · ${e['grupo_dre'] ?? 'Não DRE'}',
                         onEditar: _editarPlano,
                       ),
-                      _lista(
-                        titulo: 'Custos de mão de obra',
-                        subtitulo:
-                            'Remuneração, encargos, outros custos e horas produtivas usados na precificação.',
-                        onNovo: () => _editarColaborador(),
-                        itens: _colaboradores,
-                        tituloItem: (e) =>
-                            (e['nome'] ?? 'Funcionário').toString(),
-                        detalheItem: (e) {
-                          final mensal =
-                              _double(e['remuneracao_mensal']) +
-                              _double(e['encargos_mensais']) +
-                              _double(e['outros_custos_mensais']);
-                          final horas = _double(e['horas_produtivas_mes']);
-                          final hora = horas <= 0 ? 0 : mensal / horas;
-                          return '${e['funcao'] ?? ''} · ${_moeda.format(mensal)}/mês · '
-                              '${horas.toStringAsFixed(1)}h · ${_moeda.format(hora)}/h';
-                        },
-                        onEditar: _editarColaborador,
-                      ),
+                      _maoObraTab(),
                       _folhaPagamentosTab(),
                     ],
                   ),
@@ -254,6 +238,200 @@ class _WebFinanceiroAdministracaoPageState
           ),
         ],
       ),
+    );
+  }
+
+  Widget _maoObraTab() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+      children: [
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            const SizedBox(
+              width: 700,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Custos de mão de obra',
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Cadastro, custos, situação e histórico salarial compartilhados com o Android.',
+                    style: TextStyle(color: Color(0xFF89939E)),
+                  ),
+                ],
+              ),
+            ),
+            FilledButton.icon(
+              onPressed: () => _editarColaborador(),
+              icon: const Icon(Icons.person_add_alt_1_rounded),
+              label: const Text('Novo funcionário'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_colaboradores.isEmpty)
+          const Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('Nenhum funcionário cadastrado.'),
+            ),
+          )
+        else
+          ..._colaboradores.map((item) {
+            final id = (item['id'] ?? '').toString();
+            final historico = _historicoColaboradores
+                .where((e) => (e['colaborador_id'] ?? '').toString() == id)
+                .toList();
+            final mensal =
+                _double(item['remuneracao_mensal']) +
+                _double(item['encargos_mensais']) +
+                _double(item['outros_custos_mensais']);
+            final horas = _double(item['horas_produtivas_mes']);
+            final hora = horas <= 0 ? 0 : mensal / horas;
+            final ativo = _bool(item['ativo']);
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ExpansionTile(
+                leading: CircleAvatar(
+                  child: Icon(
+                    ativo
+                        ? Icons.person_outline_rounded
+                        : Icons.person_off_outlined,
+                  ),
+                ),
+                title: Text(
+                  (item['nome'] ?? 'Funcionário').toString(),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                subtitle: Text(
+                  [
+                    (item['funcao'] ?? '').toString(),
+                    ativo ? 'Ativo' : 'Inativo',
+                    '${_moeda.format(mensal)}/mês',
+                    '${_moeda.format(hora)}/h',
+                  ].where((e) => e.trim().isNotEmpty).join(' · '),
+                ),
+                trailing: Wrap(
+                  spacing: 6,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _reajustarColaborador(item),
+                      icon: const Icon(Icons.trending_up_rounded, size: 18),
+                      label: const Text('Reajuste'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _alterarSituacaoColaborador(item),
+                      icon: Icon(
+                        ativo
+                            ? Icons.person_off_outlined
+                            : Icons.person_add_alt_outlined,
+                        size: 18,
+                      ),
+                      label: Text(ativo ? 'Inativar' : 'Ativar'),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: () => _editarColaborador(item),
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text('Editar'),
+                    ),
+                  ],
+                ),
+                children: [
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: 24,
+                        runSpacing: 8,
+                        children: [
+                          Text(
+                            'Salário: ${_moeda.format(_double(item['remuneracao_mensal']))}',
+                          ),
+                          Text(
+                            'Encargos: ${_moeda.format(_double(item['encargos_mensais']))}',
+                          ),
+                          Text(
+                            'Outros custos: ${_moeda.format(_double(item['outros_custos_mensais']))}',
+                          ),
+                          Text(
+                            'Horas produtivas: ${horas.toStringAsFixed(1)}h',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Histórico salarial e de situação',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (historico.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 18),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Ainda não há ocorrências sincronizadas.',
+                          style: TextStyle(color: Color(0xFF89939E)),
+                        ),
+                      ),
+                    )
+                  else
+                    ...historico.map((evento) {
+                      final tipo = (evento['tipo'] ?? 'Atualização').toString();
+                      final data = DateTime.tryParse(
+                        (evento['vigencia_em'] ?? '').toString(),
+                      );
+                      final remuneracaoAnterior = _double(
+                        evento['remuneracao_anterior'],
+                      );
+                      final remuneracaoNova = _double(
+                        evento['remuneracao_nova'],
+                      );
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                        ),
+                        leading: const Icon(Icons.history_rounded),
+                        title: Text(
+                          tipo,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: Text(
+                          [
+                            if (data != null)
+                              DateFormat('dd/MM/yyyy').format(data.toLocal()),
+                            (evento['motivo'] ?? '').toString(),
+                            if (tipo == 'Reajuste salarial')
+                              '${_moeda.format(remuneracaoAnterior)} → '
+                                  '${_moeda.format(remuneracaoNova)}',
+                          ].where((e) => e.trim().isNotEmpty).join(' · '),
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            );
+          }),
+      ],
     );
   }
 
@@ -1589,18 +1767,141 @@ class _WebFinanceiroAdministracaoPageState
     );
     if (ok != true) return;
     await _executar(
-      () => _service.salvarColaboradorCusto(
-        id: atual?['id']?.toString(),
-        nome: nome.text,
-        funcao: funcao.text,
-        remuneracaoMensal: _numero(remuneracao.text),
-        encargosMensais: _numero(encargos.text),
-        outrosCustosMensais: _numero(outros.text),
-        horasProdutivasMes: _numero(horas.text),
-        observacoes: observacoes.text,
-        ativo: ativo,
+      () async {
+        await _service.salvarColaboradorCusto(
+          id: atual?['id']?.toString(),
+          nome: nome.text,
+          funcao: funcao.text,
+          remuneracaoMensal: _numero(remuneracao.text),
+          encargosMensais: _numero(encargos.text),
+          outrosCustosMensais: _numero(outros.text),
+          horasProdutivasMes: _numero(horas.text),
+          observacoes: observacoes.text,
+          ativo: ativo,
+          motivo: atual == null ? 'Cadastro inicial' : 'Atualização de custos',
+          atualizadoEmBase: atual?['atualizado_em']?.toString(),
+        );
+      },
+      'Funcionário salvo e histórico sincronizado.',
+    );
+  }
+
+  Future<void> _reajustarColaborador(Map<String, dynamic> atual) async {
+    final valor = TextEditingController(
+      text: _double(atual['remuneracao_mensal']).toStringAsFixed(2),
+    );
+    final motivo = TextEditingController();
+    var vigencia = DateTime.now();
+
+    final ok = await _dialogo(
+      'Registrar reajuste salarial',
+      (setLocal) => [
+        _campo(valor, 'Novo salário / remuneração *'),
+        _campo(motivo, 'Motivo', linhas: 2),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.event_outlined),
+          title: const Text('Vigência'),
+          subtitle: Text(DateFormat('dd/MM/yyyy').format(vigencia)),
+          trailing: OutlinedButton(
+            onPressed: () async {
+              final escolhida = await showDatePicker(
+                context: context,
+                initialDate: vigencia,
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+              if (escolhida != null) setLocal(() => vigencia = escolhida);
+            },
+            child: const Text('Alterar'),
+          ),
+        ),
+      ],
+    );
+    if (ok != true) return;
+
+    await _executar(
+      () async {
+        await _service.salvarColaboradorCusto(
+          id: atual['id']?.toString(),
+          nome: (atual['nome'] ?? '').toString(),
+          funcao: (atual['funcao'] ?? '').toString(),
+          remuneracaoMensal: _numero(valor.text),
+          encargosMensais: _double(atual['encargos_mensais']),
+          outrosCustosMensais: _double(atual['outros_custos_mensais']),
+          horasProdutivasMes: _double(atual['horas_produtivas_mes']),
+          observacoes: (atual['observacoes'] ?? '').toString(),
+          ativo: _bool(atual['ativo']),
+          vigencia: vigencia,
+          motivo: motivo.text,
+          atualizadoEmBase: atual['atualizado_em']?.toString(),
+        );
+      },
+      'Reajuste registrado no histórico e sincronizado.',
+    );
+  }
+
+  Future<void> _alterarSituacaoColaborador(
+    Map<String, dynamic> atual,
+  ) async {
+    final ativoAtual = _bool(atual['ativo']);
+    final motivo = TextEditingController();
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          ativoAtual ? 'Inativar funcionário' : 'Ativar funcionário',
+        ),
+        content: SizedBox(
+          width: 520,
+          child: TextField(
+            controller: motivo,
+            minLines: 2,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Motivo',
+              hintText: 'Opcional',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(ativoAtual ? 'Inativar' : 'Ativar'),
+          ),
+        ],
       ),
-      'Custo de mão de obra salvo e sincronizado.',
+    );
+    if (confirmar != true) {
+      motivo.dispose();
+      return;
+    }
+    final textoMotivo = motivo.text;
+    motivo.dispose();
+
+    await _executar(
+      () async {
+        await _service.salvarColaboradorCusto(
+          id: atual['id']?.toString(),
+          nome: (atual['nome'] ?? '').toString(),
+          funcao: (atual['funcao'] ?? '').toString(),
+          remuneracaoMensal: _double(atual['remuneracao_mensal']),
+          encargosMensais: _double(atual['encargos_mensais']),
+          outrosCustosMensais: _double(atual['outros_custos_mensais']),
+          horasProdutivasMes: _double(atual['horas_produtivas_mes']),
+          observacoes: (atual['observacoes'] ?? '').toString(),
+          ativo: !ativoAtual,
+          motivo: textoMotivo,
+          atualizadoEmBase: atual['atualizado_em']?.toString(),
+        );
+      },
+      ativoAtual
+          ? 'Funcionário inativado e histórico sincronizado.'
+          : 'Funcionário ativado e histórico sincronizado.',
     );
   }
 
