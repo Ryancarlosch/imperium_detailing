@@ -25,6 +25,7 @@ import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'os_cloud_v3_service.dart';
 import 'os_finalizacao_cloud_v4_service.dart';
+import 'pagamento_colaborador_cloud_service.dart';
 import 'os_arquivos_cloud_service.dart';
 import 'os_arquivos_cloud_v2_service.dart';
 import 'ponto_nuvem_service.dart';
@@ -546,6 +547,10 @@ class OperacionalSyncService {
     await PrecificacaoCloudV2Service.instance.sincronizarDepoisDoDownload(
       empresaId,
     );
+
+    // O pagamento depende dos mapas de colaborador da Precificação e dos
+    // mapas de conta/movimento já fechados pelo Financeiro.
+    await PagamentoColaboradorCloudService.instance.sincronizar(empresaId);
   }
 
   Future<void> registrarExclusaoVeiculo(int localId) async {
