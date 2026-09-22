@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/app_database.dart';
 import 'supabase_bootstrap.dart';
+import 'web_origem_service.dart';
 
 class WebContaFinanceiraResumo {
   const WebContaFinanceiraResumo({
@@ -262,6 +263,132 @@ class WebCloudContasService {
           !data.isBefore(inicio) &&
           data.isBefore(fimExclusivo);
     }).toList();
+  }
+
+  Future<Map<String, dynamic>> salvarConta({
+    String? id,
+    String? atualizadoEmEsperado,
+    required String nome,
+    required String tipo,
+    required String instituicao,
+    required double saldoInicial,
+    DateTime? dataSaldoInicial,
+    String observacoes = '',
+    bool ativo = true,
+  }) async {
+    final nomeLimpo = nome.trim();
+    final tipoLimpo = tipo.trim();
+    if (nomeLimpo.length < 2) {
+      throw ArgumentError('Informe o nome da conta.');
+    }
+    if (tipoLimpo.isEmpty) {
+      throw ArgumentError('Informe o tipo da conta.');
+    }
+
+    final empresaId = await _empresaId();
+    final client = _client();
+    final agora = DateTime.now().toIso8601String();
+    final payload = <String, dynamic>{
+      'nome': nomeLimpo,
+      'tipo': tipoLimpo,
+      'instituicao': instituicao.trim(),
+      'saldo_inicial': saldoInicial,
+      'data_saldo_inicial': dataSaldoInicial?.toIso8601String(),
+      'observacoes': observacoes.trim(),
+      'ativo': ativo,
+      'origem_atualizado_em': agora,
+      'excluido_em': null,
+    };
+
+    final idLimpo = id?.trim() ?? '';
+    if (idLimpo.isEmpty) {
+      final origem = await WebOrigemService.instance.proxima();
+      final raw = await client
+          .from('imperium_financeiro_contas')
+          .insert({
+            'empresa_id': empresaId,
+            'origem_dispositivo': origem.dispositivoId,
+            'origem_local_id': origem.localId,
+            ...payload,
+            'origem_criado_em': agora,
+          })
+          .select()
+          .single();
+      return Map<String, dynamic>.from(raw);
+    }
+
+    dynamic query = client
+        .from('imperium_financeiro_contas')
+        .update(payload)
+        .eq('empresa_id', empresaId)
+        .eq('id', idLimpo);
+
+    final esperado = atualizadoEmEsperado?.trim() ?? '';
+    if (esperado.isNotEmpty) {
+      query = query.eq('atualizado_em', esperado);
+    }
+
+    final rows = await query.select();
+    if (rows is! List || rows.isEmpty) {
+      throw StateError(
+        'A conta foi alterada em outro dispositivo. Atualize a tela e tente novamente.',
+      );
+    }
+    return Map<String, dynamic>.from(rows.first as Map);
+  }
+
+  Future<void> definirAtivo({
+    required Map<String, dynamic> conta,
+    required bool ativo,
+  }) async {
+    await salvarConta(
+      id: conta['id']?.toString(),
+      atualizadoEmEsperado: conta['atualizado_em']?.toString(),
+      nome: (conta['nome'] ?? '').toString(),
+      tipo: (conta['tipo'] ?? 'Conta bancária').toString(),
+      instituicao: (conta['instituicao'] ?? '').toString(),
+      saldoInicial: _double(conta['saldo_inicial']),
+      dataSaldoInicial: _parseData(conta['data_saldo_inicial']),
+      observacoes: (conta['observacoes'] ?? '').toString(),
+      ativo: ativo,
+    );
+  }
+
+  Future<Map<String, dynamic>> registrarConciliacao({
+    required String contaId,
+    required DateTime data,
+    required double saldoInformado,
+    required bool criarAjuste,
+    String observacoes = '',
+  }) async {
+    final id = contaId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('Conta financeira inválida.');
+    }
+
+    final empresaId = await _empresaId();
+    final conciliacao = await WebOrigemService.instance.proxima();
+    final movimento = await WebOrigemService.instance.proxima();
+
+    final raw = await _client().rpc(
+      'imperium_financeiro_conciliar_web',
+      params: <String, Object?>{
+        'p_empresa_id': empresaId,
+        'p_conta_id': id,
+        'p_data': data.toIso8601String(),
+        'p_saldo_informado': saldoInformado,
+        'p_criar_ajuste': criarAjuste,
+        'p_observacoes': observacoes.trim(),
+        'p_origem_dispositivo': conciliacao.dispositivoId,
+        'p_conciliacao_local_id': conciliacao.localId,
+        'p_movimento_local_id': movimento.localId,
+      },
+    );
+
+    if (raw is! Map) {
+      throw StateError('A conciliação não retornou um resultado válido.');
+    }
+    return Map<String, dynamic>.from(raw);
   }
 
   Future<String> _empresaId() async {
