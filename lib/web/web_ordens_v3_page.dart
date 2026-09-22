@@ -5,6 +5,7 @@ import '../domain/ordem_servico_valor.dart';
 import '../services/web_cloud_operacional_service.dart';
 import '../services/web_os_cancelamento_v5_service.dart';
 import '../services/web_os_v3_service.dart';
+import '../services/whatsapp_service.dart';
 import 'imperium_web_theme.dart';
 import 'web_os_arquivos_page.dart';
 
@@ -329,10 +330,200 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
     );
   }
 
+  Map<String, dynamic>? _clienteDaOs(Map<String, dynamic> os) {
+    final id = (os['cliente_id'] ?? '').toString();
+    for (final cliente in _clientes) {
+      if ((cliente['id'] ?? '').toString() == id) return cliente;
+    }
+    return null;
+  }
+
+  Future<void> _abrirWhatsApp(Map<String, dynamic> os) async {
+    final cliente = _clienteDaOs(os);
+    final nome = (cliente?['nome'] ?? 'Cliente').toString();
+    final telefone = (cliente?['telefone'] ?? '').toString().trim();
+
+    if (telefone.isEmpty) {
+      _mensagem('O cliente $nome não possui telefone cadastrado.', erro: true);
+      return;
+    }
+
+    final status = (os['status'] ?? 'Aberta').toString();
+    final opcao = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (bottomContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text(
+                'Enviar pelo WhatsApp',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+              ),
+              subtitle: Text('Os mesmos atalhos disponíveis no aplicativo.'),
+            ),
+            if (status == 'Aberta' || status == 'Em andamento')
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.play_arrow_outlined),
+                ),
+                title: const Text('Serviço iniciado'),
+                subtitle: const Text('Avisar que o veículo entrou em serviço'),
+                onTap: () => Navigator.pop(bottomContext, 'iniciado'),
+              ),
+            if (status == 'Finalizada')
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.check_circle_outline),
+                ),
+                title: const Text('Veículo pronto'),
+                subtitle: const Text('Avisar que o serviço foi finalizado'),
+                onTap: () => Navigator.pop(bottomContext, 'pronto'),
+              ),
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.receipt_long_outlined),
+              ),
+              title: const Text('Resumo da Ordem de Serviço'),
+              subtitle: const Text('Enviar status e valor negociado'),
+              onTap: () => Navigator.pop(bottomContext, 'resumo'),
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.payments_outlined),
+              ),
+              title: const Text('Enviar cobrança'),
+              subtitle: const Text('Enviar o valor da Ordem de Serviço'),
+              onTap: () => Navigator.pop(bottomContext, 'cobranca'),
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.edit_note_outlined),
+              ),
+              title: const Text('Mensagem personalizada'),
+              subtitle: const Text('Escrever uma mensagem livre'),
+              onTap: () => Navigator.pop(bottomContext, 'personalizada'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (opcao == null) return;
+
+    final numero = (os['numero'] ?? 'Ordem de Serviço').toString();
+    final valor = _moeda.format(
+      OrdemServicoValor.valorNegociado(
+        valorTotal: _double(os['valor_total']),
+        desconto: _double(os['desconto']),
+        descontoNegociacao: _double(os['desconto_negociacao']),
+        acrescimoNegociacao: _double(os['acrescimo_negociacao']),
+        jurosParcelamento: _double(os['juros_parcelamento']),
+      ),
+    );
+
+    try {
+      switch (opcao) {
+        case 'iniciado':
+          await WhatsAppService.enviarAtualizacaoOrdemServico(
+            telefone: telefone,
+            cliente: nome,
+            numeroOrdem: numero,
+            status: status,
+            valor: valor,
+            mensagemPersonalizada:
+                'Informamos que o serviço foi iniciado e manteremos você atualizado sobre o andamento.',
+          );
+          break;
+        case 'pronto':
+          await WhatsAppService.enviarVeiculoPronto(
+            telefone: telefone,
+            cliente: nome,
+            numeroOrdem: numero,
+            valor: valor,
+          );
+          break;
+        case 'resumo':
+          await WhatsAppService.enviarAtualizacaoOrdemServico(
+            telefone: telefone,
+            cliente: nome,
+            numeroOrdem: numero,
+            status: status,
+            valor: valor,
+          );
+          break;
+        case 'cobranca':
+          await WhatsAppService.enviarCobrancaOrdemServico(
+            telefone: telefone,
+            cliente: nome,
+            numeroOrdem: numero,
+            valor: valor,
+            formaPagamento: (os['forma_pagamento'] ?? '').toString(),
+          );
+          break;
+        case 'personalizada':
+          final mensagem = await _mensagemPersonalizada();
+          if (mensagem == null) return;
+          await WhatsAppService.enviarMensagemPersonalizada(
+            telefone: telefone,
+            mensagem: mensagem,
+          );
+          break;
+      }
+    } catch (e) {
+      _mensagem('Não foi possível abrir o WhatsApp. $e', erro: true);
+    }
+  }
+
+  Future<String?> _mensagemPersonalizada() async {
+    final controller = TextEditingController();
+    final resultado = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Mensagem personalizada'),
+        content: SizedBox(
+          width: 560,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            minLines: 4,
+            maxLines: 8,
+            decoration: const InputDecoration(
+              hintText: 'Digite a mensagem para o cliente',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              final texto = controller.text.trim();
+              Navigator.pop(dialogContext, texto.isEmpty ? null : texto);
+            },
+            icon: const Icon(Icons.send_outlined),
+            label: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return resultado;
+  }
+
   Widget _acoesOs(Map<String, dynamic> os, bool editavel) {
     return Wrap(
       spacing: 2,
       children: [
+        IconButton(
+          tooltip: 'WhatsApp',
+          onPressed: () => _abrirWhatsApp(os),
+          icon: const Icon(Icons.chat_outlined),
+        ),
         IconButton(
           tooltip: 'Fotos, avarias e assinatura',
           onPressed: () => _abrirArquivos(os),
