@@ -734,6 +734,14 @@ class WebCloudExpansaoService {
       }
     }
 
+    final alertasSaude = await _diagnosticarSaudeCloud(empresaId);
+    final criticos = alertasSaude
+        .where((item) => item['nivel'] == 'Crítico')
+        .length;
+    final atencoes = alertasSaude
+        .where((item) => item['nivel'] == 'Atenção')
+        .length;
+
     return <String, Object?>{
       'empresa_id': empresaId,
       'usuario':
@@ -742,7 +750,133 @@ class WebCloudExpansaoService {
       'horas_mensais_empresa': ImperiumRegrasNegocio.horasMensaisPadrao,
       'ultima_atualizacao': ultimaAtualizacao?.toIso8601String(),
       'modulos': modulos,
+      'saude_alertas': alertasSaude,
+      'saude_criticos': criticos,
+      'saude_atencoes': atencoes,
+      'saude_status': criticos == 0 ? 'Saudável' : 'Crítico',
     };
+  }
+
+  Future<List<Map<String, Object?>>> _diagnosticarSaudeCloud(
+    String empresaId,
+  ) async {
+    final alertas = <Map<String, Object?>>[];
+
+    try {
+      final estoque = await _client
+          .from('imperium_estoque_itens')
+          .select('id,nome,quantidade')
+          .eq('empresa_id', empresaId)
+          .isFilter('excluido_em', null)
+          .lt('quantidade', 0)
+          .limit(500);
+
+      final negativos = estoque as List;
+      if (negativos.isNotEmpty) {
+        alertas.add(<String, Object?>{
+          'chave': 'estoque_negativo',
+          'nivel': 'Crítico',
+          'titulo': 'Estoque negativo',
+          'detalhe':
+              '${negativos.length} item(ns) ativo(s) com saldo abaixo de zero.',
+        });
+      }
+    } catch (error) {
+      if (!_semPermissao(error)) rethrow;
+    }
+
+    try {
+      final movimentos = await _client
+          .from('imperium_financeiro_movimentos')
+          .select('id,descricao,numero_documento,status')
+          .eq('empresa_id', empresaId)
+          .limit(2000);
+
+      final semDocumento = (movimentos as List).where((raw) {
+        final item = Map<String, dynamic>.from(raw as Map);
+        final status = (item['status'] ?? '').toString();
+        final documento = (item['numero_documento'] ?? '').toString().trim();
+        return status != 'Cancelado' && documento.isEmpty;
+      }).length;
+
+      if (semDocumento > 0) {
+        alertas.add(<String, Object?>{
+          'chave': 'movimento_sem_documento',
+          'nivel': 'Atenção',
+          'titulo': 'Movimentos financeiros sem documento',
+          'detalhe':
+              '$semDocumento movimento(s) ativo(s) sem número de documento.',
+        });
+      }
+    } catch (error) {
+      if (!_semPermissao(error)) rethrow;
+    }
+
+    try {
+      final notasRaw = await _client
+          .from('imperium_fiscal_notas_entrada')
+          .select('id,status_importacao')
+          .eq('empresa_id', empresaId)
+          .limit(1000);
+      final itensRaw = await _client
+          .from('imperium_fiscal_notas_itens')
+          .select('nota_fiscal_id')
+          .eq('empresa_id', empresaId)
+          .limit(5000);
+
+      final notasComItens = (itensRaw as List)
+          .map((raw) => (raw['nota_fiscal_id'] ?? '').toString())
+          .where((id) => id.isNotEmpty)
+          .toSet();
+
+      final notasSemItens = (notasRaw as List).where((raw) {
+        final nota = Map<String, dynamic>.from(raw as Map);
+        final status = (nota['status_importacao'] ?? '').toString().toLowerCase();
+        final processada = status == 'processada' || status == 'processado';
+        return processada &&
+            !notasComItens.contains((nota['id'] ?? '').toString());
+      }).length;
+
+      if (notasSemItens > 0) {
+        alertas.add(<String, Object?>{
+          'chave': 'nota_processada_sem_itens',
+          'nivel': 'Atenção',
+          'titulo': 'Nota fiscal processada sem itens',
+          'detalhe':
+              '$notasSemItens nota(s) processada(s) sem produtos vinculados.',
+        });
+      }
+    } catch (error) {
+      if (!_semPermissao(error)) rethrow;
+    }
+
+    try {
+      final solicitacoes = await _client.rpc(
+        'ponto_listar_solicitacoes_ajuste_admin',
+        params: {
+          'p_empresa_id': empresaId,
+          'p_status': 'Pendente',
+          'p_limite': 300,
+        },
+      );
+      final pendentes = solicitacoes is List ? solicitacoes.length : 0;
+      if (pendentes > 0) {
+        alertas.add(<String, Object?>{
+          'chave': 'ponto_solicitacoes_pendentes',
+          'nivel': 'Atenção',
+          'titulo': 'Solicitações de ponto pendentes',
+          'detalhe':
+              '$pendentes solicitação(ões) aguardando decisão administrativa.',
+        });
+      }
+    } catch (error) {
+      if (!_semPermissao(error)) {
+        final texto = error.toString().toLowerCase();
+        if (!texto.contains('somente administradores')) rethrow;
+      }
+    }
+
+    return alertas;
   }
 
   bool _semPermissao(Object error) {
