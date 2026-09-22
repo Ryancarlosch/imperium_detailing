@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'web_estoque_config_page.dart';
 import 'web_estoque_movimentacoes_page.dart';
 import 'web_estoque_produtos_page.dart';
 
@@ -9,7 +10,7 @@ class WebEstoqueGestaoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           Material(
@@ -23,6 +24,10 @@ class WebEstoqueGestaoPage extends StatelessWidget {
                   icon: Icon(Icons.inventory_2_outlined),
                   text: 'Cadastro de produtos',
                 ),
+                Tab(
+                  icon: Icon(Icons.settings_outlined),
+                  text: 'Configurações',
+                ),
               ],
             ),
           ),
@@ -31,6 +36,7 @@ class WebEstoqueGestaoPage extends StatelessWidget {
               children: [
                 WebEstoqueMovimentacoesPage(),
                 WebEstoqueProdutosPage(),
+                WebEstoqueConfigPage(),
               ],
             ),
           ),
