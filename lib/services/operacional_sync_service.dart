@@ -17,6 +17,7 @@ import 'financeiro_cloud_upload_service.dart';
 import 'fotos_servico_cloud_service.dart';
 import 'financeiro_cloud_v2_service.dart';
 import 'financeiro_cloud_v3_service.dart';
+import 'fiscal_cloud_sync_service.dart';
 import 'precificacao_cloud_service.dart';
 import 'precificacao_cloud_v2_service.dart';
 import 'operacional_cloud_v2_service.dart';
@@ -334,14 +335,20 @@ class OperacionalSyncService {
             executar: () => _syncFinanceiro(empresaId),
           ),
           SyncMotorEtapa(
-            modulo: 'precificacao',
+            modulo: 'fiscal',
             prioridade: 80,
+            dependencias: const <String>['financeiro', 'estoque'],
+            executar: () => _syncFiscal(empresaId),
+          ),
+          SyncMotorEtapa(
+            modulo: 'precificacao',
+            prioridade: 90,
             dependencias: const <String>['financeiro', 'estoque'],
             executar: () => _syncPrecificacao(empresaId),
           ),
           SyncMotorEtapa(
             modulo: 'ponto',
-            prioridade: 90,
+            prioridade: 100,
             executar: _sincronizarPontoFuncionario,
           ),
         ],
@@ -512,6 +519,18 @@ class OperacionalSyncService {
     await OsFinalizacaoCloudV4Service.instance.sincronizarPosFinanceiro(
       empresaId,
     );
+  }
+
+  Future<void> _syncFiscal(String empresaId) async {
+    await FiscalCloudSyncService.instance.sincronizar(empresaId);
+
+    if (await FiscalCloudSyncService.instance.possuiConflitosPendentes(
+      empresaId,
+    )) {
+      throw const SyncMotorBloqueadoException(
+        'Conflitos pendentes no Fiscal.',
+      );
+    }
   }
 
   Future<void> _syncPrecificacao(String empresaId) async {
