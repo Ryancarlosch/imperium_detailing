@@ -27,6 +27,12 @@ class _WebFinanceiroAdministracaoPageState
   List<Map<String, dynamic>> _movimentos = const [];
   List<Map<String, dynamic>> _transferencias = const [];
   List<Map<String, dynamic>> _colaboradores = const [];
+  List<Map<String, dynamic>> _pagamentosColaboradores = const [];
+  DateTime _mesFolha = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    1,
+  );
 
   @override
   void initState() {
@@ -52,6 +58,7 @@ class _WebFinanceiroAdministracaoPageState
         _service.listarMovimentos(),
         _service.listarTransferencias(),
         _service.listarColaboradoresCusto(),
+        _service.listarPagamentosColaboradores(),
       ]);
       if (!mounted) return;
       setState(() {
@@ -64,6 +71,7 @@ class _WebFinanceiroAdministracaoPageState
         _movimentos = dados[6] as List<Map<String, dynamic>>;
         _transferencias = dados[7] as List<Map<String, dynamic>>;
         _colaboradores = dados[8] as List<Map<String, dynamic>>;
+        _pagamentosColaboradores = dados[9] as List<Map<String, dynamic>>;
       });
     } catch (e) {
       if (mounted) setState(() => _erro = _textoErro(e));
@@ -97,7 +105,7 @@ class _WebFinanceiroAdministracaoPageState
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 7,
+      length: 8,
       child: Column(
         children: [
           const Material(
@@ -119,6 +127,10 @@ class _WebFinanceiroAdministracaoPageState
                 Tab(
                   icon: Icon(Icons.engineering_outlined),
                   text: 'Mão de obra',
+                ),
+                Tab(
+                  icon: Icon(Icons.payments_outlined),
+                  text: 'Folha e pagamentos',
                 ),
               ],
             ),
@@ -219,6 +231,7 @@ class _WebFinanceiroAdministracaoPageState
                         },
                         onEditar: _editarColaborador,
                       ),
+                      _folhaPagamentosTab(),
                     ],
                   ),
                 if (_carregando)
@@ -234,6 +247,345 @@ class _WebFinanceiroAdministracaoPageState
         ],
       ),
     );
+  }
+
+  Widget _folhaPagamentosTab() {
+    final inicio = DateTime(_mesFolha.year, _mesFolha.month, 1);
+    final fim = DateTime(_mesFolha.year, _mesFolha.month + 1, 1);
+    final pagamentos = _pagamentosColaboradores.where((item) {
+      final data = DateTime.tryParse((item['data_pagamento'] ?? '').toString());
+      return data != null && !data.isBefore(inicio) && data.isBefore(fim);
+    }).toList();
+
+    final remuneracaoBase = _colaboradores
+        .where((item) => _bool(item['ativo']))
+        .fold<double>(
+          0,
+          (total, item) => total + _double(item['remuneracao_mensal']),
+        );
+    final encargosOutros = _colaboradores
+        .where((item) => _bool(item['ativo']))
+        .fold<double>(
+          0,
+          (total, item) =>
+              total +
+              _double(item['encargos_mensais']) +
+              _double(item['outros_custos_mensais']),
+        );
+    final pagoMes = pagamentos.fold<double>(
+      0,
+      (total, item) => total + _double(item['valor']),
+    );
+    final agora = DateTime.now();
+    final podeAvancar =
+        _mesFolha.year < agora.year ||
+        (_mesFolha.year == agora.year && _mesFolha.month < agora.month);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+      children: [
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            const SizedBox(
+              width: 650,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Folha e pagamentos',
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Pagamentos da equipe integrados ao caixa e ao histórico do aplicativo.',
+                    style: TextStyle(color: Color(0xFF89939E)),
+                  ),
+                ],
+              ),
+            ),
+            FilledButton.icon(
+              onPressed:
+                  _colaboradores.isEmpty ||
+                      _contas.where((e) => _bool(e['ativo'])).isEmpty
+                  ? null
+                  : _registrarPagamentoFuncionario,
+              icon: const Icon(Icons.add_card_rounded),
+              label: const Text('Registrar pagamento'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'Mês anterior',
+                  onPressed: () {
+                    setState(() {
+                      _mesFolha = DateTime(
+                        _mesFolha.year,
+                        _mesFolha.month - 1,
+                        1,
+                      );
+                    });
+                  },
+                  icon: const Icon(Icons.chevron_left_rounded),
+                ),
+                Expanded(
+                  child: Text(
+                    DateFormat('MMMM yyyy', 'pt_BR').format(_mesFolha),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Próximo mês',
+                  onPressed: podeAvancar
+                      ? () {
+                          setState(() {
+                            _mesFolha = DateTime(
+                              _mesFolha.year,
+                              _mesFolha.month + 1,
+                              1,
+                            );
+                          });
+                        }
+                      : null,
+                  icon: const Icon(Icons.chevron_right_rounded),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final colunas = constraints.maxWidth >= 900
+                ? 4
+                : constraints.maxWidth >= 560
+                ? 2
+                : 1;
+            final largura =
+                (constraints.maxWidth - (colunas - 1) * 12) / colunas;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _Kpi(
+                  width: largura,
+                  titulo: 'Remuneração base',
+                  valor: _moeda.format(remuneracaoBase),
+                  detalhe: 'Funcionários ativos',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Encargos + outros',
+                  valor: _moeda.format(encargosOutros),
+                  detalhe: 'Base mensal cadastrada',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Custo base da equipe',
+                  valor: _moeda.format(remuneracaoBase + encargosOutros),
+                  detalhe: 'Referência para precificação',
+                ),
+                _Kpi(
+                  width: largura,
+                  titulo: 'Pago no mês',
+                  valor: _moeda.format(pagoMes),
+                  detalhe: '${pagamentos.length} pagamento(s)',
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        const Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: EdgeInsets.all(14),
+            child: Text(
+              'A base mensal acima é cadastral. O fechamento de ponto continua sendo a referência para faltas, horas extras e valor estimado a pagar.',
+              style: TextStyle(color: Color(0xFF89939E)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+        const Text(
+          'Pagamentos do mês',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 10),
+        if (pagamentos.isEmpty)
+          const Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: EdgeInsets.all(22),
+              child: Text('Nenhum pagamento registrado neste mês.'),
+            ),
+          )
+        else
+          ...pagamentos.map((item) {
+            final colaboradorId = (item['colaborador_id'] ?? '').toString();
+            final contaId = (item['conta_id'] ?? '').toString();
+            final data = DateTime.tryParse(
+              (item['data_pagamento'] ?? '').toString(),
+            );
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.person_outline_rounded),
+                ),
+                title: Text(
+                  _nomeColaborador(colaboradorId),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Text(
+                  [
+                    if (data != null) DateFormat('dd/MM/yyyy').format(data),
+                    (item['forma_pagamento'] ?? '').toString(),
+                    _nomeConta(contaId),
+                  ].where((e) => e.trim().isNotEmpty).join(' · '),
+                ),
+                trailing: Text(
+                  _moeda.format(_double(item['valor'])),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  String _nomeColaborador(String id) {
+    for (final item in _colaboradores) {
+      if (item['id']?.toString() == id) {
+        return (item['nome'] ?? 'Funcionário').toString();
+      }
+    }
+    return 'Funcionário';
+  }
+
+  String _nomeConta(String id) {
+    for (final item in _contas) {
+      if (item['id']?.toString() == id) {
+        return (item['nome'] ?? 'Conta').toString();
+      }
+    }
+    return 'Conta';
+  }
+
+  Future<void> _registrarPagamentoFuncionario() async {
+    final colaboradores = _colaboradores
+        .where((item) => (item['id'] ?? '').toString().trim().isNotEmpty)
+        .toList();
+    final contas = _contas
+        .where(
+          (item) =>
+              _bool(item['ativo']) &&
+              (item['id'] ?? '').toString().trim().isNotEmpty,
+        )
+        .toList();
+    if (colaboradores.isEmpty || contas.isEmpty) return;
+
+    var colaboradorId = colaboradores.first['id'].toString();
+    var contaId = contas.first['id'].toString();
+    var data = DateTime.now();
+    final valor = TextEditingController();
+    final forma = TextEditingController(text: 'Pix');
+    final observacoes = TextEditingController();
+
+    final ok = await _dialogo(
+      'Registrar pagamento de funcionário',
+      (setLocal) => [
+        DropdownButtonFormField<String>(
+          initialValue: colaboradorId,
+          decoration: const InputDecoration(labelText: 'Funcionário'),
+          items: colaboradores
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item['id'].toString(),
+                  child: Text(
+                    '${item['nome'] ?? 'Funcionário'}'
+                    '${_bool(item['ativo']) ? '' : ' · inativo'}',
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value != null) setLocal(() => colaboradorId = value);
+          },
+        ),
+        DropdownButtonFormField<String>(
+          initialValue: contaId,
+          decoration: const InputDecoration(labelText: 'Conta de pagamento'),
+          items: contas
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item['id'].toString(),
+                  child: Text((item['nome'] ?? 'Conta').toString()),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value != null) setLocal(() => contaId = value);
+          },
+        ),
+        _campo(valor, 'Valor *'),
+        _campo(forma, 'Forma de pagamento'),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.calendar_today_outlined),
+          title: const Text('Data do pagamento'),
+          subtitle: Text(DateFormat('dd/MM/yyyy').format(data)),
+          trailing: OutlinedButton(
+            onPressed: () async {
+              final escolhida = await showDatePicker(
+                context: context,
+                initialDate: data,
+                firstDate: DateTime(DateTime.now().year - 2),
+                lastDate: DateTime(DateTime.now().year + 1),
+              );
+              if (escolhida != null) setLocal(() => data = escolhida);
+            },
+            child: const Text('Alterar'),
+          ),
+        ),
+        _campo(observacoes, 'Observações', linhas: 2),
+      ],
+    );
+
+    if (ok != true) return;
+
+    await _executar(
+      () async {
+        await _service.registrarPagamentoColaborador(
+          colaboradorId: colaboradorId,
+          contaId: contaId,
+          valor: _numero(valor.text),
+          dataPagamento: data,
+          formaPagamento: forma.text,
+          observacoes: observacoes.text,
+        );
+      },
+      'Pagamento registrado e sincronizado.',
+    );
+
+    valor.dispose();
+    forma.dispose();
+    observacoes.dispose();
   }
 
   Widget _visaoGeral() {
