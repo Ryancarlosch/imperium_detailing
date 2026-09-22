@@ -22,12 +22,14 @@ class _WebPontoPageState extends State<WebPontoPage>
   List<Map<String, dynamic>> _colaboradores = const [];
   List<Map<String, dynamic>> _registros = const [];
   List<Map<String, dynamic>> _jornada = const [];
+  List<Map<String, dynamic>> _solicitacoesAjuste = const [];
+  String _statusSolicitacoes = 'Pendente';
   Map<String, dynamic> _config = const {};
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
     _carregar();
   }
 
@@ -54,6 +56,9 @@ class _WebPontoPageState extends State<WebPontoPage>
         _service.listarRegistros(inicio: inicio, fim: fim),
         _service.listarJornada(),
         _service.obterConfig(),
+        _service.listarSolicitacoesAjusteAdmin(
+          status: _statusSolicitacoes,
+        ),
       ]);
 
       if (!mounted) return;
@@ -62,6 +67,7 @@ class _WebPontoPageState extends State<WebPontoPage>
         _registros = dados[1] as List<Map<String, dynamic>>;
         _jornada = dados[2] as List<Map<String, dynamic>>;
         _config = dados[3] as Map<String, dynamic>;
+        _solicitacoesAjuste = dados[4] as List<Map<String, dynamic>>;
       });
     } catch (e) {
       if (mounted) setState(() => _erro = _textoErro(e));
@@ -440,6 +446,10 @@ class _WebPontoPageState extends State<WebPontoPage>
             tabs: const [
               Tab(icon: Icon(Icons.groups_2_outlined), text: 'Equipe e ponto'),
               Tab(icon: Icon(Icons.schedule_outlined), text: 'Jornada'),
+              Tab(
+                icon: Icon(Icons.rule_folder_outlined),
+                text: 'Solicitações',
+              ),
             ],
           ),
         ),
@@ -451,7 +461,11 @@ class _WebPontoPageState extends State<WebPontoPage>
               ? _erroView()
               : TabBarView(
                   controller: _tabs,
-                  children: [_equipeView(), _jornadaView()],
+                  children: [
+                    _equipeView(),
+                    _jornadaView(),
+                    _solicitacoesView(),
+                  ],
                 ),
         ),
       ],
@@ -869,6 +883,333 @@ class _WebPontoPageState extends State<WebPontoPage>
           ],
         );
       },
+    );
+  }
+
+  Future<void> _decidirSolicitacao(
+    Map<String, dynamic> solicitacao, {
+    required bool aprovar,
+  }) async {
+    final motivo = TextEditingController();
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          aprovar ? 'Aprovar solicitação?' : 'Rejeitar solicitação?',
+        ),
+        content: SizedBox(
+          width: 560,
+          child: TextField(
+            controller: motivo,
+            autofocus: true,
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: aprovar
+                  ? 'Observação da aprovação'
+                  : 'Motivo da rejeição *',
+              helperText: aprovar
+                  ? 'Opcional. O pedido do funcionário ficará preservado no histórico.'
+                  : 'Obrigatório, com pelo menos 5 caracteres.',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!aprovar && motivo.text.trim().length < 5) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Informe o motivo da rejeição com pelo menos 5 caracteres.',
+                    ),
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(dialogContext, true);
+            },
+            child: Text(aprovar ? 'Aprovar' : 'Rejeitar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmou != true) {
+      motivo.dispose();
+      return;
+    }
+
+    final textoMotivo = motivo.text;
+    motivo.dispose();
+
+    try {
+      await _service.decidirSolicitacaoAjuste(
+        solicitacaoId: (solicitacao['id'] ?? '').toString(),
+        aprovar: aprovar,
+        motivo: textoMotivo,
+      );
+      await _carregar();
+      _snack(
+        aprovar
+            ? 'Solicitação aprovada e ponto atualizado.'
+            : 'Solicitação rejeitada.',
+      );
+    } catch (e) {
+      _snack(_textoErro(e), erro: true);
+    }
+  }
+
+  Widget _solicitacoesView() {
+    final pendentes = _solicitacoesAjuste
+        .where((e) => (e['status'] ?? '').toString() == 'Pendente')
+        .length;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+      children: [
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            SizedBox(
+              width: 680,
+              child: _cabecalho(
+                'Solicitações de ajuste',
+                'Pedidos enviados pelos funcionários para corrigir o ponto. '
+                    'A aprovação atualiza o registro usando a mesma regra do Android.',
+              ),
+            ),
+            SizedBox(
+              width: 220,
+              child: DropdownButtonFormField<String>(
+                initialValue: _statusSolicitacoes,
+                decoration: const InputDecoration(labelText: 'Exibir'),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'Pendente',
+                    child: Text('Pendentes'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Aprovada',
+                    child: Text('Aprovadas'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Rejeitada',
+                    child: Text('Rejeitadas'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Cancelada',
+                    child: Text('Canceladas'),
+                  ),
+                  DropdownMenuItem(value: 'Todos', child: Text('Todas')),
+                ],
+                onChanged: (valor) {
+                  if (valor == null || valor == _statusSolicitacoes) return;
+                  setState(() => _statusSolicitacoes = valor);
+                  _carregar();
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
+            leading: const Icon(Icons.notifications_active_outlined),
+            title: Text(
+              _statusSolicitacoes == 'Pendente'
+                  ? '$pendentes solicitação(ões) pendente(s)'
+                  : '${_solicitacoesAjuste.length} registro(s)',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            subtitle: const Text(
+              'As decisões ficam registradas no histórico do Ponto.',
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (_solicitacoesAjuste.isEmpty)
+          const Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('Nenhuma solicitação encontrada neste filtro.'),
+            ),
+          )
+        else
+          ..._solicitacoesAjuste.map((item) {
+            final status = (item['status'] ?? 'Pendente').toString();
+            final atualRaw = item['registro_atual_json'];
+            final atual = atualRaw is Map
+                ? Map<String, dynamic>.from(atualRaw)
+                : const <String, dynamic>{};
+            final solicitado = [
+              (item['situacao_solicitada'] ?? '').toString(),
+              if (_hora(item['entrada_solicitada']).isNotEmpty)
+                'Entrada ${_hora(item['entrada_solicitada'])}',
+              if (_hora(item['intervalo_inicio_solicitado']).isNotEmpty)
+                'Intervalo ${_hora(item['intervalo_inicio_solicitado'])}'
+                    '–${_hora(item['intervalo_fim_solicitado'])}',
+              if (_hora(item['saida_solicitada']).isNotEmpty)
+                'Saída ${_hora(item['saida_solicitada'])}',
+            ].where((e) => e.trim().isNotEmpty).join(' · ');
+
+            final atualTexto = atual.isEmpty
+                ? 'Sem registro anterior'
+                : [
+                    (atual['situacao'] ?? '').toString(),
+                    if (_hora(atual['entrada']).isNotEmpty)
+                      'Entrada ${_hora(atual['entrada'])}',
+                    if (_hora(atual['intervalo_inicio']).isNotEmpty)
+                      'Intervalo ${_hora(atual['intervalo_inicio'])}'
+                          '–${_hora(atual['intervalo_fim'])}',
+                    if (_hora(atual['saida']).isNotEmpty)
+                      'Saída ${_hora(atual['saida'])}',
+                  ].where((e) => e.trim().isNotEmpty).join(' · ');
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        SizedBox(
+                          width: 540,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (item['colaborador_nome'] ?? 'Funcionário')
+                                    .toString(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              Text(
+                                [
+                                  (item['colaborador_funcao'] ?? '').toString(),
+                                  _dataExibicao(
+                                    (item['data'] ?? '').toString(),
+                                  ),
+                                  status,
+                                ].where((e) => e.trim().isNotEmpty).join(' · '),
+                                style: const TextStyle(
+                                  color: Color(0xFF89939E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (status == 'Pendente')
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: () => _decidirSolicitacao(
+                                  item,
+                                  aprovar: false,
+                                ),
+                                icon: const Icon(Icons.close_rounded),
+                                label: const Text('Rejeitar'),
+                              ),
+                              FilledButton.icon(
+                                onPressed: () => _decidirSolicitacao(
+                                  item,
+                                  aprovar: true,
+                                ),
+                                icon: const Icon(Icons.check_rounded),
+                                label: const Text('Aprovar'),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    Text(
+                      'Motivo do funcionário',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text((item['motivo'] ?? 'Sem motivo informado').toString()),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 18,
+                      runSpacing: 12,
+                      children: [
+                        SizedBox(
+                          width: 420,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Registro atual',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(atualTexto),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 420,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Solicitado',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(solicitado),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if ((item['observacoes_solicitadas'] ?? '')
+                        .toString()
+                        .trim()
+                        .isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Observação solicitada: '
+                        '${item['observacoes_solicitadas']}',
+                      ),
+                    ],
+                    if ((item['decisao_motivo'] ?? '')
+                        .toString()
+                        .trim()
+                        .isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Decisão: ${item['decisao_motivo']}',
+                        style: const TextStyle(color: Color(0xFF89939E)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }),
+      ],
     );
   }
 
