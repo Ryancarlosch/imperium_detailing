@@ -89,6 +89,12 @@ class WebFinanceiroAdministracaoService {
     crescente: true,
   );
 
+  Future<List<Map<String, dynamic>>> listarPagamentosColaboradores() => _listar(
+    'imperium_financeiro_pagamentos_colaboradores',
+    ordenarPor: 'data_pagamento',
+  );
+
+
   Future<void> _salvar({
     required String tabela,
     required Map<String, Object?> valores,
@@ -345,6 +351,52 @@ class WebFinanceiroAdministracaoService {
         'excluido_em': null,
       },
     );
+  }
+
+  Future<Map<String, dynamic>> registrarPagamentoColaborador({
+    required String colaboradorId,
+    required String contaId,
+    required double valor,
+    required DateTime dataPagamento,
+    required String formaPagamento,
+    String observacoes = '',
+  }) async {
+    final colaborador = colaboradorId.trim();
+    final conta = contaId.trim();
+    if (colaborador.isEmpty) {
+      throw ArgumentError('Selecione o funcionário.');
+    }
+    if (conta.isEmpty) {
+      throw ArgumentError('Selecione a conta de pagamento.');
+    }
+    if (valor <= 0) {
+      throw ArgumentError('O valor do pagamento deve ser maior que zero.');
+    }
+
+    final empresaId = await _empresaId();
+    final pagamento = await _origem.proxima();
+    final movimento = await _origem.proxima();
+
+    final raw = await _client.rpc(
+      'imperium_financeiro_pagar_colaborador_web',
+      params: <String, Object?>{
+        'p_empresa_id': empresaId,
+        'p_colaborador_id': colaborador,
+        'p_conta_id': conta,
+        'p_valor': valor,
+        'p_data_pagamento': dataPagamento.toIso8601String(),
+        'p_forma_pagamento': formaPagamento.trim(),
+        'p_observacoes': observacoes.trim(),
+        'p_origem_dispositivo': pagamento.dispositivoId,
+        'p_pagamento_local_id': pagamento.localId,
+        'p_movimento_local_id': movimento.localId,
+      },
+    );
+
+    if (raw is! Map) {
+      throw StateError('O pagamento não retornou um resultado válido.');
+    }
+    return Map<String, dynamic>.from(raw);
   }
 
   Future<String> transferir({
