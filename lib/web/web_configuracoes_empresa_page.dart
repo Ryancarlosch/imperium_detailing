@@ -37,6 +37,10 @@ class _WebConfiguracoesEmpresaPageState
   final _cidade = TextEditingController();
   final _estado = TextEditingController();
   final _cep = TextEditingController();
+  final _nomeAplicativo = TextEditingController();
+  String _tema = 'escuro';
+  int _corPrincipal = 0xFFD6A84B;
+  int _corSecundaria = 0xFF1A1A1A;
   final _validadeOrcamento = TextEditingController();
   final _rodapeDocumentos = TextEditingController();
   final _termosOrcamento = TextEditingController();
@@ -74,6 +78,7 @@ class _WebConfiguracoesEmpresaPageState
       _cidade,
       _estado,
       _cep,
+      _nomeAplicativo,
       _validadeOrcamento,
       _rodapeDocumentos,
       _termosOrcamento,
@@ -127,6 +132,21 @@ class _WebConfiguracoesEmpresaPageState
     _cidade.text = _texto(item['cidade']);
     _estado.text = _texto(item['estado']);
     _cep.text = _texto(item['cep']);
+    _nomeAplicativo.text = _texto(
+      item['nome_aplicativo'],
+      padrao: 'Imperium Detailing',
+    );
+    _tema = _texto(item['tema'], padrao: 'escuro') == 'claro'
+        ? 'claro'
+        : 'escuro';
+    _corPrincipal = _inteiro(
+      item['cor_principal'],
+      padrao: 0xFFD6A84B,
+    );
+    _corSecundaria = _inteiro(
+      item['cor_secundaria'],
+      padrao: 0xFF1A1A1A,
+    );
     _validadeOrcamento.text = _texto(
       item['validade_orcamento_dias'],
       padrao: '15',
@@ -171,6 +191,10 @@ class _WebConfiguracoesEmpresaPageState
           'cidade': _cidade.text,
           'estado': _estado.text,
           'cep': _cep.text,
+          'nome_aplicativo': _nomeAplicativo.text,
+          'tema': _tema,
+          'cor_principal': _corPrincipal,
+          'cor_secundaria': _corSecundaria,
           'validade_orcamento_dias': _validadeOrcamento.text,
           'rodape_documentos': _rodapeDocumentos.text,
           'termos_orcamento': _termosOrcamento.text,
@@ -252,6 +276,42 @@ class _WebConfiguracoesEmpresaPageState
 
   InputDecoration _dec(String label, IconData icon) {
     return InputDecoration(labelText: label, prefixIcon: Icon(icon));
+  }
+
+  Widget _seletorCor({
+    required String titulo,
+    required int selecionada,
+    required List<(String, int)> opcoes,
+    required ValueChanged<int> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(titulo, style: const TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final opcao in opcoes)
+              ChoiceChip(
+                selected: selecionada == opcao.$2,
+                onSelected: (_) => onChanged(opcao.$2),
+                avatar: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: Color(opcao.$2),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white24),
+                  ),
+                ),
+                label: Text(opcao.$1),
+              ),
+          ],
+        ),
+      ],
+    );
   }
 
   @override
@@ -436,6 +496,125 @@ class _WebConfiguracoesEmpresaPageState
             ),
             const SizedBox(height: 14),
             _secao(
+              titulo: 'Identidade visual',
+              subtitulo:
+                  'Nome, tema e cores compartilhados com o aplicativo Android.',
+              children: [
+                _linha([
+                  TextField(
+                    controller: _nomeAplicativo,
+                    decoration: _dec(
+                      'Nome do aplicativo',
+                      Icons.apps_outlined,
+                    ),
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: _tema,
+                    decoration: _dec('Tema', Icons.contrast_outlined),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'escuro',
+                        child: Text('Tema escuro'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'claro',
+                        child: Text('Tema claro'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _tema = value);
+                      }
+                    },
+                  ),
+                ]),
+                const SizedBox(height: 16),
+                _seletorCor(
+                  titulo: 'Cor principal',
+                  selecionada: _corPrincipal,
+                  opcoes: const [
+                    ('Dourado Imperium', 0xFFD6A84B),
+                    ('Amarelo', 0xFFFFC107),
+                    ('Azul', 0xFF2196F3),
+                    ('Azul escuro', 0xFF1565C0),
+                    ('Verde', 0xFF4CAF50),
+                    ('Vermelho', 0xFFE53935),
+                    ('Roxo', 0xFF9C27B0),
+                    ('Laranja', 0xFFFF7A00),
+                    ('Prata', 0xFFBDBDBD),
+                  ],
+                  onChanged: (valor) {
+                    setState(() => _corPrincipal = valor);
+                  },
+                ),
+                const SizedBox(height: 16),
+                _seletorCor(
+                  titulo: 'Cor secundária',
+                  selecionada: _corSecundaria,
+                  opcoes: const [
+                    ('Preto', 0xFF0E0E0E),
+                    ('Cinza escuro', 0xFF1A1A1A),
+                    ('Grafite', 0xFF252525),
+                    ('Azul escuro', 0xFF101820),
+                    ('Marrom escuro', 0xFF211A14),
+                  ],
+                  onChanged: (valor) {
+                    setState(() => _corSecundaria = valor);
+                  },
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Color(_corSecundaria),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Color(_corPrincipal).withValues(alpha: 0.55),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Color(_corPrincipal),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome_outlined,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _nomeAplicativo.text.trim().isEmpty
+                              ? 'Imperium Detailing'
+                              : _nomeAplicativo.text.trim(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        _tema == 'claro' ? 'Claro' : 'Escuro',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'A identidade é salva no Cloud e aplicada pelo Android no próximo ciclo de sincronização. A interface Web mantém o tema administrativo próprio por enquanto.',
+                  style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _secao(
               titulo: 'Documentos e operação',
               subtitulo:
                   'Regras e textos padrão compartilhados com orçamentos e ordens de serviço.',
@@ -556,6 +735,11 @@ class _WebConfiguracoesEmpresaPageState
   static String _texto(dynamic value, {String padrao = ''}) {
     final texto = (value ?? '').toString().trim();
     return texto.isEmpty ? padrao : texto;
+  }
+
+  static int _inteiro(dynamic value, {required int padrao}) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? padrao;
   }
 
   static String _textoErro(Object erro) {
