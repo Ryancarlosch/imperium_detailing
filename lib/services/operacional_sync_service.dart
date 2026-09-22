@@ -527,9 +527,7 @@ class OperacionalSyncService {
     if (await FiscalCloudSyncService.instance.possuiConflitosPendentes(
       empresaId,
     )) {
-      throw const SyncMotorBloqueadoException(
-        'Conflitos pendentes no Fiscal.',
-      );
+      throw const SyncMotorBloqueadoException('Conflitos pendentes no Fiscal.');
     }
   }
 
