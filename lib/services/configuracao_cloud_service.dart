@@ -12,8 +12,9 @@ import 'supabase_bootstrap.dart';
 
 /// Configuracoes Cloud V1.
 ///
-/// Sincroniza apenas dados portaveis da empresa. Arquivos locais e metadados
-/// de backup continuam locais e serao tratados por Storage em outra etapa.
+/// Sincroniza os dados portáteis da empresa.
+/// Logo e assinatura usam ConfiguracaoArquivosCloudService/Storage; metadados
+/// de backup continuam locais.
 class ConfiguracaoCloudService {
   ConfiguracaoCloudService._();
 
@@ -332,7 +333,7 @@ class ConfiguracaoCloudService {
       'mapeada': mapa != null,
       'remoto_atualizado_em': mapa?['remoto_atualizado_em'],
       'conflitos_pendentes': conflitos,
-      'arquivos_locais_fora_do_cloud': true,
+      'arquivos_identidade_no_cloud': true,
       'backup_local_fora_do_cloud': true,
     };
   }
