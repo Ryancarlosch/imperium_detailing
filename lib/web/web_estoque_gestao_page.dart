@@ -24,10 +24,7 @@ class WebEstoqueGestaoPage extends StatelessWidget {
                   icon: Icon(Icons.inventory_2_outlined),
                   text: 'Cadastro de produtos',
                 ),
-                Tab(
-                  icon: Icon(Icons.settings_outlined),
-                  text: 'Configurações',
-                ),
+                Tab(icon: Icon(Icons.settings_outlined), text: 'Configurações'),
               ],
             ),
           ),

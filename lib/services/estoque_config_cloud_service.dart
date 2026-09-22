@@ -84,19 +84,15 @@ class EstoqueConfigCloudService {
     if (rows.isNotEmpty) return rows.first;
 
     final agora = DateTime.now().toIso8601String();
-    final id = await database.insert(
-      'configuracoes_estoque',
-      <String, Object?>{
-        'controlar_estoque': 1,
-        'controlar_produtos_ordem_servico': 0,
-        'baixa_automatica': 0,
-        'exigir_quantidade': 0,
-        'alertar_estoque_baixo': 1,
-        'estoque_minimo_padrao': 1.0,
-        'atualizado_em': agora,
-      },
-      conflictAlgorithm: ConflictAlgorithm.abort,
-    );
+    final id = await database.insert('configuracoes_estoque', <String, Object?>{
+      'controlar_estoque': 1,
+      'controlar_produtos_ordem_servico': 0,
+      'baixa_automatica': 0,
+      'exigir_quantidade': 0,
+      'alertar_estoque_baixo': 1,
+      'estoque_minimo_padrao': 1.0,
+      'atualizado_em': agora,
+    }, conflictAlgorithm: ConflictAlgorithm.abort);
 
     final criado = await database.query(
       'configuracoes_estoque',
@@ -128,9 +124,7 @@ class EstoqueConfigCloudService {
         ),
         'p_baixa_automatica': _boolLocal(local['baixa_automatica']),
         'p_exigir_quantidade': _boolLocal(local['exigir_quantidade']),
-        'p_alertar_estoque_baixo': _boolLocal(
-          local['alertar_estoque_baixo'],
-        ),
+        'p_alertar_estoque_baixo': _boolLocal(local['alertar_estoque_baixo']),
         'p_estoque_minimo_padrao': _double(local['estoque_minimo_padrao']),
         'p_origem_dispositivo': dispositivoId,
         'p_origem_atualizado_em': origemAtualizado,
@@ -157,8 +151,9 @@ class EstoqueConfigCloudService {
             remoto['controlar_produtos_ordem_servico'] == true ? 1 : 0,
         'baixa_automatica': remoto['baixa_automatica'] == true ? 1 : 0,
         'exigir_quantidade': remoto['exigir_quantidade'] == true ? 1 : 0,
-        'alertar_estoque_baixo':
-            remoto['alertar_estoque_baixo'] == true ? 1 : 0,
+        'alertar_estoque_baixo': remoto['alertar_estoque_baixo'] == true
+            ? 1
+            : 0,
         'estoque_minimo_padrao': _double(remoto['estoque_minimo_padrao']),
         'atualizado_em': _textoPreferido(
           remoto['origem_atualizado_em'],

@@ -73,19 +73,21 @@ class WebEstoqueConfigService {
         'p_controlar_estoque': controlarEstoque,
         'p_controlar_produtos_ordem_servico':
             controlarEstoque && controlarProdutosOrdemServico,
-        'p_baixa_automatica': controlarEstoque &&
+        'p_baixa_automatica':
+            controlarEstoque &&
             controlarProdutosOrdemServico &&
             baixaAutomatica,
-        'p_exigir_quantidade': controlarEstoque &&
+        'p_exigir_quantidade':
+            controlarEstoque &&
             controlarProdutosOrdemServico &&
             exigirQuantidade,
-        'p_alertar_estoque_baixo':
-            controlarEstoque && alertarEstoqueBaixo,
+        'p_alertar_estoque_baixo': controlarEstoque && alertarEstoqueBaixo,
         'p_estoque_minimo_padrao': estoqueMinimoPadrao,
         'p_origem_dispositivo': origem,
         'p_origem_atualizado_em': agora,
-        'p_atualizado_em_base':
-            (atualizadoEmBase ?? '').trim().isEmpty ? null : atualizadoEmBase,
+        'p_atualizado_em_base': (atualizadoEmBase ?? '').trim().isEmpty
+            ? null
+            : atualizadoEmBase,
       },
     );
 
