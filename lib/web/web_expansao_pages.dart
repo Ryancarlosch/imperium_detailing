@@ -9,6 +9,7 @@ import '../services/web_orcamento_pdf_service.dart';
 import '../services/whatsapp_service.dart';
 import 'imperium_web_theme.dart';
 import 'web_crm_campanhas_page.dart';
+import 'web_crm_operacao_page.dart';
 
 class WebCrmPage extends StatefulWidget {
   const WebCrmPage({super.key});
@@ -67,6 +68,15 @@ class _WebCrmPageState extends State<WebCrmPage> {
     } finally {
       if (mounted) setState(() => _carregando = false);
     }
+  }
+
+  Future<void> _abrirCentralRelacionamento() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const WebCrmOperacaoPage()),
+    );
+
+    if (!mounted) return;
+    await _carregar();
   }
 
   Future<void> _abrirCampanhasBeneficios() async {
@@ -1090,17 +1100,29 @@ class _WebCrmPageState extends State<WebCrmPage> {
                 const SizedBox(width: 6),
                 if (!compacto) ...[
                   FilledButton.tonalIcon(
+                    onPressed: _abrirCentralRelacionamento,
+                    icon: const Icon(Icons.support_agent_outlined),
+                    label: const Text('Central de relacionamento'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonalIcon(
                     onPressed: _abrirCampanhasBeneficios,
                     icon: const Icon(Icons.campaign_outlined),
                     label: const Text('Campanhas e benefícios'),
                   ),
                   const SizedBox(width: 8),
-                ] else
+                ] else ...[
+                  IconButton(
+                    tooltip: 'Central de relacionamento',
+                    onPressed: _abrirCentralRelacionamento,
+                    icon: const Icon(Icons.support_agent_outlined),
+                  ),
                   IconButton(
                     tooltip: 'Campanhas e benefícios',
                     onPressed: _abrirCampanhasBeneficios,
                     icon: const Icon(Icons.campaign_outlined),
                   ),
+                ],
                 FilledButton.icon(
                   onPressed: () => _editarLead(),
                   icon: const Icon(Icons.person_add_alt_1_rounded),
