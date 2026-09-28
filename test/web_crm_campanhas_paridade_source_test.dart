@@ -4,9 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('Clientes compartilham nascimento entre Web Cloud e Android', () {
-    final web = File(
-      'lib/web/web_operacional_shell.dart',
-    ).readAsStringSync();
+    final web = File('lib/web/web_operacional_shell.dart').readAsStringSync();
     final service = File(
       'lib/services/web_cloud_operacional_service.dart',
     ).readAsStringSync();
@@ -26,12 +24,8 @@ void main() {
   });
 
   test('CRM Web gerencia campanhas e cupons com regras do mobile', () {
-    final page = File(
-      'lib/web/web_crm_campanhas_page.dart',
-    ).readAsStringSync();
-    final crm = File(
-      'lib/web/web_expansao_pages.dart',
-    ).readAsStringSync();
+    final page = File('lib/web/web_crm_campanhas_page.dart').readAsStringSync();
+    final crm = File('lib/web/web_expansao_pages.dart').readAsStringSync();
     final service = File(
       'lib/services/web_cloud_expansao_service.dart',
     ).readAsStringSync();

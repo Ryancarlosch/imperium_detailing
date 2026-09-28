@@ -71,18 +71,8 @@ class _WebCrmCampanhasPageState extends State<WebCrmCampanhasPage> {
       text: ((atual?['dias_sem_retorno'] as num?)?.toInt() ?? 180).toString(),
     );
 
-    const tipos = <String>[
-      'Aniversário',
-      'Reativação',
-      'Indicação',
-      'Manual',
-    ];
-    const beneficios = <String>[
-      'Percentual',
-      'Valor',
-      'Serviço',
-      'Crédito',
-    ];
+    const tipos = <String>['Aniversário', 'Reativação', 'Indicação', 'Manual'];
+    const beneficios = <String>['Percentual', 'Valor', 'Serviço', 'Crédito'];
 
     var tipo = (atual?['tipo'] ?? 'Manual').toString();
     if (!tipos.contains(tipo)) tipo = 'Manual';
@@ -118,7 +108,9 @@ class _WebCrmCampanhasPageState extends State<WebCrmCampanhasPage> {
                         child: DropdownButtonFormField<String>(
                           initialValue: tipo,
                           isExpanded: true,
-                          decoration: const InputDecoration(labelText: 'Tipo *'),
+                          decoration: const InputDecoration(
+                            labelText: 'Tipo *',
+                          ),
                           items: tipos
                               .map(
                                 (item) => DropdownMenuItem(
@@ -313,15 +305,12 @@ class _WebCrmCampanhasPageState extends State<WebCrmCampanhasPage> {
         atualizadoEmEsperado: (campanha['atualizado_em'] ?? '').toString(),
         nome: (campanha['nome'] ?? '').toString(),
         tipo: (campanha['tipo'] ?? 'Manual').toString(),
-        beneficioTipo:
-            (campanha['beneficio_tipo'] ?? 'Percentual').toString(),
+        beneficioTipo: (campanha['beneficio_tipo'] ?? 'Percentual').toString(),
         beneficioValor: _double(campanha['beneficio_valor']),
-        beneficioDescricao:
-            (campanha['beneficio_descricao'] ?? '').toString(),
+        beneficioDescricao: (campanha['beneficio_descricao'] ?? '').toString(),
         valorMinimo: _double(campanha['valor_minimo']),
         diasValidade: (campanha['dias_validade'] as num?)?.toInt() ?? 30,
-        diasSemRetorno:
-            (campanha['dias_sem_retorno'] as num?)?.toInt() ?? 180,
+        diasSemRetorno: (campanha['dias_sem_retorno'] as num?)?.toInt() ?? 180,
         ativo: campanha['ativo'] == false,
       );
       await _carregar();
@@ -557,8 +546,9 @@ class _WebCrmCampanhasPageState extends State<WebCrmCampanhasPage> {
   @override
   Widget build(BuildContext context) {
     final ativas = _campanhas.where((e) => e['ativo'] != false).length;
-    final cuponsAtivos =
-        _cupons.where((e) => (e['status'] ?? '').toString() == 'Ativo').length;
+    final cuponsAtivos = _cupons
+        .where((e) => (e['status'] ?? '').toString() == 'Ativo')
+        .length;
 
     return Scaffold(
       backgroundColor: ImperiumWebTheme.background,
@@ -630,10 +620,7 @@ class _WebCrmCampanhasPageState extends State<WebCrmCampanhasPage> {
                             label: Text('$ativas campanha(s) ativa(s)'),
                           ),
                           Chip(
-                            avatar: const Icon(
-                              Icons.redeem_outlined,
-                              size: 17,
-                            ),
+                            avatar: const Icon(Icons.redeem_outlined, size: 17),
                             label: Text('$cuponsAtivos cupom(ns) ativo(s)'),
                           ),
                         ],
@@ -658,10 +645,7 @@ class _WebCrmCampanhasPageState extends State<WebCrmCampanhasPage> {
                               ),
                               Expanded(
                                 child: TabBarView(
-                                  children: [
-                                    _campanhasTab(),
-                                    _cuponsTab(),
-                                  ],
+                                  children: [_campanhasTab(), _cuponsTab()],
                                 ),
                               ),
                             ],

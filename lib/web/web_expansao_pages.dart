@@ -71,9 +71,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
 
   Future<void> _abrirCampanhasBeneficios() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const WebCrmCampanhasPage(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const WebCrmCampanhasPage()),
     );
 
     if (!mounted) return;
