@@ -459,6 +459,29 @@ class WebCloudExpansaoService {
     );
   }
 
+  Future<Map<String, dynamic>> gerarOsDeOrcamento({
+    required String id,
+    required String atualizadoEmEsperado,
+    String funcionarioResponsavel = '',
+  }) async {
+    if (id.trim().isEmpty) {
+      throw ArgumentError('Orçamento inválido.');
+    }
+
+    final empresaId = await _empresaId();
+    final resposta = await _client.rpc(
+      'imperium_orcamento_gerar_os_web',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_orcamento_id': id.trim(),
+        'p_atualizado_em_base': _textoNulo(atualizadoEmEsperado),
+        'p_funcionario_responsavel': funcionarioResponsavel.trim(),
+      },
+    );
+
+    return Map<String, dynamic>.from(resposta as Map);
+  }
+
   Future<void> excluirOrcamento({
     required String id,
     required String atualizadoEmEsperado,
