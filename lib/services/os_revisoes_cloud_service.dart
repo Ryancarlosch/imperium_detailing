@@ -167,23 +167,18 @@ class OsRevisoesCloudService {
       if (existente.isNotEmpty) {
         localId = _int(existente.first['id']);
       } else {
-        localId = await database.insert(
-          'ordem_servico_revisoes',
-          <String, Object?>{
-            'ordem_servico_id': ordemLocalId,
-            'numero_revisao': numeroRevisao,
-            'tipo': _texto(remoto['tipo']),
-            'motivo': _texto(remoto['motivo']),
-            'dados_anteriores_json': jsonEncode(
-              _mapJson(remoto['dados_anteriores']),
-            ),
-            'dados_novos_json': jsonEncode(
-              _mapJson(remoto['dados_novos']),
-            ),
-            'criado_em': _texto(remoto['criado_em']),
-          },
-          conflictAlgorithm: ConflictAlgorithm.abort,
-        );
+        localId = await database
+            .insert('ordem_servico_revisoes', <String, Object?>{
+              'ordem_servico_id': ordemLocalId,
+              'numero_revisao': numeroRevisao,
+              'tipo': _texto(remoto['tipo']),
+              'motivo': _texto(remoto['motivo']),
+              'dados_anteriores_json': jsonEncode(
+                _mapJson(remoto['dados_anteriores']),
+              ),
+              'dados_novos_json': jsonEncode(_mapJson(remoto['dados_novos'])),
+              'criado_em': _texto(remoto['criado_em']),
+            }, conflictAlgorithm: ConflictAlgorithm.abort);
       }
 
       if (localId <= 0) continue;
@@ -284,15 +279,11 @@ class OsRevisoesCloudService {
   }) async {
     if (localId <= 0 || remotoId.isEmpty) return;
 
-    await database.insert(
-      'imperium_sync_os_revisoes',
-      <String, Object?>{
-        'empresa_id': empresaId,
-        'local_id': localId,
-        'remoto_id': remotoId,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert('imperium_sync_os_revisoes', <String, Object?>{
+      'empresa_id': empresaId,
+      'local_id': localId,
+      'remoto_id': remotoId,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   static Map<String, dynamic> _jsonObjeto(dynamic valor) {

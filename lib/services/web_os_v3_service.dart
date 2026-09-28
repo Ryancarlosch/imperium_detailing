@@ -146,9 +146,7 @@ class WebOsV3Service {
     return Map<String, dynamic>.from(resposta as Map);
   }
 
-  Future<List<Map<String, dynamic>>> listarRevisoes(
-    String ordemId,
-  ) async {
+  Future<List<Map<String, dynamic>>> listarRevisoes(String ordemId) async {
     final client = SupabaseBootstrap.client;
     if (client == null) throw StateError('Supabase não está disponível.');
 
