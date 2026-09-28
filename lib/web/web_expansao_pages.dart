@@ -1176,9 +1176,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     }
   }
 
-  Future<void> _editarOrcamento(
-    Map<String, dynamic> orcamento,
-  ) async {
+  Future<void> _editarOrcamento(Map<String, dynamic> orcamento) async {
     try {
       final itens = await _service.listarItensOrcamento(
         orcamento['id'].toString(),
@@ -2252,9 +2250,8 @@ class _NovoOrcamentoWebDialogState extends State<_NovoOrcamentoWebDialog> {
 
     final inicial = widget.orcamento;
     final clienteInicial = (inicial?['cliente_id'] ?? '').toString();
-    _clienteId = widget.clientes.any(
-      (item) => item['id'].toString() == clienteInicial,
-    )
+    _clienteId =
+        widget.clientes.any((item) => item['id'].toString() == clienteInicial)
         ? clienteInicial
         : widget.clientes.first['id'].toString();
 
@@ -2325,8 +2322,7 @@ class _NovoOrcamentoWebDialogState extends State<_NovoOrcamentoWebDialog> {
         'atualizado_em': item.atualizadoEm,
         'origem_local_id': item.origemLocalId,
         'servico_catalogo_id': item.servicoCatalogoId,
-        'origem_servico_catalogo_local_id':
-            item.origemServicoCatalogoLocalId,
+        'origem_servico_catalogo_local_id': item.origemServicoCatalogoLocalId,
         'servico': item.servico.text.trim(),
         'descricao': item.descricao.text.trim(),
         'quantidade': _double(item.quantidade.text),
@@ -2538,7 +2534,9 @@ class _NovoOrcamentoWebDialogState extends State<_NovoOrcamentoWebDialog> {
         ),
         FilledButton(
           onPressed: _salvar,
-          child: Text(widget.editando ? 'Salvar alterações' : 'Criar orçamento'),
+          child: Text(
+            widget.editando ? 'Salvar alterações' : 'Criar orçamento',
+          ),
         ),
       ],
     );
@@ -2576,10 +2574,10 @@ class _ItemOrcamentoController {
     String descricao = '',
     String quantidade = '1',
     String valor = '',
-  })  : servico = TextEditingController(text: servico),
-        descricao = TextEditingController(text: descricao),
-        quantidade = TextEditingController(text: quantidade),
-        valor = TextEditingController(text: valor);
+  }) : servico = TextEditingController(text: servico),
+       descricao = TextEditingController(text: descricao),
+       quantidade = TextEditingController(text: quantidade),
+       valor = TextEditingController(text: valor);
 
   factory _ItemOrcamentoController.fromMap(Map<String, dynamic> item) {
     return _ItemOrcamentoController(
@@ -2587,8 +2585,7 @@ class _ItemOrcamentoController {
       atualizadoEm: item['atualizado_em']?.toString(),
       origemLocalId: item['origem_local_id'],
       servicoCatalogoId: item['servico_catalogo_id'],
-      origemServicoCatalogoLocalId:
-          item['origem_servico_catalogo_local_id'],
+      origemServicoCatalogoLocalId: item['origem_servico_catalogo_local_id'],
       servico: (item['servico'] ?? '').toString(),
       descricao: (item['descricao'] ?? '').toString(),
       quantidade: _double(item['quantidade']).toString(),
