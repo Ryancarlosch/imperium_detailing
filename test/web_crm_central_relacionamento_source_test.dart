@@ -38,6 +38,8 @@ void main() {
       'imperium_sync_crm_acoes',
       '_estadoLocalTemAcao',
       '_estadoRemotoTemAcao',
+      'estado efetivamente retornado pelo Cloud',
+      '_dadosLocais(remoto, identidade)',
     ]) {
       expect(sync, contains(marker));
     }
