@@ -548,6 +548,70 @@ class CrmOrcamentosCloudService {
       );
       if (_texto(mapa?['local_hash']) == hash) continue;
 
+      if (mapa == null) {
+        final geracao = _geracaoCupom(_texto(local['chave_geracao']));
+        if (geracao != null &&
+            campanhaRemota != null &&
+            clienteRemoto != null) {
+          final existente = await _client
+              ?.from('imperium_crm_cupons')
+              .select()
+              .eq('empresa_id', empresaId)
+              .eq('campanha_id', campanhaRemota)
+              .eq('cliente_id', clienteRemoto)
+              .eq('geracao_tipo', geracao['tipo']!)
+              .eq('geracao_periodo', geracao['periodo']!)
+              .isFilter('excluido_em', null)
+              .maybeSingle();
+
+          if (existente != null) {
+            final remotoExistente = Map<String, dynamic>.from(existente);
+            await database.update(
+              'crm_cupons',
+              <String, Object?>{
+                'codigo': _texto(remotoExistente['codigo']),
+                'beneficio_tipo': _texto(remotoExistente['beneficio_tipo']),
+                'beneficio_valor': _double(
+                  remotoExistente['beneficio_valor'],
+                ),
+                'beneficio_descricao': _texto(
+                  remotoExistente['beneficio_descricao'],
+                ),
+                'valor_minimo': _double(remotoExistente['valor_minimo']),
+                'validade_inicio': _texto(remotoExistente['validade_inicio']),
+                'validade_fim': _texto(remotoExistente['validade_fim']),
+                'status': _textoPadrao(
+                  remotoExistente['status'],
+                  'Ativo',
+                ),
+                'usado_em': _textoNulo(remotoExistente['usado_em']),
+                'chave_geracao': _texto(
+                  remotoExistente['chave_geracao'],
+                ),
+                'criado_em': _textoPreferido(
+                  remotoExistente['origem_criado_em'],
+                  remotoExistente['criado_em'],
+                ),
+              },
+              where: 'id = ?',
+              whereArgs: [localId],
+            );
+
+            final reconciliado = await _localPorId('crm_cupons', localId);
+            await _salvarMapa(
+              tabelaMapa: 'imperium_sync_crm_cupons',
+              empresaId: empresaId,
+              localId: localId,
+              remotoId: _texto(remotoExistente['id']),
+              localHash: _hashCrmCupom(reconciliado),
+              remotoAtualizadoEm:
+                  remotoExistente['atualizado_em']?.toString(),
+            );
+            continue;
+          }
+        }
+      }
+
       final remoto = await _salvarRemotoMapeado(
         empresaId: empresaId,
         localId: localId,
@@ -1091,36 +1155,66 @@ class CrmOrcamentosCloudService {
       );
 
       final codigo = _texto(remoto['codigo']);
-      final existente = await database.query(
-        'crm_cupons',
-        columns: ['id'],
-        where: 'codigo = ?',
-        whereArgs: [codigo],
-        limit: 1,
-      );
+      final chaveGeracao = _texto(remoto['chave_geracao']);
+      final geracao = _geracaoCupom(chaveGeracao);
 
-      final localId = existente.isNotEmpty
-          ? _int(existente.first['id'])
-          : await database.insert('crm_cupons', {
-              'codigo': codigo,
-              'campanha_id': campanhaLocal,
-              'cliente_id': clienteLocal,
-              'lead_id': leadLocal,
-              'beneficio_tipo': _texto(remoto['beneficio_tipo']),
-              'beneficio_valor': _double(remoto['beneficio_valor']),
-              'beneficio_descricao': _texto(remoto['beneficio_descricao']),
-              'valor_minimo': _double(remoto['valor_minimo']),
-              'validade_inicio': _texto(remoto['validade_inicio']),
-              'validade_fim': _texto(remoto['validade_fim']),
-              'status': _textoPadrao(remoto['status'], 'Ativo'),
-              'usado_em': _textoNulo(remoto['usado_em']),
-              'ordem_servico_id': osLocal,
-              'chave_geracao': _texto(remoto['chave_geracao']),
-              'criado_em': _textoPreferido(
-                remoto['origem_criado_em'],
-                remoto['criado_em'],
-              ),
-            });
+      final existente =
+          geracao != null && campanhaLocal != null && clienteLocal != null
+          ? await database.query(
+              'crm_cupons',
+              columns: ['id'],
+              where: 'codigo = ? OR '
+                  '(campanha_id = ? AND cliente_id = ? '
+                  'AND chave_geracao LIKE ?)',
+              whereArgs: [
+                codigo,
+                campanhaLocal,
+                clienteLocal,
+                "${geracao['tipo']}:%:${geracao['periodo']}",
+              ],
+              limit: 1,
+            )
+          : await database.query(
+              'crm_cupons',
+              columns: ['id'],
+              where: 'codigo = ?',
+              whereArgs: [codigo],
+              limit: 1,
+            );
+
+      final dadosLocais = <String, Object?>{
+        'codigo': codigo,
+        'campanha_id': campanhaLocal,
+        'cliente_id': clienteLocal,
+        'lead_id': leadLocal,
+        'beneficio_tipo': _texto(remoto['beneficio_tipo']),
+        'beneficio_valor': _double(remoto['beneficio_valor']),
+        'beneficio_descricao': _texto(remoto['beneficio_descricao']),
+        'valor_minimo': _double(remoto['valor_minimo']),
+        'validade_inicio': _texto(remoto['validade_inicio']),
+        'validade_fim': _texto(remoto['validade_fim']),
+        'status': _textoPadrao(remoto['status'], 'Ativo'),
+        'usado_em': _textoNulo(remoto['usado_em']),
+        'ordem_servico_id': osLocal,
+        'chave_geracao': chaveGeracao,
+        'criado_em': _textoPreferido(
+          remoto['origem_criado_em'],
+          remoto['criado_em'],
+        ),
+      };
+
+      final int localId;
+      if (existente.isNotEmpty) {
+        localId = _int(existente.first['id']);
+        await database.update(
+          'crm_cupons',
+          dadosLocais,
+          where: 'id = ?',
+          whereArgs: [localId],
+        );
+      } else {
+        localId = await database.insert('crm_cupons', dadosLocais);
+      }
 
       final local = await _localPorId('crm_cupons', localId);
       await _salvarMapa(
@@ -1509,6 +1603,24 @@ class CrmOrcamentosCloudService {
       local['criado_em'],
       local['atualizado_em'],
     ]);
+  }
+
+  static Map<String, String>? _geracaoCupom(String chave) {
+    final partes = chave.split(':');
+    if (partes.length < 4) return null;
+
+    final tipo = partes.first;
+    final periodo = partes[3].trim();
+
+    if ((tipo != 'aniversario' && tipo != 'reativacao') ||
+        periodo.isEmpty) {
+      return null;
+    }
+
+    return <String, String>{
+      'tipo': tipo,
+      'periodo': periodo,
+    };
   }
 
   String _hashCrmCupom(Map<String, Object?> local) {
