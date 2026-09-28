@@ -252,6 +252,124 @@ class WebCloudExpansaoService {
     );
   }
 
+  Future<List<Map<String, dynamic>>> listarAcoesCrm({
+    String status = 'Todos',
+  }) async {
+    final empresaId = await _empresaId();
+    final agora = DateTime.now();
+    final referencia =
+        '${agora.year.toString().padLeft(4, '0')}-'
+        '${agora.month.toString().padLeft(2, '0')}-'
+        '${agora.day.toString().padLeft(2, '0')}';
+
+    await _client.rpc(
+      'imperium_crm_sincronizar_acoes_web',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_referencia': referencia,
+      },
+    );
+
+    var query = _client
+        .from('imperium_crm_acoes_relacionamento')
+        .select()
+        .eq('empresa_id', empresaId);
+
+    if (status != 'Todos') {
+      query = query.eq('status', status);
+    }
+
+    final resposta = await query.order('vencimento').order('criado_em');
+    final itens = (resposta as List)
+        .map((raw) => Map<String, dynamic>.from(raw as Map))
+        .toList();
+
+    const prioridade = <String, int>{
+      'Alta': 0,
+      'Normal': 1,
+      'Baixa': 2,
+    };
+    itens.sort((a, b) {
+      final p = (prioridade[(a['prioridade'] ?? '').toString()] ?? 1)
+          .compareTo(prioridade[(b['prioridade'] ?? '').toString()] ?? 1);
+      if (p != 0) return p;
+      return (a['vencimento'] ?? '')
+          .toString()
+          .compareTo((b['vencimento'] ?? '').toString());
+    });
+    return itens;
+  }
+
+  Future<Map<String, dynamic>> concluirAcaoCrm({
+    required Map<String, dynamic> acao,
+    String observacoes = '',
+    DateTime? proximoContato,
+  }) async {
+    final empresaId = await _empresaId();
+    final origem = await WebOrigemService.instance.proxima();
+    final proximo = proximoContato == null
+        ? null
+        : DateTime(
+            proximoContato.year,
+            proximoContato.month,
+            proximoContato.day,
+          ).toIso8601String();
+
+    final resposta = await _client.rpc(
+      'imperium_crm_concluir_acao_web',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_acao_id': acao['id'].toString(),
+        'p_atualizado_em_base': _textoNulo(acao['atualizado_em']),
+        'p_observacoes': observacoes.trim(),
+        'p_proximo_contato': proximo,
+        'p_origem_dispositivo': origem.dispositivoId,
+        'p_interacao_origem_local_id': origem.localId,
+      },
+    );
+    return Map<String, dynamic>.from(resposta as Map);
+  }
+
+  Future<Map<String, dynamic>> adiarAcaoCrm({
+    required Map<String, dynamic> acao,
+    required DateTime novaData,
+  }) async {
+    final empresaId = await _empresaId();
+    final data =
+        '${novaData.year.toString().padLeft(4, '0')}-'
+        '${novaData.month.toString().padLeft(2, '0')}-'
+        '${novaData.day.toString().padLeft(2, '0')}';
+
+    final resposta = await _client.rpc(
+      'imperium_crm_adiar_acao_web',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_acao_id': acao['id'].toString(),
+        'p_atualizado_em_base': _textoNulo(acao['atualizado_em']),
+        'p_nova_data': data,
+      },
+    );
+    return Map<String, dynamic>.from(resposta as Map);
+  }
+
+  Future<Map<String, dynamic>> ignorarAcaoCrm({
+    required Map<String, dynamic> acao,
+    String motivo = '',
+  }) async {
+    final empresaId = await _empresaId();
+
+    final resposta = await _client.rpc(
+      'imperium_crm_ignorar_acao_web',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_acao_id': acao['id'].toString(),
+        'p_atualizado_em_base': _textoNulo(acao['atualizado_em']),
+        'p_motivo': motivo.trim(),
+      },
+    );
+    return Map<String, dynamic>.from(resposta as Map);
+  }
+
   Future<List<Map<String, dynamic>>> listarInteracoes(String leadId) async {
     final empresaId = await _empresaId();
 
