@@ -698,20 +698,23 @@ class _WebCrmPageState extends State<WebCrmPage> {
           '${hora.hour.toString().padLeft(2, '0')}:'
           '${hora.minute.toString().padLeft(2, '0')}';
 
-      final resposta = await _service.agendarLead(
-        id: lead['id'].toString(),
-        atualizadoEmEsperado: (lead['atualizado_em'] ?? '').toString(),
-        veiculoId: veiculoId,
-        data: dataIso,
-        hora: horaTexto,
-        servico: servico.text,
-        valor: _double(valor.text),
-        observacoes: observacoes.text,
-      );
-
-      servico.dispose();
-      valor.dispose();
-      observacoes.dispose();
+      late final Map<String, dynamic> resposta;
+      try {
+        resposta = await _service.agendarLead(
+          id: lead['id'].toString(),
+          atualizadoEmEsperado: (lead['atualizado_em'] ?? '').toString(),
+          veiculoId: veiculoId,
+          data: dataIso,
+          hora: horaTexto,
+          servico: servico.text,
+          valor: _double(valor.text),
+          observacoes: observacoes.text,
+        );
+      } finally {
+        servico.dispose();
+        valor.dispose();
+        observacoes.dispose();
+      }
 
       if (!mounted) return;
 
