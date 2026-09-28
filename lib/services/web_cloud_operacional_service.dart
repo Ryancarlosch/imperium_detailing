@@ -63,6 +63,7 @@ class WebCloudOperacionalService {
     required String nome,
     required String telefone,
     required String email,
+    String? dataNascimento,
     required String endereco,
     required String observacoes,
     bool ativo = true,
@@ -76,6 +77,9 @@ class WebCloudOperacionalService {
       'nome': nome.trim(),
       'telefone': telefone.trim(),
       'email': email.trim(),
+      'data_nascimento': dataNascimento?.trim().isEmpty == true
+          ? null
+          : dataNascimento?.trim(),
       'endereco': endereco.trim(),
       'observacoes': observacoes.trim(),
       'ativo': ativo,
