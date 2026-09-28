@@ -786,21 +786,24 @@ class CrmRepository {
     required DateTime inicio,
   }) async {
     final partes = chaveGeracao.split(':');
-    final geracaoTipo = partes.length >= 4 &&
+    final geracaoTipo =
+        partes.length >= 4 &&
             (partes.first == 'aniversario' || partes.first == 'reativacao')
         ? partes.first
         : null;
     final geracaoPeriodo = geracaoTipo == null ? null : partes[3];
 
     final whereSemantico =
-        geracaoTipo != null && campanha.id != null && geracaoPeriodo!.isNotEmpty;
+        geracaoTipo != null &&
+        campanha.id != null &&
+        geracaoPeriodo!.isNotEmpty;
 
     final existe = await database.query(
       'crm_cupons',
       columns: ['id'],
       where: whereSemantico
           ? 'chave_geracao = ? OR '
-              '(campanha_id = ? AND cliente_id = ? AND chave_geracao LIKE ?)'
+                '(campanha_id = ? AND cliente_id = ? AND chave_geracao LIKE ?)'
           : 'chave_geracao = ?',
       whereArgs: whereSemantico
           ? [
