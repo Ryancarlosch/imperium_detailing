@@ -1337,7 +1337,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
       ),
     );
 
-    if (acao == null) return;
+    if (acao == null || !mounted) return;
 
     final numero =
         'Orçamento #${orcamento['origem_local_id'] ?? orcamento['id']}';
