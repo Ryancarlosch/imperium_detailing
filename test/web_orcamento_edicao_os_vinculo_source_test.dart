@@ -25,7 +25,10 @@ void main() {
     expect(migration, contains('security invoker'));
     expect(migration, contains("private.imperium_pode_modulo"));
     expect(migration, contains('for update'));
-    expect(migration, contains('O veículo selecionado não pertence ao cliente'));
+    expect(
+      migration,
+      contains('O veículo selecionado não pertence ao cliente'),
+    );
   });
 
   test('Orcamento aprovado gera uma unica OS vinculada', () {
@@ -45,7 +48,10 @@ void main() {
     expect(migration, contains('idx_imperium_os_orcamento_ativo_uq'));
     expect(migration, contains("v_orc.status <> 'Aprovado'"));
     expect(migration, contains("'criada', false"));
-    expect(migration, contains('insert into public.imperium_ordem_servico_itens'));
+    expect(
+      migration,
+      contains('insert into public.imperium_ordem_servico_itens'),
+    );
   });
 
   test('Mobile reconcilia o vinculo de orcamento depois do CRM', () {
@@ -66,7 +72,9 @@ void main() {
       contains('OsOrcamentoVinculoCloudService.instance.sincronizar'),
     );
     expect(
-      motor.indexOf('CrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload'),
+      motor.indexOf(
+        'CrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload',
+      ),
       lessThan(
         motor.indexOf('OsOrcamentoVinculoCloudService.instance.sincronizar'),
       ),

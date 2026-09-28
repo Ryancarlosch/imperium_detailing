@@ -1443,9 +1443,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     }
   }
 
-  Future<void> _gerarOsDeOrcamento(
-    Map<String, dynamic> orcamento,
-  ) async {
+  Future<void> _gerarOsDeOrcamento(Map<String, dynamic> orcamento) async {
     if ((orcamento['status'] ?? '').toString() != 'Aprovado') {
       _mostrarErro(
         'A Ordem de Serviço só pode ser gerada a partir de orçamento aprovado.',
