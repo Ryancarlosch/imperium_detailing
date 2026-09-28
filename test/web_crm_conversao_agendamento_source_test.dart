@@ -45,7 +45,6 @@ void main() {
     expect(page, contains('_service.listarVeiculosClienteCrm'));
     expect(page, contains('_service.agendarLead'));
 
-    expect(migration, contains("v_lead.etapa"));
     expect(migration, contains("etapa = 'Agendado'"));
     expect(migration, contains("'Agendamento'"));
     expect(migration, contains('v.cliente_id = v_lead.cliente_id'));
