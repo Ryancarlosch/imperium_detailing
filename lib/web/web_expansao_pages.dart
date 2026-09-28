@@ -457,10 +457,297 @@ class _WebCrmPageState extends State<WebCrmPage> {
     );
   }
 
+  Future<void> _converterLead(Map<String, dynamic> lead) async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Converter lead em cliente?'),
+        content: SizedBox(
+          width: 520,
+          child: Text(
+            'O Imperium procurará primeiro um cliente ativo com o mesmo '
+            'telefone ou e-mail. Se não encontrar, criará um novo cadastro '
+            'com os dados de ${lead['nome'] ?? 'Lead'}.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+            label: const Text('Converter'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmou != true || !mounted) return;
+
+    try {
+      final resposta = await _service.converterLeadEmCliente(
+        id: lead['id'].toString(),
+        atualizadoEmEsperado: (lead['atualizado_em'] ?? '').toString(),
+      );
+      if (!mounted) return;
+
+      final criado = resposta['criado'] == true;
+      final clienteRaw = resposta['cliente'];
+      final cliente = clienteRaw is Map
+          ? Map<String, dynamic>.from(clienteRaw)
+          : const <String, dynamic>{};
+      final nome = (cliente['nome'] ?? lead['nome'] ?? 'Cliente').toString();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            criado
+                ? 'Cliente $nome criado e vinculado ao lead.'
+                : 'Lead vinculado ao cliente $nome já existente.',
+          ),
+        ),
+      );
+      await _carregar();
+    } catch (e) {
+      _mostrarErro(e);
+    }
+  }
+
+  Future<void> _agendarLead(Map<String, dynamic> lead) async {
+    final clienteId = (lead['cliente_id'] ?? '').toString().trim();
+    if (clienteId.isEmpty) {
+      _mostrarErro('Converta ou vincule o lead a um cliente antes de agendar.');
+      return;
+    }
+
+    try {
+      final veiculos = await _service.listarVeiculosClienteCrm(clienteId);
+      if (!mounted) return;
+
+      if (veiculos.isEmpty) {
+        _mostrarErro(
+          'Cadastre um veículo para este cliente antes de criar o agendamento.',
+        );
+        return;
+      }
+
+      var veiculoId = veiculos.first['id'].toString();
+      var data = DateTime.now().add(const Duration(days: 1));
+      var hora = const TimeOfDay(hour: 9, minute: 0);
+      final servico = TextEditingController(
+        text: (lead['servico_interesse'] ?? '').toString(),
+      );
+      final valor = TextEditingController(
+        text: _double(lead['valor_potencial']) > 0
+            ? _double(lead['valor_potencial']).toStringAsFixed(2)
+            : '',
+      );
+      final observacoes = TextEditingController(
+        text: 'Agendamento originado do CRM - ${lead['nome'] ?? 'Lead'}',
+      );
+
+      final confirmou = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setLocal) => AlertDialog(
+            title: const Text('Criar agendamento'),
+            content: SizedBox(
+              width: 600,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: veiculoId,
+                      decoration: const InputDecoration(
+                        labelText: 'Veículo *',
+                        prefixIcon: Icon(Icons.directions_car_outlined),
+                      ),
+                      items: veiculos.map((veiculo) {
+                        final id = veiculo['id'].toString();
+                        final modelo = (veiculo['modelo'] ?? '').toString();
+                        final placa = (veiculo['placa'] ?? '').toString();
+                        final marca = (veiculo['marca'] ?? '').toString();
+                        final descricao = [
+                          marca,
+                          modelo,
+                          if (placa.trim().isNotEmpty) '• $placa',
+                        ].where((e) => e.trim().isNotEmpty).join(' ');
+                        return DropdownMenuItem(
+                          value: id,
+                          child: Text(descricao.isEmpty ? 'Veículo' : descricao),
+                        );
+                      }).toList(),
+                      onChanged: (v) {
+                        if (v != null) setLocal(() => veiculoId = v);
+                      },
+                    ),
+                    TextField(
+                      controller: servico,
+                      decoration: const InputDecoration(
+                        labelText: 'Serviço *',
+                        prefixIcon: Icon(Icons.build_outlined),
+                      ),
+                    ),
+                    TextField(
+                      controller: valor,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Valor previsto',
+                        prefixIcon: Icon(Icons.payments_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final escolhida = await showDatePicker(
+                                context: dialogContext,
+                                initialDate: data,
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 730),
+                                ),
+                              );
+                              if (escolhida != null) {
+                                setLocal(() => data = escolhida);
+                              }
+                            },
+                            icon: const Icon(Icons.calendar_today_outlined),
+                            label: Text(
+                              DateFormat('dd/MM/yyyy').format(data),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final escolhida = await showTimePicker(
+                                context: dialogContext,
+                                initialTime: hora,
+                              );
+                              if (escolhida != null) {
+                                setLocal(() => hora = escolhida);
+                              }
+                            },
+                            icon: const Icon(Icons.schedule_outlined),
+                            label: Text(
+                              '${hora.hour.toString().padLeft(2, '0')}:'
+                              '${hora.minute.toString().padLeft(2, '0')}',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextField(
+                      controller: observacoes,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Observações',
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton.icon(
+                onPressed: () {
+                  if (servico.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(content: Text('Informe o serviço.')),
+                    );
+                    return;
+                  }
+                  Navigator.pop(dialogContext, true);
+                },
+                icon: const Icon(Icons.event_available_outlined),
+                label: const Text('Agendar'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (confirmou != true) {
+        servico.dispose();
+        valor.dispose();
+        observacoes.dispose();
+        return;
+      }
+
+      final dataIso = DateTime(
+        data.year,
+        data.month,
+        data.day,
+      ).toIso8601String();
+      final horaTexto =
+          '${hora.hour.toString().padLeft(2, '0')}:'
+          '${hora.minute.toString().padLeft(2, '0')}';
+
+      final resposta = await _service.agendarLead(
+        id: lead['id'].toString(),
+        atualizadoEmEsperado: (lead['atualizado_em'] ?? '').toString(),
+        veiculoId: veiculoId,
+        data: dataIso,
+        hora: horaTexto,
+        servico: servico.text,
+        valor: _double(valor.text),
+        observacoes: observacoes.text,
+      );
+
+      servico.dispose();
+      valor.dispose();
+      observacoes.dispose();
+
+      if (!mounted) return;
+
+      final criado = resposta['criado'] == true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            criado
+                ? 'Agendamento criado pelo CRM.'
+                : 'Este lead já possui um agendamento vinculado.',
+          ),
+        ),
+      );
+      await _carregar();
+    } catch (e) {
+      _mostrarErro(e);
+    }
+  }
+
   Widget _acoesLead(Map<String, dynamic> lead) {
     return Wrap(
       spacing: 2,
       children: [
+        if ((lead['cliente_id'] ?? '').toString().trim().isEmpty)
+          IconButton(
+            tooltip: 'Converter em cliente',
+            onPressed: () => _converterLead(lead),
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+          ),
+        if ((lead['cliente_id'] ?? '').toString().trim().isNotEmpty &&
+            (lead['agendamento_id'] ?? '').toString().trim().isEmpty)
+          IconButton(
+            tooltip: 'Criar agendamento',
+            onPressed: () => _agendarLead(lead),
+            icon: const Icon(Icons.event_available_outlined),
+          ),
         IconButton(
           tooltip: 'Nova interação',
           onPressed: () => _interagir(lead),
