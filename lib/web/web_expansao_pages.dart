@@ -1176,6 +1176,44 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     }
   }
 
+  Future<void> _editarOrcamento(
+    Map<String, dynamic> orcamento,
+  ) async {
+    try {
+      final itens = await _service.listarItensOrcamento(
+        orcamento['id'].toString(),
+      );
+      if (!mounted) return;
+
+      final draft = await showDialog<_OrcamentoDraft>(
+        context: context,
+        builder: (context) => _NovoOrcamentoWebDialog(
+          clientes: _clientes,
+          veiculos: _veiculos,
+          orcamento: orcamento,
+          itensIniciais: itens,
+        ),
+      );
+
+      if (draft == null) return;
+
+      await _service.editarOrcamento(
+        id: orcamento['id'].toString(),
+        atualizadoEmEsperado: (orcamento['atualizado_em'] ?? '').toString(),
+        clienteId: draft.clienteId,
+        veiculoId: draft.veiculoId,
+        validade: draft.validade,
+        observacoes: draft.observacoes,
+        desconto: draft.desconto,
+        perfilPreco: draft.perfilPreco,
+        itens: draft.itens,
+      );
+      await _carregar();
+    } catch (e) {
+      _mostrarErro(e);
+    }
+  }
+
   Future<void> _alterarStatus(
     Map<String, dynamic> orcamento,
     String status,
@@ -1447,6 +1485,9 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
       tooltip: 'Mais ações',
       onSelected: (acao) {
         switch (acao) {
+          case 'editar':
+            _editarOrcamento(orcamento);
+            break;
           case 'pdf':
             _abrirPdfOrcamento(orcamento);
             break;
@@ -1459,6 +1500,14 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
         }
       },
       itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: 'editar',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.edit_outlined),
+            title: Text('Editar orçamento'),
+          ),
+        ),
         PopupMenuItem(
           value: 'pdf',
           child: ListTile(
@@ -2042,6 +2091,11 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                                     icon: const Icon(Icons.visibility_outlined),
                                   ),
                                   IconButton(
+                                    tooltip: 'Editar orçamento',
+                                    onPressed: () => _editarOrcamento(item),
+                                    icon: const Icon(Icons.edit_outlined),
+                                  ),
+                                  IconButton(
                                     tooltip: 'PDF / recibo',
                                     onPressed: () => _abrirPdfOrcamento(item),
                                     icon: const Icon(
@@ -2166,10 +2220,16 @@ class _NovoOrcamentoWebDialog extends StatefulWidget {
   const _NovoOrcamentoWebDialog({
     required this.clientes,
     required this.veiculos,
+    this.orcamento,
+    this.itensIniciais = const [],
   });
 
   final List<Map<String, dynamic>> clientes;
   final List<Map<String, dynamic>> veiculos;
+  final Map<String, dynamic>? orcamento;
+  final List<Map<String, dynamic>> itensIniciais;
+
+  bool get editando => orcamento != null;
 
   @override
   State<_NovoOrcamentoWebDialog> createState() =>
@@ -2184,12 +2244,46 @@ class _NovoOrcamentoWebDialogState extends State<_NovoOrcamentoWebDialog> {
   final _validade = TextEditingController();
   final _desconto = TextEditingController(text: '0');
   final _observacoes = TextEditingController();
-  final List<_ItemOrcamentoController> _itens = [_ItemOrcamentoController()];
+  final List<_ItemOrcamentoController> _itens = [];
 
   @override
   void initState() {
     super.initState();
-    _clienteId = widget.clientes.first['id'].toString();
+
+    final inicial = widget.orcamento;
+    final clienteInicial = (inicial?['cliente_id'] ?? '').toString();
+    _clienteId = widget.clientes.any(
+      (item) => item['id'].toString() == clienteInicial,
+    )
+        ? clienteInicial
+        : widget.clientes.first['id'].toString();
+
+    final veiculoInicial = (inicial?['veiculo_id'] ?? '').toString();
+    _veiculoId = veiculoInicial.isEmpty ? null : veiculoInicial;
+
+    final perfilInicial = (inicial?['perfil_preco'] ?? '').toString();
+    const perfis = <String>{
+      'informado',
+      'cliente',
+      'parceiro_1_4',
+      'parceiro_5_9',
+      'parceiro_10_mais',
+    };
+    _perfil = perfis.contains(perfilInicial) ? perfilInicial : 'informado';
+
+    _validade.text = (inicial?['validade'] ?? '').toString();
+    _desconto.text = inicial == null
+        ? '0'
+        : _double(inicial['desconto']).toStringAsFixed(2);
+    _observacoes.text = (inicial?['observacoes'] ?? '').toString();
+
+    for (final item in widget.itensIniciais) {
+      _itens.add(_ItemOrcamentoController.fromMap(item));
+    }
+    if (_itens.isEmpty) {
+      _itens.add(_ItemOrcamentoController());
+    }
+
     _ajustarVeiculo();
   }
 
@@ -2227,6 +2321,12 @@ class _NovoOrcamentoWebDialogState extends State<_NovoOrcamentoWebDialog> {
       }
 
       itens.add(<String, Object?>{
+        'id': item.id,
+        'atualizado_em': item.atualizadoEm,
+        'origem_local_id': item.origemLocalId,
+        'servico_catalogo_id': item.servicoCatalogoId,
+        'origem_servico_catalogo_local_id':
+            item.origemServicoCatalogoLocalId,
         'servico': item.servico.text.trim(),
         'descricao': item.descricao.text.trim(),
         'quantidade': _double(item.quantidade.text),
@@ -2251,7 +2351,7 @@ class _NovoOrcamentoWebDialogState extends State<_NovoOrcamentoWebDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Novo orçamento'),
+      title: Text(widget.editando ? 'Editar orçamento' : 'Novo orçamento'),
       content: SizedBox(
         width: 760,
         height: 620,
@@ -2436,7 +2536,10 @@ class _NovoOrcamentoWebDialogState extends State<_NovoOrcamentoWebDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
-        FilledButton(onPressed: _salvar, child: const Text('Criar orçamento')),
+        FilledButton(
+          onPressed: _salvar,
+          child: Text(widget.editando ? 'Salvar alterações' : 'Criar orçamento'),
+        ),
       ],
     );
   }
@@ -2463,10 +2566,45 @@ class _OrcamentoDraft {
 }
 
 class _ItemOrcamentoController {
-  final servico = TextEditingController();
-  final descricao = TextEditingController();
-  final quantidade = TextEditingController(text: '1');
-  final valor = TextEditingController();
+  _ItemOrcamentoController({
+    this.id,
+    this.atualizadoEm,
+    this.origemLocalId,
+    this.servicoCatalogoId,
+    this.origemServicoCatalogoLocalId,
+    String servico = '',
+    String descricao = '',
+    String quantidade = '1',
+    String valor = '',
+  })  : servico = TextEditingController(text: servico),
+        descricao = TextEditingController(text: descricao),
+        quantidade = TextEditingController(text: quantidade),
+        valor = TextEditingController(text: valor);
+
+  factory _ItemOrcamentoController.fromMap(Map<String, dynamic> item) {
+    return _ItemOrcamentoController(
+      id: item['id']?.toString(),
+      atualizadoEm: item['atualizado_em']?.toString(),
+      origemLocalId: item['origem_local_id'],
+      servicoCatalogoId: item['servico_catalogo_id'],
+      origemServicoCatalogoLocalId:
+          item['origem_servico_catalogo_local_id'],
+      servico: (item['servico'] ?? '').toString(),
+      descricao: (item['descricao'] ?? '').toString(),
+      quantidade: _double(item['quantidade']).toString(),
+      valor: _double(item['valor_unitario']).toStringAsFixed(2),
+    );
+  }
+
+  final String? id;
+  final String? atualizadoEm;
+  final Object? origemLocalId;
+  final Object? servicoCatalogoId;
+  final Object? origemServicoCatalogoLocalId;
+  final TextEditingController servico;
+  final TextEditingController descricao;
+  final TextEditingController quantidade;
+  final TextEditingController valor;
 
   void dispose() {
     servico.dispose();
