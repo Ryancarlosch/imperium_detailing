@@ -82,18 +82,20 @@ class CrmAcoesCloudService {
         );
         local = await _acaoLocalPorId(database, localId);
       } else {
-        final localMudou = mapa != null &&
+        final localMudou =
+            mapa != null &&
             _texto(local['atualizado_em']) !=
                 _texto(mapa['local_atualizado_em']);
-        final remotoMudou = mapa != null &&
+        final remotoMudou =
+            mapa != null &&
             _texto(remoto['atualizado_em']) !=
                 _texto(mapa['remoto_atualizado_em']);
 
         var usarLocal = false;
 
         if (mapa == null) {
-          usarLocal = _estadoLocalTemAcao(local) &&
-              !_estadoRemotoTemAcao(remoto);
+          usarLocal =
+              _estadoLocalTemAcao(local) && !_estadoRemotoTemAcao(remoto);
           if (_estadoLocalTemAcao(local) && _estadoRemotoTemAcao(remoto)) {
             usarLocal = _maisNovo(
               local['atualizado_em'],
@@ -332,17 +334,13 @@ class CrmAcoesCloudService {
     required String localAtualizadoEm,
     required String remotoAtualizadoEm,
   }) async {
-    await database.insert(
-      'imperium_sync_crm_acoes',
-      <String, Object?>{
-        'empresa_id': empresaId,
-        'local_id': localId,
-        'remoto_id': remotoId,
-        'local_atualizado_em': localAtualizadoEm,
-        'remoto_atualizado_em': remotoAtualizadoEm,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await database.insert('imperium_sync_crm_acoes', <String, Object?>{
+      'empresa_id': empresaId,
+      'local_id': localId,
+      'remoto_id': remotoId,
+      'local_atualizado_em': localAtualizadoEm,
+      'remoto_atualizado_em': remotoAtualizadoEm,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<int?> _localPorRemoto(

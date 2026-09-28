@@ -284,18 +284,15 @@ class WebCloudExpansaoService {
         .map((raw) => Map<String, dynamic>.from(raw as Map))
         .toList();
 
-    const prioridade = <String, int>{
-      'Alta': 0,
-      'Normal': 1,
-      'Baixa': 2,
-    };
+    const prioridade = <String, int>{'Alta': 0, 'Normal': 1, 'Baixa': 2};
     itens.sort((a, b) {
-      final p = (prioridade[(a['prioridade'] ?? '').toString()] ?? 1)
-          .compareTo(prioridade[(b['prioridade'] ?? '').toString()] ?? 1);
+      final p = (prioridade[(a['prioridade'] ?? '').toString()] ?? 1).compareTo(
+        prioridade[(b['prioridade'] ?? '').toString()] ?? 1,
+      );
       if (p != 0) return p;
-      return (a['vencimento'] ?? '')
-          .toString()
-          .compareTo((b['vencimento'] ?? '').toString());
+      return (a['vencimento'] ?? '').toString().compareTo(
+        (b['vencimento'] ?? '').toString(),
+      );
     });
     return itens;
   }
