@@ -146,6 +146,87 @@ class WebOsV3Service {
     return Map<String, dynamic>.from(resposta as Map);
   }
 
+  Future<List<Map<String, dynamic>>> listarRevisoes(
+    String ordemId,
+  ) async {
+    final client = SupabaseBootstrap.client;
+    if (client == null) throw StateError('Supabase não está disponível.');
+
+    final empresaId = await _empresaId();
+    final resposta = await client
+        .from('imperium_ordem_servico_revisoes')
+        .select()
+        .eq('empresa_id', empresaId)
+        .eq('ordem_servico_id', ordemId.trim())
+        .order('numero_revisao', ascending: false);
+
+    return (resposta as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> corrigirFinalizada({
+    required Map<String, dynamic> ordem,
+    required String motivo,
+    required String funcionarioResponsavel,
+    required String observacoes,
+    required String quilometragemEntrada,
+    required String combustivelEntrada,
+    required String dataInicio,
+    required String dataFinalizacao,
+    required String horaEntrada,
+    required String horaSaida,
+  }) async {
+    final id = (ordem['id'] ?? '').toString().trim();
+    final status = (ordem['status'] ?? '').toString().trim();
+    final motivoLimpo = motivo.trim();
+
+    if (id.isEmpty) throw ArgumentError('Ordem de Serviço inválida.');
+    if (status != 'Finalizada') {
+      throw StateError(
+        'Somente Ordens de Serviço finalizadas podem ser corrigidas.',
+      );
+    }
+    if (motivoLimpo.length < 5) {
+      throw ArgumentError(
+        'Informe um motivo de correção com pelo menos 5 caracteres.',
+      );
+    }
+
+    final client = SupabaseBootstrap.client;
+    if (client == null) throw StateError('Supabase não está disponível.');
+
+    final empresaId = await _empresaId();
+    final origem = await WebOrigemService.instance.proxima();
+
+    final resposta = await client.rpc(
+      'imperium_os_corrigir_finalizada_web',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_ordem_servico_id': id,
+        'p_atualizado_em_base': _textoNulo(ordem['atualizado_em']),
+        'p_motivo': motivoLimpo,
+        'p_funcionario_responsavel': funcionarioResponsavel.trim(),
+        'p_observacoes': observacoes.trim(),
+        'p_quilometragem_entrada': quilometragemEntrada.trim(),
+        'p_combustivel_entrada': combustivelEntrada.trim(),
+        'p_data_inicio': dataInicio.trim(),
+        'p_data_finalizacao': dataFinalizacao.trim(),
+        'p_hora_entrada': horaEntrada.trim(),
+        'p_hora_saida': horaSaida.trim(),
+        'p_origem_dispositivo': origem.dispositivoId,
+        'p_origem_local_id': origem.localId,
+      },
+    );
+
+    return Map<String, dynamic>.from(resposta as Map);
+  }
+
+  static String? _textoNulo(dynamic valor) {
+    final texto = valor?.toString().trim() ?? '';
+    return texto.isEmpty ? null : texto;
+  }
+
   static double _double(dynamic valor) {
     if (valor is num) return valor.toDouble();
     return double.tryParse(valor?.toString().replaceAll(',', '.') ?? '') ?? 0;
