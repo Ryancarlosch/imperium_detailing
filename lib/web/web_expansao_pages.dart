@@ -1443,6 +1443,90 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
     }
   }
 
+  Future<void> _gerarOsDeOrcamento(
+    Map<String, dynamic> orcamento,
+  ) async {
+    if ((orcamento['status'] ?? '').toString() != 'Aprovado') {
+      _mostrarErro(
+        'A Ordem de Serviço só pode ser gerada a partir de orçamento aprovado.',
+      );
+      return;
+    }
+
+    final responsavel = TextEditingController();
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Gerar Ordem de Serviço?'),
+        content: SizedBox(
+          width: 540,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Os serviços, cliente, veículo, desconto e observações do '
+                'orçamento serão copiados para uma nova OS aberta.',
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: responsavel,
+                decoration: const InputDecoration(
+                  labelText: 'Responsável pela OS',
+                  hintText: 'Opcional',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.assignment_add),
+            label: const Text('Gerar OS'),
+          ),
+        ],
+      ),
+    );
+
+    final responsavelTexto = responsavel.text.trim();
+    responsavel.dispose();
+    if (confirmou != true || !mounted) return;
+
+    try {
+      final resposta = await _service.gerarOsDeOrcamento(
+        id: orcamento['id'].toString(),
+        atualizadoEmEsperado: (orcamento['atualizado_em'] ?? '').toString(),
+        funcionarioResponsavel: responsavelTexto,
+      );
+      if (!mounted) return;
+
+      final criada = resposta['criada'] == true;
+      final ordemRaw = resposta['ordem'];
+      final ordem = ordemRaw is Map
+          ? Map<String, dynamic>.from(ordemRaw)
+          : const <String, dynamic>{};
+      final numero = (ordem['numero'] ?? 'OS').toString();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            criada
+                ? '$numero criada a partir do orçamento.'
+                : '$numero já estava vinculada a este orçamento.',
+          ),
+        ),
+      );
+    } catch (e) {
+      _mostrarErro(e);
+    }
+  }
+
   Future<void> _excluirOrcamentoWeb(Map<String, dynamic> orcamento) async {
     final confirmou = await showDialog<bool>(
       context: context,
@@ -1492,13 +1576,16 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
           case 'whatsapp':
             _abrirWhatsAppOrcamento(orcamento);
             break;
+          case 'gerar_os':
+            _gerarOsDeOrcamento(orcamento);
+            break;
           case 'excluir':
             _excluirOrcamentoWeb(orcamento);
             break;
         }
       },
-      itemBuilder: (_) => const [
-        PopupMenuItem(
+      itemBuilder: (_) => [
+        const PopupMenuItem(
           value: 'editar',
           child: ListTile(
             contentPadding: EdgeInsets.zero,
@@ -1506,7 +1593,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
             title: Text('Editar orçamento'),
           ),
         ),
-        PopupMenuItem(
+        const PopupMenuItem(
           value: 'pdf',
           child: ListTile(
             contentPadding: EdgeInsets.zero,
@@ -1514,7 +1601,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
             title: Text('PDF / recibo'),
           ),
         ),
-        PopupMenuItem(
+        const PopupMenuItem(
           value: 'whatsapp',
           child: ListTile(
             contentPadding: EdgeInsets.zero,
@@ -1522,8 +1609,17 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
             title: Text('WhatsApp'),
           ),
         ),
-        PopupMenuDivider(),
-        PopupMenuItem(
+        if ((orcamento['status'] ?? '').toString() == 'Aprovado')
+          const PopupMenuItem(
+            value: 'gerar_os',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.assignment_add),
+              title: Text('Gerar Ordem de Serviço'),
+            ),
+          ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
           value: 'excluir',
           child: ListTile(
             contentPadding: EdgeInsets.zero,
@@ -2093,6 +2189,14 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                                     onPressed: () => _editarOrcamento(item),
                                     icon: const Icon(Icons.edit_outlined),
                                   ),
+                                  if ((item['status'] ?? '').toString() ==
+                                      'Aprovado')
+                                    IconButton(
+                                      tooltip: 'Gerar Ordem de Serviço',
+                                      onPressed: () =>
+                                          _gerarOsDeOrcamento(item),
+                                      icon: const Icon(Icons.assignment_add),
+                                    ),
                                   IconButton(
                                     tooltip: 'PDF / recibo',
                                     onPressed: () => _abrirPdfOrcamento(item),
