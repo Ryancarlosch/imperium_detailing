@@ -730,6 +730,7 @@ class OperacionalSyncService {
       'nome': (local['nome'] ?? '').toString(),
       'telefone': (local['telefone'] ?? '').toString(),
       'email': (local['email'] ?? '').toString(),
+      'data_nascimento': _nuloTexto(local['data_nascimento']),
       'endereco': (local['endereco'] ?? '').toString(),
       'observacoes': (local['observacoes'] ?? '').toString(),
       'ativo': _int(local['ativo']) != 0,
@@ -1003,7 +1004,7 @@ class OperacionalSyncService {
     final dados = await client
         .from('imperium_clientes')
         .select(
-          'id,nome,telefone,email,endereco,observacoes,'
+          'id,nome,telefone,email,data_nascimento,endereco,observacoes,'
           'ativo,arquivado_em,excluido_em,atualizado_em',
         )
         .eq('empresa_id', empresaId)
@@ -1046,6 +1047,7 @@ class OperacionalSyncService {
         'nome': (remoto['nome'] ?? '').toString(),
         'telefone': (remoto['telefone'] ?? '').toString(),
         'email': (remoto['email'] ?? '').toString(),
+        'data_nascimento': _nuloTexto(remoto['data_nascimento']),
         'endereco': (remoto['endereco'] ?? '').toString(),
         'observacoes': (remoto['observacoes'] ?? '').toString(),
         'ativo': remoto['ativo'] == true ? 1 : 0,
@@ -1470,6 +1472,7 @@ class OperacionalSyncService {
       (item['nome'] ?? '').toString(),
       (item['telefone'] ?? '').toString(),
       (item['email'] ?? '').toString(),
+      _nuloTexto(item['data_nascimento']),
       (item['endereco'] ?? '').toString(),
       (item['observacoes'] ?? '').toString(),
       _int(item['ativo']) != 0,
