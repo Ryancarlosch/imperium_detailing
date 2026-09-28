@@ -9,6 +9,7 @@ import '../database/app_database.dart';
 import 'configuracao_arquivos_cloud_service.dart';
 import 'configuracao_cloud_service.dart';
 import 'colaborador_historico_cloud_service.dart';
+import 'crm_acoes_cloud_service.dart';
 import 'crm_orcamentos_cloud_service.dart';
 import 'crm_orcamentos_cloud_v2_service.dart';
 import 'estoque_cloud_conflito_service.dart';
@@ -488,6 +489,10 @@ class OperacionalSyncService {
     // A OS é sincronizada antes dos orçamentos. Neste ponto ambos os mapas
     // local/remoto já existem e o vínculo orçamento -> OS pode ser fechado.
     await OsOrcamentoVinculoCloudService.instance.sincronizar(empresaId);
+
+    // A Central de relacionamento depende dos mapas de lead, orçamento,
+    // cupom, cliente e OS já fechados acima.
+    await CrmAcoesCloudService.instance.sincronizar(empresaId);
 
     if (await CrmOrcamentosCloudV2Service.instance.possuiConflitosPendentes(
       empresaId,
