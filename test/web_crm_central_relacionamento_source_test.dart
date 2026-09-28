@@ -50,12 +50,8 @@ void main() {
   });
 
   test('Web opera a mesma fila com WhatsApp concluir adiar e ignorar', () {
-    final page = File(
-      'lib/web/web_crm_operacao_page.dart',
-    ).readAsStringSync();
-    final crm = File(
-      'lib/web/web_expansao_pages.dart',
-    ).readAsStringSync();
+    final page = File('lib/web/web_crm_operacao_page.dart').readAsStringSync();
+    final crm = File('lib/web/web_expansao_pages.dart').readAsStringSync();
     final service = File(
       'lib/services/web_cloud_expansao_service.dart',
     ).readAsStringSync();

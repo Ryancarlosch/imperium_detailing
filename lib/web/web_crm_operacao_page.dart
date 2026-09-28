@@ -257,10 +257,7 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
     }
 
     try {
-      await _service.ignorarAcaoCrm(
-        acao: acao,
-        motivo: motivo.text,
-      );
+      await _service.ignorarAcaoCrm(acao: acao, motivo: motivo.text);
       await _carregar();
     } catch (e) {
       _snack(e.toString(), erro: true);
@@ -307,8 +304,9 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor:
-                    ImperiumWebTheme.accentStrong.withValues(alpha: 0.11),
+                backgroundColor: ImperiumWebTheme.accentStrong.withValues(
+                  alpha: 0.11,
+                ),
                 child: Icon(icone, color: ImperiumWebTheme.accentStrong),
               ),
               const SizedBox(width: 12),
@@ -426,8 +424,7 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
               children: [
                 IconButton(
                   tooltip: 'WhatsApp',
-                  onPressed:
-                      (acao['telefone'] ?? '').toString().trim().isEmpty
+                  onPressed: (acao['telefone'] ?? '').toString().trim().isEmpty
                       ? null
                       : () => _whatsApp(acao),
                   icon: const Icon(Icons.chat_outlined),
@@ -490,9 +487,7 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
     }).length;
 
     if (_carregando) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -541,8 +536,7 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
                     : constraints.maxWidth >= 650
                     ? 2
                     : 1;
-                final larguraCard =
-                    (largura - (12 * (colunas - 1))) / colunas;
+                final larguraCard = (largura - (12 * (colunas - 1))) / colunas;
 
                 return RefreshIndicator(
                   onRefresh: _carregar,
@@ -609,23 +603,24 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
                                     labelText: 'Status',
                                     isDense: true,
                                   ),
-                                  items: const [
-                                    'Pendente',
-                                    'Concluida',
-                                    'Ignorada',
-                                    'Todos',
-                                  ]
-                                      .map(
-                                        (item) => DropdownMenuItem(
-                                          value: item,
-                                          child: Text(
-                                            item == 'Concluida'
-                                                ? 'Concluída'
-                                                : item,
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
+                                  items:
+                                      const [
+                                            'Pendente',
+                                            'Concluida',
+                                            'Ignorada',
+                                            'Todos',
+                                          ]
+                                          .map(
+                                            (item) => DropdownMenuItem(
+                                              value: item,
+                                              child: Text(
+                                                item == 'Concluida'
+                                                    ? 'Concluída'
+                                                    : item,
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
                                   onChanged: (v) {
                                     if (v != null) {
                                       setState(() => _status = v);
