@@ -28,6 +28,7 @@ import 'os_cloud_download_service.dart';
 import 'os_cloud_upload_service.dart';
 import 'os_cloud_v3_service.dart';
 import 'os_finalizacao_cloud_v4_service.dart';
+import 'os_orcamento_vinculo_cloud_service.dart';
 import 'pagamento_colaborador_cloud_service.dart';
 import 'os_arquivos_cloud_service.dart';
 import 'os_arquivos_cloud_v2_service.dart';
@@ -480,6 +481,10 @@ class OperacionalSyncService {
     await CrmOrcamentosCloudV2Service.instance.sincronizarDepoisDoDownload(
       empresaId,
     );
+
+    // A OS é sincronizada antes dos orçamentos. Neste ponto ambos os mapas
+    // local/remoto já existem e o vínculo orçamento -> OS pode ser fechado.
+    await OsOrcamentoVinculoCloudService.instance.sincronizar(empresaId);
 
     if (await CrmOrcamentosCloudV2Service.instance.possuiConflitosPendentes(
       empresaId,
