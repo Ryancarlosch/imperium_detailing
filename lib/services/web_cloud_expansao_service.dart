@@ -361,6 +361,82 @@ class WebCloudExpansaoService {
     return orcamento;
   }
 
+  Future<Map<String, dynamic>> editarOrcamento({
+    required String id,
+    required String atualizadoEmEsperado,
+    required String clienteId,
+    String? veiculoId,
+    required String validade,
+    required String observacoes,
+    required double desconto,
+    required String perfilPreco,
+    required List<Map<String, Object?>> itens,
+  }) async {
+    if (id.trim().isEmpty) {
+      throw ArgumentError('Orçamento inválido.');
+    }
+    if (clienteId.trim().isEmpty) {
+      throw ArgumentError('Selecione um cliente.');
+    }
+    if (itens.isEmpty) {
+      throw ArgumentError('Adicione pelo menos um serviço.');
+    }
+
+    final empresaId = await _empresaId();
+    final dispositivoId = await WebOrigemService.instance.dispositivoId();
+    final payloadItens = <Map<String, dynamic>>[];
+
+    for (final item in itens) {
+      final servico = (item['servico'] ?? '').toString().trim();
+      final quantidade = max(0, _double(item['quantidade']));
+      final valorUnitario = max(0, _double(item['valor_unitario']));
+
+      if (servico.isEmpty || quantidade <= 0) {
+        throw ArgumentError(
+          'Preencha serviço, quantidade e valor de todos os itens.',
+        );
+      }
+
+      var origemLocalId = item['origem_local_id'];
+      if ((item['id'] ?? '').toString().trim().isEmpty &&
+          _double(origemLocalId) <= 0) {
+        origemLocalId = await WebOrigemService.instance.proximoLocalId();
+      }
+
+      payloadItens.add(<String, dynamic>{
+        'id': _textoNulo(item['id']),
+        'atualizado_em': _textoNulo(item['atualizado_em']),
+        'origem_local_id': origemLocalId,
+        'servico_catalogo_id': _textoNulo(item['servico_catalogo_id']),
+        'origem_servico_catalogo_local_id':
+            item['origem_servico_catalogo_local_id'],
+        'servico': servico,
+        'descricao': (item['descricao'] ?? '').toString().trim(),
+        'quantidade': quantidade,
+        'valor_unitario': valorUnitario,
+      });
+    }
+
+    final resposta = await _client.rpc(
+      'imperium_orcamento_web_editar_v3',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_orcamento_id': id.trim(),
+        'p_atualizado_em_base': _textoNulo(atualizadoEmEsperado),
+        'p_cliente_id': clienteId.trim(),
+        'p_veiculo_id': _textoNulo(veiculoId),
+        'p_validade': validade.trim(),
+        'p_observacoes': observacoes.trim(),
+        'p_desconto': max(0, desconto),
+        'p_perfil_preco': perfilPreco.trim(),
+        'p_itens': payloadItens,
+        'p_origem_dispositivo': dispositivoId,
+      },
+    );
+
+    return Map<String, dynamic>.from(resposta as Map);
+  }
+
   Future<Map<String, dynamic>> alterarStatusOrcamento({
     required String id,
     required String status,
