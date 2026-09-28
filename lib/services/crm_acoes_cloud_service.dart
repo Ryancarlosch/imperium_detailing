@@ -118,6 +118,18 @@ class CrmAcoesCloudService {
             remoto: remoto,
             local: local,
           );
+
+          // Mesmo quando tentamos publicar o estado local, o CAS pode perder
+          // para uma alteração mais recente feita no Web. Sempre reaplicamos
+          // o estado efetivamente retornado pelo Cloud para encerrar a
+          // reconciliação sem deixar Android e Web divergentes.
+          await database.update(
+            CrmOperacaoRepository.tabelaAcoes,
+            _dadosLocais(remoto, identidade),
+            where: 'id = ?',
+            whereArgs: [localId],
+          );
+          local = await _acaoLocalPorId(database, localId);
         } else {
           await database.update(
             CrmOperacaoRepository.tabelaAcoes,
