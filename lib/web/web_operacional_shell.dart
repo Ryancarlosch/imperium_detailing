@@ -1153,6 +1153,9 @@ class _ClientesPageState extends State<_ClientesPage> {
     final nome = TextEditingController(text: '${atual?['nome'] ?? ''}');
     final telefone = TextEditingController(text: '${atual?['telefone'] ?? ''}');
     final email = TextEditingController(text: '${atual?['email'] ?? ''}');
+    final nascimento = TextEditingController(
+      text: '${atual?['data_nascimento'] ?? ''}',
+    );
     final endereco = TextEditingController(text: '${atual?['endereco'] ?? ''}');
     final obs = TextEditingController(text: '${atual?['observacoes'] ?? ''}');
 
@@ -1189,6 +1192,40 @@ class _ClientesPageState extends State<_ClientesPage> {
                   decoration: const InputDecoration(
                     labelText: 'E-mail',
                     prefixIcon: Icon(Icons.alternate_email_rounded),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: nascimento,
+                  readOnly: true,
+                  onTap: () async {
+                    final atualNascimento = DateTime.tryParse(
+                      nascimento.text.trim(),
+                    );
+                    final escolhida = await showDatePicker(
+                      context: context,
+                      initialDate: atualNascimento ?? DateTime(1990, 1, 1),
+                      firstDate: DateTime(1900, 1, 1),
+                      lastDate: DateTime.now(),
+                      helpText: 'Data de nascimento',
+                    );
+                    if (escolhida != null) {
+                      nascimento.text = DateFormat(
+                        'yyyy-MM-dd',
+                      ).format(escolhida);
+                    }
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Data de nascimento',
+                    hintText: 'aaaa-mm-dd',
+                    prefixIcon: const Icon(Icons.cake_outlined),
+                    suffixIcon: nascimento.text.trim().isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Remover data',
+                            onPressed: nascimento.clear,
+                            icon: const Icon(Icons.close_rounded),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1236,6 +1273,7 @@ class _ClientesPageState extends State<_ClientesPage> {
       nome: nome.text,
       telefone: telefone.text,
       email: email.text,
+      dataNascimento: nascimento.text,
       endereco: endereco.text,
       observacoes: obs.text,
       ativo: atual?['ativo'] != false,
