@@ -7,9 +7,7 @@ void main() {
     final service = File(
       'lib/services/web_cloud_expansao_service.dart',
     ).readAsStringSync();
-    final page = File(
-      'lib/web/web_expansao_pages.dart',
-    ).readAsStringSync();
+    final page = File('lib/web/web_expansao_pages.dart').readAsStringSync();
     final migration = File(
       'supabase/migrations/20260928211500_crm_web_conversao_agendamento.sql',
     ).readAsStringSync();
@@ -30,9 +28,7 @@ void main() {
     final service = File(
       'lib/services/web_cloud_expansao_service.dart',
     ).readAsStringSync();
-    final page = File(
-      'lib/web/web_expansao_pages.dart',
-    ).readAsStringSync();
+    final page = File('lib/web/web_expansao_pages.dart').readAsStringSync();
     final migration = File(
       'supabase/migrations/20260928211500_crm_web_conversao_agendamento.sql',
     ).readAsStringSync();

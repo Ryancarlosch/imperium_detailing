@@ -577,7 +577,9 @@ class _WebCrmPageState extends State<WebCrmPage> {
                         ].where((e) => e.trim().isNotEmpty).join(' ');
                         return DropdownMenuItem(
                           value: id,
-                          child: Text(descricao.isEmpty ? 'Veículo' : descricao),
+                          child: Text(
+                            descricao.isEmpty ? 'Veículo' : descricao,
+                          ),
                         );
                       }).toList(),
                       onChanged: (v) {
@@ -620,9 +622,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                               }
                             },
                             icon: const Icon(Icons.calendar_today_outlined),
-                            label: Text(
-                              DateFormat('dd/MM/yyyy').format(data),
-                            ),
+                            label: Text(DateFormat('dd/MM/yyyy').format(data)),
                           ),
                         ),
                         const SizedBox(width: 10),
