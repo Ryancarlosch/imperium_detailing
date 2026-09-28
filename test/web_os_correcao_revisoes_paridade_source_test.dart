@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('Web corrige OS finalizada sem alterar valores ou pagamentos', () {
     final page = File('lib/web/web_ordens_v3_page.dart').readAsStringSync();
-    final service = File('lib/services/web_os_v3_service.dart').readAsStringSync();
+    final service = File(
+      'lib/services/web_os_v3_service.dart',
+    ).readAsStringSync();
     final migration = File(
       'supabase/migrations/20260928203000_os_revisoes_correcao_web.sql',
     ).readAsStringSync();
@@ -28,19 +30,22 @@ void main() {
     expect(migration, isNot(contains('status_pagamento =')));
   });
 
-  test('Correcao recalcula derivados sem mudar quantidade ou custo de estoque', () {
-    final migration = File(
-      'supabase/migrations/20260928203000_os_revisoes_correcao_web.sql',
-    ).readAsStringSync();
+  test(
+    'Correcao recalcula derivados sem mudar quantidade ou custo de estoque',
+    () {
+      final migration = File(
+        'supabase/migrations/20260928203000_os_revisoes_correcao_web.sql',
+      ).readAsStringSync();
 
-    expect(migration, contains("'AUTO_OS_FINALIZACAO'"));
-    expect(migration, contains('imperium_financeiro_os_mao_obra'));
-    expect(migration, contains('imperium_estoque_movimentacoes'));
-    expect(migration, contains('grant update (data)'));
-    expect(migration, contains('set data = v_saida_iso'));
-    expect(migration, isNot(contains('set quantidade =')));
-    expect(migration, isNot(contains('set custo_unitario =')));
-  });
+      expect(migration, contains("'AUTO_OS_FINALIZACAO'"));
+      expect(migration, contains('imperium_financeiro_os_mao_obra'));
+      expect(migration, contains('imperium_estoque_movimentacoes'));
+      expect(migration, contains('grant update (data)'));
+      expect(migration, contains('set data = v_saida_iso'));
+      expect(migration, isNot(contains('set quantidade =')));
+      expect(migration, isNot(contains('set custo_unitario =')));
+    },
+  );
 
   test('Revisoes de OS sincronizam de forma append only com Android', () {
     final sync = File(

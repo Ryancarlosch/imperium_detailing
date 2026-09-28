@@ -610,7 +610,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
       _mensagem(
         numero > 0
             ? 'Correção salva como revisão #$numero. O histórico será '
-                'sincronizado com o Android.'
+                  'sincronizado com o Android.'
             : 'Correção salva e sincronizada.',
       );
       await _carregar();
@@ -1341,7 +1341,9 @@ class _WebOsCorrecaoDialogState extends State<_WebOsCorrecaoDialog> {
     );
     if (saidaCompleta.isBefore(entradaCompleta)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A saída não pode ser anterior à entrada.')),
+        const SnackBar(
+          content: Text('A saída não pode ser anterior à entrada.'),
+        ),
       );
       return;
     }
@@ -1506,10 +1508,7 @@ class _WebOsCorrecaoDialogState extends State<_WebOsCorrecaoDialog> {
 }
 
 class _WebOsRevisoesDialog extends StatelessWidget {
-  const _WebOsRevisoesDialog({
-    required this.numero,
-    required this.revisoes,
-  });
+  const _WebOsRevisoesDialog({required this.numero, required this.revisoes});
 
   final String numero;
   final List<Map<String, dynamic>> revisoes;
