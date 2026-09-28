@@ -576,10 +576,86 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
     }
   }
 
+  Future<void> _corrigirFinalizada(Map<String, dynamic> os) async {
+    if ((os['status'] ?? '').toString() != 'Finalizada') {
+      _mensagem(
+        'Somente OS finalizada pode usar a correção administrativa.',
+        erro: true,
+      );
+      return;
+    }
+
+    final draft = await showDialog<_WebOsCorrecaoDraft>(
+      context: context,
+      builder: (context) => _WebOsCorrecaoDialog(ordem: os),
+    );
+    if (draft == null || !mounted) return;
+
+    try {
+      final resposta = await _service.corrigirFinalizada(
+        ordem: os,
+        motivo: draft.motivo,
+        funcionarioResponsavel: draft.funcionarioResponsavel,
+        observacoes: draft.observacoes,
+        quilometragemEntrada: draft.quilometragemEntrada,
+        combustivelEntrada: draft.combustivelEntrada,
+        dataInicio: draft.dataInicio,
+        dataFinalizacao: draft.dataFinalizacao,
+        horaEntrada: draft.horaEntrada,
+        horaSaida: draft.horaSaida,
+      );
+      if (!mounted) return;
+
+      final numero = (resposta['numero_revisao'] as num?)?.toInt() ?? 0;
+      _mensagem(
+        numero > 0
+            ? 'Correção salva como revisão #$numero. O histórico será '
+                'sincronizado com o Android.'
+            : 'Correção salva e sincronizada.',
+      );
+      await _carregar();
+    } catch (e) {
+      _mensagem(e.toString(), erro: true);
+    }
+  }
+
+  Future<void> _historicoRevisoes(Map<String, dynamic> os) async {
+    final id = (os['id'] ?? '').toString().trim();
+    if (id.isEmpty) return;
+
+    try {
+      final revisoes = await _service.listarRevisoes(id);
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) => _WebOsRevisoesDialog(
+          numero: (os['numero'] ?? '').toString(),
+          revisoes: revisoes,
+        ),
+      );
+    } catch (e) {
+      _mensagem('Não foi possível carregar o histórico. $e', erro: true);
+    }
+  }
+
   Widget _acoesOs(Map<String, dynamic> os, bool editavel) {
     return Wrap(
       spacing: 2,
       children: [
+        if ((os['status'] ?? '').toString() == 'Finalizada')
+          IconButton(
+            tooltip: 'Corrigir OS finalizada',
+            onPressed: () => _corrigirFinalizada(os),
+            icon: const Icon(Icons.edit_note_outlined),
+          ),
+        if ((os['status'] ?? '').toString() == 'Finalizada' ||
+            ((os['quantidade_revisoes'] as num?)?.toInt() ?? 0) > 0)
+          IconButton(
+            tooltip: 'Histórico de correções',
+            onPressed: () => _historicoRevisoes(os),
+            icon: const Icon(Icons.history_rounded),
+          ),
         IconButton(
           tooltip: 'PDF da Ordem de Serviço',
           onPressed: () => _abrirPdf(os),
@@ -737,7 +813,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                         ),
                         SizedBox(height: 5),
                         Text(
-                          'Edição segura de OS abertas/em andamento com CAS, histórico e cancelamento transacional.',
+                          'OS abertas/em andamento com CAS; finalizadas com correção administrativa auditada.',
                           style: TextStyle(color: Color(0xFFAAB3BD)),
                         ),
                       ],
@@ -778,9 +854,9 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                   ),
                   _resumo(
                     width: larguraResumo,
-                    titulo: 'Bloqueadas',
+                    titulo: 'Protegidas',
                     valor: '$bloqueadas',
-                    detalhe: 'Finalizadas/canceladas protegidas',
+                    detalhe: 'Finalizadas por revisão; canceladas bloqueadas',
                     icone: Icons.lock_outline_rounded,
                   ),
                 ],
@@ -1080,6 +1156,495 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
       },
     );
   }
+}
+
+class _WebOsCorrecaoDialog extends StatefulWidget {
+  const _WebOsCorrecaoDialog({required this.ordem});
+
+  final Map<String, dynamic> ordem;
+
+  @override
+  State<_WebOsCorrecaoDialog> createState() => _WebOsCorrecaoDialogState();
+}
+
+class _WebOsCorrecaoDialogState extends State<_WebOsCorrecaoDialog> {
+  late final TextEditingController _responsavel;
+  late final TextEditingController _observacoes;
+  late final TextEditingController _km;
+  late final TextEditingController _combustivel;
+  late final TextEditingController _dataEntrada;
+  late final TextEditingController _dataSaida;
+  late final TextEditingController _horaEntrada;
+  late final TextEditingController _horaSaida;
+  late final TextEditingController _motivo;
+
+  DateTime? _entrada;
+  DateTime? _saida;
+
+  @override
+  void initState() {
+    super.initState();
+    _entrada = _lerData(widget.ordem['data_inicio']);
+    _saida = _lerData(widget.ordem['data_finalizacao']);
+
+    _responsavel = TextEditingController(
+      text: (widget.ordem['funcionario_responsavel'] ?? '').toString(),
+    );
+    _observacoes = TextEditingController(
+      text: (widget.ordem['observacoes'] ?? '').toString(),
+    );
+    _km = TextEditingController(
+      text: (widget.ordem['quilometragem_entrada'] ?? '').toString(),
+    );
+    _combustivel = TextEditingController(
+      text: (widget.ordem['combustivel_entrada'] ?? '').toString(),
+    );
+    _dataEntrada = TextEditingController(text: _formatarData(_entrada));
+    _dataSaida = TextEditingController(text: _formatarData(_saida));
+    _horaEntrada = TextEditingController(
+      text: (widget.ordem['hora_entrada'] ?? '').toString(),
+    );
+    _horaSaida = TextEditingController(
+      text: (widget.ordem['hora_saida'] ?? '').toString(),
+    );
+    _motivo = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _responsavel.dispose();
+    _observacoes.dispose();
+    _km.dispose();
+    _combustivel.dispose();
+    _dataEntrada.dispose();
+    _dataSaida.dispose();
+    _horaEntrada.dispose();
+    _horaSaida.dispose();
+    _motivo.dispose();
+    super.dispose();
+  }
+
+  DateTime? _lerData(dynamic raw) {
+    final texto = raw?.toString().trim() ?? '';
+    if (texto.isEmpty) return null;
+
+    final iso = DateTime.tryParse(texto);
+    if (iso != null) return DateTime(iso.year, iso.month, iso.day);
+
+    final partes = texto.split('/');
+    if (partes.length != 3) return null;
+    final dia = int.tryParse(partes[0]);
+    final mes = int.tryParse(partes[1]);
+    final ano = int.tryParse(partes[2]);
+    if (dia == null || mes == null || ano == null) return null;
+
+    final data = DateTime(ano, mes, dia);
+    if (data.day != dia || data.month != mes || data.year != ano) return null;
+    return data;
+  }
+
+  String _formatarData(DateTime? data) {
+    if (data == null) return '';
+    final dia = data.day.toString().padLeft(2, '0');
+    final mes = data.month.toString().padLeft(2, '0');
+    return '$dia/$mes/${data.year.toString().padLeft(4, '0')}';
+  }
+
+  String _isoData(DateTime data) {
+    final mes = data.month.toString().padLeft(2, '0');
+    final dia = data.day.toString().padLeft(2, '0');
+    return '${data.year}-$mes-${dia}T00:00:00.000';
+  }
+
+  Future<void> _selecionarData({required bool entrada}) async {
+    final atual = entrada ? _entrada : _saida;
+    final selecionada = await showDatePicker(
+      context: context,
+      initialDate: atual ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: entrada ? 'Data de entrada' : 'Data de saída',
+    );
+    if (selecionada == null || !mounted) return;
+
+    setState(() {
+      if (entrada) {
+        _entrada = selecionada;
+        _dataEntrada.text = _formatarData(selecionada);
+      } else {
+        _saida = selecionada;
+        _dataSaida.text = _formatarData(selecionada);
+      }
+    });
+  }
+
+  bool _horaValida(String valor) {
+    final texto = valor.trim();
+    if (texto.isEmpty) return true;
+    final partes = texto.split(':');
+    if (partes.length < 2) return false;
+    final hora = int.tryParse(partes[0]);
+    final minuto = int.tryParse(partes[1]);
+    return hora != null &&
+        minuto != null &&
+        hora >= 0 &&
+        hora <= 23 &&
+        minuto >= 0 &&
+        minuto <= 59;
+  }
+
+  void _salvar() {
+    final motivo = _motivo.text.trim();
+    if (motivo.length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Descreva o motivo com pelo menos 5 caracteres.'),
+        ),
+      );
+      return;
+    }
+    if (_entrada == null || _saida == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe as datas de entrada e saída.')),
+      );
+      return;
+    }
+    if (!_horaValida(_horaEntrada.text) || !_horaValida(_horaSaida.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Revise os horários informados.')),
+      );
+      return;
+    }
+
+    final entradaHora = _horaEntrada.text.trim().isEmpty
+        ? '00:00'
+        : _horaEntrada.text.trim();
+    final saidaHora = _horaSaida.text.trim().isEmpty
+        ? '00:00'
+        : _horaSaida.text.trim();
+
+    final entradaPartes = entradaHora.split(':');
+    final saidaPartes = saidaHora.split(':');
+    final entradaCompleta = DateTime(
+      _entrada!.year,
+      _entrada!.month,
+      _entrada!.day,
+      int.parse(entradaPartes[0]),
+      int.parse(entradaPartes[1]),
+    );
+    final saidaCompleta = DateTime(
+      _saida!.year,
+      _saida!.month,
+      _saida!.day,
+      int.parse(saidaPartes[0]),
+      int.parse(saidaPartes[1]),
+    );
+    if (saidaCompleta.isBefore(entradaCompleta)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A saída não pode ser anterior à entrada.')),
+      );
+      return;
+    }
+
+    Navigator.pop(
+      context,
+      _WebOsCorrecaoDraft(
+        motivo: motivo,
+        funcionarioResponsavel: _responsavel.text.trim(),
+        observacoes: _observacoes.text.trim(),
+        quilometragemEntrada: _km.text.trim(),
+        combustivelEntrada: _combustivel.text.trim(),
+        dataInicio: _isoData(_entrada!),
+        dataFinalizacao: _isoData(_saida!),
+        horaEntrada: _horaEntrada.text.trim(),
+        horaSaida: _horaSaida.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Corrigir OS ${widget.ordem['numero'] ?? ''}'),
+      content: SizedBox(
+        width: 760,
+        height: 620,
+        child: ListView(
+          children: [
+            Card(
+              color: Colors.amber.withValues(alpha: 0.10),
+              child: const Padding(
+                padding: EdgeInsets.all(14),
+                child: Text(
+                  'A OS continuará Finalizada. Esta correção não altera '
+                  'serviços, valores ou pagamentos. Ela registra auditoria e '
+                  'recalcula somente os dados operacionais derivados.',
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _responsavel,
+              decoration: const InputDecoration(
+                labelText: 'Responsável pelo serviço',
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _km,
+                    decoration: const InputDecoration(
+                      labelText: 'Quilometragem de entrada',
+                      prefixIcon: Icon(Icons.speed_outlined),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _combustivel,
+                    decoration: const InputDecoration(
+                      labelText: 'Combustível de entrada',
+                      prefixIcon: Icon(Icons.local_gas_station_outlined),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _dataEntrada,
+                    readOnly: true,
+                    onTap: () => _selecionarData(entrada: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Data de entrada *',
+                      prefixIcon: Icon(Icons.calendar_today_outlined),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _dataSaida,
+                    readOnly: true,
+                    onTap: () => _selecionarData(entrada: false),
+                    decoration: const InputDecoration(
+                      labelText: 'Data de saída *',
+                      prefixIcon: Icon(Icons.event_available_outlined),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _horaEntrada,
+                    decoration: const InputDecoration(
+                      labelText: 'Hora de entrada',
+                      hintText: 'HH:mm',
+                      prefixIcon: Icon(Icons.access_time_outlined),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _horaSaida,
+                    decoration: const InputDecoration(
+                      labelText: 'Hora de saída',
+                      hintText: 'HH:mm',
+                      prefixIcon: Icon(Icons.access_time_filled_outlined),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            TextField(
+              controller: _observacoes,
+              minLines: 3,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                labelText: 'Observações',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.notes_outlined),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _motivo,
+              minLines: 3,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Motivo da correção *',
+                hintText: 'Explique por que a OS está sendo corrigida',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.history_edu_outlined),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton.icon(
+          onPressed: _salvar,
+          icon: const Icon(Icons.save_as_outlined),
+          label: const Text('Salvar correção'),
+        ),
+      ],
+    );
+  }
+}
+
+class _WebOsRevisoesDialog extends StatelessWidget {
+  const _WebOsRevisoesDialog({
+    required this.numero,
+    required this.revisoes,
+  });
+
+  final String numero;
+  final List<Map<String, dynamic>> revisoes;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Histórico de correções · OS $numero'),
+      content: SizedBox(
+        width: 760,
+        height: 520,
+        child: revisoes.isEmpty
+            ? const Center(
+                child: Text('Esta OS ainda não possui correções registradas.'),
+              )
+            : ListView.separated(
+                itemCount: revisoes.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final revisao = revisoes[index];
+                  final anteriores = _mapa(revisao['dados_anteriores']);
+                  final novos = _mapa(revisao['dados_novos']);
+                  final alteracoes = <String>[];
+
+                  for (final chave in novos.keys) {
+                    final antes = anteriores[chave];
+                    final depois = novos[chave];
+                    if ('$antes' == '$depois') continue;
+                    alteracoes.add(
+                      '${_nomeCampo(chave)}: '
+                      '${_valor(antes)} → ${_valor(depois)}',
+                    );
+                  }
+
+                  return Card(
+                    margin: EdgeInsets.zero,
+                    child: ExpansionTile(
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.history_edu_outlined),
+                      ),
+                      title: Text(
+                        'Revisão #${revisao['numero_revisao'] ?? ''}',
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      subtitle: Text(
+                        [
+                          (revisao['motivo'] ?? '').toString(),
+                          _dataRevisao(revisao['criado_em']),
+                        ].where((e) => e.trim().isNotEmpty).join(' · '),
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              alteracoes.isEmpty
+                                  ? 'Sem diferenças detalhadas.'
+                                  : alteracoes.join('\n'),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Fechar'),
+        ),
+      ],
+    );
+  }
+
+  static Map<String, dynamic> _mapa(dynamic raw) {
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return const <String, dynamic>{};
+  }
+
+  static String _valor(dynamic valor) {
+    final texto = valor?.toString().trim() ?? '';
+    return texto.isEmpty || texto == 'null' ? '—' : texto;
+  }
+
+  static String _nomeCampo(String chave) {
+    return switch (chave) {
+      'funcionario_responsavel' => 'Responsável',
+      'observacoes' => 'Observações',
+      'quilometragem_entrada' => 'Quilometragem',
+      'combustivel_entrada' => 'Combustível',
+      'data_inicio' => 'Data de entrada',
+      'data_finalizacao' => 'Data de saída',
+      'hora_entrada' => 'Hora de entrada',
+      'hora_saida' => 'Hora de saída',
+      _ => chave,
+    };
+  }
+
+  static String _dataRevisao(dynamic raw) {
+    final data = DateTime.tryParse(raw?.toString() ?? '');
+    if (data == null) return '';
+    final local = data.toLocal();
+    final dia = local.day.toString().padLeft(2, '0');
+    final mes = local.month.toString().padLeft(2, '0');
+    final hora = local.hour.toString().padLeft(2, '0');
+    final minuto = local.minute.toString().padLeft(2, '0');
+    return '$dia/$mes/${local.year} $hora:$minuto';
+  }
+}
+
+class _WebOsCorrecaoDraft {
+  const _WebOsCorrecaoDraft({
+    required this.motivo,
+    required this.funcionarioResponsavel,
+    required this.observacoes,
+    required this.quilometragemEntrada,
+    required this.combustivelEntrada,
+    required this.dataInicio,
+    required this.dataFinalizacao,
+    required this.horaEntrada,
+    required this.horaSaida,
+  });
+
+  final String motivo;
+  final String funcionarioResponsavel;
+  final String observacoes;
+  final String quilometragemEntrada;
+  final String combustivelEntrada;
+  final String dataInicio;
+  final String dataFinalizacao;
+  final String horaEntrada;
+  final String horaSaida;
 }
 
 class _WebOsEditDialog extends StatefulWidget {
