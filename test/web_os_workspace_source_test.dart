@@ -28,7 +28,7 @@ void main() {
     for (final marker in [
       'Editar ordens de serviço',
       'Valor editável',
-      'Bloqueadas',
+      'Protegidas',
       'DataTable',
       'Fotos, avarias e assinatura',
       'Editar com proteção de concorrência',
