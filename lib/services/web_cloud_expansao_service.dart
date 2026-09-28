@@ -113,6 +113,157 @@ class WebCloudExpansaoService {
     );
   }
 
+  Future<List<Map<String, dynamic>>> listarCuponsDetalhados() async {
+    final resultados = await Future.wait([
+      listarCupons(),
+      listarCampanhas(),
+      _listar('imperium_clientes', orderBy: 'nome'),
+    ]);
+
+    final campanhas = <String, String>{
+      for (final item in resultados[1])
+        item['id'].toString(): (item['nome'] ?? 'Campanha').toString(),
+    };
+    final clientes = <String, String>{
+      for (final item in resultados[2])
+        item['id'].toString(): (item['nome'] ?? 'Cliente').toString(),
+    };
+
+    return resultados[0].map((item) {
+      return <String, dynamic>{
+        ...item,
+        'campanha_nome': campanhas[(item['campanha_id'] ?? '').toString()],
+        'cliente_nome': clientes[(item['cliente_id'] ?? '').toString()],
+      };
+    }).toList();
+  }
+
+  Future<Map<String, dynamic>> salvarCampanha({
+    String? id,
+    String? atualizadoEmEsperado,
+    required String nome,
+    required String tipo,
+    required String beneficioTipo,
+    required double beneficioValor,
+    required String beneficioDescricao,
+    required double valorMinimo,
+    required int diasValidade,
+    required int diasSemRetorno,
+    required bool ativo,
+  }) async {
+    const tipos = <String>{
+      'Aniversário',
+      'Reativação',
+      'Indicação',
+      'Manual',
+    };
+    const beneficios = <String>{
+      'Percentual',
+      'Valor',
+      'Serviço',
+      'Crédito',
+    };
+
+    final nomeLimpo = nome.trim();
+    if (nomeLimpo.length < 3) {
+      throw ArgumentError('Informe o nome da campanha.');
+    }
+    if (!tipos.contains(tipo)) {
+      throw ArgumentError('Tipo de campanha inválido.');
+    }
+    if (!beneficios.contains(beneficioTipo)) {
+      throw ArgumentError('Tipo de benefício inválido.');
+    }
+    if (beneficioValor < 0 || valorMinimo < 0) {
+      throw ArgumentError('Valores da campanha não podem ser negativos.');
+    }
+    if (beneficioTipo == 'Percentual' && beneficioValor > 100) {
+      throw ArgumentError('O percentual não pode ser maior que 100%.');
+    }
+    if (diasValidade < 1 || diasValidade > 365) {
+      throw ArgumentError('A validade deve ficar entre 1 e 365 dias.');
+    }
+    if (diasSemRetorno < 0) {
+      throw ArgumentError('Dias sem retorno não pode ser negativo.');
+    }
+
+    final empresaId = await _empresaId();
+    final agora = DateTime.now().toUtc().toIso8601String();
+    final payload = <String, dynamic>{
+      'nome': nomeLimpo,
+      'tipo': tipo,
+      'beneficio_tipo': beneficioTipo,
+      'beneficio_valor': max(0, beneficioValor),
+      'beneficio_descricao': beneficioDescricao.trim(),
+      'valor_minimo': max(0, valorMinimo),
+      'dias_validade': diasValidade,
+      'dias_sem_retorno': diasSemRetorno,
+      'ativo': ativo,
+      'origem_atualizado_em': agora,
+      'excluido_em': null,
+    };
+
+    if (id == null || id.trim().isEmpty) {
+      final origem = await WebOrigemService.instance.proxima();
+      final resposta = await _client
+          .from('imperium_crm_campanhas')
+          .insert(<String, dynamic>{
+            'empresa_id': empresaId,
+            'origem_dispositivo': origem.dispositivoId,
+            'origem_local_id': origem.localId,
+            'origem_criado_em': agora,
+            ...payload,
+          })
+          .select()
+          .single();
+      return Map<String, dynamic>.from(resposta);
+    }
+
+    return _atualizarCas(
+      tabela: 'imperium_crm_campanhas',
+      id: id,
+      atualizadoEmEsperado: atualizadoEmEsperado ?? '',
+      payload: payload,
+    );
+  }
+
+  Future<Map<String, dynamic>> gerarBeneficiosCrm({
+    DateTime? referencia,
+  }) async {
+    final empresaId = await _empresaId();
+    final dispositivoId = await WebOrigemService.instance.dispositivoId();
+    final data = referencia ?? DateTime.now();
+    final dataTexto =
+        '${data.year.toString().padLeft(4, '0')}-'
+        '${data.month.toString().padLeft(2, '0')}-'
+        '${data.day.toString().padLeft(2, '0')}';
+
+    final resposta = await _client.rpc(
+      'imperium_crm_gerar_beneficios_web',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_referencia': dataTexto,
+        'p_origem_dispositivo': dispositivoId,
+      },
+    );
+
+    return Map<String, dynamic>.from(resposta as Map);
+  }
+
+  Future<void> cancelarCupom({
+    required String id,
+    required String atualizadoEmEsperado,
+  }) async {
+    await _atualizarCas(
+      tabela: 'imperium_crm_cupons',
+      id: id,
+      atualizadoEmEsperado: atualizadoEmEsperado,
+      payload: <String, dynamic>{
+        'status': 'Cancelado',
+      },
+    );
+  }
+
   Future<List<Map<String, dynamic>>> listarInteracoes(String leadId) async {
     final empresaId = await _empresaId();
 
