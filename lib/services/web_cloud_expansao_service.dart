@@ -198,6 +198,103 @@ class WebCloudExpansaoService {
     );
   }
 
+  Future<Map<String, dynamic>> converterLeadEmCliente({
+    required String id,
+    required String atualizadoEmEsperado,
+  }) async {
+    if (id.trim().isEmpty) {
+      throw ArgumentError('Lead inválido.');
+    }
+
+    final empresaId = await _empresaId();
+    final clienteOrigem = await WebOrigemService.instance.proxima();
+    final interacaoOrigem = await WebOrigemService.instance.proxima();
+
+    final resposta = await _client.rpc(
+      'imperium_crm_converter_lead_web',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_lead_id': id.trim(),
+        'p_atualizado_em_base': _textoNulo(atualizadoEmEsperado),
+        'p_origem_dispositivo': clienteOrigem.dispositivoId,
+        'p_cliente_origem_local_id': clienteOrigem.localId,
+        'p_interacao_origem_local_id': interacaoOrigem.localId,
+      },
+    );
+
+    return Map<String, dynamic>.from(resposta as Map);
+  }
+
+  Future<List<Map<String, dynamic>>> listarVeiculosClienteCrm(
+    String clienteId,
+  ) async {
+    if (clienteId.trim().isEmpty) return const [];
+
+    final empresaId = await _empresaId();
+    final resposta = await _client
+        .from('imperium_veiculos')
+        .select()
+        .eq('empresa_id', empresaId)
+        .eq('cliente_id', clienteId.trim())
+        .isFilter('excluido_em', null)
+        .order('modelo');
+
+    return (resposta as List)
+        .map((raw) => Map<String, dynamic>.from(raw as Map))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> agendarLead({
+    required String id,
+    required String atualizadoEmEsperado,
+    required String veiculoId,
+    required String data,
+    required String hora,
+    required String servico,
+    required double valor,
+    required String observacoes,
+  }) async {
+    if (id.trim().isEmpty) {
+      throw ArgumentError('Lead inválido.');
+    }
+    if (veiculoId.trim().isEmpty) {
+      throw ArgumentError('Selecione um veículo.');
+    }
+    if (servico.trim().isEmpty) {
+      throw ArgumentError('Informe o serviço.');
+    }
+    if (data.trim().isEmpty) {
+      throw ArgumentError('Informe a data do agendamento.');
+    }
+    if (hora.trim().isEmpty) {
+      throw ArgumentError('Informe o horário.');
+    }
+
+    final empresaId = await _empresaId();
+    final agendamentoOrigem = await WebOrigemService.instance.proxima();
+    final interacaoOrigem = await WebOrigemService.instance.proxima();
+
+    final resposta = await _client.rpc(
+      'imperium_crm_agendar_lead_web',
+      params: <String, dynamic>{
+        'p_empresa_id': empresaId,
+        'p_lead_id': id.trim(),
+        'p_atualizado_em_base': _textoNulo(atualizadoEmEsperado),
+        'p_veiculo_id': veiculoId.trim(),
+        'p_data': data.trim(),
+        'p_hora': hora.trim(),
+        'p_servico': servico.trim(),
+        'p_valor': max(0, valor),
+        'p_observacoes': observacoes.trim(),
+        'p_origem_dispositivo': agendamentoOrigem.dispositivoId,
+        'p_agendamento_origem_local_id': agendamentoOrigem.localId,
+        'p_interacao_origem_local_id': interacaoOrigem.localId,
+      },
+    );
+
+    return Map<String, dynamic>.from(resposta as Map);
+  }
+
   Future<void> excluirLead({
     required String id,
     required String atualizadoEmEsperado,
