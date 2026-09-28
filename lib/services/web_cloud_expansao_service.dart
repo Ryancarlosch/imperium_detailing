@@ -151,18 +151,8 @@ class WebCloudExpansaoService {
     required int diasSemRetorno,
     required bool ativo,
   }) async {
-    const tipos = <String>{
-      'Aniversário',
-      'Reativação',
-      'Indicação',
-      'Manual',
-    };
-    const beneficios = <String>{
-      'Percentual',
-      'Valor',
-      'Serviço',
-      'Crédito',
-    };
+    const tipos = <String>{'Aniversário', 'Reativação', 'Indicação', 'Manual'};
+    const beneficios = <String>{'Percentual', 'Valor', 'Serviço', 'Crédito'};
 
     final nomeLimpo = nome.trim();
     if (nomeLimpo.length < 3) {
@@ -258,9 +248,7 @@ class WebCloudExpansaoService {
       tabela: 'imperium_crm_cupons',
       id: id,
       atualizadoEmEsperado: atualizadoEmEsperado,
-      payload: <String, dynamic>{
-        'status': 'Cancelado',
-      },
+      payload: <String, dynamic>{'status': 'Cancelado'},
     );
   }
 
