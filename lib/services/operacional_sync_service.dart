@@ -29,6 +29,7 @@ import 'os_cloud_upload_service.dart';
 import 'os_cloud_v3_service.dart';
 import 'os_finalizacao_cloud_v4_service.dart';
 import 'os_orcamento_vinculo_cloud_service.dart';
+import 'os_revisoes_cloud_service.dart';
 import 'pagamento_colaborador_cloud_service.dart';
 import 'os_arquivos_cloud_service.dart';
 import 'os_arquivos_cloud_v2_service.dart';
@@ -437,6 +438,8 @@ class OperacionalSyncService {
         'Conflitos pendentes nas Ordens de Serviço.',
       );
     }
+
+    await OsRevisoesCloudService.instance.sincronizar(empresaId);
   }
 
   Future<void> _syncArquivosOs(String empresaId) async {
