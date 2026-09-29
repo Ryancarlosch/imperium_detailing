@@ -154,6 +154,7 @@ class CrmOperacaoRepository {
         atualizado_em TEXT NOT NULL,
         remoto_id TEXT,
         remoto_atualizado_em TEXT,
+        interacao_local_id INTEGER,
         sync_pendente INTEGER NOT NULL DEFAULT 0,
         CHECK (prioridade IN ('Baixa', 'Normal', 'Alta')),
         CHECK (status IN ('Pendente', 'Concluida', 'Adiada', 'Ignorada'))
@@ -185,6 +186,11 @@ class CrmOperacaoRepository {
     if (!nomes.contains('remoto_atualizado_em')) {
       await database.execute(
         'ALTER TABLE $tabelaAcoes ADD COLUMN remoto_atualizado_em TEXT',
+      );
+    }
+    if (!nomes.contains('interacao_local_id')) {
+      await database.execute(
+        'ALTER TABLE $tabelaAcoes ADD COLUMN interacao_local_id INTEGER',
       );
     }
     if (!nomes.contains('sync_pendente')) {
@@ -740,7 +746,7 @@ class CrmOperacaoRepository {
       );
 
       if (acao.leadId != null) {
-        await transaction.insert('crm_interacoes', {
+        final interacaoLocalId = await transaction.insert('crm_interacoes', {
           'lead_id': acao.leadId,
           'tipo': acao.tipo,
           'descricao': observacoes.trim().isEmpty
@@ -749,6 +755,12 @@ class CrmOperacaoRepository {
           'data_interacao': agora,
           'criado_em': agora,
         });
+        await transaction.update(
+          tabelaAcoes,
+          {'interacao_local_id': interacaoLocalId},
+          where: 'id = ?',
+          whereArgs: [acaoId],
+        );
 
         if (acao.tipo == 'Follow-up lead') {
           await transaction.update(
