@@ -530,7 +530,11 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
               builder: (context, constraints) {
                 final compacto = constraints.maxWidth < 760;
                 final padding = compacto ? 16.0 : 24.0;
-                final largura = constraints.maxWidth - (padding * 2);
+                final larguraBase = constraints.maxWidth >
+                        ImperiumWebTheme.contentMaxWidth
+                    ? ImperiumWebTheme.contentMaxWidth
+                    : constraints.maxWidth;
+                final largura = larguraBase - (padding * 2);
                 final colunas = constraints.maxWidth >= 1100
                     ? 4
                     : constraints.maxWidth >= 650
@@ -543,6 +547,14 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(padding, 20, padding, 40),
                     children: [
+                      Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: ImperiumWebTheme.contentMaxWidth,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                       const Text(
                         'Operação comercial',
                         style: TextStyle(
@@ -652,6 +664,10 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
                             child: _acaoCard(acao),
                           ),
                         ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 );
