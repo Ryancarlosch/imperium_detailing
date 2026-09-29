@@ -64,6 +64,6 @@ void main() {
       main,
       contains('OperacionalSyncService.instance.prepararTenantInicial'),
     );
-    expect(db, contains('static const int schemaVersion = 33;'));
+    expect(db, contains('static const int schemaVersion = 34;'));
   });
 }
