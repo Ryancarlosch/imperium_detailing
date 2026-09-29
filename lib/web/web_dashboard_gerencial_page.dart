@@ -113,7 +113,10 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
     final largura = MediaQuery.sizeOf(context).width;
     final compacto = largura < 760;
     final paddingHorizontal = compacto ? 16.0 : 28.0;
-    final disponivel = largura - (paddingHorizontal * 2);
+    final larguraConteudo = largura > ImperiumWebTheme.contentMaxWidth
+        ? ImperiumWebTheme.contentMaxWidth
+        : largura;
+    final disponivel = larguraConteudo - (paddingHorizontal * 2);
     final colunasKpi = disponivel >= 1180
         ? 4
         : disponivel >= 680
@@ -141,6 +144,14 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
               44,
             ),
             children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: ImperiumWebTheme.contentMaxWidth,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
               _CabecalhoPainel(
                 compacto: compacto,
                 ultimaAtualizacao: _ultimaAtualizacao == null
@@ -621,6 +632,10 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                     valorRecebido: _valor(item.recebido),
                   );
                 }),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
