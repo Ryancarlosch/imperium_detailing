@@ -24,7 +24,7 @@ void main() {
       'lib/screens/importar_nota_fiscal_page.dart',
     ).readAsStringSync();
 
-    expect(banco, contains('static const int schemaVersion = 33;'));
+    expect(banco, contains('static const int schemaVersion = 34;'));
     expect(banco, contains('nota_fiscal_importacao_tentativas'));
     expect(banco, contains('tentativas_importacao'));
     expect(
