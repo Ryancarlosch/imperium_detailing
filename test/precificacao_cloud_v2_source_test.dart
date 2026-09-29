@@ -82,10 +82,10 @@ void main() {
     );
   });
 
-  test('SQLite de dominio continua v33 e 220h continua oficial', () {
+  test('SQLite de dominio continua v34 e 220h continua oficial', () {
     expect(
       File('lib/database/app_database.dart').readAsStringSync(),
-      contains('static const int schemaVersion = 33;'),
+      contains('static const int schemaVersion = 34;'),
     );
     expect(
       File('lib/config/imperium_regras_negocio.dart').readAsStringSync(),
