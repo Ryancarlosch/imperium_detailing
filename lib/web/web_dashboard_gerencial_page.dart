@@ -152,486 +152,514 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-              _CabecalhoPainel(
-                compacto: compacto,
-                ultimaAtualizacao: _ultimaAtualizacao == null
-                    ? null
-                    : _hora.format(_ultimaAtualizacao!),
-                ocultarValores: _ocultarValores,
-                onAlternarValores: () =>
-                    setState(() => _ocultarValores = !_ocultarValores),
-                onAtualizar: _carregando ? null : _carregar,
-              ),
-              const SizedBox(height: 18),
-              _HeroGestao(
-                saldo: semContaFinanceira
-                    ? '—'
-                    : _valor(resumo.saldoConsolidado),
-                faturamento: _valor(financeiro.vendas),
-                resultado: _valor(financeiro.competencia.resultadoGerencial),
-                aReceber: _valor(financeiro.aReceber),
-                resultadoNegativo:
-                    financeiro.competencia.resultadoGerencial < 0,
-                contasConfiguradas: !semContaFinanceira,
-              ),
-              const SizedBox(height: 24),
-              _SectionTitle(
-                titulo: 'Atenções do gestor',
-                subtitulo: alertasGestor == 0
-                    ? 'Nenhum alerta prioritário identificado neste momento.'
-                    : '$alertasGestor ponto(s) pedem acompanhamento.',
-              ),
-              const SizedBox(height: 12),
-              Card(
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 6,
-                  ),
-                  child: Column(
-                    children: [
-                      _AtencaoLinha(
-                        icon: Icons.account_balance_outlined,
-                        titulo: 'Contas financeiras',
-                        detalhe: semContaFinanceira
-                            ? 'Nenhuma conta Cloud configurada. Cadastre ou sincronize uma conta para calcular o saldo real.'
-                            : '${resumo.contas.length} conta(s) financeira(s) ativa(s) no cálculo do saldo',
-                        alerta: semContaFinanceira,
-                        onTap: () => widget.onNavigate?.call(11),
+                      _CabecalhoPainel(
+                        compacto: compacto,
+                        ultimaAtualizacao: _ultimaAtualizacao == null
+                            ? null
+                            : _hora.format(_ultimaAtualizacao!),
+                        ocultarValores: _ocultarValores,
+                        onAlternarValores: () =>
+                            setState(() => _ocultarValores = !_ocultarValores),
+                        onAtualizar: _carregando ? null : _carregar,
                       ),
-                      const Divider(height: 1),
-                      _AtencaoLinha(
-                        icon: Icons.schedule_rounded,
-                        titulo: 'Recebimentos pendentes',
-                        detalhe: financeiro.aReceber > 0
-                            ? '${_valor(financeiro.aReceber)} ainda a receber no período'
-                            : 'Nenhum saldo pendente no período',
-                        alerta: financeiro.aReceber > 0,
-                        onTap: () => widget.onNavigate?.call(9),
+                      const SizedBox(height: 18),
+                      _HeroGestao(
+                        saldo: semContaFinanceira
+                            ? '—'
+                            : _valor(resumo.saldoConsolidado),
+                        faturamento: _valor(financeiro.vendas),
+                        resultado: _valor(
+                          financeiro.competencia.resultadoGerencial,
+                        ),
+                        aReceber: _valor(financeiro.aReceber),
+                        resultadoNegativo:
+                            financeiro.competencia.resultadoGerencial < 0,
+                        contasConfiguradas: !semContaFinanceira,
                       ),
-                      const Divider(height: 1),
-                      _AtencaoLinha(
-                        icon: Icons.car_repair_outlined,
-                        titulo: 'Ordens em aberto',
-                        detalhe:
-                            '${operacional['os_abertas'] ?? 0} OS aberta(s) ou em andamento',
-                        alerta:
-                            ((operacional['os_abertas'] as num?)?.toInt() ??
-                                0) >
-                            0,
-                        onTap: () => widget.onNavigate?.call(4),
+                      const SizedBox(height: 24),
+                      _SectionTitle(
+                        titulo: 'Atenções do gestor',
+                        subtitulo: alertasGestor == 0
+                            ? 'Nenhum alerta prioritário identificado neste momento.'
+                            : '$alertasGestor ponto(s) pedem acompanhamento.',
                       ),
-                      const Divider(height: 1),
-                      _AtencaoLinha(
-                        icon: Icons.replay_circle_filled_outlined,
-                        titulo: 'Clientes para contato',
-                        detalhe: comercial.posVendaAcoes > 0
-                            ? '${comercial.posVendaAcoes} cliente(s) precisam de ação no pós-venda'
-                            : 'Nenhum cliente exige ação imediata no pós-venda',
-                        alerta: comercial.posVendaAcoes > 0,
-                        onTap: () => widget.onNavigate?.call(18),
+                      const SizedBox(height: 12),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 6,
+                          ),
+                          child: Column(
+                            children: [
+                              _AtencaoLinha(
+                                icon: Icons.account_balance_outlined,
+                                titulo: 'Contas financeiras',
+                                detalhe: semContaFinanceira
+                                    ? 'Nenhuma conta Cloud configurada. Cadastre ou sincronize uma conta para calcular o saldo real.'
+                                    : '${resumo.contas.length} conta(s) financeira(s) ativa(s) no cálculo do saldo',
+                                alerta: semContaFinanceira,
+                                onTap: () => widget.onNavigate?.call(11),
+                              ),
+                              const Divider(height: 1),
+                              _AtencaoLinha(
+                                icon: Icons.schedule_rounded,
+                                titulo: 'Recebimentos pendentes',
+                                detalhe: financeiro.aReceber > 0
+                                    ? '${_valor(financeiro.aReceber)} ainda a receber no período'
+                                    : 'Nenhum saldo pendente no período',
+                                alerta: financeiro.aReceber > 0,
+                                onTap: () => widget.onNavigate?.call(9),
+                              ),
+                              const Divider(height: 1),
+                              _AtencaoLinha(
+                                icon: Icons.car_repair_outlined,
+                                titulo: 'Ordens em aberto',
+                                detalhe:
+                                    '${operacional['os_abertas'] ?? 0} OS aberta(s) ou em andamento',
+                                alerta:
+                                    ((operacional['os_abertas'] as num?)
+                                            ?.toInt() ??
+                                        0) >
+                                    0,
+                                onTap: () => widget.onNavigate?.call(4),
+                              ),
+                              const Divider(height: 1),
+                              _AtencaoLinha(
+                                icon: Icons.replay_circle_filled_outlined,
+                                titulo: 'Clientes para contato',
+                                detalhe: comercial.posVendaAcoes > 0
+                                    ? '${comercial.posVendaAcoes} cliente(s) precisam de ação no pós-venda'
+                                    : 'Nenhum cliente exige ação imediata no pós-venda',
+                                alerta: comercial.posVendaAcoes > 0,
+                                onTap: () => widget.onNavigate?.call(18),
+                              ),
+                              const Divider(height: 1),
+                              _AtencaoLinha(
+                                icon: Icons.inventory_2_outlined,
+                                titulo: 'Alertas de estoque',
+                                detalhe: resumo.estoqueAlertas > 0
+                                    ? '${resumo.estoqueAlertas} alerta(s) ativo(s) no estoque'
+                                    : 'Nenhum alerta ativo de estoque',
+                                alerta: resumo.estoqueAlertas > 0,
+                                onTap: () => widget.onNavigate?.call(8),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      const Divider(height: 1),
-                      _AtencaoLinha(
-                        icon: Icons.inventory_2_outlined,
-                        titulo: 'Alertas de estoque',
-                        detalhe: resumo.estoqueAlertas > 0
-                            ? '${resumo.estoqueAlertas} alerta(s) ativo(s) no estoque'
-                            : 'Nenhum alerta ativo de estoque',
-                        alerta: resumo.estoqueAlertas > 0,
-                        onTap: () => widget.onNavigate?.call(8),
+                      const SizedBox(height: 30),
+                      const _SectionTitle(
+                        titulo: 'Indicadores do mês',
+                        subtitulo:
+                            'Leitura rápida da operação, vendas e recebimentos do período atual.',
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
-              const _SectionTitle(
-                titulo: 'Indicadores do mês',
-                subtitulo:
-                    'Leitura rápida da operação, vendas e recebimentos do período atual.',
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Vendas líquidas',
-                    valor: _valor(financeiro.vendas),
-                    detalhe: '${financeiro.quantidadeOrdens} OS finalizadas',
-                    icon: Icons.receipt_long_outlined,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Recebido',
-                    valor: _valor(financeiro.recebido),
-                    detalhe: 'Recebimentos registrados nas OS do período',
-                    icon: Icons.payments_outlined,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'A receber',
-                    valor: _valor(financeiro.aReceber),
-                    detalhe: 'Saldo pendente das OS do período',
-                    icon: Icons.schedule_rounded,
-                    alerta: financeiro.aReceber > 0,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Ticket médio',
-                    valor: _valor(financeiro.ticketMedio),
-                    detalhe: 'Valor líquido médio por OS',
-                    icon: Icons.shopping_bag_outlined,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'OS abertas',
-                    valor: '${operacional['os_abertas'] ?? 0}',
-                    detalhe: 'Ordens abertas ou em andamento',
-                    icon: Icons.car_repair_outlined,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Agenda aberta',
-                    valor: '${operacional['agenda'] ?? 0}',
-                    detalhe: 'Agendamentos ainda ativos',
-                    icon: Icons.calendar_month_outlined,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Clientes ativos',
-                    valor: '${operacional['clientes'] ?? 0}',
-                    detalhe: 'Clientes disponíveis na operação',
-                    icon: Icons.people_outline_rounded,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Veículos',
-                    valor: '${operacional['veiculos'] ?? 0}',
-                    detalhe: 'Veículos cadastrados na empresa',
-                    icon: Icons.directions_car_outlined,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-              _SectionTitle(
-                titulo: 'Comercial e retenção',
-                subtitulo:
-                    'CRM, pós-venda e marketing usando os mesmos dados Cloud do restante da plataforma.',
-                trailing: compacto
-                    ? null
-                    : Wrap(
-                        spacing: 6,
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
-                          TextButton(
-                            onPressed: () => widget.onNavigate?.call(13),
-                            child: const Text('CRM'),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Vendas líquidas',
+                            valor: _valor(financeiro.vendas),
+                            detalhe:
+                                '${financeiro.quantidadeOrdens} OS finalizadas',
+                            icon: Icons.receipt_long_outlined,
                           ),
-                          TextButton(
-                            onPressed: () => widget.onNavigate?.call(18),
-                            child: const Text('Pós-venda'),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Recebido',
+                            valor: _valor(financeiro.recebido),
+                            detalhe:
+                                'Recebimentos registrados nas OS do período',
+                            icon: Icons.payments_outlined,
                           ),
-                          TextButton(
-                            onPressed: () => widget.onNavigate?.call(19),
-                            child: const Text('Marketing'),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'A receber',
+                            valor: _valor(financeiro.aReceber),
+                            detalhe: 'Saldo pendente das OS do período',
+                            icon: Icons.schedule_rounded,
+                            alerta: financeiro.aReceber > 0,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Ticket médio',
+                            valor: _valor(financeiro.ticketMedio),
+                            detalhe: 'Valor líquido médio por OS',
+                            icon: Icons.shopping_bag_outlined,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'OS abertas',
+                            valor: '${operacional['os_abertas'] ?? 0}',
+                            detalhe: 'Ordens abertas ou em andamento',
+                            icon: Icons.car_repair_outlined,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Agenda aberta',
+                            valor: '${operacional['agenda'] ?? 0}',
+                            detalhe: 'Agendamentos ainda ativos',
+                            icon: Icons.calendar_month_outlined,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Clientes ativos',
+                            valor: '${operacional['clientes'] ?? 0}',
+                            detalhe: 'Clientes disponíveis na operação',
+                            icon: Icons.people_outline_rounded,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Veículos',
+                            valor: '${operacional['veiculos'] ?? 0}',
+                            detalhe: 'Veículos cadastrados na empresa',
+                            icon: Icons.directions_car_outlined,
                           ),
                         ],
                       ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Leads abertos',
-                    valor: '${comercial.leadsAbertos}',
-                    detalhe:
-                        '${comercial.leadsGanhos} lead(s) marcado(s) como ganho',
-                    icon: Icons.person_search_outlined,
-                    alerta: comercial.leadsAbertos > 0,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Potencial do CRM',
-                    valor: _valor(comercial.potencial),
-                    detalhe: 'Soma das oportunidades ainda não perdidas',
-                    icon: Icons.handshake_outlined,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Pós-venda pendente',
-                    valor: '${comercial.posVendaAcoes}',
-                    detalhe:
-                        '${comercial.posVendaReativacao} cliente(s) em reativação',
-                    icon: Icons.replay_circle_filled_outlined,
-                    alerta: comercial.posVendaAcoes > 0,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Campanhas ativas',
-                    valor: '${comercial.campanhasAtivas}',
-                    detalhe: '${comercial.marketingLeads} lead(s) de marketing',
-                    icon: Icons.campaign_outlined,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'Faturamento atribuído',
-                    valor: _valor(comercial.marketingFaturamento),
-                    detalhe: 'Receita de OS vinculadas às campanhas',
-                    icon: Icons.trending_up_rounded,
-                  ),
-                  _KpiCard(
-                    width: larguraKpi,
-                    titulo: 'ROAS',
-                    valor: comercial.marketingRoas <= 0
-                        ? '—'
-                        : '${comercial.marketingRoas.toStringAsFixed(2)}x',
-                    detalhe:
-                        'Retorno de receita sobre investimento em marketing',
-                    icon: Icons.analytics_outlined,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-              const _SectionTitle(
-                titulo: 'Acesso rápido',
-                subtitulo:
-                    'Abra as áreas gerenciais mais usadas sem sair do contexto do painel.',
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.add_business_outlined,
-                    titulo: 'Nova OS',
-                    detalhe: 'Abra uma nova ordem de serviço',
-                    onTap: () => widget.onNavigate?.call(5),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.calendar_month_outlined,
-                    titulo: 'Agenda',
-                    detalhe: 'Compromissos e serviços programados',
-                    onTap: () => widget.onNavigate?.call(3),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.receipt_long_outlined,
-                    titulo: 'Ordens de serviço',
-                    detalhe: 'Execução, valores e situação das OS',
-                    onTap: () => widget.onNavigate?.call(4),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.inventory_2_outlined,
-                    titulo: 'Estoque',
-                    detalhe: 'Produtos, reservas e movimentações',
-                    onTap: () => widget.onNavigate?.call(8),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.account_balance_wallet_outlined,
-                    titulo: 'Contas e caixa',
-                    detalhe: 'Saldos, extrato e movimentação financeira',
-                    onTap: () => _irParaModulo(
-                      11,
-                      'Contas e caixa',
-                      const WebContasFinanceirasPage(),
-                    ),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.query_stats_rounded,
-                    titulo: 'DRE gerencial',
-                    detalhe: 'Resultado por competência e por caixa',
-                    onTap: () =>
-                        _irParaModulo(10, 'DRE gerencial', const WebDrePage()),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.analytics_outlined,
-                    titulo: 'Relatórios',
-                    detalhe: 'Vendas, executores e indicadores detalhados',
-                    onTap: () => _irParaModulo(
-                      12,
-                      'Relatórios',
-                      const WebRelatoriosPage(),
-                    ),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.tune_rounded,
-                    titulo: 'Gestão financeira',
-                    detalhe:
-                        'Taxas, fornecedores, custos, metas e transferências',
-                    onTap: () => widget.onNavigate?.call(26),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.receipt_long_outlined,
-                    titulo: 'Notas fiscais',
-                    detalhe: 'Importação XML e integração fiscal com estoque',
-                    onTap: () => widget.onNavigate?.call(25),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.badge_outlined,
-                    titulo: 'Ponto e equipe',
-                    detalhe: 'Funcionários, jornada, batidas e ajustes',
-                    onTap: () => _irParaModulo(
-                      16,
-                      'Ponto e equipe',
-                      const WebPontoPage(),
-                    ),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.handshake_outlined,
-                    titulo: 'CRM',
-                    detalhe: 'Leads, oportunidades e pipeline comercial',
-                    onTap: () => widget.onNavigate?.call(13),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.replay_circle_filled_outlined,
-                    titulo: 'Pós-venda',
-                    detalhe: 'Retorno, reativação e histórico de contatos',
-                    onTap: () => widget.onNavigate?.call(18),
-                  ),
-                  _QuickAction(
-                    width: larguraAcao,
-                    icon: Icons.campaign_outlined,
-                    titulo: 'Marketing',
-                    detalhe: 'Campanhas, conteúdo, atribuição e ROAS',
-                    onTap: () => widget.onNavigate?.call(19),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-              const _SectionTitle(
-                titulo: 'Operação de hoje',
-                subtitulo:
-                    'Agenda do dia e veículos que ainda estão em execução.',
-              ),
-              const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final ladoALado = constraints.maxWidth >= 980;
-                  final larguraPainel = ladoALado
-                      ? (constraints.maxWidth - 12) / 2
-                      : constraints.maxWidth;
-
-                  final agendaCard = SizedBox(
-                    width: larguraPainel,
-                    child: _AgendaHojePainel(
-                      itens: agendaHoje,
-                      valor: _valor,
-                      onVerTodos: () => widget.onNavigate?.call(3),
-                    ),
-                  );
-                  final ordensCard = SizedBox(
-                    width: larguraPainel,
-                    child: _OrdensAbertasPainel(
-                      itens: ordensAbertas,
-                      valor: _valor,
-                      onVerTodos: () => widget.onNavigate?.call(4),
-                    ),
-                  );
-
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [agendaCard, ordensCard],
-                  );
-                },
-              ),
-              const SizedBox(height: 30),
-              _SectionTitle(
-                titulo: 'Saldos por conta',
-                subtitulo:
-                    'Contas ativas usando o snapshot financeiro oficial.',
-                trailing: TextButton.icon(
-                  onPressed: () => _irParaModulo(
-                    11,
-                    'Contas e caixa',
-                    const WebContasFinanceirasPage(),
-                  ),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                  label: const Text('Ver contas'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (contas.isEmpty)
-                const _EstadoVazio('Nenhuma conta financeira ativa encontrada.')
-              else ...[
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    for (final conta in contas)
-                      _ContaCard(
-                        nome: conta.nome,
-                        detalhe: [
-                          conta.instituicao,
-                          conta.tipo,
-                        ].where((e) => e.trim().isNotEmpty).join(' · '),
-                        saldo: _valor(conta.saldoAtual),
+                      const SizedBox(height: 30),
+                      _SectionTitle(
+                        titulo: 'Comercial e retenção',
+                        subtitulo:
+                            'CRM, pós-venda e marketing usando os mesmos dados Cloud do restante da plataforma.',
+                        trailing: compacto
+                            ? null
+                            : Wrap(
+                                spacing: 6,
+                                children: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        widget.onNavigate?.call(13),
+                                    child: const Text('CRM'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        widget.onNavigate?.call(18),
+                                    child: const Text('Pós-venda'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        widget.onNavigate?.call(19),
+                                    child: const Text('Marketing'),
+                                  ),
+                                ],
+                              ),
                       ),
-                  ],
-                ),
-                if (resumo.contas.length > contas.length) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    '+ ${resumo.contas.length - contas.length} conta(s) disponível(is) em Contas e caixa',
-                    style: const TextStyle(
-                      color: Color(0xFF89939E),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ],
-              const SizedBox(height: 30),
-              _SectionTitle(
-                titulo: 'Desempenho da equipe',
-                subtitulo:
-                    'Ranking comercial das OS sem expor salário ou custo interno.',
-                trailing: TextButton.icon(
-                  onPressed: () => _irParaModulo(
-                    12,
-                    'Relatórios',
-                    const WebRelatoriosPage(),
-                  ),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                  label: const Text('Ver relatório'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (executores.isEmpty)
-                const _EstadoVazio('Nenhum executor encontrado no mês atual.')
-              else
-                ...List.generate(executores.length, (index) {
-                  final item = executores[index];
-                  final progresso = maiorVendaEquipe <= 0
-                      ? 0.0
-                      : (item.vendas / maiorVendaEquipe)
-                            .clamp(0.0, 1.0)
-                            .toDouble();
-                  return _ExecutorLinha(
-                    posicao: index + 1,
-                    progresso: progresso,
-                    item: item,
-                    valorVendas: _valor(item.vendas),
-                    valorRecebido: _valor(item.recebido),
-                  );
-                }),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Leads abertos',
+                            valor: '${comercial.leadsAbertos}',
+                            detalhe:
+                                '${comercial.leadsGanhos} lead(s) marcado(s) como ganho',
+                            icon: Icons.person_search_outlined,
+                            alerta: comercial.leadsAbertos > 0,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Potencial do CRM',
+                            valor: _valor(comercial.potencial),
+                            detalhe:
+                                'Soma das oportunidades ainda não perdidas',
+                            icon: Icons.handshake_outlined,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Pós-venda pendente',
+                            valor: '${comercial.posVendaAcoes}',
+                            detalhe:
+                                '${comercial.posVendaReativacao} cliente(s) em reativação',
+                            icon: Icons.replay_circle_filled_outlined,
+                            alerta: comercial.posVendaAcoes > 0,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Campanhas ativas',
+                            valor: '${comercial.campanhasAtivas}',
+                            detalhe:
+                                '${comercial.marketingLeads} lead(s) de marketing',
+                            icon: Icons.campaign_outlined,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'Faturamento atribuído',
+                            valor: _valor(comercial.marketingFaturamento),
+                            detalhe: 'Receita de OS vinculadas às campanhas',
+                            icon: Icons.trending_up_rounded,
+                          ),
+                          _KpiCard(
+                            width: larguraKpi,
+                            titulo: 'ROAS',
+                            valor: comercial.marketingRoas <= 0
+                                ? '—'
+                                : '${comercial.marketingRoas.toStringAsFixed(2)}x',
+                            detalhe:
+                                'Retorno de receita sobre investimento em marketing',
+                            icon: Icons.analytics_outlined,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      const _SectionTitle(
+                        titulo: 'Acesso rápido',
+                        subtitulo:
+                            'Abra as áreas gerenciais mais usadas sem sair do contexto do painel.',
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.add_business_outlined,
+                            titulo: 'Nova OS',
+                            detalhe: 'Abra uma nova ordem de serviço',
+                            onTap: () => widget.onNavigate?.call(5),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.calendar_month_outlined,
+                            titulo: 'Agenda',
+                            detalhe: 'Compromissos e serviços programados',
+                            onTap: () => widget.onNavigate?.call(3),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.receipt_long_outlined,
+                            titulo: 'Ordens de serviço',
+                            detalhe: 'Execução, valores e situação das OS',
+                            onTap: () => widget.onNavigate?.call(4),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.inventory_2_outlined,
+                            titulo: 'Estoque',
+                            detalhe: 'Produtos, reservas e movimentações',
+                            onTap: () => widget.onNavigate?.call(8),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.account_balance_wallet_outlined,
+                            titulo: 'Contas e caixa',
+                            detalhe:
+                                'Saldos, extrato e movimentação financeira',
+                            onTap: () => _irParaModulo(
+                              11,
+                              'Contas e caixa',
+                              const WebContasFinanceirasPage(),
+                            ),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.query_stats_rounded,
+                            titulo: 'DRE gerencial',
+                            detalhe: 'Resultado por competência e por caixa',
+                            onTap: () => _irParaModulo(
+                              10,
+                              'DRE gerencial',
+                              const WebDrePage(),
+                            ),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.analytics_outlined,
+                            titulo: 'Relatórios',
+                            detalhe:
+                                'Vendas, executores e indicadores detalhados',
+                            onTap: () => _irParaModulo(
+                              12,
+                              'Relatórios',
+                              const WebRelatoriosPage(),
+                            ),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.tune_rounded,
+                            titulo: 'Gestão financeira',
+                            detalhe:
+                                'Taxas, fornecedores, custos, metas e transferências',
+                            onTap: () => widget.onNavigate?.call(26),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.receipt_long_outlined,
+                            titulo: 'Notas fiscais',
+                            detalhe:
+                                'Importação XML e integração fiscal com estoque',
+                            onTap: () => widget.onNavigate?.call(25),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.badge_outlined,
+                            titulo: 'Ponto e equipe',
+                            detalhe: 'Funcionários, jornada, batidas e ajustes',
+                            onTap: () => _irParaModulo(
+                              16,
+                              'Ponto e equipe',
+                              const WebPontoPage(),
+                            ),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.handshake_outlined,
+                            titulo: 'CRM',
+                            detalhe:
+                                'Leads, oportunidades e pipeline comercial',
+                            onTap: () => widget.onNavigate?.call(13),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.replay_circle_filled_outlined,
+                            titulo: 'Pós-venda',
+                            detalhe:
+                                'Retorno, reativação e histórico de contatos',
+                            onTap: () => widget.onNavigate?.call(18),
+                          ),
+                          _QuickAction(
+                            width: larguraAcao,
+                            icon: Icons.campaign_outlined,
+                            titulo: 'Marketing',
+                            detalhe: 'Campanhas, conteúdo, atribuição e ROAS',
+                            onTap: () => widget.onNavigate?.call(19),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      const _SectionTitle(
+                        titulo: 'Operação de hoje',
+                        subtitulo:
+                            'Agenda do dia e veículos que ainda estão em execução.',
+                      ),
+                      const SizedBox(height: 12),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final ladoALado = constraints.maxWidth >= 980;
+                          final larguraPainel = ladoALado
+                              ? (constraints.maxWidth - 12) / 2
+                              : constraints.maxWidth;
+
+                          final agendaCard = SizedBox(
+                            width: larguraPainel,
+                            child: _AgendaHojePainel(
+                              itens: agendaHoje,
+                              valor: _valor,
+                              onVerTodos: () => widget.onNavigate?.call(3),
+                            ),
+                          );
+                          final ordensCard = SizedBox(
+                            width: larguraPainel,
+                            child: _OrdensAbertasPainel(
+                              itens: ordensAbertas,
+                              valor: _valor,
+                              onVerTodos: () => widget.onNavigate?.call(4),
+                            ),
+                          );
+
+                          return Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [agendaCard, ordensCard],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 30),
+                      _SectionTitle(
+                        titulo: 'Saldos por conta',
+                        subtitulo:
+                            'Contas ativas usando o snapshot financeiro oficial.',
+                        trailing: TextButton.icon(
+                          onPressed: () => _irParaModulo(
+                            11,
+                            'Contas e caixa',
+                            const WebContasFinanceirasPage(),
+                          ),
+                          icon: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                          ),
+                          label: const Text('Ver contas'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (contas.isEmpty)
+                        const _EstadoVazio(
+                          'Nenhuma conta financeira ativa encontrada.',
+                        )
+                      else ...[
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            for (final conta in contas)
+                              _ContaCard(
+                                nome: conta.nome,
+                                detalhe: [
+                                  conta.instituicao,
+                                  conta.tipo,
+                                ].where((e) => e.trim().isNotEmpty).join(' · '),
+                                saldo: _valor(conta.saldoAtual),
+                              ),
+                          ],
+                        ),
+                        if (resumo.contas.length > contas.length) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            '+ ${resumo.contas.length - contas.length} conta(s) disponível(is) em Contas e caixa',
+                            style: const TextStyle(
+                              color: Color(0xFF89939E),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                      const SizedBox(height: 30),
+                      _SectionTitle(
+                        titulo: 'Desempenho da equipe',
+                        subtitulo:
+                            'Ranking comercial das OS sem expor salário ou custo interno.',
+                        trailing: TextButton.icon(
+                          onPressed: () => _irParaModulo(
+                            12,
+                            'Relatórios',
+                            const WebRelatoriosPage(),
+                          ),
+                          icon: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                          ),
+                          label: const Text('Ver relatório'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (executores.isEmpty)
+                        const _EstadoVazio(
+                          'Nenhum executor encontrado no mês atual.',
+                        )
+                      else
+                        ...List.generate(executores.length, (index) {
+                          final item = executores[index];
+                          final progresso = maiorVendaEquipe <= 0
+                              ? 0.0
+                              : (item.vendas / maiorVendaEquipe)
+                                    .clamp(0.0, 1.0)
+                                    .toDouble();
+                          return _ExecutorLinha(
+                            posicao: index + 1,
+                            progresso: progresso,
+                            item: item,
+                            valorVendas: _valor(item.vendas),
+                            valorRecebido: _valor(item.recebido),
+                          );
+                        }),
                     ],
                   ),
                 ),
