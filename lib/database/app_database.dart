@@ -6,7 +6,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 33;
+  static const int schemaVersion = 34;
 
   static Database? _database;
 
@@ -296,6 +296,10 @@ class AppDatabase {
         if (versaoAntiga < 33) {
           await _atualizarParaVersao33(database);
         }
+
+        if (versaoAntiga < 34) {
+          await _atualizarParaVersao34(database);
+        }
       },
     );
   }
@@ -346,6 +350,51 @@ class AppDatabase {
     await _criarTabelaCategoriasServico(database);
     await _criarTabelaOrdemServicoProdutoLotes(database);
     await _criarTabelasCrm(database);
+    await _criarTabelaCrmAcoesRelacionamento(database);
+  }
+
+  Future<void> _criarTabelaCrmAcoesRelacionamento(Database database) async {
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS crm_acoes_relacionamento (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chave TEXT NOT NULL UNIQUE,
+        tipo TEXT NOT NULL,
+        entidade_tipo TEXT NOT NULL,
+        entidade_id INTEGER NOT NULL,
+        cliente_id INTEGER,
+        lead_id INTEGER,
+        titulo TEXT NOT NULL,
+        nome_contato TEXT NOT NULL DEFAULT '',
+        telefone TEXT NOT NULL DEFAULT '',
+        mensagem_sugerida TEXT NOT NULL DEFAULT '',
+        vencimento TEXT NOT NULL,
+        prioridade TEXT NOT NULL DEFAULT 'Normal',
+        status TEXT NOT NULL DEFAULT 'Pendente',
+        concluida_em TEXT,
+        adiada_para TEXT,
+        observacoes TEXT NOT NULL DEFAULT '',
+        criado_em TEXT NOT NULL,
+        atualizado_em TEXT NOT NULL,
+        remoto_id TEXT,
+        remoto_atualizado_em TEXT,
+        sync_pendente INTEGER NOT NULL DEFAULT 0,
+        CHECK (prioridade IN ('Baixa', 'Normal', 'Alta')),
+        CHECK (status IN ('Pendente', 'Concluida', 'Adiada', 'Ignorada'))
+      )
+    ''');
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_crm_acoes_status_vencimento
+      ON crm_acoes_relacionamento (status, vencimento)
+    ''');
+    await database.execute('''
+      CREATE INDEX IF NOT EXISTS idx_crm_acoes_entidade
+      ON crm_acoes_relacionamento (entidade_tipo, entidade_id)
+    ''');
+    await database.execute('''
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_acoes_remoto_id
+      ON crm_acoes_relacionamento (remoto_id)
+      WHERE remoto_id IS NOT NULL
+    ''');
   }
 
   // financeiro-conciliacao-schema-v1
@@ -4022,6 +4071,33 @@ class AppDatabase {
         FROM financeiro_colaboradores_historico h
         WHERE h.colaborador_id = c.id
       )
+    ''');
+  }
+
+  Future<void> _atualizarParaVersao34(Database database) async {
+    await _criarTabelaCrmAcoesRelacionamento(database);
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'crm_acoes_relacionamento',
+      coluna: 'remoto_id',
+      definicao: 'TEXT',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'crm_acoes_relacionamento',
+      coluna: 'remoto_atualizado_em',
+      definicao: 'TEXT',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'crm_acoes_relacionamento',
+      coluna: 'sync_pendente',
+      definicao: 'INTEGER NOT NULL DEFAULT 0',
+    );
+    await database.execute('''
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_acoes_remoto_id
+      ON crm_acoes_relacionamento (remoto_id)
+      WHERE remoto_id IS NOT NULL
     ''');
   }
 
