@@ -156,6 +156,6 @@ void main() {
       contains('OperacionalSyncService.instance.prepararTenantInicial'),
     );
     expect(main, contains('LoginEmailSenhaPage'));
-    expect(db, contains('static const int schemaVersion = 33;'));
+    expect(db, contains('static const int schemaVersion = 34;'));
   });
 }
