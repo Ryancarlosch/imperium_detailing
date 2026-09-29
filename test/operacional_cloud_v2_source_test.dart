@@ -46,6 +46,6 @@ void main() {
 
   test('Operacional V2 nao altera schemaVersion do SQLite de dominio', () {
     final db = File('lib/database/app_database.dart').readAsStringSync();
-    expect(db, contains('static const int schemaVersion = 33;'));
+    expect(db, contains('static const int schemaVersion = 34;'));
   });
 }
