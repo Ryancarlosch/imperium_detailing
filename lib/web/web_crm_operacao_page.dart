@@ -530,8 +530,8 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
               builder: (context, constraints) {
                 final compacto = constraints.maxWidth < 760;
                 final padding = compacto ? 16.0 : 24.0;
-                final larguraBase = constraints.maxWidth >
-                        ImperiumWebTheme.contentMaxWidth
+                final larguraBase =
+                    constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
                     ? ImperiumWebTheme.contentMaxWidth
                     : constraints.maxWidth;
                 final largura = larguraBase - (padding * 2);
@@ -555,115 +555,115 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                      const Text(
-                        'Operação comercial',
-                        style: TextStyle(
-                          fontSize: 27,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Follow-ups, orçamentos, pós-venda e benefícios em uma fila compartilhada com o aplicativo.',
-                        style: TextStyle(color: Color(0xFFAAB3BD)),
-                      ),
-                      const SizedBox(height: 18),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          _resumo(
-                            titulo: 'Atrasadas',
-                            valor: '$atrasadas',
-                            icone: Icons.warning_amber_rounded,
-                            width: larguraCard,
-                          ),
-                          _resumo(
-                            titulo: 'Hoje',
-                            valor: '$vencemHoje',
-                            icone: Icons.today_outlined,
-                            width: larguraCard,
-                          ),
-                          _resumo(
-                            titulo: 'Próximos 7 dias',
-                            valor: '$proximas',
-                            icone: Icons.date_range_outlined,
-                            width: larguraCard,
-                          ),
-                          _resumo(
-                            titulo: 'Concluídas no mês',
-                            valor: '$concluidasMes',
-                            icone: Icons.task_alt_outlined,
-                            width: larguraCard,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      Card(
-                        margin: EdgeInsets.zero,
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.filter_alt_outlined),
-                              const SizedBox(width: 10),
-                              SizedBox(
-                                width: 210,
-                                child: DropdownButtonFormField<String>(
-                                  initialValue: _status,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Status',
-                                    isDense: true,
-                                  ),
-                                  items:
-                                      const [
-                                            'Pendente',
-                                            'Concluida',
-                                            'Ignorada',
-                                            'Todos',
-                                          ]
-                                          .map(
-                                            (item) => DropdownMenuItem(
-                                              value: item,
-                                              child: Text(
-                                                item == 'Concluida'
-                                                    ? 'Concluída'
-                                                    : item,
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged: (v) {
-                                    if (v != null) {
-                                      setState(() => _status = v);
-                                    }
-                                  },
+                              const Text(
+                                'Operação comercial',
+                                style: TextStyle(
+                                  fontSize: 27,
+                                  fontWeight: FontWeight.w900,
                                 ),
                               ),
-                              const Spacer(),
-                              Text('${_filtradas.length} ação(ões)'),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      if (_filtradas.isEmpty)
-                        const Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: EdgeInsets.all(32),
-                            child: Center(
-                              child: Text('Nenhuma ação neste filtro.'),
-                            ),
-                          ),
-                        )
-                      else
-                        ..._filtradas.map(
-                          (acao) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _acaoCard(acao),
-                          ),
-                        ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Follow-ups, orçamentos, pós-venda e benefícios em uma fila compartilhada com o aplicativo.',
+                                style: TextStyle(color: Color(0xFFAAB3BD)),
+                              ),
+                              const SizedBox(height: 18),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: [
+                                  _resumo(
+                                    titulo: 'Atrasadas',
+                                    valor: '$atrasadas',
+                                    icone: Icons.warning_amber_rounded,
+                                    width: larguraCard,
+                                  ),
+                                  _resumo(
+                                    titulo: 'Hoje',
+                                    valor: '$vencemHoje',
+                                    icone: Icons.today_outlined,
+                                    width: larguraCard,
+                                  ),
+                                  _resumo(
+                                    titulo: 'Próximos 7 dias',
+                                    valor: '$proximas',
+                                    icone: Icons.date_range_outlined,
+                                    width: larguraCard,
+                                  ),
+                                  _resumo(
+                                    titulo: 'Concluídas no mês',
+                                    valor: '$concluidasMes',
+                                    icone: Icons.task_alt_outlined,
+                                    width: larguraCard,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+                              Card(
+                                margin: EdgeInsets.zero,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.filter_alt_outlined),
+                                      const SizedBox(width: 10),
+                                      SizedBox(
+                                        width: 210,
+                                        child: DropdownButtonFormField<String>(
+                                          initialValue: _status,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Status',
+                                            isDense: true,
+                                          ),
+                                          items:
+                                              const [
+                                                    'Pendente',
+                                                    'Concluida',
+                                                    'Ignorada',
+                                                    'Todos',
+                                                  ]
+                                                  .map(
+                                                    (item) => DropdownMenuItem(
+                                                      value: item,
+                                                      child: Text(
+                                                        item == 'Concluida'
+                                                            ? 'Concluída'
+                                                            : item,
+                                                      ),
+                                                    ),
+                                                  )
+                                                  .toList(),
+                                          onChanged: (v) {
+                                            if (v != null) {
+                                              setState(() => _status = v);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text('${_filtradas.length} ação(ões)'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              if (_filtradas.isEmpty)
+                                const Card(
+                                  margin: EdgeInsets.zero,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(32),
+                                    child: Center(
+                                      child: Text('Nenhuma ação neste filtro.'),
+                                    ),
+                                  ),
+                                )
+                              else
+                                ..._filtradas.map(
+                                  (acao) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: _acaoCard(acao),
+                                  ),
+                                ),
                             ],
                           ),
                         ),

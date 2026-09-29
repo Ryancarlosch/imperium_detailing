@@ -604,460 +604,503 @@ class _WebConfiguracoesEmpresaPageState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Configurações da empresa',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      SizedBox(height: 5),
-                      Text(
-                        'Dados usados no Web, Android, documentos e mensagens.',
-                        style: TextStyle(color: Color(0xFFAAB3BD)),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-                OutlinedButton.icon(
-                  onPressed: _salvando ? null : _carregar,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Atualizar'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton.icon(
-                  onPressed: _salvando ? null : _salvar,
-                  icon: _salvando
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save_outlined),
-                  label: Text(_salvando ? 'Salvando...' : 'Salvar'),
-                ),
-              ],
-            ),
-            if (_erro != null) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.redAccent.withValues(alpha: 0.25),
-                  ),
-                ),
-                child: Text(_erro!),
-              ),
-            ],
-            const SizedBox(height: 20),
-            _secao(
-              titulo: 'Empresa',
-              subtitulo:
-                  'Identificação e contatos oficiais usados nos documentos e comunicações.',
-              children: [
-                _linha([
-                  TextField(
-                    controller: _nomeFantasia,
-                    decoration: _dec('Nome fantasia', Icons.store_outlined),
-                  ),
-                  TextField(
-                    controller: _razaoSocial,
-                    decoration: _dec(
-                      'Razão social',
-                      Icons.business_center_outlined,
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 10),
-                _linha([
-                  TextField(
-                    controller: _cnpj,
-                    decoration: _dec('CNPJ/CPF', Icons.badge_outlined),
-                  ),
-                  TextField(
-                    controller: _ie,
-                    decoration: _dec(
-                      'Inscrição estadual',
-                      Icons.confirmation_number_outlined,
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 10),
-                _linha([
-                  TextField(
-                    controller: _telefone,
-                    decoration: _dec('Telefone', Icons.phone_outlined),
-                  ),
-                  TextField(
-                    controller: _whatsapp,
-                    decoration: _dec('WhatsApp', Icons.chat_outlined),
-                  ),
-                  TextField(
-                    controller: _email,
-                    decoration: _dec('E-mail', Icons.alternate_email_rounded),
-                  ),
-                ]),
-                const SizedBox(height: 10),
-                _linha([
-                  TextField(
-                    controller: _site,
-                    decoration: _dec('Site', Icons.language_outlined),
-                  ),
-                  TextField(
-                    controller: _instagram,
-                    decoration: _dec('Instagram', Icons.camera_alt_outlined),
-                  ),
-                  TextField(
-                    controller: _facebook,
-                    decoration: _dec('Facebook', Icons.public_outlined),
-                  ),
-                ]),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _secao(
-              titulo: 'Endereço',
-              subtitulo: 'Usado em documentos e identificação da empresa.',
-              children: [
-                _linha([
-                  TextField(
-                    controller: _endereco,
-                    decoration: _dec('Endereço', Icons.location_on_outlined),
-                  ),
-                  TextField(
-                    controller: _numero,
-                    decoration: _dec('Número', Icons.numbers_outlined),
-                  ),
-                  TextField(
-                    controller: _complemento,
-                    decoration: _dec('Complemento', Icons.apartment_outlined),
-                  ),
-                ]),
-                const SizedBox(height: 10),
-                _linha([
-                  TextField(
-                    controller: _bairro,
-                    decoration: _dec('Bairro', Icons.map_outlined),
-                  ),
-                  TextField(
-                    controller: _cidade,
-                    decoration: _dec('Cidade', Icons.location_city_outlined),
-                  ),
-                  TextField(
-                    controller: _estado,
-                    decoration: _dec('Estado', Icons.flag_outlined),
-                  ),
-                  TextField(
-                    controller: _cep,
-                    decoration: _dec('CEP', Icons.local_post_office_outlined),
-                  ),
-                ]),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _secao(
-              titulo: 'Identidade visual',
-              subtitulo:
-                  'Nome, tema e cores compartilhados com o aplicativo Android.',
-              children: [
-                _linha([
-                  TextField(
-                    controller: _nomeAplicativo,
-                    decoration: _dec('Nome do aplicativo', Icons.apps_outlined),
-                  ),
-                  DropdownButtonFormField<String>(
-                    initialValue: _tema,
-                    decoration: _dec('Tema', Icons.contrast_outlined),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'escuro',
-                        child: Text('Tema escuro'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'claro',
-                        child: Text('Tema claro'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _tema = value);
-                      }
-                    },
-                  ),
-                ]),
-                const SizedBox(height: 16),
-                _seletorCor(
-                  titulo: 'Cor principal',
-                  selecionada: _corPrincipal,
-                  opcoes: const [
-                    ('Dourado Imperium', 0xFFD6A84B),
-                    ('Amarelo', 0xFFFFC107),
-                    ('Azul', 0xFF2196F3),
-                    ('Azul escuro', 0xFF1565C0),
-                    ('Verde', 0xFF4CAF50),
-                    ('Vermelho', 0xFFE53935),
-                    ('Roxo', 0xFF9C27B0),
-                    ('Laranja', 0xFFFF7A00),
-                    ('Prata', 0xFFBDBDBD),
-                  ],
-                  onChanged: (valor) {
-                    setState(() => _corPrincipal = valor);
-                  },
-                ),
-                const SizedBox(height: 16),
-                _seletorCor(
-                  titulo: 'Cor secundária',
-                  selecionada: _corSecundaria,
-                  opcoes: const [
-                    ('Preto', 0xFF0E0E0E),
-                    ('Cinza escuro', 0xFF1A1A1A),
-                    ('Grafite', 0xFF252525),
-                    ('Azul escuro', 0xFF101820),
-                    ('Marrom escuro', 0xFF211A14),
-                  ],
-                  onChanged: (valor) {
-                    setState(() => _corSecundaria = valor);
-                  },
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Color(_corSecundaria),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Color(_corPrincipal).withValues(alpha: 0.55),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Color(_corPrincipal),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.auto_awesome_outlined,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _nomeAplicativo.text.trim().isEmpty
-                              ? 'Imperium Detailing'
-                              : _nomeAplicativo.text.trim(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Configurações da empresa',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              SizedBox(height: 5),
+                              Text(
+                                'Dados usados no Web, Android, documentos e mensagens.',
+                                style: TextStyle(color: Color(0xFFAAB3BD)),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      Text(
-                        _tema == 'claro' ? 'Claro' : 'Escuro',
-                        style: const TextStyle(color: Colors.white70),
+                        const SizedBox(width: 14),
+                        OutlinedButton.icon(
+                          onPressed: _salvando ? null : _carregar,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Atualizar'),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(
+                          onPressed: _salvando ? null : _salvar,
+                          icon: _salvando
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.save_outlined),
+                          label: Text(_salvando ? 'Salvando...' : 'Salvar'),
+                        ),
+                      ],
+                    ),
+                    if (_erro != null) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.redAccent.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Text(_erro!),
                       ),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'A identidade é salva no Cloud e aplicada pelo Android no próximo ciclo de sincronização. A interface Web mantém o tema administrativo próprio por enquanto.',
-                  style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _secao(
-              titulo: 'Logo e assinatura',
-              subtitulo:
-                  'Arquivos privados compartilhados entre Web, Android e documentos da empresa.',
-              children: [
-                _arquivoVisualCard(
-                  titulo: 'Logo da empresa',
-                  subtitulo:
-                      'Usada na identidade e nos documentos que suportam a logo sincronizada.',
-                  bytes: _logoBytes,
-                  arquivo: _arquivos['logo'],
-                  fallbackIcon: Icons.image_outlined,
-                  actions: [
-                    OutlinedButton.icon(
-                      onPressed: _processandoArquivo
-                          ? null
-                          : () => _selecionarImagem('logo'),
-                      icon: const Icon(Icons.upload_file_outlined),
-                      label: Text(
-                        _logoBytes == null ? 'Enviar logo' : 'Substituir',
+                    const SizedBox(height: 20),
+                    _secao(
+                      titulo: 'Empresa',
+                      subtitulo:
+                          'Identificação e contatos oficiais usados nos documentos e comunicações.',
+                      children: [
+                        _linha([
+                          TextField(
+                            controller: _nomeFantasia,
+                            decoration: _dec(
+                              'Nome fantasia',
+                              Icons.store_outlined,
+                            ),
+                          ),
+                          TextField(
+                            controller: _razaoSocial,
+                            decoration: _dec(
+                              'Razão social',
+                              Icons.business_center_outlined,
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 10),
+                        _linha([
+                          TextField(
+                            controller: _cnpj,
+                            decoration: _dec('CNPJ/CPF', Icons.badge_outlined),
+                          ),
+                          TextField(
+                            controller: _ie,
+                            decoration: _dec(
+                              'Inscrição estadual',
+                              Icons.confirmation_number_outlined,
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 10),
+                        _linha([
+                          TextField(
+                            controller: _telefone,
+                            decoration: _dec('Telefone', Icons.phone_outlined),
+                          ),
+                          TextField(
+                            controller: _whatsapp,
+                            decoration: _dec('WhatsApp', Icons.chat_outlined),
+                          ),
+                          TextField(
+                            controller: _email,
+                            decoration: _dec(
+                              'E-mail',
+                              Icons.alternate_email_rounded,
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 10),
+                        _linha([
+                          TextField(
+                            controller: _site,
+                            decoration: _dec('Site', Icons.language_outlined),
+                          ),
+                          TextField(
+                            controller: _instagram,
+                            decoration: _dec(
+                              'Instagram',
+                              Icons.camera_alt_outlined,
+                            ),
+                          ),
+                          TextField(
+                            controller: _facebook,
+                            decoration: _dec('Facebook', Icons.public_outlined),
+                          ),
+                        ]),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _secao(
+                      titulo: 'Endereço',
+                      subtitulo:
+                          'Usado em documentos e identificação da empresa.',
+                      children: [
+                        _linha([
+                          TextField(
+                            controller: _endereco,
+                            decoration: _dec(
+                              'Endereço',
+                              Icons.location_on_outlined,
+                            ),
+                          ),
+                          TextField(
+                            controller: _numero,
+                            decoration: _dec('Número', Icons.numbers_outlined),
+                          ),
+                          TextField(
+                            controller: _complemento,
+                            decoration: _dec(
+                              'Complemento',
+                              Icons.apartment_outlined,
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 10),
+                        _linha([
+                          TextField(
+                            controller: _bairro,
+                            decoration: _dec('Bairro', Icons.map_outlined),
+                          ),
+                          TextField(
+                            controller: _cidade,
+                            decoration: _dec(
+                              'Cidade',
+                              Icons.location_city_outlined,
+                            ),
+                          ),
+                          TextField(
+                            controller: _estado,
+                            decoration: _dec('Estado', Icons.flag_outlined),
+                          ),
+                          TextField(
+                            controller: _cep,
+                            decoration: _dec(
+                              'CEP',
+                              Icons.local_post_office_outlined,
+                            ),
+                          ),
+                        ]),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _secao(
+                      titulo: 'Identidade visual',
+                      subtitulo:
+                          'Nome, tema e cores compartilhados com o aplicativo Android.',
+                      children: [
+                        _linha([
+                          TextField(
+                            controller: _nomeAplicativo,
+                            decoration: _dec(
+                              'Nome do aplicativo',
+                              Icons.apps_outlined,
+                            ),
+                          ),
+                          DropdownButtonFormField<String>(
+                            initialValue: _tema,
+                            decoration: _dec('Tema', Icons.contrast_outlined),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'escuro',
+                                child: Text('Tema escuro'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'claro',
+                                child: Text('Tema claro'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => _tema = value);
+                              }
+                            },
+                          ),
+                        ]),
+                        const SizedBox(height: 16),
+                        _seletorCor(
+                          titulo: 'Cor principal',
+                          selecionada: _corPrincipal,
+                          opcoes: const [
+                            ('Dourado Imperium', 0xFFD6A84B),
+                            ('Amarelo', 0xFFFFC107),
+                            ('Azul', 0xFF2196F3),
+                            ('Azul escuro', 0xFF1565C0),
+                            ('Verde', 0xFF4CAF50),
+                            ('Vermelho', 0xFFE53935),
+                            ('Roxo', 0xFF9C27B0),
+                            ('Laranja', 0xFFFF7A00),
+                            ('Prata', 0xFFBDBDBD),
+                          ],
+                          onChanged: (valor) {
+                            setState(() => _corPrincipal = valor);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _seletorCor(
+                          titulo: 'Cor secundária',
+                          selecionada: _corSecundaria,
+                          opcoes: const [
+                            ('Preto', 0xFF0E0E0E),
+                            ('Cinza escuro', 0xFF1A1A1A),
+                            ('Grafite', 0xFF252525),
+                            ('Azul escuro', 0xFF101820),
+                            ('Marrom escuro', 0xFF211A14),
+                          ],
+                          onChanged: (valor) {
+                            setState(() => _corSecundaria = valor);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Color(_corSecundaria),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Color(
+                                _corPrincipal,
+                              ).withValues(alpha: 0.55),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Color(_corPrincipal),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.auto_awesome_outlined,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _nomeAplicativo.text.trim().isEmpty
+                                      ? 'Imperium Detailing'
+                                      : _nomeAplicativo.text.trim(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                _tema == 'claro' ? 'Claro' : 'Escuro',
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'A identidade é salva no Cloud e aplicada pelo Android no próximo ciclo de sincronização. A interface Web mantém o tema administrativo próprio por enquanto.',
+                          style: TextStyle(
+                            color: Color(0xFF89939E),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _secao(
+                      titulo: 'Logo e assinatura',
+                      subtitulo:
+                          'Arquivos privados compartilhados entre Web, Android e documentos da empresa.',
+                      children: [
+                        _arquivoVisualCard(
+                          titulo: 'Logo da empresa',
+                          subtitulo:
+                              'Usada na identidade e nos documentos que suportam a logo sincronizada.',
+                          bytes: _logoBytes,
+                          arquivo: _arquivos['logo'],
+                          fallbackIcon: Icons.image_outlined,
+                          actions: [
+                            OutlinedButton.icon(
+                              onPressed: _processandoArquivo
+                                  ? null
+                                  : () => _selecionarImagem('logo'),
+                              icon: const Icon(Icons.upload_file_outlined),
+                              label: Text(
+                                _logoBytes == null
+                                    ? 'Enviar logo'
+                                    : 'Substituir',
+                              ),
+                            ),
+                            if (_logoBytes != null)
+                              TextButton.icon(
+                                onPressed: _processandoArquivo
+                                    ? null
+                                    : () => _removerArquivo('logo'),
+                                icon: const Icon(Icons.delete_outline_rounded),
+                                label: const Text('Remover'),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _arquivoVisualCard(
+                          titulo: 'Assinatura da empresa',
+                          subtitulo:
+                              'Pode ser desenhada no navegador ou importada como imagem.',
+                          bytes: _assinaturaBytes,
+                          arquivo: _arquivos['assinatura_empresa'],
+                          fallbackIcon: Icons.draw_outlined,
+                          actions: [
+                            FilledButton.tonalIcon(
+                              onPressed: _processandoArquivo
+                                  ? null
+                                  : _desenharAssinatura,
+                              icon: const Icon(Icons.draw_outlined),
+                              label: Text(
+                                _assinaturaBytes == null
+                                    ? 'Desenhar'
+                                    : 'Redesenhar',
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: _processandoArquivo
+                                  ? null
+                                  : () =>
+                                        _selecionarImagem('assinatura_empresa'),
+                              icon: const Icon(Icons.upload_file_outlined),
+                              label: const Text('Importar imagem'),
+                            ),
+                            if (_assinaturaBytes != null)
+                              TextButton.icon(
+                                onPressed: _processandoArquivo
+                                    ? null
+                                    : () =>
+                                          _removerArquivo('assinatura_empresa'),
+                                icon: const Icon(Icons.delete_outline_rounded),
+                                label: const Text('Remover'),
+                              ),
+                          ],
+                        ),
+                        if (_processandoArquivo) ...[
+                          const SizedBox(height: 12),
+                          const LinearProgressIndicator(minHeight: 2),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _secao(
+                      titulo: 'Documentos e operação',
+                      subtitulo:
+                          'Regras e textos padrão compartilhados com orçamentos e ordens de serviço.',
+                      children: [
+                        SizedBox(
+                          width: 240,
+                          child: TextField(
+                            controller: _validadeOrcamento,
+                            keyboardType: TextInputType.number,
+                            decoration: _dec(
+                              'Validade do orçamento (dias)',
+                              Icons.event_outlined,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _rodapeDocumentos,
+                          minLines: 2,
+                          maxLines: 4,
+                          decoration: _dec(
+                            'Rodapé dos documentos',
+                            Icons.subject_outlined,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _termosOrcamento,
+                          minLines: 3,
+                          maxLines: 6,
+                          decoration: _dec(
+                            'Termos do orçamento',
+                            Icons.description_outlined,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _termosOs,
+                          minLines: 3,
+                          maxLines: 6,
+                          decoration: _dec(
+                            'Termos da ordem de serviço',
+                            Icons.receipt_long_outlined,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _observacaoPadrao,
+                          minLines: 2,
+                          maxLines: 5,
+                          decoration: _dec(
+                            'Observação padrão',
+                            Icons.notes_outlined,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _secao(
+                      titulo: 'Mensagens',
+                      subtitulo:
+                          'Modelos usados em contatos com o cliente. Alterações feitas aqui chegam ao Mobile pelo sync.',
+                      children: [
+                        for (final item in <(String, TextEditingController)>[
+                          ('Agradecimento pós-serviço', _mensagemAgradecimento),
+                          ('Envio de orçamento', _mensagemOrcamento),
+                          ('Confirmação', _mensagemConfirmacao),
+                          ('Entrega', _mensagemEntrega),
+                          ('Cobrança', _mensagemCobranca),
+                        ]) ...[
+                          TextField(
+                            controller: item.$2,
+                            minLines: 2,
+                            maxLines: 5,
+                            decoration: InputDecoration(labelText: item.$1),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      margin: EdgeInsets.zero,
+                      color: ImperiumWebTheme.accentStrong.withValues(
+                        alpha: 0.06,
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.sync_rounded,
+                              color: ImperiumWebTheme.accentStrong,
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Estas configurações ficam no Cloud. O Android compara versões no próximo ciclo de sincronização e aplica a versão remota quando não houver alteração local concorrente.',
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    if (_logoBytes != null)
-                      TextButton.icon(
-                        onPressed: _processandoArquivo
-                            ? null
-                            : () => _removerArquivo('logo'),
-                        icon: const Icon(Icons.delete_outline_rounded),
-                        label: const Text('Remover'),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _arquivoVisualCard(
-                  titulo: 'Assinatura da empresa',
-                  subtitulo:
-                      'Pode ser desenhada no navegador ou importada como imagem.',
-                  bytes: _assinaturaBytes,
-                  arquivo: _arquivos['assinatura_empresa'],
-                  fallbackIcon: Icons.draw_outlined,
-                  actions: [
-                    FilledButton.tonalIcon(
-                      onPressed: _processandoArquivo
-                          ? null
-                          : _desenharAssinatura,
-                      icon: const Icon(Icons.draw_outlined),
-                      label: Text(
-                        _assinaturaBytes == null ? 'Desenhar' : 'Redesenhar',
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _processandoArquivo
-                          ? null
-                          : () => _selecionarImagem('assinatura_empresa'),
-                      icon: const Icon(Icons.upload_file_outlined),
-                      label: const Text('Importar imagem'),
-                    ),
-                    if (_assinaturaBytes != null)
-                      TextButton.icon(
-                        onPressed: _processandoArquivo
-                            ? null
-                            : () => _removerArquivo('assinatura_empresa'),
-                        icon: const Icon(Icons.delete_outline_rounded),
-                        label: const Text('Remover'),
-                      ),
-                  ],
-                ),
-                if (_processandoArquivo) ...[
-                  const SizedBox(height: 12),
-                  const LinearProgressIndicator(minHeight: 2),
-                ],
-              ],
-            ),
-            const SizedBox(height: 14),
-            _secao(
-              titulo: 'Documentos e operação',
-              subtitulo:
-                  'Regras e textos padrão compartilhados com orçamentos e ordens de serviço.',
-              children: [
-                SizedBox(
-                  width: 240,
-                  child: TextField(
-                    controller: _validadeOrcamento,
-                    keyboardType: TextInputType.number,
-                    decoration: _dec(
-                      'Validade do orçamento (dias)',
-                      Icons.event_outlined,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _rodapeDocumentos,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: _dec(
-                    'Rodapé dos documentos',
-                    Icons.subject_outlined,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _termosOrcamento,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: _dec(
-                    'Termos do orçamento',
-                    Icons.description_outlined,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _termosOs,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: _dec(
-                    'Termos da ordem de serviço',
-                    Icons.receipt_long_outlined,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _observacaoPadrao,
-                  minLines: 2,
-                  maxLines: 5,
-                  decoration: _dec('Observação padrão', Icons.notes_outlined),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _secao(
-              titulo: 'Mensagens',
-              subtitulo:
-                  'Modelos usados em contatos com o cliente. Alterações feitas aqui chegam ao Mobile pelo sync.',
-              children: [
-                for (final item in <(String, TextEditingController)>[
-                  ('Agradecimento pós-serviço', _mensagemAgradecimento),
-                  ('Envio de orçamento', _mensagemOrcamento),
-                  ('Confirmação', _mensagemConfirmacao),
-                  ('Entrega', _mensagemEntrega),
-                  ('Cobrança', _mensagemCobranca),
-                ]) ...[
-                  TextField(
-                    controller: item.$2,
-                    minLines: 2,
-                    maxLines: 5,
-                    decoration: InputDecoration(labelText: item.$1),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-              ],
-            ),
-            const SizedBox(height: 16),
-            Card(
-              margin: EdgeInsets.zero,
-              color: ImperiumWebTheme.accentStrong.withValues(alpha: 0.06),
-              child: const Padding(
-                padding: EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.sync_rounded,
-                      color: ImperiumWebTheme.accentStrong,
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Estas configurações ficam no Cloud. O Android compara versões no próximo ciclo de sincronização e aplica a versão remota quando não houver alteração local concorrente.',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
                   ],
                 ),
               ),

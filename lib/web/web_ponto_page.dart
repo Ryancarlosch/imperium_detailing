@@ -412,34 +412,34 @@ class _WebPontoPageState extends State<WebPontoPage>
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 22, 24, 12),
               child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ponto e funcionários',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ponto e funcionários',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          'Equipe, registros de jornada, acessos e configurações do ponto.',
+                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Equipe, registros de jornada, acessos e configurações do ponto.',
-                      style: TextStyle(color: Color(0xFFAAB3BD)),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'Atualizar',
-                onPressed: _carregando ? null : _carregar,
-                icon: const Icon(Icons.refresh_rounded),
-              ),
-            ],
+                  ),
+                  IconButton(
+                    tooltip: 'Atualizar',
+                    onPressed: _carregando ? null : _carregar,
+                    icon: const Icon(Icons.refresh_rounded),
+                  ),
+                ],
               ),
             ),
           ),
