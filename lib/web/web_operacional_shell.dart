@@ -699,7 +699,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
           ? Row(
               children: [
                 Container(
-                  width: ImperiumWebTheme.sidebarWidth,
+                  width: 300,
                   decoration: const BoxDecoration(
                     color: ImperiumWebTheme.surfaceSoft,
                     border: Border(
