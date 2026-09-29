@@ -99,8 +99,9 @@ class CrmAcoesRelacionamentoCloudService {
       limit: 1,
     );
 
-    Map<String, Object?>? existente =
-        existentePorRemoto.isEmpty ? null : existentePorRemoto.first;
+    Map<String, Object?>? existente = existentePorRemoto.isEmpty
+        ? null
+        : existentePorRemoto.first;
 
     final entidadeTipo = (remoto['entidade_tipo'] ?? '').toString();
     final entidadeLocalId = await _localPorRemoto(
@@ -198,7 +199,8 @@ class CrmAcoesRelacionamentoCloudService {
       'criado_em':
           remoto['criado_em']?.toString() ?? DateTime.now().toIso8601String(),
       'atualizado_em':
-          remoto['atualizado_em']?.toString() ?? DateTime.now().toIso8601String(),
+          remoto['atualizado_em']?.toString() ??
+          DateTime.now().toIso8601String(),
       'sync_pendente': 0,
     });
   }

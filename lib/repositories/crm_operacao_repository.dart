@@ -178,7 +178,9 @@ class CrmOperacaoRepository {
     final colunas = await database.rawQuery('PRAGMA table_info($tabelaAcoes)');
     final nomes = colunas.map((e) => e['name']?.toString()).toSet();
     if (!nomes.contains('remoto_id')) {
-      await database.execute('ALTER TABLE $tabelaAcoes ADD COLUMN remoto_id TEXT');
+      await database.execute(
+        'ALTER TABLE $tabelaAcoes ADD COLUMN remoto_id TEXT',
+      );
     }
     if (!nomes.contains('remoto_atualizado_em')) {
       await database.execute(
