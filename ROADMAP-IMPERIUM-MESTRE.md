@@ -2545,3 +2545,33 @@ Status: 🟡 **implementação funcional concluída; CI final em validação**
 - não iniciar antes do fechamento dos gates acima;
 - preservar regras de negócio, serviços Cloud, RLS, CAS e contratos de sincronização;
 - tratar a reestilização como camada visual/UX, sem recriar módulos já sincronizados.
+
+
+---
+
+## 2026-09-29 — Reestilização profissional Web / execução do roadmap
+
+Status: 🟡 **em execução; fundação e módulos principais modernizados, CI final pendente**
+
+Entregue nesta fase:
+- design system Web centralizado em `ImperiumWebTheme`;
+- shell desktop refinado, mantendo navegação responsiva e busca global;
+- Dashboard executivo organizado em canvas responsivo para monitores amplos;
+- Estoque com navegação profissional entre movimentações, produtos e configurações;
+- Ponto/Funcionários com cabeçalho e navegação alinhados ao novo workspace;
+- Configurações da empresa em canvas responsivo;
+- Central de relacionamento/CRM alinhada ao novo canvas;
+- Fluxo de caixa alinhado ao novo padrão desktop;
+- Ordens de Serviço alinhadas ao novo canvas profissional;
+- nenhuma regra de negócio, RLS, CAS, tenant ou contrato Cloud foi recriado pela camada visual;
+- workflow Web Preview ajustado para formatar as fontes Web antes da análise/build, eliminando corrida com o workflow de autoformatação.
+
+Próximos gates desta fase:
+1. concluir a padronização visual dos módulos Web restantes;
+2. Dart Auto Format verde;
+3. Flutter Quality verde;
+4. Web Preview Build verde;
+5. Android APK Build verde;
+6. Mobile APK Build verde;
+7. homologação visual/funcional do Web publicado;
+8. após os gates, alterar o status de **Reestilização profissional do Web** para concluído.
