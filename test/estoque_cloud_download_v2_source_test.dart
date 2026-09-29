@@ -54,9 +54,9 @@ void main() {
     );
   });
 
-  test('SQLite permanece v33', () {
+  test('SQLite permanece v34', () {
     final database = File('lib/database/app_database.dart').readAsStringSync();
 
-    expect(database, contains('static const int schemaVersion = 33;'));
+    expect(database, contains('static const int schemaVersion = 34;'));
   });
 }
