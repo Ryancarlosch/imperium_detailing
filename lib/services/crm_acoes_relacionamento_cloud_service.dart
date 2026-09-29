@@ -253,7 +253,9 @@ class CrmAcoesRelacionamentoCloudService {
             'p_observacoes': (row['observacoes'] ?? '').toString(),
             'p_proximo_contato': proximoContato,
             'p_origem_dispositivo': dispositivoId,
-            'p_interacao_origem_local_id': origemLocalId > 0 ? origemLocalId : id,
+            'p_interacao_origem_local_id': origemLocalId > 0
+                ? origemLocalId
+                : id,
           },
         );
       } else if (status == 'Ignorada') {
