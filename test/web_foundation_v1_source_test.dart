@@ -7,7 +7,7 @@ void main() {
     final source = File('lib/database/app_database.dart').readAsStringSync();
     expect(source, isNot(contains("import 'dart:io';")));
     expect(source, contains("import 'tenant_database_platform.dart';"));
-    expect(source, contains('static const int schemaVersion = 33;'));
+    expect(source, contains('static const int schemaVersion = 34;'));
   });
 
   test('Web usa SQLite WASM e SharedPreferences para tenant', () {
