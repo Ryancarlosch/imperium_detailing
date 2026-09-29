@@ -2549,6 +2549,35 @@ Status: 🟡 **implementação funcional concluída; CI final em validação**
 
 ---
 
+
+
+## 2026-09-29 — Paridade funcional App → Web / auditoria de ações
+
+Status: 🟡 **auditoria de ações em execução**
+
+Objetivo desta etapa:
+- o Web deve expor todas as funções de negócio disponíveis no app Android, usando a mesma fonte Cloud, permissões, RLS, CAS e regras transacionais;
+- não basta o módulo existir no menu: criar, editar, arquivar/inativar, concluir, transferir, conciliar, anexar, gerar documentos e demais ações equivalentes devem estar acessíveis no Web quando tecnicamente aplicáveis;
+- recursos exclusivamente nativos continuam fora da paridade Web: câmera nativa, notificações locais, backup SQLite/Google Drive e offline completo do Android.
+
+Cobertura já confirmada na auditoria de ações:
+- clientes: criar, editar, arquivar/reativar e consultar histórico;
+- veículos e agenda: operações Cloud no workspace;
+- OS: criar, editar, finalizar, correção administrativa, checklist, fotos, assinatura, arquivos e PDF;
+- financeiro: lançamentos previsto/realizado, contas, extrato/comparativo/conciliação, transferências e administração;
+- gestão financeira: fornecedores, taxas de maquininha, custos fixos, metas, plano de contas, mão de obra, folha/pagamentos e histórico salarial;
+- CRM/orçamentos: conversão, PDF/recibo/WhatsApp, campanhas, benefícios e relacionamento;
+- demais módulos de negócio permanecem sob revisão de ações e navegação antes do gate final.
+
+Gates:
+1. eliminar regressões de analyze/test/build introduzidas durante a reestilização;
+2. concluir auditoria App → Web por ação;
+3. implementar gaps encontrados;
+4. Flutter Quality verde;
+5. Web Preview Build verde;
+6. Android e Mobile APK verdes;
+7. homologação funcional Web ↔ Android nos fluxos críticos.
+
 ## 2026-09-29 — Reestilização profissional Web / execução do roadmap
 
 Status: 🟡 **em execução; fundação e módulos principais modernizados, CI final pendente**
