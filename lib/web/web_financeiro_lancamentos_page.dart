@@ -649,8 +649,12 @@ class _WebFinanceiroLancamentosPageState
             builder: (context, constraints) {
               final compacto = constraints.maxWidth < 760;
               final tabela = constraints.maxWidth >= 1050;
+              final larguraBase = constraints.maxWidth >
+                      ImperiumWebTheme.contentMaxWidth
+                  ? ImperiumWebTheme.contentMaxWidth
+                  : constraints.maxWidth;
               final larguraDisponivel =
-                  constraints.maxWidth - (compacto ? 32 : 48);
+                  larguraBase - (compacto ? 32 : 48);
               final colunasResumo = constraints.maxWidth >= 1180
                   ? 5
                   : constraints.maxWidth >= 760
@@ -676,6 +680,14 @@ class _WebFinanceiroLancamentosPageState
                   40,
                 ),
                 children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: ImperiumWebTheme.contentMaxWidth,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1115,6 +1127,10 @@ class _WebFinanceiroLancamentosPageState
                         ),
                       );
                     }),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               );
             },
