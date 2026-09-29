@@ -242,7 +242,8 @@ class CrmAcoesRelacionamentoCloudService {
           }
         }
 
-        final origemLocalId = DateTime.now().microsecondsSinceEpoch;
+        final origemLocalId = _int(row['interacao_local_id']);
+        final dispositivoId = await _dispositivoId(database);
         resposta = await client.rpc(
           'imperium_crm_concluir_acao_web',
           params: <String, dynamic>{
@@ -251,8 +252,8 @@ class CrmAcoesRelacionamentoCloudService {
             'p_atualizado_em_base': atualizadoBase,
             'p_observacoes': (row['observacoes'] ?? '').toString(),
             'p_proximo_contato': proximoContato,
-            'p_origem_dispositivo': 'android-crm-relacionamento',
-            'p_interacao_origem_local_id': origemLocalId,
+            'p_origem_dispositivo': dispositivoId,
+            'p_interacao_origem_local_id': origemLocalId > 0 ? origemLocalId : id,
           },
         );
       } else if (status == 'Ignorada') {
@@ -355,6 +356,11 @@ class CrmAcoesRelacionamentoCloudService {
         'ALTER TABLE crm_acoes_relacionamento ADD COLUMN remoto_atualizado_em TEXT',
       );
     }
+    if (!nomes.contains('interacao_local_id')) {
+      await database.execute(
+        'ALTER TABLE crm_acoes_relacionamento ADD COLUMN interacao_local_id INTEGER',
+      );
+    }
     if (!nomes.contains('sync_pendente')) {
       await database.execute(
         'ALTER TABLE crm_acoes_relacionamento ADD COLUMN sync_pendente INTEGER NOT NULL DEFAULT 0',
@@ -365,6 +371,23 @@ class CrmAcoesRelacionamentoCloudService {
       ON crm_acoes_relacionamento (remoto_id)
       WHERE remoto_id IS NOT NULL
     ''');
+  }
+
+  Future<String> _dispositivoId(Database database) async {
+    final rows = await database.query(
+      'imperium_sync_config',
+      columns: ['dispositivo_id'],
+      where: 'id = 1',
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      throw StateError('Sync operacional ainda não preparou o dispositivo.');
+    }
+    final id = (rows.first['dispositivo_id'] ?? '').toString().trim();
+    if (id.isEmpty) {
+      throw StateError('Identificador do dispositivo está vazio.');
+    }
+    return id;
   }
 
   static int _int(dynamic valor) {
