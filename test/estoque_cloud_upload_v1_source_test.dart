@@ -63,9 +63,9 @@ void main() {
     expect(sql, isNot(contains('imperium_estoque_mov_delete')));
   });
 
-  test('SQLite continua v33 sem migration local', () {
+  test('SQLite continua v34 sem migration local', () {
     final database = File('lib/database/app_database.dart').readAsStringSync();
 
-    expect(database, contains('static const int schemaVersion = 33;'));
+    expect(database, contains('static const int schemaVersion = 34;'));
   });
 }
