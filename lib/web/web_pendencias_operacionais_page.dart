@@ -84,7 +84,8 @@ class _WebPendenciasOperacionaisPageState
     return LayoutBuilder(
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
-        final larguraBase = constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
+        final larguraBase =
+            constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
             ? ImperiumWebTheme.contentMaxWidth
             : constraints.maxWidth;
         final conteudo = larguraBase - (compacto ? 32 : 48);

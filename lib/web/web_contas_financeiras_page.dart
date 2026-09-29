@@ -308,135 +308,147 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
                 children: [
                   Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: ImperiumWebTheme.contentMaxWidth),
+                      constraints: const BoxConstraints(
+                        maxWidth: ImperiumWebTheme.contentMaxWidth,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                  _HeroFinanceiro(
-                    saldoTotal: saldoTotal,
-                    contasAtivas: ativas.length,
-                    moeda: _moeda,
-                  ),
-                  const SizedBox(height: 22),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Suas contas',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
+                          _HeroFinanceiro(
+                            saldoTotal: saldoTotal,
+                            contasAtivas: ativas.length,
+                            moeda: _moeda,
+                          ),
+                          const SizedBox(height: 22),
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Suas contas',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    SizedBox(height: 3),
+                                    Text(
+                                      'Saldo calculado com o mesmo snapshot financeiro usado no Android.',
+                                      style: TextStyle(
+                                        color: Color(0xFFAAB3BD),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 3),
-                            Text(
-                              'Saldo calculado com o mesmo snapshot financeiro usado no Android.',
-                              style: TextStyle(color: Color(0xFFAAB3BD)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      FilledButton.icon(
-                        onPressed: _carregando
-                            ? null
-                            : () => _abrirFormulario(),
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Nova conta'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        selected: _mostrarInativas,
-                        onSelected: (valor) {
-                          setState(() => _mostrarInativas = valor);
-                        },
-                        avatar: const Icon(Icons.archive_outlined, size: 18),
-                        label: const Text('Mostrar inativas'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (visiveis.isEmpty)
-                    const _EstadoVazio(
-                      titulo: 'Nenhuma conta financeira',
-                      detalhe:
-                          'As contas sincronizadas com a empresa aparecerão aqui.',
-                    )
-                  else
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final largura = constraints.maxWidth >= 1180
-                            ? (constraints.maxWidth - 24) / 3
-                            : constraints.maxWidth >= 720
-                            ? (constraints.maxWidth - 12) / 2
-                            : constraints.maxWidth;
+                              const SizedBox(width: 12),
+                              FilledButton.icon(
+                                onPressed: _carregando
+                                    ? null
+                                    : () => _abrirFormulario(),
+                                icon: const Icon(Icons.add_rounded),
+                                label: const Text('Nova conta'),
+                              ),
+                              const SizedBox(width: 8),
+                              FilterChip(
+                                selected: _mostrarInativas,
+                                onSelected: (valor) {
+                                  setState(() => _mostrarInativas = valor);
+                                },
+                                avatar: const Icon(
+                                  Icons.archive_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('Mostrar inativas'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (visiveis.isEmpty)
+                            const _EstadoVazio(
+                              titulo: 'Nenhuma conta financeira',
+                              detalhe:
+                                  'As contas sincronizadas com a empresa aparecerão aqui.',
+                            )
+                          else
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final largura = constraints.maxWidth >= 1180
+                                    ? (constraints.maxWidth - 24) / 3
+                                    : constraints.maxWidth >= 720
+                                    ? (constraints.maxWidth - 12) / 2
+                                    : constraints.maxWidth;
 
-                        return Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            for (final conta in visiveis)
-                              SizedBox(
-                                width: largura,
-                                child: _ContaCard(
-                                  conta: conta,
-                                  moeda: _moeda,
-                                  onTap: () => _abrirConta(conta),
-                                  onEditar: () =>
-                                      _abrirFormulario(conta: conta),
-                                  onAlternar: () => _alternarConta(conta),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-                  const SizedBox(height: 24),
-                  Card(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: ImperiumWebTheme.accentStrong.withValues(
-                                alpha: 0.10,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
+                                return Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children: [
+                                    for (final conta in visiveis)
+                                      SizedBox(
+                                        width: largura,
+                                        child: _ContaCard(
+                                          conta: conta,
+                                          moeda: _moeda,
+                                          onTap: () => _abrirConta(conta),
+                                          onEditar: () =>
+                                              _abrirFormulario(conta: conta),
+                                          onAlternar: () =>
+                                              _alternarConta(conta),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
-                            child: const Icon(
-                              Icons.verified_user_outlined,
-                              color: ImperiumWebTheme.accentStrong,
+                          const SizedBox(height: 24),
+                          Card(
+                            margin: EdgeInsets.zero,
+                            child: Padding(
+                              padding: const EdgeInsets.all(18),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 42,
+                                    height: 42,
+                                    decoration: BoxDecoration(
+                                      color: ImperiumWebTheme.accentStrong
+                                          .withValues(alpha: 0.10),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.verified_user_outlined,
+                                      color: ImperiumWebTheme.accentStrong,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Financeiro compartilhado com o aplicativo',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        SizedBox(height: 4),
+                                        Text(
+                                          'Contas, snapshots, extratos e conciliações usam o mesmo Cloud do aplicativo. Alterações feitas aqui ficam disponíveis no Android no próximo ciclo de sincronização.',
+                                          style: TextStyle(
+                                            color: Color(0xFFAAB3BD),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 14),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Financeiro compartilhado com o aplicativo',
-                                  style: TextStyle(fontWeight: FontWeight.w800),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Contas, snapshots, extratos e conciliações usam o mesmo Cloud do aplicativo. Alterações feitas aqui ficam disponíveis no Android no próximo ciclo de sincronização.',
-                                  style: TextStyle(color: Color(0xFFAAB3BD)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                         ],
                       ),
                     ),

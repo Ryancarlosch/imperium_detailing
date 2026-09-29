@@ -316,7 +316,8 @@ class _WebFotosPageState extends State<WebFotosPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
-        final larguraBase = constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
+        final larguraBase =
+            constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
             ? ImperiumWebTheme.contentMaxWidth
             : constraints.maxWidth;
         final largura = larguraBase - (compacto ? 32 : 48);

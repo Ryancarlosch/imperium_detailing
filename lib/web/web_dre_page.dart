@@ -137,69 +137,71 @@ class _WebDrePageState extends State<WebDrePage> {
   Widget _filtros() {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: ImperiumWebTheme.contentMaxWidth),
+        constraints: const BoxConstraints(
+          maxWidth: ImperiumWebTheme.contentMaxWidth,
+        ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 14, 24, 14),
           child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compacto = constraints.maxWidth < 820;
-          final periodo = Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              IconButton.filledTonal(
-                tooltip: 'Mês anterior',
-                onPressed: _carregando ? null : _mesAnterior,
-                icon: const Icon(Icons.chevron_left_rounded),
-              ),
-              OutlinedButton.icon(
-                onPressed: _carregando ? null : _escolherInicio,
-                icon: const Icon(Icons.calendar_month_outlined),
-                label: Text(_dataBr.format(_inicio)),
-              ),
-              const Text('até'),
-              OutlinedButton.icon(
-                onPressed: _carregando ? null : _escolherFim,
-                icon: const Icon(Icons.event_available_outlined),
-                label: Text(_dataBr.format(_fim)),
-              ),
-              IconButton.filledTonal(
-                tooltip: 'Mês seguinte',
-                onPressed: _carregando ? null : _mesSeguinte,
-                icon: const Icon(Icons.chevron_right_rounded),
-              ),
-            ],
-          );
+            builder: (context, constraints) {
+              final compacto = constraints.maxWidth < 820;
+              final periodo = Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  IconButton.filledTonal(
+                    tooltip: 'Mês anterior',
+                    onPressed: _carregando ? null : _mesAnterior,
+                    icon: const Icon(Icons.chevron_left_rounded),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _carregando ? null : _escolherInicio,
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text(_dataBr.format(_inicio)),
+                  ),
+                  const Text('até'),
+                  OutlinedButton.icon(
+                    onPressed: _carregando ? null : _escolherFim,
+                    icon: const Icon(Icons.event_available_outlined),
+                    label: Text(_dataBr.format(_fim)),
+                  ),
+                  IconButton.filledTonal(
+                    tooltip: 'Mês seguinte',
+                    onPressed: _carregando ? null : _mesSeguinte,
+                    icon: const Icon(Icons.chevron_right_rounded),
+                  ),
+                ],
+              );
 
-          final regime = SegmentedButton<WebDreRegime>(
-            segments: const [
-              ButtonSegment(
-                value: WebDreRegime.competencia,
-                icon: Icon(Icons.receipt_long_outlined),
-                label: Text('Competência'),
-              ),
-              ButtonSegment(
-                value: WebDreRegime.caixa,
-                icon: Icon(Icons.account_balance_wallet_outlined),
-                label: Text('Caixa'),
-              ),
-            ],
-            selected: {_regime},
-            onSelectionChanged: _carregando
-                ? null
-                : (value) => _mudarRegime(value.first),
-          );
+              final regime = SegmentedButton<WebDreRegime>(
+                segments: const [
+                  ButtonSegment(
+                    value: WebDreRegime.competencia,
+                    icon: Icon(Icons.receipt_long_outlined),
+                    label: Text('Competência'),
+                  ),
+                  ButtonSegment(
+                    value: WebDreRegime.caixa,
+                    icon: Icon(Icons.account_balance_wallet_outlined),
+                    label: Text('Caixa'),
+                  ),
+                ],
+                selected: {_regime},
+                onSelectionChanged: _carregando
+                    ? null
+                    : (value) => _mudarRegime(value.first),
+              );
 
-          if (compacto) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [regime, const SizedBox(height: 12), periodo],
-            );
-          }
+              if (compacto) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [regime, const SizedBox(height: 12), periodo],
+                );
+              }
 
-          return Row(children: [regime, const Spacer(), periodo]);
-        },
+              return Row(children: [regime, const Spacer(), periodo]);
+            },
           ),
         ),
       ),

@@ -582,80 +582,85 @@ class _WebCrmCampanhasPageState extends State<WebCrmCampanhasPage> {
 
                 return Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: ImperiumWebTheme.contentMaxWidth),
+                    constraints: const BoxConstraints(
+                      maxWidth: ImperiumWebTheme.contentMaxWidth,
+                    ),
                     child: Padding(
                       padding: EdgeInsets.fromLTRB(padding, 18, padding, 0),
                       child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          FilledButton.icon(
-                            onPressed: () => _editarCampanha(),
-                            icon: const Icon(Icons.add_rounded),
-                            label: const Text('Nova campanha'),
-                          ),
-                          FilledButton.tonalIcon(
-                            onPressed: _gerando ? null : _gerarBeneficios,
-                            icon: _gerando
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.auto_awesome_outlined),
-                            label: Text(
-                              _gerando
-                                  ? 'Gerando...'
-                                  : 'Gerar benefícios agora',
-                            ),
-                          ),
-                          Chip(
-                            avatar: const Icon(
-                              Icons.campaign_outlined,
-                              size: 17,
-                            ),
-                            label: Text('$ativas campanha(s) ativa(s)'),
-                          ),
-                          Chip(
-                            avatar: const Icon(Icons.redeem_outlined, size: 17),
-                            label: Text('$cuponsAtivos cupom(ns) ativo(s)'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Expanded(
-                        child: DefaultTabController(
-                          length: 2,
-                          child: Column(
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              const TabBar(
-                                tabs: [
-                                  Tab(
-                                    icon: Icon(Icons.campaign_outlined),
-                                    text: 'Campanhas',
-                                  ),
-                                  Tab(
-                                    icon: Icon(Icons.redeem_outlined),
-                                    text: 'Cupons e benefícios',
-                                  ),
-                                ],
+                              FilledButton.icon(
+                                onPressed: () => _editarCampanha(),
+                                icon: const Icon(Icons.add_rounded),
+                                label: const Text('Nova campanha'),
                               ),
-                              Expanded(
-                                child: TabBarView(
-                                  children: [_campanhasTab(), _cuponsTab()],
+                              FilledButton.tonalIcon(
+                                onPressed: _gerando ? null : _gerarBeneficios,
+                                icon: _gerando
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.auto_awesome_outlined),
+                                label: Text(
+                                  _gerando
+                                      ? 'Gerando...'
+                                      : 'Gerar benefícios agora',
                                 ),
+                              ),
+                              Chip(
+                                avatar: const Icon(
+                                  Icons.campaign_outlined,
+                                  size: 17,
+                                ),
+                                label: Text('$ativas campanha(s) ativa(s)'),
+                              ),
+                              Chip(
+                                avatar: const Icon(
+                                  Icons.redeem_outlined,
+                                  size: 17,
+                                ),
+                                label: Text('$cuponsAtivos cupom(ns) ativo(s)'),
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                    ],
+                          const SizedBox(height: 14),
+                          Expanded(
+                            child: DefaultTabController(
+                              length: 2,
+                              child: Column(
+                                children: [
+                                  const TabBar(
+                                    tabs: [
+                                      Tab(
+                                        icon: Icon(Icons.campaign_outlined),
+                                        text: 'Campanhas',
+                                      ),
+                                      Tab(
+                                        icon: Icon(Icons.redeem_outlined),
+                                        text: 'Cupons e benefícios',
+                                      ),
+                                    ],
+                                  ),
+                                  Expanded(
+                                    child: TabBarView(
+                                      children: [_campanhasTab(), _cuponsTab()],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

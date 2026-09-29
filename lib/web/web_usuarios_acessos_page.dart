@@ -571,7 +571,8 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1050;
-        final larguraBase = constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
+        final larguraBase =
+            constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
             ? ImperiumWebTheme.contentMaxWidth
             : constraints.maxWidth;
         final larguraDisponivel = larguraBase - (compacto ? 32 : 48);

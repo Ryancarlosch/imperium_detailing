@@ -332,7 +332,8 @@ class _WebServicosCatalogoPageState extends State<WebServicosCatalogoPage> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 900;
-        final larguraBase = constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
+        final larguraBase =
+            constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
             ? ImperiumWebTheme.contentMaxWidth
             : constraints.maxWidth;
         final conteudo = larguraBase - (compacto ? 32 : 48);
