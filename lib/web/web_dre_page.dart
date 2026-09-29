@@ -135,9 +135,12 @@ class _WebDrePageState extends State<WebDrePage> {
   }
 
   Widget _filtros() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 14),
-      child: LayoutBuilder(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: ImperiumWebTheme.contentMaxWidth),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 14),
+          child: LayoutBuilder(
         builder: (context, constraints) {
           final compacto = constraints.maxWidth < 820;
           final periodo = Wrap(
@@ -197,6 +200,8 @@ class _WebDrePageState extends State<WebDrePage> {
 
           return Row(children: [regime, const Spacer(), periodo]);
         },
+          ),
+        ),
       ),
     );
   }
