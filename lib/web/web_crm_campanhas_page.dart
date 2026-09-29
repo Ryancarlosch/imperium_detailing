@@ -580,9 +580,12 @@ class _WebCrmCampanhasPageState extends State<WebCrmCampanhasPage> {
                 final compacto = constraints.maxWidth < 760;
                 final padding = compacto ? 16.0 : 24.0;
 
-                return Padding(
-                  padding: EdgeInsets.fromLTRB(padding, 18, padding, 0),
-                  child: Column(
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: ImperiumWebTheme.contentMaxWidth),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(padding, 18, padding, 0),
+                      child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Wrap(
@@ -653,6 +656,8 @@ class _WebCrmCampanhasPageState extends State<WebCrmCampanhasPage> {
                         ),
                       ),
                     ],
+                      ),
+                    ),
                   ),
                 );
               },
