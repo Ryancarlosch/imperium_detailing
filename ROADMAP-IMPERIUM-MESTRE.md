@@ -5,7 +5,7 @@
 > **Regra principal:** nenhum item antigo deve ser apagado. Quando algo for concluído,
 > o item permanece no roadmap e muda de status, recebendo data/notas quando necessário.
 
-Última atualização: **2026-09-14**
+Última atualização: **2026-09-29**
 ## BASELINE OFICIAL — 2026-09-01
 
 - Branch oficial: `desenvolvimento`.
@@ -2464,3 +2464,84 @@ Validação:
 - último HEAD antes deste checkpoint foi formatado automaticamente pelo CI;
 - Flutter Quality e Web Preview serão usados como gate deste checkpoint;
 - falha recente do APK foi externa ao código: HTTP 500 ao baixar Gradle 9.1.0.
+
+
+---
+
+## 2026-09-29 — Paridade Mobile → Web / Central de relacionamento Cloud
+
+Status: 🟡 **implementação funcional concluída; CI final em validação**
+
+### Central de relacionamento
+
+- migration `20260928204602_crm_acoes_relacionamento_cloud.sql` registrada no repositório;
+- tabela Cloud `imperium_crm_acoes_relacionamento` com RLS por módulo CRM;
+- fontes centralizadas:
+  - Follow-up de lead;
+  - Follow-up de orçamento;
+  - Pós-venda de OS;
+  - Benefício/cupom;
+- Web conectado às RPCs de sincronizar, concluir, adiar e ignorar;
+- página `WebCrmOperacaoPage` conectada ao CRM Web;
+- Android/SQLite evoluído para schema **v34**;
+- ações locais armazenam `remoto_id`, `remoto_atualizado_em`, `interacao_local_id` e `sync_pendente`;
+- alterações feitas offline no Android são mantidas em fila e publicadas no Cloud quando a conexão volta;
+- conclusão de follow-up reutiliza a origem/local_id da interação SQLite para impedir duplicação quando o sync geral do CRM rodar;
+- CAS remoto continua usando `atualizado_em` para impedir sobrescrita concorrente;
+- testes de contrato adicionados para migration, Web, SQLite v34 e sync bidirecional;
+- workflow de APK debug adicionado ao CI.
+
+### Auditoria funcional Mobile × Web
+
+**Paridade funcional já coberta no Web:**
+
+- Dashboard gerencial;
+- Clientes;
+- Veículos;
+- Agenda;
+- Ordens de Serviço: criação, edição, finalização, correção administrativa, arquivos/PDF/WhatsApp;
+- Estoque e configurações compartilhadas;
+- Financeiro, contas, DRE, relatórios, conciliação, transferências e administração financeira;
+- Orçamentos, edição atômica, PDF/recibo/WhatsApp e conversão para OS;
+- CRM, conversão Lead → Cliente/Agendamento, campanhas, benefícios/cupons e Central de relacionamento;
+- Precificação;
+- Ponto/funcionários e histórico salarial;
+- Pós-venda;
+- Marketing;
+- Serviços;
+- Fotos;
+- Fiscal Cloud;
+- Usuários/acessos;
+- Configurações da empresa;
+- Central Cloud/diagnóstico.
+
+**Diferenças que permanecem intencionalmente específicas de plataforma e não bloqueiam a paridade de negócio:**
+
+- backup local/Google Drive do banco SQLite;
+- captura por câmera e integrações nativas do Android;
+- notificações locais do aparelho;
+- comportamento offline completo do Android, enquanto o Web permanece online-first.
+
+**Gates antes da reestilização profissional do Web:**
+
+1. Dart Auto Format sem alterações pendentes;
+2. Flutter Quality verde;
+3. Web Preview Build verde;
+4. Android APK Build verde;
+5. confirmar no Supabase que a migration `crm_acoes_relacionamento_cloud` permanece aplicada;
+6. teste funcional Web ↔ Android da Central:
+   - gerar ação;
+   - concluir;
+   - adiar;
+   - ignorar;
+   - repetir um caso offline → online;
+   - confirmar ausência de interação duplicada;
+7. somente depois iniciar a reestilização profissional do Web.
+
+### Próxima fase após os gates
+
+⬜ **Reestilização profissional do Web**
+
+- não iniciar antes do fechamento dos gates acima;
+- preservar regras de negócio, serviços Cloud, RLS, CAS e contratos de sincronização;
+- tratar a reestilização como camada visual/UX, sem recriar módulos já sincronizados.
