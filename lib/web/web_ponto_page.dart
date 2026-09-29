@@ -404,9 +404,14 @@ class _WebPontoPageState extends State<WebPontoPage>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 22, 24, 12),
-          child: Row(
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: ImperiumWebTheme.contentMaxWidth,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 12),
+              child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Expanded(
@@ -435,10 +440,12 @@ class _WebPontoPageState extends State<WebPontoPage>
                 icon: const Icon(Icons.refresh_rounded),
               ),
             ],
+              ),
+            ),
           ),
         ),
         Material(
-          color: Colors.transparent,
+          color: ImperiumWebTheme.surfaceSoft,
           child: TabBar(
             controller: _tabs,
             tabs: const [
