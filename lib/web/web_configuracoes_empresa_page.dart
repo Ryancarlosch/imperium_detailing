@@ -596,6 +596,14 @@ class _WebConfiguracoesEmpresaPageState
             40,
           ),
           children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: ImperiumWebTheme.contentMaxWidth,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1046,6 +1054,10 @@ class _WebConfiguracoesEmpresaPageState
                         'Estas configurações ficam no Cloud. O Android compara versões no próximo ciclo de sincronização e aplica a versão remota quando não houver alteração local concorrente.',
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ),
                   ],
                 ),
               ),
