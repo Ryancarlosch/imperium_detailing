@@ -27,10 +27,10 @@ void main() {
     expect(platformIo, isNot(contains('origem.rename(')));
   });
 
-  test('Schema de dominio continua v33', () {
+  test('Schema de dominio continua v34', () {
     final source = File('lib/database/app_database.dart').readAsStringSync();
 
-    expect(source, contains('static const int schemaVersion = 33;'));
+    expect(source, contains('static const int schemaVersion = 34;'));
   });
 
   test('Startup prepara tenant antes da sessao local', () {
