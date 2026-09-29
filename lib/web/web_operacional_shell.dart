@@ -525,9 +525,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         automaticallyImplyLeading: false,
         backgroundColor: ImperiumWebTheme.background,
         surfaceTintColor: Colors.transparent,
-        shape: const Border(
-          bottom: BorderSide(color: ImperiumWebTheme.border),
-        ),
+        shape: const Border(bottom: BorderSide(color: ImperiumWebTheme.border)),
         leading: desktop
             ? null
             : Builder(
