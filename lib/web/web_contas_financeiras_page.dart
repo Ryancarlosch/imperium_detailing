@@ -306,6 +306,12 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
               ListView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
                 children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: ImperiumWebTheme.contentMaxWidth),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                   _HeroFinanceiro(
                     saldoTotal: saldoTotal,
                     contasAtivas: ativas.length,
@@ -427,6 +433,10 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
                               ],
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
                         ],
                       ),
                     ),
