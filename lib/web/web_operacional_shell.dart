@@ -214,7 +214,8 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       selected: selecionado,
       selectedTileColor: ImperiumWebTheme.accentStrong.withValues(alpha: 0.10),
       selectedColor: ImperiumWebTheme.accentStrong,
-      leading: Icon(icone, size: 21),
+      hoverColor: ImperiumWebTheme.hover,
+      leading: Icon(icone, size: 20),
       title: Text(
         titulo,
         style: TextStyle(
@@ -244,7 +245,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
 
   Widget _menu() {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
       children: [
         _itemMenu(
           indice: 0,
@@ -520,8 +521,13 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
               child: SafeArea(child: _conteudoMenuLateral()),
             ),
       appBar: AppBar(
-        toolbarHeight: compacto ? 62 : 68,
+        toolbarHeight: compacto ? 62 : 72,
         automaticallyImplyLeading: false,
+        backgroundColor: ImperiumWebTheme.background,
+        surfaceTintColor: Colors.transparent,
+        shape: const Border(
+          bottom: BorderSide(color: ImperiumWebTheme.border),
+        ),
         leading: desktop
             ? null
             : Builder(
@@ -566,11 +572,25 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.dashboard_outlined),
             ),
-          IconButton(
-            tooltip: 'Busca global',
-            onPressed: _abrirBuscaGlobal,
-            icon: const Icon(Icons.search_rounded),
-          ),
+          if (desktop)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              child: OutlinedButton.icon(
+                onPressed: _abrirBuscaGlobal,
+                icon: const Icon(Icons.search_rounded, size: 18),
+                label: const Text('Buscar'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(112, 42),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              tooltip: 'Busca global',
+              onPressed: _abrirBuscaGlobal,
+              icon: const Icon(Icons.search_rounded),
+            ),
           IconButton(
             tooltip: 'Atualizar página',
             onPressed: _atualizar,
@@ -681,9 +701,9 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
           ? Row(
               children: [
                 Container(
-                  width: 300,
+                  width: ImperiumWebTheme.sidebarWidth,
                   decoration: const BoxDecoration(
-                    color: ImperiumWebTheme.surface,
+                    color: ImperiumWebTheme.surfaceSoft,
                     border: Border(
                       right: BorderSide(color: ImperiumWebTheme.border),
                     ),
