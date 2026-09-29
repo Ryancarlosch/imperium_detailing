@@ -377,6 +377,7 @@ class AppDatabase {
         atualizado_em TEXT NOT NULL,
         remoto_id TEXT,
         remoto_atualizado_em TEXT,
+        interacao_local_id INTEGER,
         sync_pendente INTEGER NOT NULL DEFAULT 0,
         CHECK (prioridade IN ('Baixa', 'Normal', 'Alta')),
         CHECK (status IN ('Pendente', 'Concluida', 'Adiada', 'Ignorada'))
@@ -4087,6 +4088,12 @@ class AppDatabase {
       tabela: 'crm_acoes_relacionamento',
       coluna: 'remoto_atualizado_em',
       definicao: 'TEXT',
+    );
+    await _adicionarColunaSeNecessario(
+      database: database,
+      tabela: 'crm_acoes_relacionamento',
+      coluna: 'interacao_local_id',
+      definicao: 'INTEGER',
     );
     await _adicionarColunaSeNecessario(
       database: database,
