@@ -120,6 +120,7 @@ class _WebFinanceiroAdministracaoPageState
       child: Column(
         children: [
           const Material(
+            color: ImperiumWebTheme.surfaceSoft,
             child: TabBar(
               isScrollable: true,
               tabs: [
