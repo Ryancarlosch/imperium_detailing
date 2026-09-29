@@ -59,7 +59,7 @@ void main() {
     expect(source, contains("'Central Cloud'"));
   });
 
-  test('220h e SQLite v33 continuam preservados', () {
+  test('220h e SQLite v34 continuam preservados', () {
     expect(
       File('lib/config/imperium_regras_negocio.dart').readAsStringSync(),
       contains('horasMensaisPadrao = 220.0'),
