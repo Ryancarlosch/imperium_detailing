@@ -731,6 +731,7 @@ class CrmOperacaoRepository {
           'concluida_em': agora,
           'observacoes': observacoes.trim(),
           'atualizado_em': agora,
+          'sync_pendente': 1,
         },
         where: 'id = ?',
         whereArgs: [acaoId],
@@ -761,7 +762,6 @@ class CrmOperacaoRepository {
       }
     });
 
-    await CrmAcoesRelacionamentoCloudService.instance.marcarPendente(acaoId);
     await CrmAcoesRelacionamentoCloudService.instance.sincronizar();
   }
 
@@ -780,6 +780,7 @@ class CrmOperacaoRepository {
         'vencimento': _dataDia(nova),
         'adiada_para': _dataDia(nova),
         'atualizado_em': DateTime.now().toIso8601String(),
+        'sync_pendente': 1,
       },
       where: "id = ? AND status IN ('Pendente', 'Adiada')",
       whereArgs: [acaoId],
@@ -800,6 +801,7 @@ class CrmOperacaoRepository {
         'status': 'Ignorada',
         'observacoes': motivo.trim(),
         'atualizado_em': DateTime.now().toIso8601String(),
+        'sync_pendente': 1,
       },
       where: "id = ? AND status != 'Concluida'",
       whereArgs: [acaoId],
