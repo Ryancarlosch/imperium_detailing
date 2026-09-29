@@ -40,10 +40,10 @@ void main() {
     expect(publicar, greaterThan(reconciliar));
   });
 
-  test('SQLite continua v33', () {
+  test('SQLite continua v34', () {
     expect(
       File('lib/database/app_database.dart').readAsStringSync(),
-      contains('static const int schemaVersion = 33;'),
+      contains('static const int schemaVersion = 34;'),
     );
   });
 }
