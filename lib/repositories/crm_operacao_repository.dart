@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
 import '../models/crm_acao_relacionamento.dart';
+import '../services/crm_acoes_relacionamento_cloud_service.dart';
 
 class CrmOperacaoResumo {
   const CrmOperacaoResumo({
@@ -151,6 +152,9 @@ class CrmOperacaoRepository {
         observacoes TEXT NOT NULL DEFAULT '',
         criado_em TEXT NOT NULL,
         atualizado_em TEXT NOT NULL,
+        remoto_id TEXT,
+        remoto_atualizado_em TEXT,
+        sync_pendente INTEGER NOT NULL DEFAULT 0,
         CHECK (prioridade IN ('Baixa', 'Normal', 'Alta')),
         CHECK (status IN ('Pendente', 'Concluida', 'Adiada', 'Ignorada'))
       )
@@ -170,23 +174,47 @@ class CrmOperacaoRepository {
       CREATE INDEX IF NOT EXISTS idx_crm_acoes_cliente
       ON $tabelaAcoes (cliente_id, status)
     ''');
+
+    final colunas = await database.rawQuery('PRAGMA table_info($tabelaAcoes)');
+    final nomes = colunas.map((e) => e['name']?.toString()).toSet();
+    if (!nomes.contains('remoto_id')) {
+      await database.execute('ALTER TABLE $tabelaAcoes ADD COLUMN remoto_id TEXT');
+    }
+    if (!nomes.contains('remoto_atualizado_em')) {
+      await database.execute(
+        'ALTER TABLE $tabelaAcoes ADD COLUMN remoto_atualizado_em TEXT',
+      );
+    }
+    if (!nomes.contains('sync_pendente')) {
+      await database.execute(
+        'ALTER TABLE $tabelaAcoes ADD COLUMN sync_pendente INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    await database.execute('''
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_acoes_remoto_id
+      ON $tabelaAcoes (remoto_id)
+      WHERE remoto_id IS NOT NULL
+    ''');
   }
 
   Future<int> sincronizarAcoes({DateTime? referencia}) async {
     final database = await _databaseProvider();
     final ref = referencia ?? DateTime.now();
-    return database.transaction<int>((transaction) async {
+    final criadas = await database.transaction<int>((transaction) async {
       await _garantirEstrutura(transaction);
 
       await _invalidarAcoesSemFonte(transaction);
 
-      var criadas = 0;
-      criadas += await _sincronizarLeads(transaction, ref);
-      criadas += await _sincronizarOrcamentos(transaction, ref);
-      criadas += await _sincronizarPosVenda(transaction, ref);
-      criadas += await _sincronizarCupons(transaction, ref);
-      return criadas;
+      var total = 0;
+      total += await _sincronizarLeads(transaction, ref);
+      total += await _sincronizarOrcamentos(transaction, ref);
+      total += await _sincronizarPosVenda(transaction, ref);
+      total += await _sincronizarCupons(transaction, ref);
+      return total;
     });
+
+    await CrmAcoesRelacionamentoCloudService.instance.sincronizar();
+    return criadas;
   }
 
   Future<int> _sincronizarLeads(
@@ -732,6 +760,9 @@ class CrmOperacaoRepository {
         }
       }
     });
+
+    await CrmAcoesRelacionamentoCloudService.instance.marcarPendente(acaoId);
+    await CrmAcoesRelacionamentoCloudService.instance.sincronizar();
   }
 
   Future<void> adiarAcao(int acaoId, DateTime novaData) async {
@@ -756,6 +787,8 @@ class CrmOperacaoRepository {
     if (alterados == 0) {
       throw StateError('Ação não está disponível para adiamento.');
     }
+    await CrmAcoesRelacionamentoCloudService.instance.marcarPendente(acaoId);
+    await CrmAcoesRelacionamentoCloudService.instance.sincronizar();
   }
 
   Future<void> ignorarAcao(int acaoId, {String motivo = ''}) async {
@@ -771,6 +804,8 @@ class CrmOperacaoRepository {
       where: "id = ? AND status != 'Concluida'",
       whereArgs: [acaoId],
     );
+    await CrmAcoesRelacionamentoCloudService.instance.marcarPendente(acaoId);
+    await CrmAcoesRelacionamentoCloudService.instance.sincronizar();
   }
 
   Future<int> criarOuAtualizarLeadDoOrcamento(int orcamentoId) async {
