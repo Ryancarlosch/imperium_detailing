@@ -98,7 +98,7 @@ void main() {
     expect(source, contains('troca de empresa'));
   });
 
-  test('Migration possui RLS e SQLite continua v33', () {
+  test('Migration possui RLS e SQLite continua v34', () {
     final sql = File(
       'supabase/migrations/20260913021355_configuracoes_cloud_v1.sql',
     ).readAsStringSync();
@@ -112,7 +112,7 @@ void main() {
 
     expect(
       File('lib/database/app_database.dart').readAsStringSync(),
-      contains('static const int schemaVersion = 33;'),
+      contains('static const int schemaVersion = 34;'),
     );
   });
 }
