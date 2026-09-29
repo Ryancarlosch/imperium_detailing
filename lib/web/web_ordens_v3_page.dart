@@ -777,7 +777,11 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1050;
-        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraBase = constraints.maxWidth >
+                ImperiumWebTheme.contentMaxWidth
+            ? ImperiumWebTheme.contentMaxWidth
+            : constraints.maxWidth;
+        final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1180
             ? 4
             : constraints.maxWidth >= 720
@@ -796,6 +800,14 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
               40,
             ),
             children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: ImperiumWebTheme.contentMaxWidth,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1150,6 +1162,10 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                     ),
                   );
                 }),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         );
