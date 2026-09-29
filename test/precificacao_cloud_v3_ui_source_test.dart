@@ -66,7 +66,7 @@ void main() {
     );
     expect(
       File('lib/database/app_database.dart').readAsStringSync(),
-      contains('static const int schemaVersion = 33;'),
+      contains('static const int schemaVersion = 34;'),
     );
   });
 }
