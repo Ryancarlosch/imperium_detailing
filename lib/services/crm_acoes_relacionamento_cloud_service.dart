@@ -22,8 +22,9 @@ class CrmAcoesRelacionamentoCloudService {
 
   Future<void> sincronizar() async {
     final client = _client;
+    if (client == null) return;
     final empresaId = (await _appDatabase.empresaAtivaId)?.trim() ?? '';
-    if (client == null || empresaId.isEmpty) return;
+    if (empresaId.isEmpty) return;
 
     try {
       final database = await _appDatabase.database;
