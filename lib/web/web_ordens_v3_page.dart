@@ -777,8 +777,8 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1050;
-        final larguraBase = constraints.maxWidth >
-                ImperiumWebTheme.contentMaxWidth
+        final larguraBase =
+            constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
             ? ImperiumWebTheme.contentMaxWidth
             : constraints.maxWidth;
         final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
@@ -808,360 +808,394 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Editar ordens de serviço',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        SizedBox(height: 5),
-                        Text(
-                          'OS abertas/em andamento com CAS; finalizadas com correção administrativa auditada.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Atualizar',
-                    onPressed: _carregar,
-                    icon: const Icon(Icons.refresh_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _resumo(
-                    width: larguraResumo,
-                    titulo: 'Abertas',
-                    valor: '$abertas',
-                    detalhe: 'Disponíveis para edição',
-                    icone: Icons.edit_note_outlined,
-                  ),
-                  _resumo(
-                    width: larguraResumo,
-                    titulo: 'Em andamento',
-                    valor: '$andamento',
-                    detalhe: 'Em execução e ainda editáveis',
-                    icone: Icons.car_repair_outlined,
-                  ),
-                  _resumo(
-                    width: larguraResumo,
-                    titulo: 'Valor editável',
-                    valor: _moeda.format(valorEditavel),
-                    detalhe: 'Total negociado das OS editáveis',
-                    icone: Icons.payments_outlined,
-                  ),
-                  _resumo(
-                    width: larguraResumo,
-                    titulo: 'Protegidas',
-                    valor: '$bloqueadas',
-                    detalhe: 'Finalizadas por revisão; canceladas bloqueadas',
-                    icone: Icons.lock_outline_rounded,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-              Card(
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: compacto ? larguraDisponivel - 28 : 430,
-                        child: TextField(
-                          controller: _busca,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.search_rounded),
-                            hintText:
-                                'Buscar OS, cliente, veículo ou responsável',
-                            suffixIcon: _busca.text.isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: 'Limpar busca',
-                                    onPressed: () {
-                                      _busca.clear();
-                                      setState(() {});
-                                    },
-                                    icon: const Icon(Icons.close_rounded),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Editar ordens de serviço',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
                                   ),
+                                ),
+                                SizedBox(height: 5),
+                                Text(
+                                  'OS abertas/em andamento com CAS; finalizadas com correção administrativa auditada.',
+                                  style: TextStyle(color: Color(0xFFAAB3BD)),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                          IconButton(
+                            tooltip: 'Atualizar',
+                            onPressed: _carregar,
+                            icon: const Icon(Icons.refresh_rounded),
+                          ),
+                        ],
                       ),
-                      SizedBox(
-                        width: 190,
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _status,
-                          decoration: const InputDecoration(
-                            labelText: 'Status',
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          _resumo(
+                            width: larguraResumo,
+                            titulo: 'Abertas',
+                            valor: '$abertas',
+                            detalhe: 'Disponíveis para edição',
+                            icone: Icons.edit_note_outlined,
                           ),
-                          items:
-                              const [
-                                    'Todos',
-                                    'Aberta',
-                                    'Em andamento',
-                                    'Finalizada',
-                                    'Cancelada',
-                                  ]
-                                  .map(
-                                    (item) => DropdownMenuItem(
-                                      value: item,
-                                      child: Text(item),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged: (v) =>
-                              setState(() => _status = v ?? 'Todos'),
-                        ),
+                          _resumo(
+                            width: larguraResumo,
+                            titulo: 'Em andamento',
+                            valor: '$andamento',
+                            detalhe: 'Em execução e ainda editáveis',
+                            icone: Icons.car_repair_outlined,
+                          ),
+                          _resumo(
+                            width: larguraResumo,
+                            titulo: 'Valor editável',
+                            valor: _moeda.format(valorEditavel),
+                            detalhe: 'Total negociado das OS editáveis',
+                            icone: Icons.payments_outlined,
+                          ),
+                          _resumo(
+                            width: larguraResumo,
+                            titulo: 'Protegidas',
+                            valor: '$bloqueadas',
+                            detalhe:
+                                'Finalizadas por revisão; canceladas bloqueadas',
+                            icone: Icons.lock_outline_rounded,
+                          ),
+                        ],
                       ),
-                      Text(
-                        '${filtradas.length} resultado(s)',
-                        style: const TextStyle(
-                          color: Color(0xFF89939E),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              if (filtradas.isEmpty)
-                const Card(
-                  margin: EdgeInsets.zero,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.edit_note_outlined,
-                          size: 42,
-                          color: Color(0xFF89939E),
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'Nenhuma OS encontrada',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else if (tabela)
-                Card(
-                  margin: EdgeInsets.zero,
-                  clipBehavior: Clip.antiAlias,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      headingRowHeight: 52,
-                      dataRowMinHeight: 62,
-                      dataRowMaxHeight: 80,
-                      columns: const [
-                        DataColumn(label: Text('OS / CLIENTE')),
-                        DataColumn(label: Text('VEÍCULO')),
-                        DataColumn(label: Text('STATUS')),
-                        DataColumn(label: Text('RESPONSÁVEL')),
-                        DataColumn(label: Text('ABERTURA')),
-                        DataColumn(label: Text('VALOR')),
-                        DataColumn(label: Text('AÇÕES')),
-                      ],
-                      rows: filtradas.map((os) {
-                        final negociado = OrdemServicoValor.valorNegociado(
-                          valorTotal: _double(os['valor_total']),
-                          desconto: _double(os['desconto']),
-                          descontoNegociacao: _double(
-                            os['desconto_negociacao'],
-                          ),
-                          acrescimoNegociacao: _double(
-                            os['acrescimo_negociacao'],
-                          ),
-                          jurosParcelamento: _double(os['juros_parcelamento']),
-                        );
-                        final editavel =
-                            os['status'] == 'Aberta' ||
-                            os['status'] == 'Em andamento';
-
-                        return DataRow(
-                          cells: [
-                            DataCell(
+                      const SizedBox(height: 22),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
                               SizedBox(
-                                width: 250,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'OS ${os['numero'] ?? ''}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                      ),
+                                width: compacto ? larguraDisponivel - 28 : 430,
+                                child: TextField(
+                                  controller: _busca,
+                                  onChanged: (_) => setState(() {}),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(
+                                      Icons.search_rounded,
                                     ),
-                                    Text(
-                                      nomes[os['cliente_id']?.toString()] ??
-                                          'Cliente',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Color(0xFFAAB3BD),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
+                                    hintText:
+                                        'Buscar OS, cliente, veículo ou responsável',
+                                    suffixIcon: _busca.text.isEmpty
+                                        ? null
+                                        : IconButton(
+                                            tooltip: 'Limpar busca',
+                                            onPressed: () {
+                                              _busca.clear();
+                                              setState(() {});
+                                            },
+                                            icon: const Icon(
+                                              Icons.close_rounded,
+                                            ),
+                                          ),
+                                  ),
                                 ),
                               ),
-                            ),
-                            DataCell(
                               SizedBox(
-                                width: 220,
-                                child: Text(
-                                  carros[os['veiculo_id']?.toString()] ?? '—',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                width: 190,
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: _status,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Status',
+                                  ),
+                                  items:
+                                      const [
+                                            'Todos',
+                                            'Aberta',
+                                            'Em andamento',
+                                            'Finalizada',
+                                            'Cancelada',
+                                          ]
+                                          .map(
+                                            (item) => DropdownMenuItem(
+                                              value: item,
+                                              child: Text(item),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (v) =>
+                                      setState(() => _status = v ?? 'Todos'),
                                 ),
                               ),
-                            ),
-                            DataCell(
-                              _statusChip(
-                                (os['status'] ?? 'Sem status').toString(),
-                              ),
-                            ),
-                            DataCell(
-                              SizedBox(
-                                width: 170,
-                                child: Text(
-                                  (os['funcionario_responsavel'] ?? '—')
-                                      .toString(),
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text((os['data_abertura'] ?? '—').toString()),
-                            ),
-                            DataCell(
                               Text(
-                                _moeda.format(negociado),
+                                '${filtradas.length} resultado(s)',
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF89939E),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      if (filtradas.isEmpty)
+                        const Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 40,
                             ),
-                            DataCell(_acoesOs(os, editavel)),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                )
-              else
-                ...filtradas.map((os) {
-                  final negociado = OrdemServicoValor.valorNegociado(
-                    valorTotal: _double(os['valor_total']),
-                    desconto: _double(os['desconto']),
-                    descontoNegociacao: _double(os['desconto_negociacao']),
-                    acrescimoNegociacao: _double(os['acrescimo_negociacao']),
-                    jurosParcelamento: _double(os['juros_parcelamento']),
-                  );
-                  final editavel =
-                      os['status'] == 'Aberta' ||
-                      os['status'] == 'Em andamento';
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Card(
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 13, 8, 13),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              child: Icon(
-                                editavel
-                                    ? Icons.edit_note_outlined
-                                    : Icons.lock_outline,
-                              ),
-                            ),
-                            const SizedBox(width: 11),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'OS ${os['numero'] ?? ''} · '
-                                    '${nomes[os['cliente_id']?.toString()] ?? 'Cliente'}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                    ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.edit_note_outlined,
+                                  size: 42,
+                                  color: Color(0xFF89939E),
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                  'Nenhuma OS encontrada',
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w900,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    [
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (tabela)
+                        Card(
+                          margin: EdgeInsets.zero,
+                          clipBehavior: Clip.antiAlias,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(
+                              headingRowHeight: 52,
+                              dataRowMinHeight: 62,
+                              dataRowMaxHeight: 80,
+                              columns: const [
+                                DataColumn(label: Text('OS / CLIENTE')),
+                                DataColumn(label: Text('VEÍCULO')),
+                                DataColumn(label: Text('STATUS')),
+                                DataColumn(label: Text('RESPONSÁVEL')),
+                                DataColumn(label: Text('ABERTURA')),
+                                DataColumn(label: Text('VALOR')),
+                                DataColumn(label: Text('AÇÕES')),
+                              ],
+                              rows: filtradas.map((os) {
+                                final negociado =
+                                    OrdemServicoValor.valorNegociado(
+                                      valorTotal: _double(os['valor_total']),
+                                      desconto: _double(os['desconto']),
+                                      descontoNegociacao: _double(
+                                        os['desconto_negociacao'],
+                                      ),
+                                      acrescimoNegociacao: _double(
+                                        os['acrescimo_negociacao'],
+                                      ),
+                                      jurosParcelamento: _double(
+                                        os['juros_parcelamento'],
+                                      ),
+                                    );
+                                final editavel =
+                                    os['status'] == 'Aberta' ||
+                                    os['status'] == 'Em andamento';
+
+                                return DataRow(
+                                  cells: [
+                                    DataCell(
+                                      SizedBox(
+                                        width: 250,
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'OS ${os['numero'] ?? ''}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                            Text(
+                                              nomes[os['cliente_id']
+                                                      ?.toString()] ??
+                                                  'Cliente',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: Color(0xFFAAB3BD),
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      SizedBox(
+                                        width: 220,
+                                        child: Text(
                                           carros[os['veiculo_id']
                                                   ?.toString()] ??
-                                              '',
-                                          (os['funcionario_responsavel'] ?? '')
-                                              .toString(),
-                                          (os['data_abertura'] ?? '')
-                                              .toString(),
-                                        ]
-                                        .where((e) => e.trim().isNotEmpty)
-                                        .join(' · '),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Color(0xFFAAB3BD),
-                                      fontSize: 12,
+                                              '—',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 7),
-                                  Row(
-                                    children: [
+                                    DataCell(
                                       _statusChip(
                                         (os['status'] ?? 'Sem status')
                                             .toString(),
                                       ),
-                                      const SizedBox(width: 8),
+                                    ),
+                                    DataCell(
+                                      SizedBox(
+                                        width: 170,
+                                        child: Text(
+                                          (os['funcionario_responsavel'] ?? '—')
+                                              .toString(),
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Text(
+                                        (os['data_abertura'] ?? '—').toString(),
+                                      ),
+                                    ),
+                                    DataCell(
                                       Text(
                                         _moeda.format(negociado),
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w900,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ],
+                                    ),
+                                    DataCell(_acoesOs(os, editavel)),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        )
+                      else
+                        ...filtradas.map((os) {
+                          final negociado = OrdemServicoValor.valorNegociado(
+                            valorTotal: _double(os['valor_total']),
+                            desconto: _double(os['desconto']),
+                            descontoNegociacao: _double(
+                              os['desconto_negociacao'],
+                            ),
+                            acrescimoNegociacao: _double(
+                              os['acrescimo_negociacao'],
+                            ),
+                            jurosParcelamento: _double(
+                              os['juros_parcelamento'],
+                            ),
+                          );
+                          final editavel =
+                              os['status'] == 'Aberta' ||
+                              os['status'] == 'Em andamento';
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  14,
+                                  13,
+                                  8,
+                                  13,
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      child: Icon(
+                                        editavel
+                                            ? Icons.edit_note_outlined
+                                            : Icons.lock_outline,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 11),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'OS ${os['numero'] ?? ''} · '
+                                            '${nomes[os['cliente_id']?.toString()] ?? 'Cliente'}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            [
+                                                  carros[os['veiculo_id']
+                                                          ?.toString()] ??
+                                                      '',
+                                                  (os['funcionario_responsavel'] ??
+                                                          '')
+                                                      .toString(),
+                                                  (os['data_abertura'] ?? '')
+                                                      .toString(),
+                                                ]
+                                                .where(
+                                                  (e) => e.trim().isNotEmpty,
+                                                )
+                                                .join(' · '),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Color(0xFFAAB3BD),
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 7),
+                                          Row(
+                                            children: [
+                                              _statusChip(
+                                                (os['status'] ?? 'Sem status')
+                                                    .toString(),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _moeda.format(negociado),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    _acoesOs(os, editavel),
+                                  ],
+                                ),
                               ),
                             ),
-                            _acoesOs(os, editavel),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
+                          );
+                        }),
                     ],
                   ),
                 ),

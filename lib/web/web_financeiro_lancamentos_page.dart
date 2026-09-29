@@ -649,12 +649,11 @@ class _WebFinanceiroLancamentosPageState
             builder: (context, constraints) {
               final compacto = constraints.maxWidth < 760;
               final tabela = constraints.maxWidth >= 1050;
-              final larguraBase = constraints.maxWidth >
-                      ImperiumWebTheme.contentMaxWidth
+              final larguraBase =
+                  constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
                   ? ImperiumWebTheme.contentMaxWidth
                   : constraints.maxWidth;
-              final larguraDisponivel =
-                  larguraBase - (compacto ? 32 : 48);
+              final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
               final colunasResumo = constraints.maxWidth >= 1180
                   ? 5
                   : constraints.maxWidth >= 760
@@ -688,445 +687,474 @@ class _WebFinanceiroLancamentosPageState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Fluxo de caixa',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            SizedBox(height: 5),
-                            Text(
-                              'Saldos, recebimentos, despesas e lançamentos em uma visão operacional.',
-                              style: TextStyle(color: Color(0xFFAAB3BD)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      IconButton(
-                        tooltip: 'Atualizar',
-                        onPressed: _recarregar,
-                        icon: const Icon(Icons.refresh_rounded),
-                      ),
-                      const SizedBox(width: 6),
-                      FilledButton.icon(
-                        onPressed: () => _abrirNovoLancamento(dados),
-                        icon: const Icon(Icons.add_rounded),
-                        label: Text(compacto ? 'Novo' : 'Novo lançamento'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _resumoFinanceiro(
-                        width: larguraResumo,
-                        titulo: 'Saldo total',
-                        valor: _moeda.format(
-                          _double(dados.resumo['saldo_total']),
-                        ),
-                        detalhe: 'Saldo consolidado das contas',
-                        icone: Icons.account_balance_wallet_outlined,
-                      ),
-                      _resumoFinanceiro(
-                        width: larguraResumo,
-                        titulo: 'Entradas do mês',
-                        valor: _moeda.format(
-                          _double(dados.resumo['entradas_mes']),
-                        ),
-                        detalhe: 'Recebimentos realizados no mês',
-                        icone: Icons.south_west_rounded,
-                      ),
-                      _resumoFinanceiro(
-                        width: larguraResumo,
-                        titulo: 'Saídas do mês',
-                        valor: _moeda.format(
-                          _double(dados.resumo['saidas_mes']),
-                        ),
-                        detalhe: 'Despesas realizadas no mês',
-                        icone: Icons.north_east_rounded,
-                      ),
-                      _resumoFinanceiro(
-                        width: larguraResumo,
-                        titulo: 'Resultado de caixa',
-                        valor: _moeda.format(
-                          _double(dados.resumo['resultado_caixa_mes']),
-                        ),
-                        detalhe: 'Entradas menos saídas realizadas',
-                        icone: Icons.trending_up_rounded,
-                      ),
-                      _resumoFinanceiro(
-                        width: larguraResumo,
-                        titulo: 'A receber',
-                        valor: _moeda.format(
-                          _double(dados.resumo['a_receber']),
-                        ),
-                        detalhe: 'Valores ainda pendentes',
-                        icone: Icons.schedule_outlined,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Contas e caixas',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${dados.contas.length} conta(s)',
-                        style: const TextStyle(
-                          color: Color(0xFF89939E),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  if (dados.contas.isEmpty)
-                    const Card(
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: EdgeInsets.all(18),
-                        child: Text(
-                          'Nenhuma conta financeira ativa cadastrada.',
-                        ),
-                      ),
-                    )
-                  else
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: dados.contas
-                          .map(
-                            (conta) => _contaCard(conta, saldos, larguraConta),
-                          )
-                          .toList(),
-                    ),
-                  const SizedBox(height: 22),
-                  WebFinanceiroPagamentosCard(onChanged: _recarregar),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'Movimentos financeiros',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 10),
-                  Card(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: compacto ? larguraDisponivel - 28 : 390,
-                            child: TextField(
-                              controller: _busca,
-                              onChanged: (_) => setState(() {}),
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.search_rounded),
-                                hintText:
-                                    'Buscar descrição, forma, documento ou observação',
-                                suffixIcon: _busca.text.isEmpty
-                                    ? null
-                                    : IconButton(
-                                        tooltip: 'Limpar busca',
-                                        onPressed: () {
-                                          _busca.clear();
-                                          setState(() {});
-                                        },
-                                        icon: const Icon(Icons.close_rounded),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Fluxo de caixa',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -0.5,
                                       ),
+                                    ),
+                                    SizedBox(height: 5),
+                                    Text(
+                                      'Saldos, recebimentos, despesas e lançamentos em uma visão operacional.',
+                                      style: TextStyle(
+                                        color: Color(0xFFAAB3BD),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 14),
+                              IconButton(
+                                tooltip: 'Atualizar',
+                                onPressed: _recarregar,
+                                icon: const Icon(Icons.refresh_rounded),
+                              ),
+                              const SizedBox(width: 6),
+                              FilledButton.icon(
+                                onPressed: () => _abrirNovoLancamento(dados),
+                                icon: const Icon(Icons.add_rounded),
+                                label: Text(
+                                  compacto ? 'Novo' : 'Novo lançamento',
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(
-                            width: 165,
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _filtroTipo,
-                              decoration: const InputDecoration(
-                                labelText: 'Tipo',
+                          const SizedBox(height: 20),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              _resumoFinanceiro(
+                                width: larguraResumo,
+                                titulo: 'Saldo total',
+                                valor: _moeda.format(
+                                  _double(dados.resumo['saldo_total']),
+                                ),
+                                detalhe: 'Saldo consolidado das contas',
+                                icone: Icons.account_balance_wallet_outlined,
                               ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'Todos',
-                                  child: Text('Todos'),
+                              _resumoFinanceiro(
+                                width: larguraResumo,
+                                titulo: 'Entradas do mês',
+                                valor: _moeda.format(
+                                  _double(dados.resumo['entradas_mes']),
                                 ),
-                                DropdownMenuItem(
-                                  value: 'Entradas',
-                                  child: Text('Entradas'),
+                                detalhe: 'Recebimentos realizados no mês',
+                                icone: Icons.south_west_rounded,
+                              ),
+                              _resumoFinanceiro(
+                                width: larguraResumo,
+                                titulo: 'Saídas do mês',
+                                valor: _moeda.format(
+                                  _double(dados.resumo['saidas_mes']),
                                 ),
-                                DropdownMenuItem(
-                                  value: 'Saídas',
-                                  child: Text('Saídas'),
+                                detalhe: 'Despesas realizadas no mês',
+                                icone: Icons.north_east_rounded,
+                              ),
+                              _resumoFinanceiro(
+                                width: larguraResumo,
+                                titulo: 'Resultado de caixa',
+                                valor: _moeda.format(
+                                  _double(dados.resumo['resultado_caixa_mes']),
                                 ),
-                              ],
-                              onChanged: (v) =>
-                                  setState(() => _filtroTipo = v ?? 'Todos'),
-                            ),
+                                detalhe: 'Entradas menos saídas realizadas',
+                                icone: Icons.trending_up_rounded,
+                              ),
+                              _resumoFinanceiro(
+                                width: larguraResumo,
+                                titulo: 'A receber',
+                                valor: _moeda.format(
+                                  _double(dados.resumo['a_receber']),
+                                ),
+                                detalhe: 'Valores ainda pendentes',
+                                icone: Icons.schedule_outlined,
+                              ),
+                            ],
                           ),
-                          SizedBox(
-                            width: 175,
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _filtroStatus,
-                              decoration: const InputDecoration(
-                                labelText: 'Status',
-                              ),
-                              items: [
-                                const DropdownMenuItem(
-                                  value: 'Todos',
-                                  child: Text('Todos'),
-                                ),
-                                ...statuses.map(
-                                  (item) => DropdownMenuItem(
-                                    value: item,
-                                    child: Text(item),
+                          const SizedBox(height: 22),
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Contas e caixas',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
-                              ],
-                              onChanged: (v) =>
-                                  setState(() => _filtroStatus = v ?? 'Todos'),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 175,
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _periodo,
-                              decoration: const InputDecoration(
-                                labelText: 'Período',
                               ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'Todos',
-                                  child: Text('Todos'),
+                              Text(
+                                '${dados.contas.length} conta(s)',
+                                style: const TextStyle(
+                                  color: Color(0xFF89939E),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
                                 ),
-                                DropdownMenuItem(
-                                  value: 'Este mês',
-                                  child: Text('Este mês'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          if (dados.contas.isEmpty)
+                            const Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: EdgeInsets.all(18),
+                                child: Text(
+                                  'Nenhuma conta financeira ativa cadastrada.',
                                 ),
-                                DropdownMenuItem(
-                                  value: '30 dias',
-                                  child: Text('Últimos 30 dias'),
-                                ),
-                              ],
-                              onChanged: (v) =>
-                                  setState(() => _periodo = v ?? 'Este mês'),
+                              ),
+                            )
+                          else
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: dados.contas
+                                  .map(
+                                    (conta) =>
+                                        _contaCard(conta, saldos, larguraConta),
+                                  )
+                                  .toList(),
+                            ),
+                          const SizedBox(height: 22),
+                          WebFinanceiroPagamentosCard(onChanged: _recarregar),
+                          const SizedBox(height: 22),
+                          const Text(
+                            'Movimentos financeiros',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
-                          Text(
-                            '${movimentos.length} resultado(s)',
-                            style: const TextStyle(
-                              color: Color(0xFF89939E),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (movimentos.isEmpty)
-                    const Card(
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 36,
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.account_balance_wallet_outlined,
-                              size: 40,
-                              color: Color(0xFF89939E),
-                            ),
-                            SizedBox(height: 10),
-                            Text(
-                              'Nenhum movimento encontrado',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 16,
+                          const SizedBox(height: 10),
+                          Card(
+                            margin: EdgeInsets.zero,
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: compacto
+                                        ? larguraDisponivel - 28
+                                        : 390,
+                                    child: TextField(
+                                      controller: _busca,
+                                      onChanged: (_) => setState(() {}),
+                                      decoration: InputDecoration(
+                                        prefixIcon: const Icon(
+                                          Icons.search_rounded,
+                                        ),
+                                        hintText:
+                                            'Buscar descrição, forma, documento ou observação',
+                                        suffixIcon: _busca.text.isEmpty
+                                            ? null
+                                            : IconButton(
+                                                tooltip: 'Limpar busca',
+                                                onPressed: () {
+                                                  _busca.clear();
+                                                  setState(() {});
+                                                },
+                                                icon: const Icon(
+                                                  Icons.close_rounded,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 165,
+                                    child: DropdownButtonFormField<String>(
+                                      initialValue: _filtroTipo,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Tipo',
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'Todos',
+                                          child: Text('Todos'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Entradas',
+                                          child: Text('Entradas'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Saídas',
+                                          child: Text('Saídas'),
+                                        ),
+                                      ],
+                                      onChanged: (v) => setState(
+                                        () => _filtroTipo = v ?? 'Todos',
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 175,
+                                    child: DropdownButtonFormField<String>(
+                                      initialValue: _filtroStatus,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Status',
+                                      ),
+                                      items: [
+                                        const DropdownMenuItem(
+                                          value: 'Todos',
+                                          child: Text('Todos'),
+                                        ),
+                                        ...statuses.map(
+                                          (item) => DropdownMenuItem(
+                                            value: item,
+                                            child: Text(item),
+                                          ),
+                                        ),
+                                      ],
+                                      onChanged: (v) => setState(
+                                        () => _filtroStatus = v ?? 'Todos',
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 175,
+                                    child: DropdownButtonFormField<String>(
+                                      initialValue: _periodo,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Período',
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'Todos',
+                                          child: Text('Todos'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Este mês',
+                                          child: Text('Este mês'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: '30 dias',
+                                          child: Text('Últimos 30 dias'),
+                                        ),
+                                      ],
+                                      onChanged: (v) => setState(
+                                        () => _periodo = v ?? 'Este mês',
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${movimentos.length} resultado(s)',
+                                    style: const TextStyle(
+                                      color: Color(0xFF89939E),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else if (tabela)
-                    Card(
-                      margin: EdgeInsets.zero,
-                      clipBehavior: Clip.antiAlias,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          headingRowHeight: 52,
-                          dataRowMinHeight: 62,
-                          dataRowMaxHeight: 76,
-                          columns: const [
-                            DataColumn(label: Text('DATA')),
-                            DataColumn(label: Text('DESCRIÇÃO')),
-                            DataColumn(label: Text('TIPO')),
-                            DataColumn(label: Text('STATUS')),
-                            DataColumn(label: Text('CONTA')),
-                            DataColumn(label: Text('FORMA')),
-                            DataColumn(label: Text('VALOR')),
-                          ],
-                          rows: movimentos.map((movimento) {
-                            final entrada = _entrada(movimento['tipo']);
-                            final status = (movimento['status'] ?? '')
-                                .toString();
-                            final contaNome = _nomeConta(
-                              dados.contas,
-                              movimento['conta_id']?.toString(),
-                            );
+                          ),
+                          const SizedBox(height: 12),
+                          if (movimentos.isEmpty)
+                            const Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 36,
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.account_balance_wallet_outlined,
+                                      size: 40,
+                                      color: Color(0xFF89939E),
+                                    ),
+                                    SizedBox(height: 10),
+                                    Text(
+                                      'Nenhum movimento encontrado',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else if (tabela)
+                            Card(
+                              margin: EdgeInsets.zero,
+                              clipBehavior: Clip.antiAlias,
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: DataTable(
+                                  headingRowHeight: 52,
+                                  dataRowMinHeight: 62,
+                                  dataRowMaxHeight: 76,
+                                  columns: const [
+                                    DataColumn(label: Text('DATA')),
+                                    DataColumn(label: Text('DESCRIÇÃO')),
+                                    DataColumn(label: Text('TIPO')),
+                                    DataColumn(label: Text('STATUS')),
+                                    DataColumn(label: Text('CONTA')),
+                                    DataColumn(label: Text('FORMA')),
+                                    DataColumn(label: Text('VALOR')),
+                                  ],
+                                  rows: movimentos.map((movimento) {
+                                    final entrada = _entrada(movimento['tipo']);
+                                    final status = (movimento['status'] ?? '')
+                                        .toString();
+                                    final contaNome = _nomeConta(
+                                      dados.contas,
+                                      movimento['conta_id']?.toString(),
+                                    );
 
-                            return DataRow(
-                              cells: [
-                                DataCell(
-                                  SizedBox(
-                                    width: 105,
-                                    child: Text(
-                                      _formatarData(
-                                        movimento['data']?.toString(),
-                                      ),
-                                    ),
-                                  ),
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(
+                                          SizedBox(
+                                            width: 105,
+                                            child: Text(
+                                              _formatarData(
+                                                movimento['data']?.toString(),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          SizedBox(
+                                            width: 310,
+                                            child: Text(
+                                              (movimento['descricao'] ??
+                                                      'Movimento')
+                                                  .toString(),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                entrada
+                                                    ? Icons.south_west_rounded
+                                                    : Icons.north_east_rounded,
+                                                size: 17,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                entrada ? 'Entrada' : 'Saída',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        DataCell(_statusChip(status)),
+                                        DataCell(
+                                          SizedBox(
+                                            width: 160,
+                                            child: Text(
+                                              contaNome.isEmpty
+                                                  ? '—'
+                                                  : contaNome,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          SizedBox(
+                                            width: 130,
+                                            child: Text(
+                                              (movimento['forma_pagamento'] ??
+                                                      '—')
+                                                  .toString(),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            '${entrada ? '+' : '-'} '
+                                            '${_moeda.format(_double(movimento['valor']))}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              color: entrada
+                                                  ? Colors.greenAccent
+                                                  : Colors.orangeAccent,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
                                 ),
-                                DataCell(
-                                  SizedBox(
-                                    width: 310,
-                                    child: Text(
-                                      (movimento['descricao'] ?? 'Movimento')
-                                          .toString(),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                DataCell(
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
+                              ),
+                            )
+                          else
+                            ...movimentos.map((movimento) {
+                              final entrada = _entrada(movimento['tipo']);
+                              final status = (movimento['status'] ?? '')
+                                  .toString();
+                              final contaNome = _nomeConta(
+                                dados.contas,
+                                movimento['conta_id']?.toString(),
+                              );
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Card(
+                                  margin: EdgeInsets.zero,
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      child: Icon(
                                         entrada
                                             ? Icons.south_west_rounded
                                             : Icons.north_east_rounded,
-                                        size: 17,
                                       ),
-                                      const SizedBox(width: 6),
-                                      Text(entrada ? 'Entrada' : 'Saída'),
-                                    ],
-                                  ),
-                                ),
-                                DataCell(_statusChip(status)),
-                                DataCell(
-                                  SizedBox(
-                                    width: 160,
-                                    child: Text(
-                                      contaNome.isEmpty ? '—' : contaNome,
                                     ),
-                                  ),
-                                ),
-                                DataCell(
-                                  SizedBox(
-                                    width: 130,
-                                    child: Text(
-                                      (movimento['forma_pagamento'] ?? '—')
+                                    title: Text(
+                                      (movimento['descricao'] ?? 'Movimento')
                                           .toString(),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      [
+                                            _formatarData(
+                                              movimento['data']?.toString(),
+                                            ),
+                                            status,
+                                            contaNome,
+                                            (movimento['forma_pagamento'] ?? '')
+                                                .toString(),
+                                          ]
+                                          .where((e) => e.trim().isNotEmpty)
+                                          .join(' · '),
+                                    ),
+                                    trailing: Text(
+                                      '${entrada ? '+' : '-'} '
+                                      '${_moeda.format(_double(movimento['valor']))}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        color: entrada
+                                            ? Colors.greenAccent
+                                            : Colors.orangeAccent,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                DataCell(
-                                  Text(
-                                    '${entrada ? '+' : '-'} '
-                                    '${_moeda.format(_double(movimento['valor']))}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      color: entrada
-                                          ? Colors.greenAccent
-                                          : Colors.orangeAccent,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    )
-                  else
-                    ...movimentos.map((movimento) {
-                      final entrada = _entrada(movimento['tipo']);
-                      final status = (movimento['status'] ?? '').toString();
-                      final contaNome = _nomeConta(
-                        dados.contas,
-                        movimento['conta_id']?.toString(),
-                      );
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Card(
-                          margin: EdgeInsets.zero,
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              child: Icon(
-                                entrada
-                                    ? Icons.south_west_rounded
-                                    : Icons.north_east_rounded,
-                              ),
-                            ),
-                            title: Text(
-                              (movimento['descricao'] ?? 'Movimento')
-                                  .toString(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            subtitle: Text(
-                              [
-                                _formatarData(movimento['data']?.toString()),
-                                status,
-                                contaNome,
-                                (movimento['forma_pagamento'] ?? '').toString(),
-                              ].where((e) => e.trim().isNotEmpty).join(' · '),
-                            ),
-                            trailing: Text(
-                              '${entrada ? '+' : '-'} '
-                              '${_moeda.format(_double(movimento['valor']))}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                color: entrada
-                                    ? Colors.greenAccent
-                                    : Colors.orangeAccent,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
+                              );
+                            }),
                         ],
                       ),
                     ),
