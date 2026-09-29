@@ -788,7 +788,6 @@ class CrmOperacaoRepository {
     if (alterados == 0) {
       throw StateError('Ação não está disponível para adiamento.');
     }
-    await CrmAcoesRelacionamentoCloudService.instance.marcarPendente(acaoId);
     await CrmAcoesRelacionamentoCloudService.instance.sincronizar();
   }
 
@@ -806,7 +805,6 @@ class CrmOperacaoRepository {
       where: "id = ? AND status != 'Concluida'",
       whereArgs: [acaoId],
     );
-    await CrmAcoesRelacionamentoCloudService.instance.marcarPendente(acaoId);
     await CrmAcoesRelacionamentoCloudService.instance.sincronizar();
   }
 
