@@ -193,7 +193,7 @@ void main() {
     final db = File('lib/database/app_database.dart').readAsStringSync();
     final main = File('lib/main.dart').readAsStringSync();
 
-    expect(db, contains('static const int schemaVersion = 33;'));
+    expect(db, contains('static const int schemaVersion = 34;'));
     expect(
       main,
       contains('OperacionalSyncService.instance.prepararTenantInicial'),
