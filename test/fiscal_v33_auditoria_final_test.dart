@@ -5,7 +5,7 @@ import 'package:imperium_detailing/database/app_database.dart';
 
 void main() {
   test('Fiscal V33 mantém schema esperado e histórico de importação', () {
-    expect(AppDatabase.schemaVersion, 33);
+    expect(AppDatabase.schemaVersion, 34);
 
     final banco = File('lib/database/app_database.dart').readAsStringSync();
     expect(banco, contains('nota_fiscal_importacao_tentativas'));
