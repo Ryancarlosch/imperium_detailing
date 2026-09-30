@@ -102,4 +102,18 @@ void main() {
     );
     expect(db, contains('static const int schemaVersion = 34;'));
   });
+
+  test('CRM Web expoe exclusao de lead com CAS', () {
+    final page = File('lib/web/web_expansao_pages.dart').readAsStringSync();
+    final service = File(
+      'lib/services/web_cloud_expansao_service.dart',
+    ).readAsStringSync();
+
+    expect(page, contains("tooltip: 'Excluir lead'"));
+    expect(page, contains('_service.excluirLead'));
+    expect(service, contains('Future<void> excluirLead'));
+    expect(service, contains("'excluido_em': DateTime.now().toUtc().toIso8601String()"));
+    expect(service, contains('_atualizarCas'));
+  });
+
 }
