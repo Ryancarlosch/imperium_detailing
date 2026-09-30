@@ -158,4 +158,13 @@ void main() {
     expect(main, contains('LoginEmailSenhaPage'));
     expect(db, contains('static const int schemaVersion = 34;'));
   });
+
+  test('Workspace operacional usa canvas responsivo em monitores amplos', () {
+    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
+
+    expect(shell, contains('ImperiumWebTheme.contentMaxWidth'));
+    expect(shell, contains('final larguraBase = constraints.maxWidth >'));
+    expect(shell, contains('final larguraDisponivel = larguraBase -'));
+  });
+
 }
