@@ -22,6 +22,23 @@ void main() {
     expect(service, contains("'ponto_decidir_solicitacao_ajuste'"));
   });
 
+  test('Web completa autosservico de historico e correcao do Ponto', () {
+    final page = File('lib/web/web_ponto_page.dart').readAsStringSync();
+    final service = File(
+      'lib/services/web_cloud_ponto_service.dart',
+    ).readAsStringSync();
+
+    expect(page, contains('Histórico e correções'));
+    expect(page, contains('Solicitar correção'));
+    expect(page, contains('Minhas solicitações'));
+    expect(page, contains('_service.solicitarMeuAjuste'));
+    expect(page, contains('_service.cancelarMinhaSolicitacaoAjuste'));
+    expect(service, contains('listarMeusRegistros'));
+    expect(service, contains('listarMinhasSolicitacoesAjuste'));
+    expect(service, contains("'ponto_solicitar_ajuste'"));
+    expect(service, contains("'ponto_cancelar_solicitacao_ajuste'"));
+  });
+
   test('Central Cloud possui diagnostico de saude operacional', () {
     final page = File('lib/web/web_expansao_pages.dart').readAsStringSync();
     final service = File(
