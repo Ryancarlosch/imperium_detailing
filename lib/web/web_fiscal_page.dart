@@ -177,7 +177,7 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                 SelectableText(
                   (nota['chave_acesso'] ?? '').toString(),
                   style: const TextStyle(
-                    color: Color(0xFF89939E),
+                    color: ImperiumWebTheme.textMuted,
                     fontSize: 11,
                   ),
                 ),
@@ -229,7 +229,7 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                                           _double(item['valor_total']),
                                         ),
                                     style: const TextStyle(
-                                      color: Color(0xFF89939E),
+                                      color: ImperiumWebTheme.textMuted,
                                       fontSize: 11,
                                     ),
                                   ),
@@ -593,7 +593,7 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                         SizedBox(height: 5),
                         Text(
                           'XML, estoque e financeiro usando a mesma validação fiscal do Android.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
