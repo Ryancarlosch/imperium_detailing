@@ -92,7 +92,9 @@ void main() {
     expect(page, contains('_service.excluirNota'));
     expect(service, contains('Future<void> excluirNota'));
     expect(service, contains('integração com estoque ou financeiro'));
-    expect(service, contains("'excluido_em': DateTime.now().toUtc().toIso8601String()"));
+    expect(
+      service,
+      contains("'excluido_em': DateTime.now().toUtc().toIso8601String()"),
+    );
   });
-
 }
