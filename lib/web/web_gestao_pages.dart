@@ -6,9 +6,14 @@ import '../services/web_cloud_operacional_service.dart';
 import 'imperium_web_theme.dart';
 
 class WebNovaOrdemPage extends StatefulWidget {
-  const WebNovaOrdemPage({super.key, required this.onCreated});
+  const WebNovaOrdemPage({
+    super.key,
+    required this.onCreated,
+    this.agendamentoInicial,
+  });
 
   final VoidCallback onCreated;
+  final Map<String, dynamic>? agendamentoInicial;
 
   @override
   State<WebNovaOrdemPage> createState() => _WebNovaOrdemPageState();
@@ -63,8 +68,21 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
       setState(() {
         _clientes = clientes;
         _veiculos = resultados[1];
-        _clienteId = clientes.isEmpty ? null : clientes.first['id'].toString();
+        final agenda = widget.agendamentoInicial;
+        final clienteAgenda = agenda?['cliente_id']?.toString();
+        _clienteId = clienteAgenda != null &&
+                clientes.any((item) => item['id'].toString() == clienteAgenda)
+            ? clienteAgenda
+            : clientes.isEmpty
+            ? null
+            : clientes.first['id'].toString();
+        _veiculoId = agenda?['veiculo_id']?.toString();
         _ajustarVeiculo();
+        if (agenda != null) {
+          _itens.first.servico.text = (agenda['servico'] ?? '').toString();
+          _itens.first.valor.text = _double(agenda['valor']).toStringAsFixed(2);
+          _observacoes.text = (agenda['observacoes'] ?? '').toString();
+        }
       });
     } catch (e) {
       if (mounted) setState(() => _erro = e.toString());
@@ -142,6 +160,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
       final numero = await _gestao.criarOrdemAberta(
         clienteId: _clienteId!,
         veiculoId: _veiculoId,
+        agendamentoId: widget.agendamentoInicial?['id']?.toString(),
         funcionarioResponsavel: _responsavel.text,
         observacoes: _observacoes.text,
         itens: itens,
