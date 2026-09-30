@@ -19,9 +19,7 @@ void main() {
       '.xcconfig',
     };
 
-    final ignorados = <String>{
-      'test/repositorio_segredos_source_test.dart',
-    };
+    final ignorados = <String>{'test/repositorio_segredos_source_test.dart'};
 
     final arquivos = Directory('.')
         .listSync(recursive: true, followLinks: false)
@@ -44,10 +42,7 @@ void main() {
         r'(?:SUPABASE_)?SERVICE_ROLE(?:_KEY)?\\s*[:=]\\s*["\\x27]?[A-Za-z0-9._-]{20,}',
         caseSensitive: false,
       ),
-      RegExp(
-        r'postgres(?:ql)?://[^\\s:@/]+:[^\\s@/]+@',
-        caseSensitive: false,
-      ),
+      RegExp(r'postgres(?:ql)?://[^\\s:@/]+:[^\\s@/]+@', caseSensitive: false),
     ];
 
     for (final arquivo in arquivos) {
