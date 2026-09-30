@@ -1,0 +1,56 @@
+name: iOS Bootstrap
+
+on:
+  push:
+    branches:
+      - desenvolvimento
+    paths:
+      - ".github/workflows/ios_bootstrap.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: desenvolvimento
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Gerar scaffold iOS oficial
+        run: |
+          if [ -d ios ]; then
+            echo "Scaffold iOS já existe."
+            exit 0
+          fi
+          flutter create \
+            --platforms=ios \
+            --org br.com.imperiumdetailing \
+            --project-name imperium_detailing \
+            .
+
+      - name: Restaurar entrypoint compartilhado
+        run: |
+          test -f lib/main.dart
+          flutter pub get
+          dart format lib test
+
+      - name: Commitar scaffold iOS
+        run: |
+          if git diff --quiet && [ -z "$(git status --porcelain)" ]; then
+            echo "Nada para commitar."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ios .metadata pubspec.lock
+          git commit -m "feat(ios): adiciona scaffold Flutter"
+          git push origin HEAD:desenvolvimento
