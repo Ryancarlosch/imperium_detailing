@@ -265,7 +265,7 @@ class _WebFinanceiroAdministracaoPageState
                   SizedBox(height: 4),
                   Text(
                     'Cadastro, custos, situação e histórico salarial compartilhados com o Android.',
-                    style: TextStyle(color: Color(0xFF89939E)),
+                    style: TextStyle(color: ImperiumWebTheme.textMuted),
                   ),
                 ],
               ),
@@ -391,7 +391,7 @@ class _WebFinanceiroAdministracaoPageState
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Ainda não há ocorrências sincronizadas.',
-                          style: TextStyle(color: Color(0xFF89939E)),
+                          style: TextStyle(color: ImperiumWebTheme.textMuted),
                         ),
                       ),
                     )
@@ -516,7 +516,7 @@ class _WebFinanceiroAdministracaoPageState
                   SizedBox(height: 4),
                   Text(
                     'Pagamentos da equipe integrados ao caixa e ao histórico do aplicativo.',
-                    style: TextStyle(color: Color(0xFF89939E)),
+                    style: TextStyle(color: ImperiumWebTheme.textMuted),
                   ),
                 ],
               ),
@@ -662,7 +662,7 @@ class _WebFinanceiroAdministracaoPageState
         const Text(
           'Mesma regra do Android: base de 220h, faltas, horas extras, '
           'pagamentos e fechamento mensal do Ponto.',
-          style: TextStyle(color: Color(0xFF89939E)),
+          style: TextStyle(color: ImperiumWebTheme.textMuted),
         ),
         const SizedBox(height: 10),
         if (resumos.isEmpty)
@@ -714,7 +714,7 @@ class _WebFinanceiroAdministracaoPageState
                                 ].where((e) => e.trim().isNotEmpty).join(' · '),
                                 style: TextStyle(
                                   color: vinculado
-                                      ? const Color(0xFF89939E)
+                                      ? const ImperiumWebTheme.textMuted
                                       : Colors.orangeAccent,
                                 ),
                               ),
@@ -857,7 +857,7 @@ class _WebFinanceiroAdministracaoPageState
     if (!mesTerminou) {
       return const Text(
         'O fechamento será liberado após o fim do mês.',
-        style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
+        style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
       );
     }
 
@@ -973,7 +973,7 @@ class _WebFinanceiroAdministracaoPageState
       children: [
         Text(
           titulo,
-          style: const TextStyle(color: Color(0xFF89939E), fontSize: 11),
+          style: const TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 11),
         ),
         Text(
           valor,
@@ -1186,7 +1186,7 @@ class _WebFinanceiroAdministracaoPageState
                   SizedBox(height: 4),
                   Text(
                     'Fornecedores, taxas, custos, metas, plano de contas, mão de obra e transferências.',
-                    style: TextStyle(color: Color(0xFF89939E)),
+                    style: TextStyle(color: ImperiumWebTheme.textMuted),
                   ),
                 ],
               ),
@@ -1344,7 +1344,7 @@ class _WebFinanceiroAdministracaoPageState
                   const SizedBox(height: 4),
                   Text(
                     subtitulo,
-                    style: const TextStyle(color: Color(0xFF89939E)),
+                    style: const TextStyle(color: ImperiumWebTheme.textMuted),
                   ),
                 ],
               ),
@@ -2077,7 +2077,7 @@ class _Kpi extends StatelessWidget {
               Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
               Text(
                 detalhe,
-                style: const TextStyle(color: Color(0xFF89939E), fontSize: 11),
+                style: const TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 11),
               ),
             ],
           ),
