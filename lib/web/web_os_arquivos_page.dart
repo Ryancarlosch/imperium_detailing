@@ -363,7 +363,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                 height: 260,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: const ImperiumWebTheme.textMuted),
+                  border: Border.all(color: ImperiumWebTheme.textMuted),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 clipBehavior: Clip.antiAlias,
