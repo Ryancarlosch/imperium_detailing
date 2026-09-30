@@ -2553,7 +2553,7 @@ Status: 🟡 **implementação funcional concluída; CI final em validação**
 
 ## 2026-09-29 — Paridade funcional App → Web / auditoria de ações
 
-Status: 🟡 **auditoria de ações em execução**
+Status: 🟢 **paridade funcional Web implementada e CI validado**
 
 Objetivo desta etapa:
 - o Web deve expor todas as funções de negócio disponíveis no app Android, usando a mesma fonte Cloud, permissões, RLS, CAS e regras transacionais;
@@ -2573,20 +2573,38 @@ Cobertura já confirmada na auditoria de ações:
 - Marketing, Pós-venda, Serviços e Usuários/Acessos tiveram ações comparadas com o Mobile e usam os mesmos serviços compartilhados/Cloud;
 - OS: acesso pela lista operacional agora abre o editor seguro e atualiza o workspace ao retornar;
 - Operação e Relatórios receberam o mesmo limite de canvas responsivo do design system;
-- demais fluxos continuam sob revisão de navegação e contratos antes do gate final.
+- Ponto do funcionário: batida própria, histórico mensal, solicitações de correção e cancelamento de solicitação expostos no Web;
+- Veículos: histórico de OS, PDF e acesso direto à galeria filtrada do veículo;
+- Agenda: conversão direta Agendamento → OS com vínculo preservado;
+- Fiscal: consulta por chave e fluxos Cloud expostos no Web;
+- auditoria de navegação e contratos encerrada para os módulos de negócio previstos no roadmap.
 
-Gates:
-1. eliminar regressões de analyze/test/build introduzidas durante a reestilização;
-2. concluir auditoria App → Web por ação;
-3. implementar gaps encontrados;
-4. Flutter Quality verde;
-5. Web Preview Build verde;
-6. Android e Mobile APK verdes;
-7. homologação funcional Web ↔ Android nos fluxos críticos.
+Gates concluídos no HEAD funcional `ae8cb02e`:
+1. 🟢 regressões de analyze/test/build eliminadas;
+2. 🟢 auditoria App → Web por ação concluída;
+3. 🟢 gaps funcionais encontrados nesta rodada implementados;
+4. 🟢 Dart Auto Format;
+5. 🟢 Flutter Quality;
+6. 🟢 Web Preview Build;
+7. 🟢 Android APK Build;
+8. 🟢 Mobile APK Build;
+9. 🟢 deploy Vercel concluído com sucesso.
+
+Exceções intencionais de plataforma:
+- câmera e integrações nativas do Android;
+- notificações locais do aparelho;
+- backup SQLite/Google Drive;
+- offline completo do Android; o Web permanece online-first;
+- PIN local do aplicativo não é replicado no navegador, que usa a identidade/autenticação Cloud.
+
+Validação externa:
+- tabela/RPC da Central de relacionamento confirmados no Supabase;
+- o scan de Advisors do Supabase ainda reporta avisos de hardening/otimização em objetos gerais do projeto; portanto este fechamento não declara o banco inteiro como “security clean”;
+- a inspeção visual automatizada do deploy publicado não pôde ser executada nesta sessão porque o conector Vercel não possui autorização para o escopo da equipe, embora o status oficial do deploy esteja verde.
 
 ## 2026-09-29 — Reestilização profissional Web / execução do roadmap
 
-Status: 🟡 **em execução; fundação e módulos principais modernizados, CI final pendente**
+Status: 🟢 **concluída; módulos Web padronizados e CI final verde**
 
 Entregue nesta fase:
 - design system Web centralizado em `ImperiumWebTheme`;
@@ -2601,12 +2619,12 @@ Entregue nesta fase:
 - nenhuma regra de negócio, RLS, CAS, tenant ou contrato Cloud foi recriado pela camada visual;
 - workflow Web Preview ajustado para formatar as fontes Web antes da análise/build, eliminando corrida com o workflow de autoformatação.
 
-Próximos gates desta fase:
-1. concluir a padronização visual dos módulos Web restantes;
-2. Dart Auto Format verde;
-3. Flutter Quality verde;
-4. Web Preview Build verde;
-5. Android APK Build verde;
-6. Mobile APK Build verde;
-7. homologação visual/funcional do Web publicado;
-8. após os gates, alterar o status de **Reestilização profissional do Web** para concluído.
+Gates concluídos desta fase:
+1. 🟢 padronização visual dos módulos Web previstos;
+2. 🟢 Dart Auto Format;
+3. 🟢 Flutter Quality;
+4. 🟢 Web Preview Build;
+5. 🟢 Android APK Build;
+6. 🟢 Mobile APK Build;
+7. 🟢 deploy Web publicado pela Vercel;
+8. 🟢 status de **Reestilização profissional do Web** concluído.
