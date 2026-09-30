@@ -477,7 +477,7 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -558,8 +558,11 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
             builder: (context, constraints) {
               final compacto = constraints.maxWidth < 760;
               final tabela = constraints.maxWidth >= 980;
-              final larguraDisponivel =
-                  constraints.maxWidth - (compacto ? 32 : 48);
+              final larguraBase =
+                  constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
+                  ? ImperiumWebTheme.contentMaxWidth
+                  : constraints.maxWidth;
+              final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
               final colunas = constraints.maxWidth >= 1100
                   ? 4
                   : constraints.maxWidth >= 720
@@ -594,7 +597,7 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                             SizedBox(height: 5),
                             Text(
                               'Produtos, custos, estoque mínimo e fornecedores sincronizados com a operação.',
-                              style: TextStyle(color: Color(0xFFAAB3BD)),
+                              style: TextStyle(color: ImperiumWebTheme.textSecondary),
                             ),
                           ],
                         ),
@@ -688,7 +691,7 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                           Text(
                             '${itens.length} resultado(s)',
                             style: const TextStyle(
-                              color: Color(0xFF89939E),
+                              color: ImperiumWebTheme.textMuted,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),
@@ -711,7 +714,7 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                             Icon(
                               Icons.inventory_2_outlined,
                               size: 42,
-                              color: Color(0xFF89939E),
+                              color: ImperiumWebTheme.textMuted,
                             ),
                             SizedBox(height: 12),
                             Text(
