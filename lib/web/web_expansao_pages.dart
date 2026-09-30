@@ -282,6 +282,44 @@ class _WebCrmPageState extends State<WebCrmPage> {
     }
   }
 
+  Future<void> _excluirLead(Map<String, dynamic> lead) async {
+    final nome = (lead['nome'] ?? 'Lead').toString();
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir lead'),
+        content: Text(
+          'Excluir $nome do CRM? O registro será removido da operação ativa, preservando o histórico sincronizado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true) return;
+
+    try {
+      await _service.excluirLead(
+        id: lead['id'].toString(),
+        atualizadoEmEsperado: (lead['atualizado_em'] ?? '').toString(),
+      );
+      await _carregar();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Lead excluído do CRM.')));
+    } catch (e) {
+      _mostrarErro(e);
+    }
+  }
+
   Future<void> _interagir(Map<String, dynamic> lead) async {
     final descricao = TextEditingController();
     var tipo = 'Contato';
@@ -785,6 +823,11 @@ class _WebCrmPageState extends State<WebCrmPage> {
           tooltip: 'Editar lead',
           onPressed: () => _editarLead(lead),
           icon: const Icon(Icons.edit_outlined),
+        ),
+        IconButton(
+          tooltip: 'Excluir lead',
+          onPressed: () => _excluirLead(lead),
+          icon: const Icon(Icons.delete_outline_rounded),
         ),
       ],
     );
