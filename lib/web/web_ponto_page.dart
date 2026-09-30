@@ -269,6 +269,110 @@ class _WebPontoPageState extends State<WebPontoPage>
     }
   }
 
+  Future<void> _gerenciarCompetencia(Map<String, dynamic> colaborador) async {
+    final agora = DateTime.now();
+    final competencia = DateTime(agora.year, agora.month - 1, 1);
+    try {
+      final resumo = await _service.obterResumoCompetencia(
+        colaboradorId: colaborador['id'].toString(),
+        competencia: competencia,
+      );
+      if (!mounted) return;
+
+      final acao = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('Competência · ${colaborador['nome'] ?? 'Funcionário'}'),
+          content: SizedBox(
+            width: 520,
+            child: Text(
+              'Mês: ${DateFormat('MM/yyyy').format(competencia)}\n'
+              'Registros: ${resumo['registros'] ?? 0}\n'
+              'Pendências: ${resumo['pendencias'] ?? 0}\n'
+              'Incompletos: ${resumo['incompletos'] ?? 0}\n\n'
+              'Feche a competência quando todos os ajustes estiverem resolvidos. '
+              'A reabertura exige motivo e fica registrada no Cloud.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pop(dialogContext, 'reabrir'),
+              icon: const Icon(Icons.lock_open_rounded),
+              label: const Text('Reabrir'),
+            ),
+            FilledButton.icon(
+              onPressed:
+                  (resumo['pendencias'] ?? 0) == 0 &&
+                      (resumo['incompletos'] ?? 0) == 0
+                  ? () => Navigator.pop(dialogContext, 'fechar')
+                  : null,
+              icon: const Icon(Icons.lock_outline_rounded),
+              label: const Text('Fechar mês'),
+            ),
+          ],
+        ),
+      );
+      if (acao == null || !mounted) return;
+
+      if (acao == 'fechar') {
+        await _service.fecharCompetencia(
+          colaboradorId: colaborador['id'].toString(),
+          competencia: competencia,
+          snapshot: resumo,
+        );
+        _snack('Competência fechada no Cloud.');
+        await _carregar();
+        return;
+      }
+
+      final motivo = TextEditingController();
+      final texto = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Reabrir competência'),
+          content: TextField(
+            controller: motivo,
+            autofocus: true,
+            minLines: 2,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Motivo da reabertura *',
+              hintText: 'Informe pelo menos 5 caracteres',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final valor = motivo.text.trim();
+                if (valor.length >= 5) Navigator.pop(dialogContext, valor);
+              },
+              child: const Text('Reabrir'),
+            ),
+          ],
+        ),
+      );
+      motivo.dispose();
+      if (texto == null) return;
+      await _service.reabrirCompetencia(
+        colaboradorId: colaborador['id'].toString(),
+        competencia: competencia,
+        motivo: texto,
+      );
+      _snack('Competência reaberta no Cloud.');
+      await _carregar();
+    } catch (e) {
+      _snack(_textoErro(e), erro: true);
+    }
+  }
+
   Widget _campoHora(TextEditingController controller, String label) {
     return TextField(
       controller: controller,
@@ -716,6 +820,12 @@ class _WebPontoPageState extends State<WebPontoPage>
                                         : Icons.person_add_alt_1_rounded,
                                   ),
                                 ),
+                                IconButton(
+                                  tooltip: 'Fechar ou reabrir competência',
+                                  onPressed: () =>
+                                      _gerenciarCompetencia(colaborador),
+                                  icon: const Icon(Icons.lock_clock_outlined),
+                                ),
                               ],
                             ),
                           ),
@@ -768,6 +878,8 @@ class _WebPontoPageState extends State<WebPontoPage>
                             _editarRegistro(colaborador, registro);
                           } else if (acao == 'acesso') {
                             _vincular(colaborador);
+                          } else if (acao == 'competencia') {
+                            _gerenciarCompetencia(colaborador);
                           }
                         },
                         itemBuilder: (_) => const [
@@ -778,6 +890,10 @@ class _WebPontoPageState extends State<WebPontoPage>
                           PopupMenuItem(
                             value: 'acesso',
                             child: Text('Vincular acesso'),
+                          ),
+                          PopupMenuItem(
+                            value: 'competencia',
+                            child: Text('Fechar/reabrir competência'),
                           ),
                         ],
                       ),
