@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 import '../database/app_database.dart';
+import '../services/chave_fiscal_service.dart';
 import '../services/nota_fiscal_entrada_xml_service.dart';
 import 'supabase_bootstrap.dart';
 import 'web_estoque_cloud_service.dart';
@@ -81,6 +82,39 @@ class WebFiscalService {
       contas: _lista(resultados[3]),
       planoContas: _lista(resultados[4]),
     );
+  }
+
+  Future<Map<String, dynamic>> consultarChaveNfe(String chaveAcesso) async {
+    final chave = ChaveFiscalService.normalizar(chaveAcesso);
+    final metadados = ChaveFiscalService.metadados(chave);
+    if (metadados.modelo != 55) {
+      throw ArgumentError(
+        'A consulta por chave no Web é destinada a NF-e modelo 55.',
+      );
+    }
+
+    final sessao = _client.auth.currentSession;
+    if (sessao == null) {
+      throw StateError('Entre na sua conta para consultar a NF-e.');
+    }
+
+    final response = await _client.functions.invoke(
+      'imperium-fiscal-dfe',
+      body: {'chave': chave},
+      headers: {'Authorization': 'Bearer ${sessao.accessToken}'},
+    );
+    final raw = response.data;
+    final data = raw is Map ? Map<String, dynamic>.from(raw) : const <String, dynamic>{};
+    if (data['ok'] != true) {
+      throw StateError(
+        (data['message'] ?? 'O backend fiscal não retornou a NF-e.').toString(),
+      );
+    }
+    final xml = (data['xml'] ?? '').toString().trim();
+    if (xml.isEmpty) {
+      throw StateError('O backend fiscal respondeu sem o XML da NF-e.');
+    }
+    return importarXml(xml);
   }
 
   Future<Map<String, dynamic>> importarXml(String xml) async {
