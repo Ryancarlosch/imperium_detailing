@@ -521,7 +521,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Por enquanto esta agenda organiza o conteúdo. A conexão Meta futura reutilizará estes registros.',
-                      style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
+                      style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
                     ),
                   ),
                 ],
@@ -722,7 +722,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -824,7 +824,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                           ),
                         ),
@@ -1019,7 +1019,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                         SizedBox(height: 5),
                         Text(
                           'Campanhas, conteúdo e atribuição de vendas em uma visão única.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -1073,7 +1073,7 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                             Text(
                               'Dados e atribuição já funcionam manualmente. Instagram/Facebook serão conectados pelo backend em uma etapa posterior.',
                               style: TextStyle(
-                                color: Color(0xFF89939E),
+                                color: ImperiumWebTheme.textMuted,
                                 fontSize: 12,
                               ),
                             ),
