@@ -2531,22 +2531,23 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                           ),
                           trailing: PopupMenuButton<String>(
                             onSelected: (acao) {
-                              if (acao == 'editar') {
+                              if (acao == 'detalhes') {
+                                _abrirDetalhes(e);
+                              } else if (acao == 'editar') {
                                 _editar(e, clientes);
                               } else if (acao == 'excluir') {
                                 _excluir(e);
                               }
                             },
-                            itemBuilder: (_) => [
-                              const PopupMenuItem(
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'detalhes',
+                                child: Text('Detalhes e histórico'),
+                              ),
+                              PopupMenuItem(
                                 value: 'editar',
                                 child: Text('Editar'),
                               ),
-                              if (_statusAberto((e['status'] ?? 'Agendado').toString()))
-                                const PopupMenuItem(
-                                  value: 'criar_os',
-                                  child: Text('Criar OS'),
-                                ),
                               const PopupMenuItem(
                                 value: 'excluir',
                                 child: Text('Excluir'),
