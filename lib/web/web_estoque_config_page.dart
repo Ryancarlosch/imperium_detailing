@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'imperium_web_theme.dart';
+
 import '../services/web_estoque_config_service.dart';
 
 class WebEstoqueConfigPage extends StatefulWidget {
@@ -145,6 +147,14 @@ class _WebEstoqueConfigPageState extends State<WebEstoqueConfigPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
       children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: ImperiumWebTheme.contentMaxWidth,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
         Wrap(
           alignment: WrapAlignment.spaceBetween,
           crossAxisAlignment: WrapCrossAlignment.center,
@@ -163,7 +173,7 @@ class _WebEstoqueConfigPageState extends State<WebEstoqueConfigPage> {
                   SizedBox(height: 4),
                   Text(
                     'As mesmas regras usadas no Android e nas Ordens de Serviço.',
-                    style: TextStyle(color: Color(0xFF89939E)),
+                    style: TextStyle(color: ImperiumWebTheme.textMuted),
                   ),
                 ],
               ),
@@ -270,6 +280,10 @@ class _WebEstoqueConfigPageState extends State<WebEstoqueConfigPage> {
             ),
             subtitle: Text(
               'Alterações feitas aqui chegam ao Android no próximo ciclo de sincronização, e alterações do aplicativo voltam para o Web.',
+            ),
+          ),
+        ),
+              ],
             ),
           ),
         ),
