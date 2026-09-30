@@ -294,7 +294,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -826,7 +826,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                                 SizedBox(height: 5),
                                 Text(
                                   'OS abertas/em andamento com CAS; finalizadas com correção administrativa auditada.',
-                                  style: TextStyle(color: Color(0xFFAAB3BD)),
+                                  style: TextStyle(color: ImperiumWebTheme.textSecondary),
                                 ),
                               ],
                             ),
@@ -939,7 +939,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                               Text(
                                 '${filtradas.length} resultado(s)',
                                 style: const TextStyle(
-                                  color: Color(0xFF89939E),
+                                  color: ImperiumWebTheme.textMuted,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -962,7 +962,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                                 Icon(
                                   Icons.edit_note_outlined,
                                   size: 42,
-                                  color: Color(0xFF89939E),
+                                  color: ImperiumWebTheme.textMuted,
                                 ),
                                 SizedBox(height: 12),
                                 Text(
@@ -1038,7 +1038,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
-                                                color: Color(0xFFAAB3BD),
+                                                color: ImperiumWebTheme.textSecondary,
                                                 fontSize: 12,
                                               ),
                                             ),
@@ -1166,7 +1166,7 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
-                                              color: Color(0xFFAAB3BD),
+                                              color: ImperiumWebTheme.textSecondary,
                                               fontSize: 12,
                                             ),
                                           ),
