@@ -240,7 +240,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                       SizedBox(height: 5),
                       Text(
                         'Abra a OS na nuvem e organize cliente, veículo, responsável e serviços antes da execução.',
-                        style: TextStyle(color: Color(0xFFAAB3BD)),
+                        style: TextStyle(color: ImperiumWebTheme.textSecondary),
                       ),
                     ],
                   ),
@@ -327,7 +327,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                       const Icon(
                         Icons.person_off_outlined,
                         size: 42,
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                       ),
                       const SizedBox(height: 12),
                       const Text(
@@ -341,7 +341,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                       const Text(
                         'Cadastre um cliente antes de abrir uma ordem de serviço.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFFAAB3BD)),
+                        style: TextStyle(color: ImperiumWebTheme.textSecondary),
                       ),
                     ],
                   ),
@@ -514,7 +514,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
                       Text(
                         'Adicione todos os serviços que farão parte desta OS.',
                         style: TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                         ),
                       ),
@@ -692,7 +692,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
               const Divider(height: 28),
               const Text(
                 'O valor final ainda poderá receber descontos, acréscimos e condições de pagamento no fluxo de edição/finalização.',
-                style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
+                style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -727,7 +727,7 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
     return Row(
       children: [
         Expanded(
-          child: Text(titulo, style: const TextStyle(color: Color(0xFFAAB3BD))),
+          child: Text(titulo, style: const TextStyle(color: ImperiumWebTheme.textSecondary)),
         ),
         const SizedBox(width: 12),
         Flexible(
