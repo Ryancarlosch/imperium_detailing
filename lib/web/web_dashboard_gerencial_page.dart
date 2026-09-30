@@ -615,7 +615,7 @@ class _WebDashboardGerencialPageState extends State<WebDashboardGerencialPage> {
                           Text(
                             '+ ${resumo.contas.length - contas.length} conta(s) disponível(is) em Contas e caixa',
                             style: const TextStyle(
-                              color: Color(0xFF89939E),
+                              color: ImperiumWebTheme.textMuted,
                               fontSize: 12,
                             ),
                           ),
@@ -730,7 +730,7 @@ class _AgendaHojePainel extends StatelessWidget {
                 child: Center(
                   child: Text(
                     'Nenhum agendamento aberto para hoje.',
-                    style: TextStyle(color: Color(0xFF89939E)),
+                    style: TextStyle(color: ImperiumWebTheme.textMuted),
                   ),
                 ),
               )
@@ -771,7 +771,7 @@ class _AgendaHojePainel extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color: Color(0xFF89939E),
+                                color: ImperiumWebTheme.textMuted,
                                 fontSize: 12,
                               ),
                             ),
@@ -837,7 +837,7 @@ class _OrdensAbertasPainel extends StatelessWidget {
                 child: Center(
                   child: Text(
                     'Nenhuma ordem aberta ou em andamento.',
-                    style: TextStyle(color: Color(0xFF89939E)),
+                    style: TextStyle(color: ImperiumWebTheme.textMuted),
                   ),
                 ),
               )
@@ -885,7 +885,7 @@ class _OrdensAbertasPainel extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color: Color(0xFF89939E),
+                                color: ImperiumWebTheme.textMuted,
                                 fontSize: 12,
                               ),
                             ),
@@ -940,7 +940,7 @@ class _CabecalhoPainel extends StatelessWidget {
         const SizedBox(height: 4),
         const Text(
           'Caixa, vendas, operação e equipe em uma visão gerencial.',
-          style: TextStyle(color: Color(0xFFAAB3BD)),
+          style: TextStyle(color: ImperiumWebTheme.textSecondary),
         ),
         if (ultimaAtualizacao != null) ...[
           const SizedBox(height: 7),
@@ -955,7 +955,7 @@ class _CabecalhoPainel extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'Atualizado às $ultimaAtualizacao',
-                style: const TextStyle(color: Color(0xFF89939E), fontSize: 12),
+                style: const TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
               ),
             ],
           ),
@@ -1065,7 +1065,7 @@ class _HeroGestao extends StatelessWidget {
                     const Text(
                       'Saldo consolidado',
                       style: TextStyle(
-                        color: Color(0xFFAAB3BD),
+                        color: ImperiumWebTheme.textSecondary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1088,7 +1088,7 @@ class _HeroGestao extends StatelessWidget {
                       : 'Cadastre ou sincronize uma conta financeira para exibir o saldo real',
                   style: TextStyle(
                     color: contasConfiguradas
-                        ? const Color(0xFFAAB3BD)
+                        ? ImperiumWebTheme.textSecondary
                         : Colors.orangeAccent,
                   ),
                 ),
@@ -1143,7 +1143,7 @@ class _HeroMini extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(titulo, style: const TextStyle(color: Color(0xFFAAB3BD))),
+                Text(titulo, style: const TextStyle(color: ImperiumWebTheme.textSecondary)),
                 const SizedBox(height: 4),
                 Text(
                   valor,
@@ -1208,7 +1208,7 @@ class _KpiCard extends StatelessWidget {
                   children: [
                     Text(
                       titulo,
-                      style: const TextStyle(color: Color(0xFFAAB3BD)),
+                      style: const TextStyle(color: ImperiumWebTheme.textSecondary),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -1226,7 +1226,7 @@ class _KpiCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 12,
                       ),
                     ),
@@ -1299,7 +1299,7 @@ class _QuickAction extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                         ),
                       ),
@@ -1310,7 +1310,7 @@ class _QuickAction extends StatelessWidget {
                 const Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 15,
-                  color: Color(0xFF89939E),
+                  color: ImperiumWebTheme.textMuted,
                 ),
               ],
             ),
@@ -1375,7 +1375,7 @@ class _ContaCard extends StatelessWidget {
                 detalhe,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Color(0xFFAAB3BD), fontSize: 12),
+                style: const TextStyle(color: ImperiumWebTheme.textSecondary, fontSize: 12),
               ),
             ],
           ),
@@ -1448,7 +1448,7 @@ class _ExecutorLinha extends StatelessWidget {
                   Text(
                     '${item.quantidade} OS · $valorRecebido recebido',
                     style: const TextStyle(
-                      color: Color(0xFFAAB3BD),
+                      color: ImperiumWebTheme.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -1518,7 +1518,7 @@ class _AtencaoLinha extends StatelessWidget {
                   Text(
                     detalhe,
                     style: const TextStyle(
-                      color: Color(0xFF89939E),
+                      color: ImperiumWebTheme.textMuted,
                       fontSize: 12,
                     ),
                   ),
@@ -1569,7 +1569,7 @@ class _SectionTitle extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(subtitulo, style: const TextStyle(color: Color(0xFFAAB3BD))),
+              Text(subtitulo, style: const TextStyle(color: ImperiumWebTheme.textSecondary)),
             ],
           ),
         ),
@@ -1593,7 +1593,7 @@ class _EstadoVazio extends StatelessWidget {
         border: Border.all(color: ImperiumWebTheme.border),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(texto, style: const TextStyle(color: Color(0xFFAAB3BD))),
+      child: Text(texto, style: const TextStyle(color: ImperiumWebTheme.textSecondary)),
     );
   }
 }
