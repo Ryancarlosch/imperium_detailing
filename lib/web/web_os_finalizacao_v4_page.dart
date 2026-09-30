@@ -261,7 +261,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -414,7 +414,10 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1020;
-        final larguraDisponivel = constraints.maxWidth - (compacto ? 32 : 48);
+        final larguraBase = constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
+            ? ImperiumWebTheme.contentMaxWidth
+            : constraints.maxWidth;
+        final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
         final colunas = constraints.maxWidth >= 1080
             ? 3
             : constraints.maxWidth >= 720
@@ -451,7 +454,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                         SizedBox(height: 5),
                         Text(
                           'Fechamento transacional com estoque FIFO, mão de obra, pagamento e financeiro no mesmo commit.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -480,7 +483,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                         child: Text(
                           'A finalização só é concluída se todas as etapas passarem. '
                           'Se houver falha em estoque, pagamento ou financeiro, a OS permanece sem finalizar.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ),
                     ],
@@ -548,7 +551,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                         Text(
                           '${ordens.length} resultado(s)',
                           style: const TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -569,7 +572,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                         Icon(
                           Icons.task_alt_outlined,
                           size: 42,
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                         ),
                         SizedBox(height: 12),
                         Text(
@@ -583,7 +586,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                         Text(
                           'Quando uma OS entrar em execução, ela aparecerá aqui para preparação e fechamento.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -641,7 +644,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        color: Color(0xFFAAB3BD),
+                                        color: ImperiumWebTheme.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -735,7 +738,7 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      color: Color(0xFFAAB3BD),
+                                      color: ImperiumWebTheme.textSecondary,
                                       fontSize: 12,
                                     ),
                                   ),
