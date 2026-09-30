@@ -135,6 +135,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       0 => WebDashboardGerencialPage(
         key: ValueKey('dashboard-premium-${widget.empresaAtualId}-$_revisao'),
         onNavigate: (indice) => _selecionar(indice, fecharMenu: false),
+        onChanged: _atualizar,
       ),
       1 => _ClientesPage(
         key: ValueKey('clientes-$_revisao'),
@@ -3338,11 +3339,13 @@ class _OrdensPage extends StatefulWidget {
     required this.service,
     required this.moeda,
     required this.onNavigate,
+    required this.onChanged,
   });
 
   final WebCloudOperacionalService service;
   final NumberFormat moeda;
   final ValueChanged<int> onNavigate;
+  final VoidCallback onChanged;
 
   @override
   State<_OrdensPage> createState() => _OrdensPageState();
