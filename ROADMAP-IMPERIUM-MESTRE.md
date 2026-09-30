@@ -2567,7 +2567,11 @@ Cobertura já confirmada na auditoria de ações:
 - financeiro: lançamentos previsto/realizado, contas, extrato/comparativo/conciliação, transferências e administração;
 - gestão financeira: fornecedores, taxas de maquininha, custos fixos, metas, plano de contas, mão de obra, folha/pagamentos e histórico salarial;
 - CRM/orçamentos: conversão, PDF/recibo/WhatsApp, campanhas, benefícios e relacionamento;
-- demais módulos de negócio permanecem sob revisão de ações e navegação antes do gate final.
+- Fiscal: importação XML, vínculo/entrada de estoque, lançamento financeiro e exclusão segura expostos no Web;
+- CRM: exclusão segura de lead com CAS agora exposta no Web;
+- Ponto: fechamento e reabertura mensal de competência agora expostos no Web, com bloqueio por pendências/incompletos;
+- Marketing, Pós-venda, Serviços e Usuários/Acessos tiveram ações comparadas com o Mobile e usam os mesmos serviços compartilhados/Cloud;
+- demais fluxos continuam sob revisão de navegação e contratos antes do gate final.
 
 Gates:
 1. eliminar regressões de analyze/test/build introduzidas durante a reestilização;
