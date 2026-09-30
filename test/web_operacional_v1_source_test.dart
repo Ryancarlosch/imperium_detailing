@@ -183,7 +183,6 @@ void main() {
     expect(service, contains("'agendamento_id': _textoNulo(agendamentoId)"));
   });
 
-
   test('Veiculos Web expoem historico de OS e PDF', () {
     final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
 
@@ -192,5 +191,4 @@ void main() {
     expect(shell, contains('WebOsPdfService.instance.baixarPdf'));
     expect(shell, contains('Este veículo ainda não possui Ordens de Serviço.'));
   });
-
 }

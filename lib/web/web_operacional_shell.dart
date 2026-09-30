@@ -168,7 +168,9 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         onChanged: _atualizar,
       ),
       5 => WebNovaOrdemPage(
-        key: ValueKey('nova-os-${_agendamentoParaOs?['id'] ?? 'avulsa'}-$_revisao'),
+        key: ValueKey(
+          'nova-os-${_agendamentoParaOs?['id'] ?? 'avulsa'}-$_revisao',
+        ),
         agendamentoInicial: _agendamentoParaOs,
         onCreated: () {
           _agendamentoParaOs = null;
@@ -1837,12 +1839,22 @@ class _VeiculosPageState extends State<_VeiculosPage> {
 
   Future<void> _abrirDetalhes(Map<String, dynamic> veiculo) async {
     try {
-      final ordens = (await widget.service.listarOrdens())
-          .where((e) => (e['veiculo_id'] ?? '').toString() == veiculo['id'].toString())
-          .toList()
-        ..sort((a, b) => (b['data_finalizacao'] ?? b['data_abertura'] ?? '')
-            .toString()
-            .compareTo((a['data_finalizacao'] ?? a['data_abertura'] ?? '').toString()));
+      final ordens =
+          (await widget.service.listarOrdens())
+              .where(
+                (e) =>
+                    (e['veiculo_id'] ?? '').toString() ==
+                    veiculo['id'].toString(),
+              )
+              .toList()
+            ..sort(
+              (a, b) => (b['data_finalizacao'] ?? b['data_abertura'] ?? '')
+                  .toString()
+                  .compareTo(
+                    (a['data_finalizacao'] ?? a['data_abertura'] ?? '')
+                        .toString(),
+                  ),
+            );
       if (!mounted) return;
 
       await showDialog<void>(
@@ -1874,7 +1886,9 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                 Expanded(
                   child: ordens.isEmpty
                       ? const Center(
-                          child: Text('Este veículo ainda não possui Ordens de Serviço.'),
+                          child: Text(
+                            'Este veículo ainda não possui Ordens de Serviço.',
+                          ),
                         )
                       : ListView.separated(
                           itemCount: ordens.length,
@@ -1885,13 +1899,19 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                               leading: const Icon(Icons.receipt_long_outlined),
                               title: Text(
                                 'OS ${ordem['numero'] ?? ''}',
-                                style: const TextStyle(fontWeight: FontWeight.w800),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                               subtitle: Text(
                                 [
                                   (ordem['status'] ?? '').toString(),
-                                  (ordem['data_finalizacao'] ?? ordem['data_abertura'] ?? '').toString(),
-                                  (ordem['funcionario_responsavel'] ?? '').toString(),
+                                  (ordem['data_finalizacao'] ??
+                                          ordem['data_abertura'] ??
+                                          '')
+                                      .toString(),
+                                  (ordem['funcionario_responsavel'] ?? '')
+                                      .toString(),
                                 ].where((e) => e.trim().isNotEmpty).join(' · '),
                               ),
                               trailing: IconButton(
@@ -1900,10 +1920,14 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                                   try {
                                     await WebOsPdfService.instance.baixarPdf(
                                       ordemId: ordem['id'].toString(),
-                                      numero: (ordem['numero'] ?? '').toString(),
+                                      numero: (ordem['numero'] ?? '')
+                                          .toString(),
                                     );
                                   } catch (e) {
-                                    if (mounted) _snack('Não foi possível gerar o PDF: $e');
+                                    if (mounted)
+                                      _snack(
+                                        'Não foi possível gerar o PDF: $e',
+                                      );
                                   }
                                 },
                                 icon: const Icon(Icons.picture_as_pdf_outlined),
@@ -3406,7 +3430,9 @@ class _AgendaPageState extends State<_AgendaPage> {
                                       onPressed: _statusAberto(status)
                                           ? () => widget.onCriarOrdem(e)
                                           : null,
-                                      icon: const Icon(Icons.add_business_outlined),
+                                      icon: const Icon(
+                                        Icons.add_business_outlined,
+                                      ),
                                     ),
                                     IconButton(
                                       tooltip: 'Excluir agendamento',
@@ -3458,7 +3484,9 @@ class _AgendaPageState extends State<_AgendaPage> {
                                 value: 'editar',
                                 child: Text('Editar'),
                               ),
-                              if (_statusAberto((e['status'] ?? 'Agendado').toString()))
+                              if (_statusAberto(
+                                (e['status'] ?? 'Agendado').toString(),
+                              ))
                                 const PopupMenuItem(
                                   value: 'criar_os',
                                   child: Text('Criar OS'),

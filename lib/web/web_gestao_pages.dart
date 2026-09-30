@@ -70,7 +70,8 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
         _veiculos = resultados[1];
         final agenda = widget.agendamentoInicial;
         final clienteAgenda = agenda?['cliente_id']?.toString();
-        _clienteId = clienteAgenda != null &&
+        _clienteId =
+            clienteAgenda != null &&
                 clientes.any((item) => item['id'].toString() == clienteAgenda)
             ? clienteAgenda
             : clientes.isEmpty
