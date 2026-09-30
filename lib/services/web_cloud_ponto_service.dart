@@ -258,14 +258,6 @@ class WebCloudPontoService {
           _horaNula(e['saida']?.toString()) == null;
     }).length;
 
-    final fechamento = await _client
-        .from('ponto_fechamentos')
-        .select('status,fechado_em,reaberto_em,motivo_reabertura')
-        .eq('empresa_id', empresaId)
-        .eq('colaborador_id', colaboradorId)
-        .eq('competencia', _data(inicio))
-        .maybeSingle();
-
     return <String, dynamic>{
       'empresa_id': empresaId,
       'colaborador_id': colaboradorId,
@@ -273,9 +265,6 @@ class WebCloudPontoService {
       'pendencias': pendencias,
       'incompletos': incompletos,
       'registros': registrosColaborador.length,
-      'fechamento_status': fechamento == null
-          ? 'Aberto'
-          : ((fechamento as Map)['status'] ?? 'Fechado').toString(),
     };
   }
 
