@@ -3453,12 +3453,17 @@ class _AgendaPageState extends State<_AgendaPage> {
                                 _excluir(e);
                               }
                             },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
                                 value: 'editar',
                                 child: Text('Editar'),
                               ),
-                              PopupMenuItem(
+                              if (_statusAberto((e['status'] ?? 'Agendado').toString()))
+                                const PopupMenuItem(
+                                  value: 'criar_os',
+                                  child: Text('Criar OS'),
+                                ),
+                              const PopupMenuItem(
                                 value: 'excluir',
                                 child: Text('Excluir'),
                               ),
