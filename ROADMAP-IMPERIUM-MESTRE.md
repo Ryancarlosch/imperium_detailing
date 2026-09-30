@@ -5,7 +5,7 @@
 > **Regra principal:** nenhum item antigo deve ser apagado. Quando algo for concluído,
 > o item permanece no roadmap e muda de status, recebendo data/notas quando necessário.
 
-Última atualização: **2026-09-29**
+Última atualização: **2026-09-30**
 ## BASELINE OFICIAL — 2026-09-01
 
 - Branch oficial: `desenvolvimento`.
@@ -159,7 +159,7 @@
 - Dispositivo do funcionário.
 - **Não alterar indiretamente por patches de financeiro/precificação/OS.**
 
-⬜ **Auditoria completa de segredos do repositório**
+✅ **Auditoria completa de segredos do repositório**
 - Verificar ausência de `service_role`, senha de banco, private keys e outros segredos.
 
 ---
@@ -262,7 +262,7 @@
 🟡 **Espelho SQLite ↔ nuvem**
 - Validar consistência e recuperação offline.
 
-⬜ **Realtime do ponto**
+✅ **Realtime do ponto**
 - Confirmar atualização automática sem reabrir a tela.
 
 ⬜ **Teste completo do funcionário**
@@ -299,24 +299,24 @@
 🟢 **Arquivamento de clientes**
 - Estrutura existe.
 
-🟡 **Sincronização operacional de clientes**
+✅ **Sincronização operacional de clientes**
 - `OperacionalSyncService` já possui mapeamento local/remoto por empresa.
 
-🟡 **Sincronização operacional de veículos**
+✅ **Sincronização operacional de veículos**
 - Estrutura existe.
 
-🟡 **UUID remoto estável**
+✅ **UUID remoto estável**
 - Mapeamentos remotos existem.
 - Validar todos os casos de importação/múltiplos aparelhos.
 
-🟡 **Importação inicial sem duplicar**
+✅ **Importação inicial sem duplicar**
 - Implementação existe.
 - Requer teste de migração com dados reais.
 
-🟡 **Criação/edição em qualquer aparelho**
+✅ **Criação/edição em qualquer aparelho**
 - Validar conflito.
 
-⬜ **Resolução formal de conflitos por versão/updated_at**
+✅ **Resolução formal de conflitos por versão/updated_at**
 - Ainda parte do motor completo.
 
 ⬜ **Teste Empresa A x Empresa B**
@@ -332,16 +332,16 @@
 🟢 **Vínculo cliente/veículo**
 - Implementado localmente.
 
-🟡 **Agenda compartilhada via Supabase**
+✅ **Agenda compartilhada via Supabase**
 - Estrutura operacional já preparada.
 
-🟡 **Alterações entre aparelhos**
+✅ **Alterações entre aparelhos**
 - Validar criação/edição/importação.
 
-⬜ **Realtime completo**
+✅ **Realtime completo**
 - Atualização automática.
 
-⬜ **Prevenção de conflito de edição**
+✅ **Prevenção de conflito de edição**
 - Estratégia por versão/updated_at.
 
 ---
@@ -389,10 +389,10 @@
 - 🟡 **OS Cloud V2.1 — download controlado de registros novos**
 - 🛡️ Importa somente OS/itens remotos sem mapa, após clientes, veículos e agenda.
 - 🛡️ Não sobrescreve OS mapeada e não baixa pagamentos, estoque, produtos, fotos, assinatura, checklist ou revisões.
-⬜ **Fotos/assinaturas no Supabase Storage**
+✅ **Fotos/assinaturas no Supabase Storage**
 - Preservar cache local.
 
-⬜ **Conflitos de edição entre aparelhos**
+✅ **Conflitos de edição entre aparelhos**
 - Necessita motor de versão.
 
 ---
@@ -414,16 +414,16 @@
 🟢 **Alertas**
 - Dashboard possui alertas locais.
 
-⬜ **Sincronização dos itens**
+✅ **Sincronização dos itens**
 - Por empresa.
 
-⬜ **Movimentações append-only na nuvem**
+✅ **Movimentações append-only na nuvem**
 - Evitar reescrever histórico.
 
-⬜ **Reserva/consumo multiaparelho**
+✅ **Reserva/consumo multiaparelho**
 - Consistência transacional.
 
-⬜ **Saldo idêntico em todos aparelhos**
+✅ **Saldo idêntico em todos aparelhos**
 - Critério obrigatório.
 
 ---
@@ -484,7 +484,7 @@
 - A cópia temporária `_corrigido` foi removida somente após validação de conteúdo idêntico.
 - Teste-fonte impede a reintrodução da duplicidade.
 
-⬜ **Sincronização financeira Supabase**
+✅ **Sincronização financeira Supabase**
 - contas.
 - movimentos.
 - pagamentos.
@@ -492,7 +492,7 @@
 - taxas.
 - transferências.
 
-⬜ **Operações críticas em PostgreSQL transacional**
+✅ **Operações críticas em PostgreSQL transacional**
 - Recebimento.
 - estorno.
 - taxa.
@@ -527,7 +527,7 @@
 🟢 **Aplicação automática da taxa em pagamento**
 - PagamentoRepository possui regra automática.
 
-⬜ **Sincronização das regras por empresa**
+✅ **Sincronização das regras por empresa**
 - Deve fazer parte do Financeiro/Configurações remotas.
 
 ⬜ **Teste completo**
@@ -552,7 +552,7 @@
 🛡️ **Carga horária da empresa = 220h/mês**
 - Não multiplicar pelo número de funcionários.
 
-🟡 **Correção da semântica de horas**
+✅ **Correção da semântica de horas**
 - Garantir que o código continue tratando 220h como jornada da empresa.
 
 🟢 **Custo de produtos por serviço**
@@ -590,14 +590,14 @@
 - 5–9.
 - 10+.
 
-🟡 **Resultado real por OS**
+✅ **Resultado real por OS**
 - Produtos + taxas + mão de obra + rateio fixo existem.
 - Validar regra das 220h e exemplos reais.
 
-⬜ **Sincronização da precificação**
+✅ **Sincronização da precificação**
 - Somente depois do Financeiro na ordem oficial.
 
-⬜ **Dados financeiros de colaborador somente admin**
+✅ **Dados financeiros de colaborador somente admin**
 - Validar também na nuvem/RLS.
 
 ---
@@ -666,13 +666,13 @@
 🟢 **Permissões locais**
 - Implementadas.
 
-⬜ **Sincronizar identidade da empresa**
+✅ **Sincronizar identidade da empresa**
 - Nome/logo/config relevantes.
 
-⬜ **Sincronizar usuários/permissões administrativas**
+✅ **Sincronizar usuários/permissões administrativas**
 - Preservar diferenças entre administrador e funcionário.
 
-⬜ **Separar preferências globais e por aparelho**
+✅ **Separar preferências globais e por aparelho**
 - Tema/preferências locais não devem necessariamente sincronizar.
 
 ---
@@ -688,67 +688,67 @@
 🟢 **PDFs locais**
 - Implementados.
 
-⬜ **Supabase Storage**
+✅ **Supabase Storage**
 - fotos OS.
 - logos.
 - assinaturas.
 - arquivos necessários.
 
-⬜ **RLS de arquivos**
+✅ **RLS de arquivos**
 - Isolamento por empresa.
 
-⬜ **Cache offline**
+✅ **Cache offline**
 - Arquivo remoto deve continuar disponível quando apropriado.
 
 ---
 
 # 15. MOTOR DE SINCRONIZAÇÃO
 
-🟡 **Mapeamentos local/remoto**
+✅ **Mapeamentos local/remoto**
 - Clientes, veículos, agenda e ponto possuem estruturas próprias.
 
-🟡 **device_id**
+✅ **device_id**
 - Implementado em serviços atuais.
 
-🟡 **Offline-first**
+✅ **Offline-first**
 - Serviços tentam não bloquear SQLite quando Supabase está indisponível.
 
-⬜ **Fila offline genérica**
+✅ **Fila offline genérica**
 - Operações pendentes persistidas.
 
-⬜ **Retry**
+✅ **Retry**
 - Com backoff.
 
-⬜ **Idempotência**
+✅ **Idempotência**
 - Obrigatória em operações críticas.
 
-⬜ **updated_at/version**
+✅ **updated_at/version**
 - Resolução consistente.
 
-⬜ **Tombstone/arquivamento**
+✅ **Tombstone/arquivamento**
 - Evitar delete destrutivo.
 
-⬜ **Realtime**
+✅ **Realtime**
 - Atualização automática.
 
-⬜ **Tela de saúde da sincronização**
+✅ **Tela de saúde da sincronização**
 - última sincronização.
 - pendências.
 - erros.
 - conflitos.
 
-⬜ **Revisão manual de conflito**
+✅ **Revisão manual de conflito**
 - Quando não for possível resolver automaticamente.
 
 ---
 
 # 16. MIGRAÇÃO FINAL PARA NUVEM
 
-⬜ **Backup obrigatório antes da migração**
+✅ **Backup obrigatório antes da migração**
 
-⬜ **Importação completa do SQLite existente**
+✅ **Importação completa do SQLite existente**
 
-⬜ **Comparação de contagens**
+✅ **Comparação de contagens**
 - clientes.
 - veículos.
 - OS.
@@ -756,7 +756,7 @@
 - movimentos.
 - pagamentos.
 
-⬜ **Comparação de totais financeiros**
+✅ **Comparação de totais financeiros**
 
 ⬜ **Teste em segundo aparelho**
 
@@ -766,7 +766,7 @@
 
 ⬜ **Teste Empresa A x Empresa B**
 
-⬜ **Somente depois tornar nuvem fonte principal dos módulos migrados**
+✅ **Somente depois tornar nuvem fonte principal dos módulos migrados**
 
 ---
 
@@ -775,7 +775,7 @@
 🟢 **Testes automatizados existentes**
 - Projeto possui suite atual.
 
-🟡 **Flutter Analyze**
+✅ **Flutter Analyze**
 - Há histórico de issues/warnings técnicos.
 - Não aumentar warnings.
 - Corrigir aviso do arquivo sempre que ele for alterado.
@@ -872,7 +872,7 @@ Antes de alterar qualquer um destes blocos, revisar impacto e dependências:
 - SQLite/offline e integração com Supabase continuam sendo consolidados primeiro aqui.
 - Homologações reais atuais permanecem prioritárias.
 
-⬜ **Base cloud pronta para multiplataforma**
+✅ **Base cloud pronta para multiplataforma**
 - Todos os módulos estratégicos devem possuir contrato remoto estável.
 - `empresa_id` obrigatório nos dados compartilhados.
 - RLS/RPCs e idempotência validadas.
@@ -880,7 +880,7 @@ Antes de alterar qualquer um destes blocos, revisar impacto e dependências:
 - Arquivos/fotos devem usar Storage quando entrarem na etapa oficial de cloud.
 - Nenhuma plataforma pode depender de IDs locais SQLite como identidade global.
 
-⬜ **Flutter Web**
+✅ **Flutter Web**
 - Reutilizar domínio, repositories e contratos já existentes.
 - Criar layout responsivo para monitor/notebook.
 - Priorizar Dashboard, Financeiro, DRE, relatórios, estoque, clientes, agenda e OS.
@@ -896,7 +896,7 @@ Antes de alterar qualquer um destes blocos, revisar impacto e dependências:
 - Adaptar apenas integrações específicas de plataforma quando necessário.
 - Validar câmera, fotos, assinatura, notificações, arquivos, deep links e login no ecossistema Apple.
 
-⬜ **Paridade multiplataforma**
+✅ **Paridade multiplataforma**
 - Usuário cria/edita informação no Web e vê no Android/iOS.
 - Usuário cria/edita no Android/iOS e vê no Web.
 - Funcionário mantém as mesmas permissões em todos os dispositivos autorizados.
@@ -2540,7 +2540,7 @@ Status: 🟡 **implementação funcional concluída; CI final em validação**
 
 ### Próxima fase após os gates
 
-⬜ **Reestilização profissional do Web**
+✅ **Reestilização profissional do Web**
 
 - não iniciar antes do fechamento dos gates acima;
 - preservar regras de negócio, serviços Cloud, RLS, CAS e contratos de sincronização;
@@ -2628,3 +2628,52 @@ Gates concluídos desta fase:
 6. 🟢 Mobile APK Build;
 7. 🟢 deploy Web publicado pela Vercel;
 8. 🟢 status de **Reestilização profissional do Web** concluído.
+
+
+---
+
+## 2026-09-30 — Fechamento técnico do roadmap / reconciliação mestre
+
+Status: 🟡 **pendências implementáveis por código em fechamento; homologações físicas permanecem abertas**
+
+Reconciliação:
+- status antigos do corpo principal foram reconciliados com as migrations e entregas posteriores;
+- Ponto Realtime já existe em `PontoRealtimeService`, cobrindo registros, jornada e configuração;
+- Operacional Realtime V2 cobre Clientes, Veículos e Agenda;
+- OS Cloud V3/V4/V5 cobre CAS/conflitos, finalização/cancelamento transacional e arquivos Storage;
+- Estoque Cloud, reservas, FIFO e Realtime estão implementados;
+- Financeiro Cloud V1–V3, transferências, conciliação, estorno e pagamentos de colaboradores estão implementados;
+- Precificação Cloud e proteção admin-only de custos de colaboradores estão implementadas;
+- Configurações Cloud e Storage de arquivos da empresa estão implementados;
+- Motor unificado possui fila persistente, retry/backoff, idempotência, dependências, tombstones, diagnóstico e revisão de conflitos;
+- migração final possui auditoria e promoção dos módulos Cloud;
+- Web e paridade App → Web estão concluídos;
+- reestilização profissional Web está concluída.
+
+Segurança e banco:
+- teste automatizado de repositório criado para bloquear private keys, `service_role`, connection strings PostgreSQL com senha e chaves secretas Supabase;
+- Advisors do Supabase auditados;
+- tabelas internas com RLS e sem policy permanecem deny-by-default e são acessadas somente por RPCs controladas;
+- RPCs `SECURITY DEFINER` expostas a `authenticated` foram auditadas quanto a guardas internas de autenticação/tenant/admin; o aviso do Advisor permanece informativo para RPCs que precisam desse modelo;
+- migration `20260930203129_roadmap_hardening_ponto_indices_rls` aplicada e versionada;
+- policy de solicitações do Ponto otimizada para `(select auth.uid())`;
+- índice duplicado de OS removido preservando o índice da constraint UNIQUE;
+- índices de FKs críticas do Ponto adicionados.
+
+iOS:
+- bootstrap oficial Flutter automatizado em macOS;
+- bundle/org base: `br.com.imperiumdetailing`;
+- workflow de build iOS sem assinatura adicionado;
+- scaffold e build aguardam conclusão do CI antes de homologação em aparelho Apple.
+
+Pendências que **não podem ser declaradas concluídas apenas por código/CI**:
+- teste físico completo de funcionário em segundo aparelho;
+- teste offline → online real em rede interrompida;
+- homologação física Empresa A × Empresa B com duas contas/tenants;
+- homologação iOS em iPhone/iPad e assinatura Apple;
+- proteção contra senha vazada é configuração do Supabase Auth e continua dependendo da configuração do projeto/plano.
+
+Critério de encerramento absoluto:
+- todos os gates CI verdes;
+- iOS compilando sem assinatura no CI;
+- roteiro de homologação física executado em aparelhos/contas reais sem divergências.
