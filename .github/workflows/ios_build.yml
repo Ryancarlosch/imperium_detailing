@@ -17,26 +17,39 @@ permissions:
 
 jobs:
   build-ios:
-    if: ${{ hashFiles('ios/Runner.xcodeproj/project.pbxproj') != '' }}
     runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verificar scaffold iOS
+        id: ios
+        run: |
+          if [ -f ios/Runner.xcodeproj/project.pbxproj ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Flutter
+        if: steps.ios.outputs.exists == 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
       - name: Dependências
+        if: steps.ios.outputs.exists == 'true'
         run: flutter pub get
 
       - name: Analyze
+        if: steps.ios.outputs.exists == 'true'
         run: flutter analyze
 
       - name: Tests
+        if: steps.ios.outputs.exists == 'true'
         run: flutter test
 
       - name: Build iOS sem assinatura
+        if: steps.ios.outputs.exists == 'true'
         run: flutter build ios --release --no-codesign
