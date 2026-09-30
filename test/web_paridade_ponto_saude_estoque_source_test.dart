@@ -86,5 +86,4 @@ void main() {
     expect(service, contains("'ponto_fechar_competencia_admin'"));
     expect(service, contains("'ponto_reabrir_competencia_admin'"));
   });
-
 }

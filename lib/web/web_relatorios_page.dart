@@ -161,124 +161,138 @@ class _WebRelatoriosPageState extends State<WebRelatoriosPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _MetricCard(
-                  titulo: 'Vendas líquidas',
-                  valor: _moeda.format(resumo.vendas),
-                  icon: Icons.receipt_long_outlined,
-                ),
-                _MetricCard(
-                  titulo: 'Recebido',
-                  valor: _moeda.format(resumo.recebido),
-                  icon: Icons.payments_outlined,
-                ),
-                _MetricCard(
-                  titulo: 'A receber',
-                  valor: _moeda.format(resumo.aReceber),
-                  icon: Icons.schedule_rounded,
-                  alerta: resumo.aReceber > 0,
-                ),
-                _MetricCard(
-                  titulo: 'Resultado competência',
-                  valor: _moeda.format(resumo.competencia.resultadoGerencial),
-                  icon: Icons.query_stats_rounded,
-                  alerta: resumo.competencia.resultadoGerencial < 0,
-                ),
-                _MetricCard(
-                  titulo: 'Resultado caixa',
-                  valor: _moeda.format(resumo.caixa.resultadoGerencial),
-                  icon: Icons.account_balance_wallet_outlined,
-                  alerta: resumo.caixa.resultadoGerencial < 0,
-                ),
-                _MetricCard(
-                  titulo: 'Ticket médio',
-                  valor: _moeda.format(resumo.ticketMedio),
-                  icon: Icons.shopping_bag_outlined,
-                ),
-                _MetricCard(
-                  titulo: 'OS finalizadas',
-                  valor: '${resumo.quantidadeOrdens}',
-                  icon: Icons.car_repair_outlined,
-                ),
-              ],
-            ),
-            const SizedBox(height: 26),
-            const _SectionTitle(
-              titulo: 'Competência × caixa',
-              subtitulo:
-                  'Competência mede o resultado econômico; caixa mede o que realmente entrou e saiu.',
-            ),
-            const SizedBox(height: 10),
-            _DreCompareCard(
-              competencia: resumo.competencia,
-              caixa: resumo.caixa,
-              moeda: _moeda,
-            ),
-            const SizedBox(height: 26),
-            const _SectionTitle(
-              titulo: 'Desempenho por executor',
-              subtitulo:
-                  'Vendas das OS executadas, sem expor salário ou valor-hora interno.',
-            ),
-            const SizedBox(height: 10),
-            if (resumo.executores.isEmpty)
-              const _EmptyState('Sem executores no período selecionado.')
-            else
-              ...resumo.executores
-                  .take(10)
-                  .map((item) => _ExecutorCard(item: item, moeda: _moeda)),
-            const SizedBox(height: 26),
-            const _SectionTitle(
-              titulo: 'Maiores vendas do período',
-              subtitulo:
-                  'Os valores já consideram descontos, negociação, acréscimos e juros da OS.',
-            ),
-            const SizedBox(height: 10),
-            if (resumo.ordens.isEmpty)
-              const _EmptyState('Nenhuma OS finalizada no período.')
-            else
-              ...resumo.ordens
-                  .take(10)
-                  .map(
-                    (ordem) => _OrderCard(
-                      ordem: ordem,
-                      venda: WebCloudRelatoriosService.vendaOrdem(ordem),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _MetricCard(
+                          titulo: 'Vendas líquidas',
+                          valor: _moeda.format(resumo.vendas),
+                          icon: Icons.receipt_long_outlined,
+                        ),
+                        _MetricCard(
+                          titulo: 'Recebido',
+                          valor: _moeda.format(resumo.recebido),
+                          icon: Icons.payments_outlined,
+                        ),
+                        _MetricCard(
+                          titulo: 'A receber',
+                          valor: _moeda.format(resumo.aReceber),
+                          icon: Icons.schedule_rounded,
+                          alerta: resumo.aReceber > 0,
+                        ),
+                        _MetricCard(
+                          titulo: 'Resultado competência',
+                          valor: _moeda.format(
+                            resumo.competencia.resultadoGerencial,
+                          ),
+                          icon: Icons.query_stats_rounded,
+                          alerta: resumo.competencia.resultadoGerencial < 0,
+                        ),
+                        _MetricCard(
+                          titulo: 'Resultado caixa',
+                          valor: _moeda.format(resumo.caixa.resultadoGerencial),
+                          icon: Icons.account_balance_wallet_outlined,
+                          alerta: resumo.caixa.resultadoGerencial < 0,
+                        ),
+                        _MetricCard(
+                          titulo: 'Ticket médio',
+                          valor: _moeda.format(resumo.ticketMedio),
+                          icon: Icons.shopping_bag_outlined,
+                        ),
+                        _MetricCard(
+                          titulo: 'OS finalizadas',
+                          valor: '${resumo.quantidadeOrdens}',
+                          icon: Icons.car_repair_outlined,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 26),
+                    const _SectionTitle(
+                      titulo: 'Competência × caixa',
+                      subtitulo:
+                          'Competência mede o resultado econômico; caixa mede o que realmente entrou e saiu.',
+                    ),
+                    const SizedBox(height: 10),
+                    _DreCompareCard(
+                      competencia: resumo.competencia,
+                      caixa: resumo.caixa,
                       moeda: _moeda,
-                      data: _data,
                     ),
-                  ),
-            const SizedBox(height: 26),
-            const _SectionTitle(
-              titulo: 'Maiores categorias da DRE',
-              subtitulo:
-                  'Categorias com maior impacto absoluto no resultado do período.',
-            ),
-            const SizedBox(height: 10),
-            if (detalhes.isEmpty)
-              const _EmptyState('Sem categorias financeiras no período.')
-            else
-              ...detalhes
-                  .take(12)
-                  .map(
-                    (item) => Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: const Icon(Icons.account_tree_outlined),
-                        title: Text(item.nome),
-                        subtitle: Text(
-                          '${item.grupo}'
-                          '${item.codigo.isEmpty ? '' : ' · ${item.codigo}'}',
-                        ),
-                        trailing: Text(
-                          _moeda.format(item.valor),
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
+                    const SizedBox(height: 26),
+                    const _SectionTitle(
+                      titulo: 'Desempenho por executor',
+                      subtitulo:
+                          'Vendas das OS executadas, sem expor salário ou valor-hora interno.',
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    if (resumo.executores.isEmpty)
+                      const _EmptyState(
+                        'Sem executores no período selecionado.',
+                      )
+                    else
+                      ...resumo.executores
+                          .take(10)
+                          .map(
+                            (item) => _ExecutorCard(item: item, moeda: _moeda),
+                          ),
+                    const SizedBox(height: 26),
+                    const _SectionTitle(
+                      titulo: 'Maiores vendas do período',
+                      subtitulo:
+                          'Os valores já consideram descontos, negociação, acréscimos e juros da OS.',
+                    ),
+                    const SizedBox(height: 10),
+                    if (resumo.ordens.isEmpty)
+                      const _EmptyState('Nenhuma OS finalizada no período.')
+                    else
+                      ...resumo.ordens
+                          .take(10)
+                          .map(
+                            (ordem) => _OrderCard(
+                              ordem: ordem,
+                              venda: WebCloudRelatoriosService.vendaOrdem(
+                                ordem,
+                              ),
+                              moeda: _moeda,
+                              data: _data,
+                            ),
+                          ),
+                    const SizedBox(height: 26),
+                    const _SectionTitle(
+                      titulo: 'Maiores categorias da DRE',
+                      subtitulo:
+                          'Categorias com maior impacto absoluto no resultado do período.',
+                    ),
+                    const SizedBox(height: 10),
+                    if (detalhes.isEmpty)
+                      const _EmptyState(
+                        'Sem categorias financeiras no período.',
+                      )
+                    else
+                      ...detalhes
+                          .take(12)
+                          .map(
+                            (item) => Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                leading: const Icon(
+                                  Icons.account_tree_outlined,
+                                ),
+                                title: Text(item.nome),
+                                subtitle: Text(
+                                  '${item.grupo}'
+                                  '${item.codigo.isEmpty ? '' : ' · ${item.codigo}'}',
+                                ),
+                                trailing: Text(
+                                  _moeda.format(item.valor),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                   ],
                 ),
               ),

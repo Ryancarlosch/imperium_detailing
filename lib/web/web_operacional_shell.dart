@@ -1109,7 +1109,10 @@ class _BuscaGlobalDialogState extends State<_BuscaGlobalDialog> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Os resultados levam ao módulo correspondente; as buscas internas continuam disponíveis para filtros detalhados.',
-                  style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 11),
+                  style: TextStyle(
+                    color: ImperiumWebTheme.textMuted,
+                    fontSize: 11,
+                  ),
                 ),
               ),
             ],
@@ -1650,7 +1653,9 @@ class _ClientesPageState extends State<_ClientesPage> {
                             SizedBox(height: 5),
                             Text(
                               'Visão geral da carteira, contatos e situação dos cadastros.',
-                              style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                              style: TextStyle(
+                                color: ImperiumWebTheme.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -1774,7 +1779,9 @@ class _ClientesPageState extends State<_ClientesPage> {
                                 ? 'Cadastre um cliente para começar sua carteira.'
                                 : 'Tente alterar a busca ou os filtros.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+                            style: const TextStyle(
+                              color: ImperiumWebTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -2235,8 +2242,8 @@ class _VeiculosPageState extends State<_VeiculosPage> {
           builder: (context, constraints) {
             final compacto = constraints.maxWidth < 760;
             final tabela = constraints.maxWidth >= 920;
-            final larguraBase = constraints.maxWidth >
-                    ImperiumWebTheme.contentMaxWidth
+            final larguraBase =
+                constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
                 ? ImperiumWebTheme.contentMaxWidth
                 : constraints.maxWidth;
             final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
@@ -2274,7 +2281,9 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                           SizedBox(height: 5),
                           Text(
                             'Frota cadastrada, proprietário e identificação do veículo.',
-                            style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                            style: TextStyle(
+                              color: ImperiumWebTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -3016,8 +3025,8 @@ class _AgendaPageState extends State<_AgendaPage> {
           builder: (context, constraints) {
             final compacto = constraints.maxWidth < 760;
             final tabela = constraints.maxWidth >= 980;
-            final larguraBase = constraints.maxWidth >
-                    ImperiumWebTheme.contentMaxWidth
+            final larguraBase =
+                constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
                 ? ImperiumWebTheme.contentMaxWidth
                 : constraints.maxWidth;
             final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
@@ -3055,7 +3064,9 @@ class _AgendaPageState extends State<_AgendaPage> {
                           SizedBox(height: 5),
                           Text(
                             'Compromissos, retornos e serviços programados da operação.',
-                            style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                            style: TextStyle(
+                              color: ImperiumWebTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -3545,15 +3556,11 @@ class _OrdensPageState extends State<_OrdensPage> {
           icon: const Icon(Icons.photo_library_outlined),
         ),
         IconButton(
-          tooltip: editavel
-              ? 'Editar esta OS'
-              : 'OS não editável',
+          tooltip: editavel ? 'Editar esta OS' : 'OS não editável',
           onPressed: editavel
               ? () async {
                   await Navigator.of(context).push<void>(
-                    MaterialPageRoute(
-                      builder: (_) => const WebOrdensV3Page(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const WebOrdensV3Page()),
                   );
                   if (mounted) widget.onChanged();
                 }
@@ -3561,9 +3568,7 @@ class _OrdensPageState extends State<_OrdensPage> {
           icon: const Icon(Icons.edit_outlined),
         ),
         IconButton(
-          tooltip: finalizavel
-              ? 'Abrir finalização de OS'
-              : 'OS já encerrada',
+          tooltip: finalizavel ? 'Abrir finalização de OS' : 'OS já encerrada',
           onPressed: finalizavel ? () => widget.onNavigate(7) : null,
           icon: const Icon(Icons.task_alt_outlined),
         ),
@@ -3658,8 +3663,8 @@ class _OrdensPageState extends State<_OrdensPage> {
           builder: (context, constraints) {
             final compacto = constraints.maxWidth < 760;
             final tabela = constraints.maxWidth >= 1050;
-            final larguraBase = constraints.maxWidth >
-                    ImperiumWebTheme.contentMaxWidth
+            final larguraBase =
+                constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
                 ? ImperiumWebTheme.contentMaxWidth
                 : constraints.maxWidth;
             final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
@@ -3697,7 +3702,9 @@ class _OrdensPageState extends State<_OrdensPage> {
                           SizedBox(height: 5),
                           Text(
                             'Central da operação: acompanhe execução, valores, pagamentos e arquivos.',
-                            style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                            style: TextStyle(
+                              color: ImperiumWebTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -3905,7 +3912,9 @@ class _OrdensPageState extends State<_OrdensPage> {
                           Text(
                             'Altere a busca ou os filtros para visualizar outras ordens.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                            style: TextStyle(
+                              color: ImperiumWebTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),

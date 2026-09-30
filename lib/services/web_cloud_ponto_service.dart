@@ -243,7 +243,9 @@ class WebCloudPontoService {
     final inicio = DateTime(competencia.year, competencia.month, 1);
     final fim = DateTime(competencia.year, competencia.month + 1, 0);
     final registros = await listarRegistros(inicio: inicio, fim: fim);
-    final solicitacoes = await listarSolicitacoesAjusteAdmin(status: 'Pendente');
+    final solicitacoes = await listarSolicitacoesAjusteAdmin(
+      status: 'Pendente',
+    );
 
     final registrosColaborador = registros
         .where((e) => (e['colaborador_id'] ?? '').toString() == colaboradorId)

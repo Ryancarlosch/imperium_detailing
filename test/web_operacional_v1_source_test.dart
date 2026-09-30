@@ -166,5 +166,4 @@ void main() {
     expect(shell, contains('final larguraBase = constraints.maxWidth >'));
     expect(shell, contains('final larguraDisponivel = larguraBase -'));
   });
-
 }
