@@ -3536,12 +3536,25 @@ class _OrdensPageState extends State<_OrdensPage> {
           icon: const Icon(Icons.photo_library_outlined),
         ),
         IconButton(
-          tooltip: editavel ? 'Abrir edição segura' : 'OS não editável',
-          onPressed: editavel ? () => widget.onNavigate(6) : null,
+          tooltip: editavel
+              ? 'Editar esta OS'
+              : 'OS não editável',
+          onPressed: editavel
+              ? () async {
+                  await Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) => const WebOrdensV3Page(),
+                    ),
+                  );
+                  if (mounted) widget.onChanged();
+                }
+              : null,
           icon: const Icon(Icons.edit_outlined),
         ),
         IconButton(
-          tooltip: finalizavel ? 'Abrir finalização' : 'OS já encerrada',
+          tooltip: finalizavel
+              ? 'Abrir finalização de OS'
+              : 'OS já encerrada',
           onPressed: finalizavel ? () => widget.onNavigate(7) : null,
           icon: const Icon(Icons.task_alt_outlined),
         ),
