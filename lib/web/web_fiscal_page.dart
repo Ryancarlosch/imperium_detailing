@@ -77,6 +77,55 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
     }
   }
 
+  Future<void> _consultarChave() async {
+    final chave = TextEditingController();
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Consultar NF-e por chave'),
+        content: SizedBox(
+          width: 560,
+          child: TextField(
+            controller: chave,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            maxLength: 60,
+            decoration: const InputDecoration(
+              labelText: 'Chave de acesso',
+              hintText: '44 dígitos',
+              prefixIcon: Icon(Icons.key_rounded),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.search_rounded),
+            label: const Text('Consultar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) {
+      chave.dispose();
+      return;
+    }
+
+    try {
+      await _service.consultarChaveNfe(chave.text);
+      await _carregar();
+      _snack('NF-e consultada e importada no Cloud.');
+    } catch (e) {
+      _snack(_textoErro(e), erro: true);
+    } finally {
+      chave.dispose();
+    }
+  }
+
   List<Map<String, dynamic>> _itensNota(String notaId) {
     final pacote = _pacote;
     if (pacote == null) return const [];
@@ -549,10 +598,21 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                       ],
                     ),
                   ),
-                  FilledButton.icon(
-                    onPressed: _importarXml,
-                    icon: const Icon(Icons.upload_file_outlined),
-                    label: Text(compacto ? 'XML' : 'Importar XML'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _consultarChave,
+                        icon: const Icon(Icons.key_rounded),
+                        label: Text(compacto ? 'Chave' : 'Consultar chave'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: _importarXml,
+                        icon: const Icon(Icons.upload_file_outlined),
+                        label: Text(compacto ? 'XML' : 'Importar XML'),
+                      ),
+                    ],
                   ),
                 ],
               ),
