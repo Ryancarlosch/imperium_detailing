@@ -187,7 +187,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                     const SizedBox(height: 4),
                     const Text(
                       'Libere apenas os módulos necessários para este funcionário.',
-                      style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
+                      style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
                     ),
                     const SizedBox(height: 8),
                     ..._modulos.map((modulo) {
@@ -218,7 +218,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                                 'Precificação não é uma permissão Cloud independente; '
                                 'continua protegida pelo acesso ao Financeiro.',
                                 style: TextStyle(
-                                  color: Color(0xFF89939E),
+                                  color: ImperiumWebTheme.textMuted,
                                   fontSize: 12,
                                 ),
                               ),
@@ -439,7 +439,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -612,7 +612,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                         SizedBox(height: 5),
                         Text(
                           'Controle quais funcionários podem acessar a empresa e quais módulos ficam disponíveis.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -642,7 +642,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                           'Funcionários permanecem dentro da empresa. '
                           'Eles não criam outra empresa nem outro plano; o administrador controla vínculo e permissões.',
                           style: TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                           ),
                         ),
@@ -747,7 +747,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                       Text(
                         '${filtrados.length} resultado(s)',
                         style: const TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -767,7 +767,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                         Icon(
                           Icons.manage_accounts_outlined,
                           size: 42,
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                         ),
                         SizedBox(height: 12),
                         Text(
@@ -828,7 +828,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        color: Color(0xFFAAB3BD),
+                                        color: ImperiumWebTheme.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -929,7 +929,7 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      color: Color(0xFFAAB3BD),
+                                      color: ImperiumWebTheme.textSecondary,
                                       fontSize: 12,
                                     ),
                                   ),
