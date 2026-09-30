@@ -360,7 +360,7 @@ class _CabecalhoRelatorio extends StatelessWidget {
                 'Vendas líquidas, recebimentos e DRE usam a mesma fonte cloud do Android.',
                 style: Theme.of(
                   context,
-                ).textTheme.bodySmall?.copyWith(color: const Color(0xFFAAB3BD)),
+                ).textTheme.bodySmall?.copyWith(color: ImperiumWebTheme.textSecondary),
               ),
             ],
           );
@@ -439,7 +439,7 @@ class _MetricCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFFAAB3BD),
+                        color: ImperiumWebTheme.textSecondary,
                       ),
                     ),
                   ],
@@ -616,7 +616,7 @@ class _SectionTitle extends StatelessWidget {
           subtitulo,
           style: Theme.of(
             context,
-          ).textTheme.bodySmall?.copyWith(color: const Color(0xFFAAB3BD)),
+          ).textTheme.bodySmall?.copyWith(color: ImperiumWebTheme.textSecondary),
         ),
       ],
     );
@@ -636,7 +636,7 @@ class _EmptyState extends StatelessWidget {
         padding: const EdgeInsets.all(22),
         child: Row(
           children: [
-            const Icon(Icons.inbox_outlined, color: Color(0xFF89939E)),
+            const Icon(Icons.inbox_outlined, color: ImperiumWebTheme.textMuted),
             const SizedBox(width: 10),
             Expanded(child: Text(texto)),
           ],
