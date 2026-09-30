@@ -77,4 +77,14 @@ void main() {
     expect(source, contains('7 => WebOsFinalizacaoV4Page('));
     expect(source, isNot(contains('_paginaRoteada')));
   });
+
+  test('Lista de OS abre editor seguro e atualiza o workspace', () {
+    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
+
+    expect(shell, contains("tooltip: editavel"));
+    expect(shell, contains('builder: (_) => const WebOrdensV3Page()'));
+    expect(shell, contains('if (mounted) widget.onChanged()'));
+    expect(shell, contains('onChanged: _atualizar'));
+  });
+
 }
