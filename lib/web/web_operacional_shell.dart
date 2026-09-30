@@ -1941,6 +1941,20 @@ class _VeiculosPageState extends State<_VeiculosPage> {
             ),
           ),
           actions: [
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => WebFotosPage(
+                      veiculoIdInicial: veiculo['id'].toString(),
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.photo_library_outlined),
+              label: const Text('Abrir galeria'),
+            ),
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Fechar'),
