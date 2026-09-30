@@ -187,7 +187,10 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                     const SizedBox(height: 4),
                     const Text(
                       'Libere apenas os módulos necessários para este funcionário.',
-                      style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
+                      style: TextStyle(
+                        color: ImperiumWebTheme.textMuted,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     ..._modulos.map((modulo) {
@@ -612,7 +615,9 @@ class _WebUsuariosAcessosPageState extends State<WebUsuariosAcessosPage> {
                         SizedBox(height: 5),
                         Text(
                           'Controle quais funcionários podem acessar a empresa e quais módulos ficam disponíveis.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),

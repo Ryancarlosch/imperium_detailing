@@ -596,7 +596,9 @@ class _WebEstoqueMovimentacoesPageState
                             SizedBox(height: 5),
                             Text(
                               'Controle de saldo, reservas de OS, estoque mínimo e histórico de movimentações.',
-                              style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                              style: TextStyle(
+                                color: ImperiumWebTheme.textSecondary,
+                              ),
                             ),
                           ],
                         ),

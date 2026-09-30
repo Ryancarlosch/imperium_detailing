@@ -826,7 +826,9 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                                 SizedBox(height: 5),
                                 Text(
                                   'OS abertas/em andamento com CAS; finalizadas com correção administrativa auditada.',
-                                  style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                                  style: TextStyle(
+                                    color: ImperiumWebTheme.textSecondary,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1038,7 +1040,8 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
-                                                color: ImperiumWebTheme.textSecondary,
+                                                color: ImperiumWebTheme
+                                                    .textSecondary,
                                                 fontSize: 12,
                                               ),
                                             ),
@@ -1166,7 +1169,8 @@ class _WebOrdensV3PageState extends State<WebOrdensV3Page> {
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
-                                              color: ImperiumWebTheme.textSecondary,
+                                              color: ImperiumWebTheme
+                                                  .textSecondary,
                                               fontSize: 12,
                                             ),
                                           ),

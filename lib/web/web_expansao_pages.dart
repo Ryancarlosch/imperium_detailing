@@ -961,7 +961,9 @@ class _WebCrmPageState extends State<WebCrmPage> {
                               padding: EdgeInsets.all(20),
                               child: Text(
                                 'Nenhum lead',
-                                style: TextStyle(color: ImperiumWebTheme.textMuted),
+                                style: TextStyle(
+                                  color: ImperiumWebTheme.textMuted,
+                                ),
                               ),
                             ),
                           )
@@ -1006,7 +1008,8 @@ class _WebCrmPageState extends State<WebCrmPage> {
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
-                                            color: ImperiumWebTheme.textSecondary,
+                                            color:
+                                                ImperiumWebTheme.textSecondary,
                                             fontSize: 12,
                                           ),
                                         ),
@@ -2307,7 +2310,9 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                         SizedBox(height: 5),
                         Text(
                           'Propostas comerciais, aprovações e potencial de vendas em uma visão única.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -3573,7 +3578,9 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
                         SizedBox(height: 5),
                         Text(
                           'Custos, margem e preço sugerido para proteger a rentabilidade dos serviços.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -4100,7 +4107,9 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                             SizedBox(height: 5),
                             Text(
                               'Diagnóstico do tenant, permissões e disponibilidade dos módulos em nuvem.',
-                              style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                              style: TextStyle(
+                                color: ImperiumWebTheme.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -4358,7 +4367,10 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                   const SizedBox(height: 12),
                   const Text(
                     'O diagnóstico limita a leitura a 500 registros por módulo para manter a Central leve.',
-                    style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
+                    style: TextStyle(
+                      color: ImperiumWebTheme.textMuted,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),

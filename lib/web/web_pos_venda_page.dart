@@ -551,7 +551,9 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                         Text(
                           'Retorno em ${dados.config.diasRetorno} dias · '
                           'Reativação em ${dados.config.diasReativacao} dias',
-                          style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: const TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),

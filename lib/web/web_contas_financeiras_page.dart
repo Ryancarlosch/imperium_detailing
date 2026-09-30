@@ -439,7 +439,8 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
                                         Text(
                                           'Contas, snapshots, extratos e conciliações usam o mesmo Cloud do aplicativo. Alterações feitas aqui ficam disponíveis no Android no próximo ciclo de sincronização.',
                                           style: TextStyle(
-                                            color: ImperiumWebTheme.textSecondary,
+                                            color:
+                                                ImperiumWebTheme.textSecondary,
                                           ),
                                         ),
                                       ],
@@ -575,7 +576,9 @@ class _WebExtratoContaPageState extends State<WebExtratoContaPage> {
                   Text(
                     'Saldo calculado de referência do mês: '
                     '${_moeda.format(comparativo.atual.saldoFinalMes)}',
-                    style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+                    style: const TextStyle(
+                      color: ImperiumWebTheme.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   ListTile(
@@ -1088,7 +1091,10 @@ class _ContaCard extends StatelessWidget {
               const SizedBox(height: 18),
               const Text(
                 'Saldo atual',
-                style: TextStyle(color: ImperiumWebTheme.textSecondary, fontSize: 12),
+                style: TextStyle(
+                  color: ImperiumWebTheme.textSecondary,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 3),
               Text(
@@ -1441,7 +1447,9 @@ class _EstadoVazio extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     detalhe,
-                    style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+                    style: const TextStyle(
+                      color: ImperiumWebTheme.textSecondary,
+                    ),
                   ),
                 ],
               ),

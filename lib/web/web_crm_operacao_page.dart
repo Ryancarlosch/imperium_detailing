@@ -389,7 +389,9 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
                       (acao['telefone'] ?? '').toString(),
                       if (data != null) DateFormat('dd/MM/yyyy').format(data),
                     ].where((e) => e.trim().isNotEmpty).join(' · '),
-                    style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+                    style: const TextStyle(
+                      color: ImperiumWebTheme.textSecondary,
+                    ),
                   ),
                   if ((acao['mensagem_sugerida'] ?? '')
                       .toString()
@@ -565,7 +567,9 @@ class _WebCrmOperacaoPageState extends State<WebCrmOperacaoPage> {
                               const SizedBox(height: 4),
                               const Text(
                                 'Follow-ups, orçamentos, pós-venda e benefícios em uma fila compartilhada com o aplicativo.',
-                                style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                                style: TextStyle(
+                                  color: ImperiumWebTheme.textSecondary,
+                                ),
                               ),
                               const SizedBox(height: 18),
                               Wrap(

@@ -509,7 +509,9 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                               SizedBox(height: 5),
                               Text(
                                 'Arquivos privados da OS, protegidos pelas permissões da empresa.',
-                                style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                                style: TextStyle(
+                                  color: ImperiumWebTheme.textSecondary,
+                                ),
                               ),
                             ],
                           ),
@@ -777,7 +779,9 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                               Text(
                                 'Quando fotos, avarias ou assinatura forem sincronizadas, elas aparecerão aqui.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                                style: TextStyle(
+                                  color: ImperiumWebTheme.textSecondary,
+                                ),
                               ),
                             ],
                           ),

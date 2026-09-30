@@ -125,7 +125,9 @@ class _WebPendenciasOperacionaisPageState
                         SizedBox(height: 5),
                         Text(
                           'Recebimentos, contas, OS paradas, estoque e ponto que precisam de atenção.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),

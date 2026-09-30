@@ -692,7 +692,10 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
               const Divider(height: 28),
               const Text(
                 'O valor final ainda poderá receber descontos, acréscimos e condições de pagamento no fluxo de edição/finalização.',
-                style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
+                style: TextStyle(
+                  color: ImperiumWebTheme.textMuted,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -727,7 +730,10 @@ class _WebNovaOrdemPageState extends State<WebNovaOrdemPage> {
     return Row(
       children: [
         Expanded(
-          child: Text(titulo, style: const TextStyle(color: ImperiumWebTheme.textSecondary)),
+          child: Text(
+            titulo,
+            style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+          ),
         ),
         const SizedBox(width: 12),
         Flexible(

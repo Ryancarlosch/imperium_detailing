@@ -597,7 +597,9 @@ class _WebEstoqueProdutosPageState extends State<WebEstoqueProdutosPage> {
                             SizedBox(height: 5),
                             Text(
                               'Produtos, custos, estoque mínimo e fornecedores sincronizados com a operação.',
-                              style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                              style: TextStyle(
+                                color: ImperiumWebTheme.textSecondary,
+                              ),
                             ),
                           ],
                         ),

@@ -358,9 +358,9 @@ class _CabecalhoRelatorio extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 'Vendas líquidas, recebimentos e DRE usam a mesma fonte cloud do Android.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: ImperiumWebTheme.textSecondary),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ImperiumWebTheme.textSecondary,
+                ),
               ),
             ],
           );
@@ -614,9 +614,9 @@ class _SectionTitle extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           subtitulo,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: ImperiumWebTheme.textSecondary),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: ImperiumWebTheme.textSecondary,
+          ),
         ),
       ],
     );

@@ -414,7 +414,8 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
       builder: (context, constraints) {
         final compacto = constraints.maxWidth < 760;
         final tabela = constraints.maxWidth >= 1020;
-        final larguraBase = constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
+        final larguraBase =
+            constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
             ? ImperiumWebTheme.contentMaxWidth
             : constraints.maxWidth;
         final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
@@ -454,7 +455,9 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                         SizedBox(height: 5),
                         Text(
                           'Fechamento transacional com estoque FIFO, mão de obra, pagamento e financeiro no mesmo commit.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -483,7 +486,9 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                         child: Text(
                           'A finalização só é concluída se todas as etapas passarem. '
                           'Se houver falha em estoque, pagamento ou financeiro, a OS permanece sem finalizar.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ),
                     ],
@@ -586,7 +591,9 @@ class _WebOsFinalizacaoV4PageState extends State<WebOsFinalizacaoV4Page> {
                         Text(
                           'Quando uma OS entrar em execução, ela aparecerá aqui para preparação e fechamento.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),

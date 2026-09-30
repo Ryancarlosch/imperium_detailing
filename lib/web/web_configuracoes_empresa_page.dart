@@ -503,7 +503,10 @@ class _WebConfiguracoesEmpresaPageState
             const SizedBox(height: 3),
             Text(
               subtitulo,
-              style: const TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
+              style: const TextStyle(
+                color: ImperiumWebTheme.textMuted,
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 16),
             ...children,
@@ -622,7 +625,9 @@ class _WebConfiguracoesEmpresaPageState
                               SizedBox(height: 5),
                               Text(
                                 'Dados usados no Web, Android, documentos e mensagens.',
-                                style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                                style: TextStyle(
+                                  color: ImperiumWebTheme.textSecondary,
+                                ),
                               ),
                             ],
                           ),

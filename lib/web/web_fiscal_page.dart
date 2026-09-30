@@ -593,7 +593,9 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
                         SizedBox(height: 5),
                         Text(
                           'XML, estoque e financeiro usando a mesma validação fiscal do Android.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),

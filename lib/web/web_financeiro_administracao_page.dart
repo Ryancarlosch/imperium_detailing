@@ -973,7 +973,10 @@ class _WebFinanceiroAdministracaoPageState
       children: [
         Text(
           titulo,
-          style: const TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 11),
+          style: const TextStyle(
+            color: ImperiumWebTheme.textMuted,
+            fontSize: 11,
+          ),
         ),
         Text(
           valor,
@@ -2077,7 +2080,10 @@ class _Kpi extends StatelessWidget {
               Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
               Text(
                 detalhe,
-                style: const TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 11),
+                style: const TextStyle(
+                  color: ImperiumWebTheme.textMuted,
+                  fontSize: 11,
+                ),
               ),
             ],
           ),

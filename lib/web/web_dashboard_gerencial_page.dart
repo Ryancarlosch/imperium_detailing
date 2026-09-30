@@ -955,7 +955,10 @@ class _CabecalhoPainel extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'Atualizado às $ultimaAtualizacao',
-                style: const TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
+                style: const TextStyle(
+                  color: ImperiumWebTheme.textMuted,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -1143,7 +1146,10 @@ class _HeroMini extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(titulo, style: const TextStyle(color: ImperiumWebTheme.textSecondary)),
+                Text(
+                  titulo,
+                  style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   valor,
@@ -1208,7 +1214,9 @@ class _KpiCard extends StatelessWidget {
                   children: [
                     Text(
                       titulo,
-                      style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+                      style: const TextStyle(
+                        color: ImperiumWebTheme.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -1375,7 +1383,10 @@ class _ContaCard extends StatelessWidget {
                 detalhe,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: ImperiumWebTheme.textSecondary, fontSize: 12),
+                style: const TextStyle(
+                  color: ImperiumWebTheme.textSecondary,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -1569,7 +1580,10 @@ class _SectionTitle extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(subtitulo, style: const TextStyle(color: ImperiumWebTheme.textSecondary)),
+              Text(
+                subtitulo,
+                style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+              ),
             ],
           ),
         ),
@@ -1593,7 +1607,10 @@ class _EstadoVazio extends StatelessWidget {
         border: Border.all(color: ImperiumWebTheme.border),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(texto, style: const TextStyle(color: ImperiumWebTheme.textSecondary)),
+      child: Text(
+        texto,
+        style: const TextStyle(color: ImperiumWebTheme.textSecondary),
+      ),
     );
   }
 }

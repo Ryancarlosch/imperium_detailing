@@ -535,7 +535,9 @@ class _WebPontoPageState extends State<WebPontoPage>
                         SizedBox(height: 5),
                         Text(
                           'Equipe, registros de jornada, acessos e configurações do ponto.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -1785,7 +1787,9 @@ class _WebPontoPageState extends State<WebPontoPage>
                       const SizedBox(height: 12),
                       Text(
                         'Decisão: ${item['decisao_motivo']}',
-                        style: const TextStyle(color: ImperiumWebTheme.textMuted),
+                        style: const TextStyle(
+                          color: ImperiumWebTheme.textMuted,
+                        ),
                       ),
                     ],
                   ],
@@ -1880,9 +1884,9 @@ class _WebPontoPageState extends State<WebPontoPage>
         const SizedBox(height: 6),
         Text(
           subtitulo,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: ImperiumWebTheme.textSecondary),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: ImperiumWebTheme.textSecondary,
+          ),
         ),
       ],
     );

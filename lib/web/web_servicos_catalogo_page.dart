@@ -372,7 +372,9 @@ class _WebServicosCatalogoPageState extends State<WebServicosCatalogoPage> {
                         SizedBox(height: 5),
                         Text(
                           'Serviços usados em agenda, orçamentos, OS e precificação.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),

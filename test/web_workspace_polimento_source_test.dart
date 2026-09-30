@@ -15,9 +15,11 @@ void main() {
     final arquivosWeb = Directory('lib/web')
         .listSync(recursive: true)
         .whereType<File>()
-        .where((arquivo) =>
-            arquivo.path.endsWith('.dart') &&
-            !arquivo.path.endsWith('imperium_web_theme.dart'));
+        .where(
+          (arquivo) =>
+              arquivo.path.endsWith('.dart') &&
+              !arquivo.path.endsWith('imperium_web_theme.dart'),
+        );
 
     for (final arquivo in arquivosWeb) {
       final fonte = arquivo.readAsStringSync();

@@ -521,7 +521,10 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Por enquanto esta agenda organiza o conteúdo. A conexão Meta futura reutilizará estes registros.',
-                      style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
+                      style: TextStyle(
+                        color: ImperiumWebTheme.textMuted,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -1019,7 +1022,9 @@ class _WebMarketingPageState extends State<WebMarketingPage> {
                         SizedBox(height: 5),
                         Text(
                           'Campanhas, conteúdo e atribuição de vendas em uma visão única.',
-                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
