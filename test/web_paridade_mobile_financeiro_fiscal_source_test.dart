@@ -97,4 +97,19 @@ void main() {
       contains("'excluido_em': DateTime.now().toUtc().toIso8601String()"),
     );
   });
+
+  test('Fiscal Web consulta NF-e modelo 55 por chave via backend DF-e', () {
+    final page = File('lib/web/web_fiscal_page.dart').readAsStringSync();
+    final service = File(
+      'lib/services/web_fiscal_service.dart',
+    ).readAsStringSync();
+
+    expect(page, contains('Consultar NF-e por chave'));
+    expect(page, contains('_service.consultarChaveNfe'));
+    expect(service, contains('ChaveFiscalService.normalizar'));
+    expect(service, contains("'imperium-fiscal-dfe'"));
+    expect(service, contains("body: {'chave': chave}"));
+    expect(service, contains('return importarXml(xml)'));
+  });
+
 }
