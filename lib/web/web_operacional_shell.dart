@@ -456,7 +456,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFFAAB3BD),
+                        color: ImperiumWebTheme.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -557,7 +557,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Color(0xFFAAB3BD),
+                  color: ImperiumWebTheme.textSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1055,7 +1055,7 @@ class _BuscaGlobalDialogState extends State<_BuscaGlobalDialog> {
                       return const Center(
                         child: Text(
                           'Nenhum resultado encontrado.',
-                          style: TextStyle(color: Color(0xFF89939E)),
+                          style: TextStyle(color: ImperiumWebTheme.textMuted),
                         ),
                       );
                     }
@@ -1109,7 +1109,7 @@ class _BuscaGlobalDialogState extends State<_BuscaGlobalDialog> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Os resultados levam ao módulo correspondente; as buscas internas continuam disponíveis para filtros detalhados.',
-                  style: TextStyle(color: Color(0xFF89939E), fontSize: 11),
+                  style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 11),
                 ),
               ),
             ],
@@ -1386,7 +1386,7 @@ class _ClientesPageState extends State<_ClientesPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -1535,7 +1535,7 @@ class _ClientesPageState extends State<_ClientesPage> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              color: Color(0xFFAAB3BD),
+                              color: ImperiumWebTheme.textSecondary,
                               fontSize: 12,
                             ),
                           ),
@@ -1623,7 +1623,7 @@ class _ClientesPageState extends State<_ClientesPage> {
                   const SizedBox(height: 4),
                   const Text(
                     'Cadastros, contatos e situação da carteira.',
-                    style: TextStyle(color: Color(0xFFAAB3BD)),
+                    style: TextStyle(color: ImperiumWebTheme.textSecondary),
                   ),
                   const SizedBox(height: 14),
                   FilledButton.icon(
@@ -1650,7 +1650,7 @@ class _ClientesPageState extends State<_ClientesPage> {
                             SizedBox(height: 5),
                             Text(
                               'Visão geral da carteira, contatos e situação dos cadastros.',
-                              style: TextStyle(color: Color(0xFFAAB3BD)),
+                              style: TextStyle(color: ImperiumWebTheme.textSecondary),
                             ),
                           ],
                         ),
@@ -1735,7 +1735,7 @@ class _ClientesPageState extends State<_ClientesPage> {
                         Text(
                           '${itens.length} resultado(s)',
                           style: const TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -1758,7 +1758,7 @@ class _ClientesPageState extends State<_ClientesPage> {
                           const Icon(
                             Icons.person_search_outlined,
                             size: 42,
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                           ),
                           const SizedBox(height: 12),
                           const Text(
@@ -1774,7 +1774,7 @@ class _ClientesPageState extends State<_ClientesPage> {
                                 ? 'Cadastre um cliente para começar sua carteira.'
                                 : 'Tente alterar a busca ou os filtros.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Color(0xFFAAB3BD)),
+                            style: const TextStyle(color: ImperiumWebTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -2066,7 +2066,7 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -2274,7 +2274,7 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                           SizedBox(height: 5),
                           Text(
                             'Frota cadastrada, proprietário e identificação do veículo.',
-                            style: TextStyle(color: Color(0xFFAAB3BD)),
+                            style: TextStyle(color: ImperiumWebTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -2348,7 +2348,7 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                           Text(
                             '${itens.length} resultado(s)',
                             style: const TextStyle(
-                              color: Color(0xFF89939E),
+                              color: ImperiumWebTheme.textMuted,
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
                             ),
@@ -2372,7 +2372,7 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                           Icon(
                             Icons.car_crash_outlined,
                             size: 42,
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                           ),
                           SizedBox(height: 12),
                           Text(
@@ -2893,7 +2893,7 @@ class _AgendaPageState extends State<_AgendaPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -3055,7 +3055,7 @@ class _AgendaPageState extends State<_AgendaPage> {
                           SizedBox(height: 5),
                           Text(
                             'Compromissos, retornos e serviços programados da operação.',
-                            style: TextStyle(color: Color(0xFFAAB3BD)),
+                            style: TextStyle(color: ImperiumWebTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -3175,7 +3175,7 @@ class _AgendaPageState extends State<_AgendaPage> {
                           Icon(
                             Icons.event_busy_outlined,
                             size: 42,
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                           ),
                           SizedBox(height: 12),
                           Text(
@@ -3517,7 +3517,7 @@ class _OrdensPageState extends State<_OrdensPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -3697,7 +3697,7 @@ class _OrdensPageState extends State<_OrdensPage> {
                           SizedBox(height: 5),
                           Text(
                             'Central da operação: acompanhe execução, valores, pagamentos e arquivos.',
-                            style: TextStyle(color: Color(0xFFAAB3BD)),
+                            style: TextStyle(color: ImperiumWebTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -3868,7 +3868,7 @@ class _OrdensPageState extends State<_OrdensPage> {
                         Text(
                           '${filtradas.length} resultado(s)',
                           style: const TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -3891,7 +3891,7 @@ class _OrdensPageState extends State<_OrdensPage> {
                           Icon(
                             Icons.receipt_long_outlined,
                             size: 42,
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                           ),
                           SizedBox(height: 12),
                           Text(
@@ -3905,7 +3905,7 @@ class _OrdensPageState extends State<_OrdensPage> {
                           Text(
                             'Altere a busca ou os filtros para visualizar outras ordens.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFFAAB3BD)),
+                            style: TextStyle(color: ImperiumWebTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -3960,7 +3960,7 @@ class _OrdensPageState extends State<_OrdensPage> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
-                                          color: Color(0xFFAAB3BD),
+                                          color: ImperiumWebTheme.textSecondary,
                                           fontSize: 12,
                                         ),
                                       ),
@@ -4049,7 +4049,7 @@ class _OrdensPageState extends State<_OrdensPage> {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        color: Color(0xFFAAB3BD),
+                                        color: ImperiumWebTheme.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
