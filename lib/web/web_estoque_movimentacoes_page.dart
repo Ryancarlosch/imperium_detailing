@@ -461,7 +461,7 @@ class _WebEstoqueMovimentacoesPageState
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -557,8 +557,11 @@ class _WebEstoqueMovimentacoesPageState
             builder: (context, constraints) {
               final compacto = constraints.maxWidth < 760;
               final tabela = constraints.maxWidth >= 1000;
-              final larguraDisponivel =
-                  constraints.maxWidth - (compacto ? 32 : 48);
+              final larguraBase =
+                  constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
+                  ? ImperiumWebTheme.contentMaxWidth
+                  : constraints.maxWidth;
+              final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
               final colunas = constraints.maxWidth >= 1160
                   ? 4
                   : constraints.maxWidth >= 720
@@ -593,7 +596,7 @@ class _WebEstoqueMovimentacoesPageState
                             SizedBox(height: 5),
                             Text(
                               'Controle de saldo, reservas de OS, estoque mínimo e histórico de movimentações.',
-                              style: TextStyle(color: Color(0xFFAAB3BD)),
+                              style: TextStyle(color: ImperiumWebTheme.textSecondary),
                             ),
                           ],
                         ),
@@ -762,7 +765,7 @@ class _WebEstoqueMovimentacoesPageState
                       Text(
                         '${itensFiltrados.length} resultado(s)',
                         style: const TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -933,7 +936,7 @@ class _WebEstoqueMovimentacoesPageState
                       Text(
                         '${movimentosFiltrados.length} resultado(s)',
                         style: const TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
