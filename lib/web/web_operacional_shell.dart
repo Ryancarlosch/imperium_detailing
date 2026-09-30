@@ -135,7 +135,6 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
       0 => WebDashboardGerencialPage(
         key: ValueKey('dashboard-premium-${widget.empresaAtualId}-$_revisao'),
         onNavigate: (indice) => _selecionar(indice, fecharMenu: false),
-        onChanged: _atualizar,
       ),
       1 => _ClientesPage(
         key: ValueKey('clientes-$_revisao'),
@@ -158,6 +157,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         service: _service,
         moeda: _moeda,
         onNavigate: (indice) => _selecionar(indice, fecharMenu: false),
+        onChanged: _atualizar,
       ),
       5 => WebNovaOrdemPage(
         key: ValueKey('nova-os-$_revisao'),
