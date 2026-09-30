@@ -337,7 +337,7 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
                                     Text(
                                       'Saldo calculado com o mesmo snapshot financeiro usado no Android.',
                                       style: TextStyle(
-                                        color: Color(0xFFAAB3BD),
+                                        color: ImperiumWebTheme.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -439,7 +439,7 @@ class _WebContasFinanceirasPageState extends State<WebContasFinanceirasPage> {
                                         Text(
                                           'Contas, snapshots, extratos e conciliações usam o mesmo Cloud do aplicativo. Alterações feitas aqui ficam disponíveis no Android no próximo ciclo de sincronização.',
                                           style: TextStyle(
-                                            color: Color(0xFFAAB3BD),
+                                            color: ImperiumWebTheme.textSecondary,
                                           ),
                                         ),
                                       ],
@@ -575,7 +575,7 @@ class _WebExtratoContaPageState extends State<WebExtratoContaPage> {
                   Text(
                     'Saldo calculado de referência do mês: '
                     '${_moeda.format(comparativo.atual.saldoFinalMes)}',
-                    style: const TextStyle(color: Color(0xFFAAB3BD)),
+                    style: const TextStyle(color: ImperiumWebTheme.textSecondary),
                   ),
                   const SizedBox(height: 14),
                   ListTile(
@@ -819,7 +819,7 @@ class _WebExtratoContaPageState extends State<WebExtratoContaPage> {
             const SizedBox(height: 3),
             Text(
               '${_nomeMes(anterior.mes)} comparado com ${_nomeMes(atual.mes)}',
-              style: const TextStyle(color: Color(0xFFAAB3BD)),
+              style: const TextStyle(color: ImperiumWebTheme.textSecondary),
             ),
             const SizedBox(height: 10),
             _ComparativoCard(atual: atual, anterior: anterior, moeda: _moeda),
@@ -955,7 +955,7 @@ class _HeroFinanceiro extends StatelessWidget {
               children: [
                 const Text(
                   'Saldo consolidado',
-                  style: TextStyle(color: Color(0xFFAAB3BD)),
+                  style: TextStyle(color: ImperiumWebTheme.textSecondary),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -969,7 +969,7 @@ class _HeroFinanceiro extends StatelessWidget {
                 const SizedBox(height: 5),
                 Text(
                   '$contasAtivas conta(s) ativa(s) compartilhadas com o Android',
-                  style: const TextStyle(color: Color(0xFFAAB3BD)),
+                  style: const TextStyle(color: ImperiumWebTheme.textSecondary),
                 ),
               ],
             ),
@@ -1043,7 +1043,7 @@ class _ContaCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: Color(0xFFAAB3BD),
+                            color: ImperiumWebTheme.textSecondary,
                             fontSize: 12,
                           ),
                         ),
@@ -1088,7 +1088,7 @@ class _ContaCard extends StatelessWidget {
               const SizedBox(height: 18),
               const Text(
                 'Saldo atual',
-                style: TextStyle(color: Color(0xFFAAB3BD), fontSize: 12),
+                style: TextStyle(color: ImperiumWebTheme.textSecondary, fontSize: 12),
               ),
               const SizedBox(height: 3),
               Text(
@@ -1193,7 +1193,7 @@ class _MiniMetrica extends StatelessWidget {
                     Text(
                       titulo,
                       style: const TextStyle(
-                        color: Color(0xFFAAB3BD),
+                        color: ImperiumWebTheme.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -1428,7 +1428,7 @@ class _EstadoVazio extends StatelessWidget {
         padding: const EdgeInsets.all(22),
         child: Row(
           children: [
-            const Icon(Icons.inbox_outlined, color: Color(0xFF89939E)),
+            const Icon(Icons.inbox_outlined, color: ImperiumWebTheme.textMuted),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1441,7 +1441,7 @@ class _EstadoVazio extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     detalhe,
-                    style: const TextStyle(color: Color(0xFFAAB3BD)),
+                    style: const TextStyle(color: ImperiumWebTheme.textSecondary),
                   ),
                 ],
               ),
