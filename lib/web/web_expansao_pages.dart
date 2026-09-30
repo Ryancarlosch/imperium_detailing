@@ -501,7 +501,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -878,7 +878,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFFAAB3BD),
+                      color: ImperiumWebTheme.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -946,7 +946,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                               ? _moeda.format(potencial)
                               : 'Sem valor potencial',
                           style: const TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                           ),
                         ),
@@ -961,7 +961,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                               padding: EdgeInsets.all(20),
                               child: Text(
                                 'Nenhum lead',
-                                style: TextStyle(color: Color(0xFF89939E)),
+                                style: TextStyle(color: ImperiumWebTheme.textMuted),
                               ),
                             ),
                           )
@@ -1006,7 +1006,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
-                                            color: Color(0xFFAAB3BD),
+                                            color: ImperiumWebTheme.textSecondary,
                                             fontSize: 12,
                                           ),
                                         ),
@@ -1027,7 +1027,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                                           Text(
                                             'Próximo: ${lead['proximo_contato']}',
                                             style: const TextStyle(
-                                              color: Color(0xFF89939E),
+                                              color: ImperiumWebTheme.textMuted,
                                               fontSize: 11,
                                             ),
                                           ),
@@ -1129,7 +1129,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                       SizedBox(height: 5),
                       Text(
                         'Pipeline comercial para acompanhar novos contatos até ganho ou perda.',
-                        style: TextStyle(color: Color(0xFFAAB3BD)),
+                        style: TextStyle(color: ImperiumWebTheme.textSecondary),
                       ),
                     ],
                   ),
@@ -1295,7 +1295,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                     Text(
                       '${filtrados.length} resultado(s)',
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1315,7 +1315,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                       Icon(
                         Icons.person_search_outlined,
                         size: 42,
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                       ),
                       SizedBox(height: 12),
                       Text(
@@ -1374,7 +1374,7 @@ class _WebCrmPageState extends State<WebCrmPage> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      color: Color(0xFFAAB3BD),
+                                      color: ImperiumWebTheme.textSecondary,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -2129,7 +2129,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -2307,7 +2307,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                         SizedBox(height: 5),
                         Text(
                           'Propostas comerciais, aprovações e potencial de vendas em uma visão única.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -2428,7 +2428,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                       Text(
                         '${filtrados.length} resultado(s)',
                         style: const TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -2448,7 +2448,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                         Icon(
                           Icons.request_quote_outlined,
                           size: 42,
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                         ),
                         SizedBox(height: 12),
                         Text(
@@ -2662,7 +2662,7 @@ class _WebOrcamentosPageState extends State<WebOrcamentosPage> {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        color: Color(0xFFAAB3BD),
+                                        color: ImperiumWebTheme.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -3449,7 +3449,7 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -3573,7 +3573,7 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
                         SizedBox(height: 5),
                         Text(
                           'Custos, margem e preço sugerido para proteger a rentabilidade dos serviços.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -3717,7 +3717,7 @@ class _WebPrecificacaoPageState extends State<WebPrecificacaoPage> {
                       Text(
                         '${filtrados.length} resultado(s)',
                         style: const TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -3980,7 +3980,7 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -4100,7 +4100,7 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                             SizedBox(height: 5),
                             Text(
                               'Diagnóstico do tenant, permissões e disponibilidade dos módulos em nuvem.',
-                              style: TextStyle(color: Color(0xFFAAB3BD)),
+                              style: TextStyle(color: ImperiumWebTheme.textSecondary),
                             ),
                           ],
                         ),
@@ -4190,7 +4190,7 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                   const Text(
                     'Validações Cloud equivalentes às verificações de negócio do Android. '
                     'Integridade de SQLite e foreign keys continua sendo diagnóstico exclusivo do aparelho.',
-                    style: TextStyle(color: Color(0xFF89939E)),
+                    style: TextStyle(color: ImperiumWebTheme.textMuted),
                   ),
                   const SizedBox(height: 10),
                   if (alertasSaude.isEmpty)
@@ -4358,7 +4358,7 @@ class _WebCentralCloudPageState extends State<WebCentralCloudPage> {
                   const SizedBox(height: 12),
                   const Text(
                     'O diagnóstico limita a leitura a 500 registros por módulo para manter a Central leve.',
-                    style: TextStyle(color: Color(0xFF89939E), fontSize: 12),
+                    style: TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
                   ),
                 ],
               ),
