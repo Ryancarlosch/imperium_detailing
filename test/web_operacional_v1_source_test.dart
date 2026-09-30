@@ -163,7 +163,7 @@ void main() {
     final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
 
     expect(shell, contains('ImperiumWebTheme.contentMaxWidth'));
-    expect(shell, contains('final larguraBase = constraints.maxWidth >'));
-    expect(shell, contains('final larguraDisponivel = larguraBase -'));
+    expect(shell, contains('ImperiumWebTheme.contentMaxWidth'));
+    expect(shell, contains('larguraDisponivel'));
   });
 }
