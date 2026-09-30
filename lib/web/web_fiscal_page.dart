@@ -264,6 +264,14 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
               icon: const Icon(Icons.payments_outlined),
               label: const Text('Lançar financeiro'),
             ),
+            TextButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _excluirNota(nota);
+              },
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('Excluir nota'),
+            ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Fechar'),
@@ -272,6 +280,38 @@ class _WebFiscalPageState extends State<WebFiscalPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _excluirNota(Map<String, dynamic> nota) async {
+    final numero = (nota['numero'] ?? '—').toString();
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir nota fiscal'),
+        content: Text(
+          'Excluir a NF $numero? A exclusão só é permitida quando a nota ainda não possui integração com estoque ou financeiro.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+
+    try {
+      await _service.excluirNota(nota['id'].toString());
+      await _carregar();
+      _snack('Nota fiscal excluída.');
+    } catch (e) {
+      _snack(_textoErro(e), erro: true);
+    }
   }
 
   Future<void> _lancarFinanceiro(Map<String, dynamic> nota) async {
