@@ -61,6 +61,7 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
 
   int _indice = 0;
   int _revisao = 0;
+  Map<String, dynamic>? _agendamentoParaOs;
 
   bool get _empresaImperium => widget.empresaAtualId == _empresaImperiumId;
 
@@ -151,6 +152,12 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         service: _service,
         moeda: _moeda,
         onChanged: _atualizar,
+        onCriarOrdem: (agendamento) {
+          setState(() {
+            _agendamentoParaOs = Map<String, dynamic>.from(agendamento);
+            _indice = 5;
+          });
+        },
       ),
       4 => _OrdensPage(
         key: ValueKey('os-$_revisao'),
@@ -160,8 +167,12 @@ class _WebOperacionalShellState extends State<WebOperacionalShell> {
         onChanged: _atualizar,
       ),
       5 => WebNovaOrdemPage(
-        key: ValueKey('nova-os-$_revisao'),
-        onCreated: _atualizar,
+        key: ValueKey('nova-os-${_agendamentoParaOs?['id'] ?? 'avulsa'}-$_revisao'),
+        agendamentoInicial: _agendamentoParaOs,
+        onCreated: () {
+          _agendamentoParaOs = null;
+          _atualizar();
+        },
       ),
       6 => WebOrdensV3Page(key: ValueKey('editar-os-$_revisao')),
       7 => WebOsFinalizacaoV4Page(key: ValueKey('finalizar-os-$_revisao')),
@@ -2427,12 +2438,17 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                                 _excluir(e);
                               }
                             },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
                                 value: 'editar',
                                 child: Text('Editar'),
                               ),
-                              PopupMenuItem(
+                              if (_statusAberto((e['status'] ?? 'Agendado').toString()))
+                                const PopupMenuItem(
+                                  value: 'criar_os',
+                                  child: Text('Criar OS'),
+                                ),
+                              const PopupMenuItem(
                                 value: 'excluir',
                                 child: Text('Excluir'),
                               ),
@@ -2457,11 +2473,13 @@ class _AgendaPage extends StatefulWidget {
     required this.service,
     required this.moeda,
     required this.onChanged,
+    required this.onCriarOrdem,
   });
 
   final WebCloudOperacionalService service;
   final NumberFormat moeda;
   final VoidCallback onChanged;
+  final ValueChanged<Map<String, dynamic>> onCriarOrdem;
 
   @override
   State<_AgendaPage> createState() => _AgendaPageState();
@@ -3284,6 +3302,13 @@ class _AgendaPageState extends State<_AgendaPage> {
                                       icon: const Icon(Icons.edit_outlined),
                                     ),
                                     IconButton(
+                                      tooltip: 'Criar OS deste agendamento',
+                                      onPressed: _statusAberto(status)
+                                          ? () => widget.onCriarOrdem(e)
+                                          : null,
+                                      icon: const Icon(Icons.add_business_outlined),
+                                    ),
+                                    IconButton(
                                       tooltip: 'Excluir agendamento',
                                       onPressed: () => _excluir(e),
                                       icon: const Icon(Icons.delete_outline),
@@ -3322,6 +3347,8 @@ class _AgendaPageState extends State<_AgendaPage> {
                             onSelected: (acao) {
                               if (acao == 'editar') {
                                 _editar(e, clientes, veiculos);
+                              } else if (acao == 'criar_os') {
+                                widget.onCriarOrdem(e);
                               } else if (acao == 'excluir') {
                                 _excluir(e);
                               }
