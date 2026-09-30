@@ -714,7 +714,7 @@ class _WebFinanceiroAdministracaoPageState
                                 ].where((e) => e.trim().isNotEmpty).join(' · '),
                                 style: TextStyle(
                                   color: vinculado
-                                      ? const ImperiumWebTheme.textMuted
+                                      ? ImperiumWebTheme.textMuted
                                       : Colors.orangeAccent,
                                 ),
                               ),
