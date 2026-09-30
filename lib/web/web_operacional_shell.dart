@@ -1924,10 +1924,11 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                                           .toString(),
                                     );
                                   } catch (e) {
-                                    if (mounted)
+                                    if (mounted) {
                                       _snack(
                                         'Não foi possível gerar o PDF: $e',
                                       );
+                                    }
                                   }
                                 },
                                 icon: const Icon(Icons.picture_as_pdf_outlined),
