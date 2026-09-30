@@ -235,6 +235,50 @@ class WebCloudPontoService {
     );
   }
 
+  Future<Map<String, dynamic>> obterResumoCompetencia({
+    required String colaboradorId,
+    required DateTime competencia,
+  }) async {
+    final empresaId = await _empresaId();
+    final inicio = DateTime(competencia.year, competencia.month, 1);
+    final fim = DateTime(competencia.year, competencia.month + 1, 0);
+    final registros = await listarRegistros(inicio: inicio, fim: fim);
+    final solicitacoes = await listarSolicitacoesAjusteAdmin(status: 'Pendente');
+
+    final registrosColaborador = registros
+        .where((e) => (e['colaborador_id'] ?? '').toString() == colaboradorId)
+        .toList();
+    final pendencias = solicitacoes.where((e) {
+      return (e['colaborador_id'] ?? '').toString() == colaboradorId;
+    }).length;
+    final incompletos = registrosColaborador.where((e) {
+      final situacao = (e['situacao'] ?? 'Trabalhado').toString();
+      if (situacao != 'Trabalhado') return false;
+      return _horaNula(e['entrada']?.toString()) == null ||
+          _horaNula(e['saida']?.toString()) == null;
+    }).length;
+
+    final fechamento = await _client
+        .from('ponto_fechamentos')
+        .select('status,fechado_em,reaberto_em,motivo_reabertura')
+        .eq('empresa_id', empresaId)
+        .eq('colaborador_id', colaboradorId)
+        .eq('competencia', _data(inicio))
+        .maybeSingle();
+
+    return <String, dynamic>{
+      'empresa_id': empresaId,
+      'colaborador_id': colaboradorId,
+      'competencia': _data(inicio),
+      'pendencias': pendencias,
+      'incompletos': incompletos,
+      'registros': registrosColaborador.length,
+      'fechamento_status': fechamento == null
+          ? 'Aberto'
+          : ((fechamento as Map)['status'] ?? 'Fechado').toString(),
+    };
+  }
+
   Future<void> fecharCompetencia({
     required String colaboradorId,
     required DateTime competencia,
