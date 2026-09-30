@@ -280,7 +280,7 @@ class _WebServicosCatalogoPageState extends State<WebServicosCatalogoPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -372,7 +372,7 @@ class _WebServicosCatalogoPageState extends State<WebServicosCatalogoPage> {
                         SizedBox(height: 5),
                         Text(
                           'Serviços usados em agenda, orçamentos, OS e precificação.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -469,7 +469,7 @@ class _WebServicosCatalogoPageState extends State<WebServicosCatalogoPage> {
                       Text(
                         '${itens.length} resultado(s)',
                         style: const TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
