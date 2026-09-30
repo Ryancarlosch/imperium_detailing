@@ -607,7 +607,7 @@ class _WebPontoPageState extends State<WebPontoPage>
         final colaborador = snapshot.data![0] as Map<String, dynamic>?;
         final registro = snapshot.data![1] as Map<String, dynamic>?;
         if (colaborador == null) {
-          return const Center(
+          return Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: 620),
               child: Card(
