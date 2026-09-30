@@ -367,7 +367,7 @@ class _WebFotosPageState extends State<WebFotosPage> {
                         SizedBox(height: 5),
                         Text(
                           'Galeria geral Antes/Depois e imagens sincronizadas das ordens de serviço.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -669,7 +669,7 @@ class _AntesDepoisCard extends StatelessWidget {
                   cliente,
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
-                Text(veiculo, style: const TextStyle(color: Color(0xFFAAB3BD))),
+                Text(veiculo, style: const TextStyle(color: ImperiumWebTheme.textSecondary)),
                 if ((item['descricao'] ?? '').toString().trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -681,7 +681,7 @@ class _AntesDepoisCard extends StatelessWidget {
                     child: Text(
                       (item['data'] ?? '').toString(),
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -740,7 +740,7 @@ class _FotoOsCard extends StatelessWidget {
                     veiculo,
                     (item['etapa'] ?? '').toString(),
                   ].where((e) => e.trim().isNotEmpty).join(' · '),
-                  style: const TextStyle(color: Color(0xFFAAB3BD)),
+                  style: const TextStyle(color: ImperiumWebTheme.textSecondary),
                 ),
                 if ((item['descricao'] ?? '').toString().trim().isNotEmpty)
                   Padding(
