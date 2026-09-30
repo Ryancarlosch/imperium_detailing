@@ -2572,7 +2572,7 @@ class _VeiculosPageState extends State<_VeiculosPage> {
                                 value: 'editar',
                                 child: Text('Editar'),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'excluir',
                                 child: Text('Excluir'),
                               ),
