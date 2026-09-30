@@ -29,7 +29,7 @@ class _WebPontoPageState extends State<WebPontoPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
     _carregar();
   }
 
@@ -556,6 +556,7 @@ class _WebPontoPageState extends State<WebPontoPage>
               Tab(icon: Icon(Icons.groups_2_outlined), text: 'Equipe e ponto'),
               Tab(icon: Icon(Icons.schedule_outlined), text: 'Jornada'),
               Tab(icon: Icon(Icons.rule_folder_outlined), text: 'Solicitações'),
+              Tab(icon: Icon(Icons.fingerprint_rounded), text: 'Meu ponto'),
             ],
           ),
         ),
@@ -571,10 +572,156 @@ class _WebPontoPageState extends State<WebPontoPage>
                     _equipeView(),
                     _jornadaView(),
                     _solicitacoesView(),
+                    _meuPontoView(),
                   ],
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _meuPontoView() {
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait<dynamic>([
+        _service.obterMeuColaborador(),
+        _service.obterMeuRegistroHoje(),
+      ]),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData && !snapshot.hasError) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 620),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: Text(_textoErro(snapshot.error!)),
+                ),
+              ),
+            ),
+          );
+        }
+
+        final colaborador = snapshot.data![0] as Map<String, dynamic>?;
+        final registro = snapshot.data![1] as Map<String, dynamic>?;
+        if (colaborador == null) {
+          return const Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 620),
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(22),
+                  child: Text(
+                    'Seu login ainda não está vinculado a um funcionário ativo. '
+                    'Um administrador pode fazer o vínculo na aba Equipe e ponto.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        final concluido = _hora(registro?['saida']).isNotEmpty;
+        String proximaAcao;
+        if (registro == null || _hora(registro['entrada']).isEmpty) {
+          proximaAcao = 'Registrar entrada';
+        } else if (_hora(registro['intervalo_inicio']).isEmpty) {
+          proximaAcao = 'Registrar próxima batida';
+        } else if (_hora(registro['intervalo_fim']).isEmpty) {
+          proximaAcao = 'Registrar volta do intervalo';
+        } else if (!concluido) {
+          proximaAcao = 'Registrar saída';
+        } else {
+          proximaAcao = 'Ponto concluído';
+        }
+
+        Future<void> bater() async {
+          try {
+            final resposta = await _service.registrarMinhaBatida();
+            if (!mounted) return;
+            final acao = (resposta['acao'] ?? 'Batida').toString();
+            final hora = (resposta['hora'] ?? '').toString();
+            _snack(hora.isEmpty ? '$acao registrada.' : '$acao registrada às $hora.');
+            setState(() {});
+          } catch (e) {
+            _snack(_textoErro(e), erro: true);
+          }
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          (colaborador['nome'] ?? 'Funcionário').toString(),
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        if ((colaborador['funcao'] ?? '').toString().trim().isNotEmpty)
+                          Text(
+                            colaborador['funcao'].toString(),
+                            style: const TextStyle(
+                              color: ImperiumWebTheme.textSecondary,
+                            ),
+                          ),
+                        const SizedBox(height: 18),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _PontoHoraChip('Entrada', _hora(registro?['entrada'])),
+                            _PontoHoraChip(
+                              'Intervalo',
+                              _hora(registro?['intervalo_inicio']),
+                            ),
+                            _PontoHoraChip(
+                              'Volta',
+                              _hora(registro?['intervalo_fim']),
+                            ),
+                            _PontoHoraChip('Saída', _hora(registro?['saida'])),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        FilledButton.icon(
+                          onPressed: concluido ? null : bater,
+                          icon: Icon(
+                            concluido
+                                ? Icons.check_rounded
+                                : Icons.fingerprint_rounded,
+                          ),
+                          label: Text(proximaAcao),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'A batida usa o horário confirmado pelo servidor e as mesmas regras do aplicativo.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: ImperiumWebTheme.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1526,6 +1673,22 @@ class _ResumoCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+class _PontoHoraChip extends StatelessWidget {
+  const _PontoHoraChip(this.titulo, this.valor);
+
+  final String titulo;
+  final String valor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      avatar: const Icon(Icons.schedule_rounded, size: 16),
+      label: Text('$titulo: ${valor.isEmpty ? '—' : valor}'),
     );
   }
 }
