@@ -53,4 +53,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ios .metadata pubspec.lock
           git commit -m "feat(ios): adiciona scaffold Flutter"
+          git pull --rebase origin desenvolvimento
           git push origin HEAD:desenvolvimento
