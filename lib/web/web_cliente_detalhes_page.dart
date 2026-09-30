@@ -261,7 +261,10 @@ class _WebClienteDetalhesPageState extends State<WebClienteDetalhesPage> {
           : LayoutBuilder(
               builder: (context, constraints) {
                 final compacto = constraints.maxWidth < 760;
-                final width = constraints.maxWidth;
+                final width = constraints.maxWidth >
+                        ImperiumWebTheme.contentMaxWidth
+                    ? ImperiumWebTheme.contentMaxWidth
+                    : constraints.maxWidth;
                 final colunas = width >= 1100
                     ? 4
                     : width >= 650
