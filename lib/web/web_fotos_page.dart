@@ -10,7 +10,9 @@ import '../services/web_fotos_service.dart';
 import 'imperium_web_theme.dart';
 
 class WebFotosPage extends StatefulWidget {
-  const WebFotosPage({super.key});
+  const WebFotosPage({super.key, this.veiculoIdInicial});
+
+  final String? veiculoIdInicial;
 
   @override
   State<WebFotosPage> createState() => _WebFotosPageState();
@@ -289,6 +291,11 @@ class _WebFotosPageState extends State<WebFotosPage> {
 
     final gerais = dados.gerais.where((e) {
       if (_tipo == 'OS') return false;
+      final veiculoInicial = widget.veiculoIdInicial?.trim() ?? '';
+      if (veiculoInicial.isNotEmpty &&
+          e['veiculo_id']?.toString() != veiculoInicial) {
+        return false;
+      }
       final textos = [
         clientes[e['cliente_id']?.toString()] ?? '',
         veiculos[e['veiculo_id']?.toString()] ?? '',
@@ -302,6 +309,11 @@ class _WebFotosPageState extends State<WebFotosPage> {
     final fotosOs = dados.fotosOs.where((e) {
       if (_tipo == 'Antes/Depois') return false;
       final ordem = ordens[e['ordem_servico_id']?.toString()] ?? const {};
+      final veiculoInicial = widget.veiculoIdInicial?.trim() ?? '';
+      if (veiculoInicial.isNotEmpty &&
+          ordem['veiculo_id']?.toString() != veiculoInicial) {
+        return false;
+      }
       final textos = [
         ordem['numero'],
         clientes[ordem['cliente_id']?.toString()] ?? '',
