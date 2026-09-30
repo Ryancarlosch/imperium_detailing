@@ -644,7 +644,9 @@ class _WebPontoPageState extends State<WebPontoPage>
             if (!mounted) return;
             final acao = (resposta['acao'] ?? 'Batida').toString();
             final hora = (resposta['hora'] ?? '').toString();
-            _snack(hora.isEmpty ? '$acao registrada.' : '$acao registrada às $hora.');
+            _snack(
+              hora.isEmpty ? '$acao registrada.' : '$acao registrada às $hora.',
+            );
             setState(() {});
           } catch (e) {
             _snack(_textoErro(e), erro: true);
@@ -670,7 +672,10 @@ class _WebPontoPageState extends State<WebPontoPage>
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        if ((colaborador['funcao'] ?? '').toString().trim().isNotEmpty)
+                        if ((colaborador['funcao'] ?? '')
+                            .toString()
+                            .trim()
+                            .isNotEmpty)
                           Text(
                             colaborador['funcao'].toString(),
                             style: const TextStyle(
@@ -682,7 +687,10 @@ class _WebPontoPageState extends State<WebPontoPage>
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            _PontoHoraChip('Entrada', _hora(registro?['entrada'])),
+                            _PontoHoraChip(
+                              'Entrada',
+                              _hora(registro?['entrada']),
+                            ),
                             _PontoHoraChip(
                               'Intervalo',
                               _hora(registro?['intervalo_inicio']),
@@ -1676,7 +1684,6 @@ class _ResumoCard extends StatelessWidget {
     );
   }
 }
-
 
 class _PontoHoraChip extends StatelessWidget {
   const _PontoHoraChip(this.titulo, this.valor);

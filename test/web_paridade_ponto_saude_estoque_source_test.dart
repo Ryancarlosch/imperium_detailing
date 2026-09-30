@@ -101,5 +101,4 @@ void main() {
     expect(service, contains("'ponto_registrar_batida'"));
     expect(service, contains('p_colaborador_id'));
   });
-
 }
