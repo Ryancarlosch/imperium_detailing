@@ -403,7 +403,7 @@ class _WebConfiguracoesEmpresaPageState
                   Text(
                     subtitulo,
                     style: const TextStyle(
-                      color: Color(0xFF89939E),
+                      color: ImperiumWebTheme.textMuted,
                       fontSize: 12,
                     ),
                   ),
@@ -503,7 +503,7 @@ class _WebConfiguracoesEmpresaPageState
             const SizedBox(height: 3),
             Text(
               subtitulo,
-              style: const TextStyle(color: Color(0xFF89939E), fontSize: 12),
+              style: const TextStyle(color: ImperiumWebTheme.textMuted, fontSize: 12),
             ),
             const SizedBox(height: 16),
             ...children,
@@ -622,7 +622,7 @@ class _WebConfiguracoesEmpresaPageState
                               SizedBox(height: 5),
                               Text(
                                 'Dados usados no Web, Android, documentos e mensagens.',
-                                style: TextStyle(color: Color(0xFFAAB3BD)),
+                                style: TextStyle(color: ImperiumWebTheme.textSecondary),
                               ),
                             ],
                           ),
@@ -908,7 +908,7 @@ class _WebConfiguracoesEmpresaPageState
                         const Text(
                           'A identidade é salva no Cloud e aplicada pelo Android no próximo ciclo de sincronização. A interface Web mantém o tema administrativo próprio por enquanto.',
                           style: TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                           ),
                         ),
