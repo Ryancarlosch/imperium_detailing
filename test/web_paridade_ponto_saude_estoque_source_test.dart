@@ -72,4 +72,19 @@ void main() {
     expect(sql, contains('security invoker'));
     expect(sql, contains('private.imperium_pode_modulo'));
   });
+
+  test('Web fecha e reabre competencia mensal do Ponto', () {
+    final page = File('lib/web/web_ponto_page.dart').readAsStringSync();
+    final service = File(
+      'lib/services/web_cloud_ponto_service.dart',
+    ).readAsStringSync();
+
+    expect(page, contains('Fechar ou reabrir competência'));
+    expect(page, contains('_service.fecharCompetencia'));
+    expect(page, contains('_service.reabrirCompetencia'));
+    expect(service, contains('obterResumoCompetencia'));
+    expect(service, contains("'ponto_fechar_competencia_admin'"));
+    expect(service, contains("'ponto_reabrir_competencia_admin'"));
+  });
+
 }
