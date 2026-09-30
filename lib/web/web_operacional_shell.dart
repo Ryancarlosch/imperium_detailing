@@ -2235,8 +2235,11 @@ class _VeiculosPageState extends State<_VeiculosPage> {
           builder: (context, constraints) {
             final compacto = constraints.maxWidth < 760;
             final tabela = constraints.maxWidth >= 920;
-            final larguraDisponivel =
-                constraints.maxWidth - (compacto ? 32 : 48);
+            final larguraBase = constraints.maxWidth >
+                    ImperiumWebTheme.contentMaxWidth
+                ? ImperiumWebTheme.contentMaxWidth
+                : constraints.maxWidth;
+            final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
             final colunas = constraints.maxWidth >= 1080
                 ? 3
                 : constraints.maxWidth >= 640
@@ -3013,8 +3016,11 @@ class _AgendaPageState extends State<_AgendaPage> {
           builder: (context, constraints) {
             final compacto = constraints.maxWidth < 760;
             final tabela = constraints.maxWidth >= 980;
-            final larguraDisponivel =
-                constraints.maxWidth - (compacto ? 32 : 48);
+            final larguraBase = constraints.maxWidth >
+                    ImperiumWebTheme.contentMaxWidth
+                ? ImperiumWebTheme.contentMaxWidth
+                : constraints.maxWidth;
+            final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
             final colunas = constraints.maxWidth >= 1180
                 ? 4
                 : constraints.maxWidth >= 760
@@ -3652,8 +3658,11 @@ class _OrdensPageState extends State<_OrdensPage> {
           builder: (context, constraints) {
             final compacto = constraints.maxWidth < 760;
             final tabela = constraints.maxWidth >= 1050;
-            final larguraDisponivel =
-                constraints.maxWidth - (compacto ? 32 : 48);
+            final larguraBase = constraints.maxWidth >
+                    ImperiumWebTheme.contentMaxWidth
+                ? ImperiumWebTheme.contentMaxWidth
+                : constraints.maxWidth;
+            final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
             final colunas = constraints.maxWidth >= 1180
                 ? 4
                 : constraints.maxWidth >= 760
