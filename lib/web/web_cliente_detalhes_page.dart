@@ -184,7 +184,7 @@ class _WebClienteDetalhesPageState extends State<WebClienteDetalhesPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -342,7 +342,7 @@ class _WebClienteDetalhesPageState extends State<WebClienteDetalhesPage> {
                                         .where((e) => e.trim().isNotEmpty)
                                         .join(' · '),
                                     style: const TextStyle(
-                                      color: Color(0xFFAAB3BD),
+                                      color: ImperiumWebTheme.textSecondary,
                                     ),
                                   ),
                                   if ((cliente['observacoes'] ?? '')
@@ -473,7 +473,7 @@ class _WebClienteDetalhesPageState extends State<WebClienteDetalhesPage> {
                         Text(
                           '${_ordens.length} registro(s)',
                           style: const TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                           ),
                         ),
