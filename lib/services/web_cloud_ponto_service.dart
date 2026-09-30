@@ -22,6 +22,61 @@ class WebCloudPontoService {
     return client;
   }
 
+  Future<Map<String, dynamic>?> obterMeuColaborador() async {
+    final empresaId = await _empresaId();
+    final authUserId = _client.auth.currentUser?.id?.toString().trim() ?? '';
+    if (authUserId.isEmpty) return null;
+
+    final item = await _client
+        .from('ponto_colaboradores')
+        .select('id,nome,funcao,ativo,auth_user_id,atualizado_em')
+        .eq('empresa_id', empresaId)
+        .eq('auth_user_id', authUserId)
+        .eq('ativo', true)
+        .maybeSingle();
+
+    if (item == null) return null;
+    return Map<String, dynamic>.from(item as Map);
+  }
+
+  Future<Map<String, dynamic>?> obterMeuRegistroHoje() async {
+    final colaborador = await obterMeuColaborador();
+    if (colaborador == null) return null;
+    final empresaId = await _empresaId();
+    final hoje = _data(DateTime.now());
+    final item = await _client
+        .from('ponto_registros')
+        .select(
+          'id,colaborador_id,data,situacao,entrada,intervalo_inicio,'
+          'intervalo_fim,saida,observacoes,atualizado_em',
+        )
+        .eq('empresa_id', empresaId)
+        .eq('colaborador_id', colaborador['id'].toString())
+        .eq('data', hoje)
+        .maybeSingle();
+    if (item == null) return null;
+    return Map<String, dynamic>.from(item as Map);
+  }
+
+  Future<Map<String, dynamic>> registrarMinhaBatida() async {
+    final colaborador = await obterMeuColaborador();
+    if (colaborador == null) {
+      throw StateError(
+        'Seu usuário ainda não está vinculado a um funcionário ativo.',
+      );
+    }
+    final empresaId = await _empresaId();
+    final resposta = await _client.rpc(
+      'ponto_registrar_batida',
+      params: {
+        'p_empresa_id': empresaId,
+        'p_colaborador_id': colaborador['id'].toString(),
+      },
+    );
+    if (resposta is Map) return Map<String, dynamic>.from(resposta);
+    throw StateError('O servidor não retornou a confirmação da batida.');
+  }
+
   Future<List<Map<String, dynamic>>> listarColaboradores() async {
     final empresaId = await _empresaId();
     final dados = await _client
