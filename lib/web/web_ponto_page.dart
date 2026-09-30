@@ -585,6 +585,11 @@ class _WebPontoPageState extends State<WebPontoPage>
       future: Future.wait<dynamic>([
         _service.obterMeuColaborador(),
         _service.obterMeuRegistroHoje(),
+        _service.listarMeusRegistros(
+          inicio: DateTime(DateTime.now().year, DateTime.now().month, 1),
+          fim: DateTime(DateTime.now().year, DateTime.now().month + 1, 0),
+        ),
+        _service.listarMinhasSolicitacoesAjuste(),
       ]),
       builder: (context, snapshot) {
         if (!snapshot.hasData && !snapshot.hasError) {
@@ -606,6 +611,9 @@ class _WebPontoPageState extends State<WebPontoPage>
 
         final colaborador = snapshot.data![0] as Map<String, dynamic>?;
         final registro = snapshot.data![1] as Map<String, dynamic>?;
+        final registrosMes = snapshot.data![2] as List<Map<String, dynamic>>;
+        final minhasSolicitacoes =
+            snapshot.data![3] as List<Map<String, dynamic>>;
         if (colaborador == null) {
           return Center(
             child: ConstrainedBox(
@@ -723,6 +731,91 @@ class _WebPontoPageState extends State<WebPontoPage>
                         ),
                       ],
                     ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Histórico e correções',
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        FilledButton.tonalIcon(
+                          onPressed: () => _abrirSolicitacaoMeuPonto(),
+                          icon: const Icon(Icons.edit_calendar_outlined),
+                          label: const Text('Solicitar correção'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Wrap(
+                          spacing: 24,
+                          runSpacing: 10,
+                          children: [
+                            Text('Registros no mês: ' + registrosMes.length.toString()),
+                            Text(
+                              'Ajustes pendentes: ' +
+                                  minhasSolicitacoes
+                                      .where((e) => (e['status'] ?? '').toString() == 'Pendente')
+                                      .length
+                                      .toString(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ...registrosMes.take(12).map(
+                      (item) => Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.schedule_outlined),
+                          title: Text(_dataExibicao((item['data'] ?? '').toString())),
+                          subtitle: Text(
+                            [
+                              'Entrada ' + (_hora(item['entrada']).isEmpty ? '—' : _hora(item['entrada'])),
+                              'Intervalo ' + (_hora(item['intervalo_inicio']).isEmpty ? '—' : _hora(item['intervalo_inicio'])),
+                              'Volta ' + (_hora(item['intervalo_fim']).isEmpty ? '—' : _hora(item['intervalo_fim'])),
+                              'Saída ' + (_hora(item['saida']).isEmpty ? '—' : _hora(item['saida'])),
+                            ].join(' · '),
+                          ),
+                          trailing: Text((item['situacao'] ?? 'Trabalhado').toString()),
+                        ),
+                      ),
+                    ),
+                    if (minhasSolicitacoes.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Minhas solicitações',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 6),
+                      ...minhasSolicitacoes.take(8).map(
+                        (item) => Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.assignment_outlined),
+                            title: Text(
+                              _dataExibicao((item['data'] ?? '').toString()) +
+                                  ' · ' +
+                                  (item['status'] ?? 'Pendente').toString(),
+                            ),
+                            subtitle: Text((item['motivo'] ?? '').toString()),
+                            trailing: (item['status'] ?? '').toString() == 'Pendente'
+                                ? IconButton(
+                                    tooltip: 'Cancelar solicitação',
+                                    onPressed: () => _cancelarSolicitacaoMeuPonto(item),
+                                    icon: const Icon(Icons.cancel_outlined),
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -731,6 +824,128 @@ class _WebPontoPageState extends State<WebPontoPage>
         );
       },
     );
+  }
+
+  Future<void> _abrirSolicitacaoMeuPonto() async {
+    DateTime data = DateTime.now();
+    var situacao = 'Trabalhado';
+    final entrada = TextEditingController();
+    final intervaloInicio = TextEditingController();
+    final intervaloFim = TextEditingController();
+    final saida = TextEditingController();
+    final motivo = TextEditingController();
+    final observacoes = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setLocal) => AlertDialog(
+          title: const Text('Solicitar correção do ponto'),
+          content: SizedBox(
+            width: 620,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Data'),
+                    subtitle: Text(_dataBr.format(data)),
+                    trailing: OutlinedButton(
+                      onPressed: () async {
+                        final escolhida = await showDatePicker(
+                          context: context,
+                          initialDate: data,
+                          firstDate: DateTime(DateTime.now().year - 1),
+                          lastDate: DateTime.now(),
+                        );
+                        if (escolhida != null) setLocal(() => data = escolhida);
+                      },
+                      child: const Text('Alterar'),
+                    ),
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: situacao,
+                    decoration: const InputDecoration(labelText: 'Situação'),
+                    items: const ['Trabalhado', 'Folga', 'Falta', 'Atestado', 'Férias']
+                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) setLocal(() => situacao = value);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: TextField(controller: entrada, decoration: const InputDecoration(labelText: 'Entrada HH:mm'))),
+                    const SizedBox(width: 10),
+                    Expanded(child: TextField(controller: intervaloInicio, decoration: const InputDecoration(labelText: 'Início intervalo'))),
+                  ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: TextField(controller: intervaloFim, decoration: const InputDecoration(labelText: 'Fim intervalo'))),
+                    const SizedBox(width: 10),
+                    Expanded(child: TextField(controller: saida, decoration: const InputDecoration(labelText: 'Saída HH:mm'))),
+                  ]),
+                  const SizedBox(height: 10),
+                  TextField(controller: motivo, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Motivo *', helperText: 'Mínimo de 5 caracteres.')),
+                  const SizedBox(height: 10),
+                  TextField(controller: observacoes, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Observações')),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () {
+                if (motivo.text.trim().length < 5) return;
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Enviar solicitação'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      try {
+        await _service.solicitarMeuAjuste(
+          data: data,
+          situacao: situacao,
+          entrada: entrada.text,
+          intervaloInicio: intervaloInicio.text,
+          intervaloFim: intervaloFim.text,
+          saida: saida.text,
+          observacoes: observacoes.text,
+          motivo: motivo.text,
+        );
+        if (mounted) {
+          _snack('Solicitação enviada para aprovação.');
+          setState(() {});
+        }
+      } catch (e) {
+        _snack(_textoErro(e), erro: true);
+      }
+    }
+    entrada.dispose();
+    intervaloInicio.dispose();
+    intervaloFim.dispose();
+    saida.dispose();
+    motivo.dispose();
+    observacoes.dispose();
+  }
+
+  Future<void> _cancelarSolicitacaoMeuPonto(Map<String, dynamic> item) async {
+    try {
+      await _service.cancelarMinhaSolicitacaoAjuste(
+        (item['id'] ?? '').toString(),
+      );
+      if (mounted) {
+        _snack('Solicitação cancelada.');
+        setState(() {});
+      }
+    } catch (e) {
+      _snack(_textoErro(e), erro: true);
+    }
   }
 
   Widget _erroView() {
