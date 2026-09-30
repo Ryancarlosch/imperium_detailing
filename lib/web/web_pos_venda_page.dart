@@ -312,7 +312,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                           Text(
                             _data.format(data),
                             style: const TextStyle(
-                              color: Color(0xFF89939E),
+                              color: ImperiumWebTheme.textMuted,
                               fontSize: 12,
                             ),
                           ),
@@ -410,7 +410,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -551,7 +551,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                         Text(
                           'Retorno em ${dados.config.diasRetorno} dias · '
                           'Reativação em ${dados.config.diasReativacao} dias',
-                          style: const TextStyle(color: Color(0xFFAAB3BD)),
+                          style: const TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -663,7 +663,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                       Text(
                         '${clientes.length} resultado(s)',
                         style: const TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -683,7 +683,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                         Icon(
                           Icons.replay_circle_filled_outlined,
                           size: 42,
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                         ),
                         SizedBox(height: 12),
                         Text(
@@ -748,7 +748,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        color: Color(0xFFAAB3BD),
+                                        color: ImperiumWebTheme.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -823,7 +823,7 @@ class _WebPosVendaPageState extends State<WebPosVendaPage> {
                                         '${cliente.quantidadeOs} OS · '
                                         '${_moeda.format(cliente.valorTotal)}',
                                         style: const TextStyle(
-                                          color: Color(0xFFAAB3BD),
+                                          color: ImperiumWebTheme.textSecondary,
                                           fontSize: 12,
                                         ),
                                       ),
