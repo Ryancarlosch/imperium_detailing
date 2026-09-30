@@ -104,7 +104,9 @@ class WebFiscalService {
       headers: {'Authorization': 'Bearer ${sessao.accessToken}'},
     );
     final raw = response.data;
-    final data = raw is Map ? Map<String, dynamic>.from(raw) : const <String, dynamic>{};
+    final data = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : const <String, dynamic>{};
     if (data['ok'] != true) {
       throw StateError(
         (data['message'] ?? 'O backend fiscal não retornou a NF-e.').toString(),
