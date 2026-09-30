@@ -125,7 +125,7 @@ class _WebPendenciasOperacionaisPageState
                         SizedBox(height: 5),
                         Text(
                           'Recebimentos, contas, OS paradas, estoque e ponto que precisam de atenção.',
-                          style: TextStyle(color: Color(0xFFAAB3BD)),
+                          style: TextStyle(color: ImperiumWebTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -209,7 +209,7 @@ class _WebPendenciasOperacionaisPageState
                       Text(
                         itens.length.toString() + ' resultado(s)',
                         style: const TextStyle(
-                          color: Color(0xFF89939E),
+                          color: ImperiumWebTheme.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -306,7 +306,7 @@ class _WebPendenciasOperacionaisPageState
                                       Text(
                                         item.descricao,
                                         style: const TextStyle(
-                                          color: Color(0xFFAAB3BD),
+                                          color: ImperiumWebTheme.textSecondary,
                                           fontSize: 12,
                                         ),
                                       ),
@@ -404,7 +404,7 @@ class _ResumoPendencia extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
