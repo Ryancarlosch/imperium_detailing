@@ -518,7 +518,7 @@ class _WebFinanceiroLancamentosPageState
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF89939E),
+                        color: ImperiumWebTheme.textMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -571,7 +571,7 @@ class _WebFinanceiroLancamentosPageState
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFFAAB3BD),
+                        color: ImperiumWebTheme.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -706,7 +706,7 @@ class _WebFinanceiroLancamentosPageState
                                     Text(
                                       'Saldos, recebimentos, despesas e lançamentos em uma visão operacional.',
                                       style: TextStyle(
-                                        color: Color(0xFFAAB3BD),
+                                        color: ImperiumWebTheme.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -795,7 +795,7 @@ class _WebFinanceiroLancamentosPageState
                               Text(
                                 '${dados.contas.length} conta(s)',
                                 style: const TextStyle(
-                                  color: Color(0xFF89939E),
+                                  color: ImperiumWebTheme.textMuted,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -951,7 +951,7 @@ class _WebFinanceiroLancamentosPageState
                                   Text(
                                     '${movimentos.length} resultado(s)',
                                     style: const TextStyle(
-                                      color: Color(0xFF89939E),
+                                      color: ImperiumWebTheme.textMuted,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -974,7 +974,7 @@ class _WebFinanceiroLancamentosPageState
                                     Icon(
                                       Icons.account_balance_wallet_outlined,
                                       size: 40,
-                                      color: Color(0xFF89939E),
+                                      color: ImperiumWebTheme.textMuted,
                                     ),
                                     SizedBox(height: 10),
                                     Text(
