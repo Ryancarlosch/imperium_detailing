@@ -166,4 +166,21 @@ void main() {
     expect(shell, contains('ImperiumWebTheme.contentMaxWidth'));
     expect(shell, contains('larguraDisponivel'));
   });
+
+  test('Agenda Web cria OS vinculada e pre-preenchida', () {
+    final shell = File('lib/web/web_operacional_shell.dart').readAsStringSync();
+    final gestao = File('lib/web/web_gestao_pages.dart').readAsStringSync();
+    final service = File(
+      'lib/services/web_cloud_gestao_service.dart',
+    ).readAsStringSync();
+
+    expect(shell, contains('onCriarOrdem'));
+    expect(shell, contains('Criar OS deste agendamento'));
+    expect(gestao, contains('agendamentoInicial'));
+    expect(gestao, contains("agenda['servico']"));
+    expect(gestao, contains("agenda['valor']"));
+    expect(service, contains('String? agendamentoId'));
+    expect(service, contains("'agendamento_id': _textoNulo(agendamentoId)"));
+  });
+
 }
