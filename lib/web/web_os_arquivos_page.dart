@@ -363,7 +363,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                 height: 260,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: const Color(0xFF89939E)),
+                  border: Border.all(color: const ImperiumWebTheme.textMuted),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -463,8 +463,11 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
           return LayoutBuilder(
             builder: (context, constraints) {
               final compacto = constraints.maxWidth < 760;
-              final larguraDisponivel =
-                  constraints.maxWidth - (compacto ? 32 : 48);
+              final larguraBase =
+                  constraints.maxWidth > ImperiumWebTheme.contentMaxWidth
+                  ? ImperiumWebTheme.contentMaxWidth
+                  : constraints.maxWidth;
+              final larguraDisponivel = larguraBase - (compacto ? 32 : 48);
               final colunasResumo = constraints.maxWidth >= 1000
                   ? 3
                   : constraints.maxWidth >= 650
@@ -506,7 +509,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                               SizedBox(height: 5),
                               Text(
                                 'Arquivos privados da OS, protegidos pelas permissões da empresa.',
-                                style: TextStyle(color: Color(0xFFAAB3BD)),
+                                style: TextStyle(color: ImperiumWebTheme.textSecondary),
                               ),
                             ],
                           ),
@@ -615,7 +618,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                                     ? 'Alterações feitas aqui usam o mesmo Storage privado e ficam disponíveis no mobile após a sincronização.'
                                     : 'Esta OS está $status e permanece somente para consulta. Os arquivos continuam protegidos pelas permissões da empresa.',
                                 style: const TextStyle(
-                                  color: Color(0xFF89939E),
+                                  color: ImperiumWebTheme.textMuted,
                                   fontSize: 12,
                                 ),
                               ),
@@ -666,7 +669,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                         Text(
                           '${checklist.length} item(ns)',
                           style: const TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -687,7 +690,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                               const Icon(
                                 Icons.checklist_outlined,
                                 size: 34,
-                                color: Color(0xFF89939E),
+                                color: ImperiumWebTheme.textMuted,
                               ),
                               const SizedBox(width: 14),
                               const Expanded(
@@ -739,7 +742,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                         Text(
                           '${arquivos.length} arquivo(s)',
                           style: const TextStyle(
-                            color: Color(0xFF89939E),
+                            color: ImperiumWebTheme.textMuted,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -760,7 +763,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                               Icon(
                                 Icons.cloud_off_outlined,
                                 size: 42,
-                                color: Color(0xFF89939E),
+                                color: ImperiumWebTheme.textMuted,
                               ),
                               SizedBox(height: 10),
                               Text(
@@ -774,7 +777,7 @@ class _WebOsArquivosPageState extends State<WebOsArquivosPage> {
                               Text(
                                 'Quando fotos, avarias ou assinatura forem sincronizadas, elas aparecerão aqui.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: Color(0xFFAAB3BD)),
+                                style: TextStyle(color: ImperiumWebTheme.textSecondary),
                               ),
                             ],
                           ),
