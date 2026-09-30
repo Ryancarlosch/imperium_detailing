@@ -114,7 +114,9 @@ class WebCloudPontoService {
     }
     final motivoLimpo = motivo.trim();
     if (motivoLimpo.length < 5) {
-      throw ArgumentError('Informe o motivo da correção com pelo menos 5 caracteres.');
+      throw ArgumentError(
+        'Informe o motivo da correção com pelo menos 5 caracteres.',
+      );
     }
     final empresaId = await _empresaId();
     final resposta = await _client.rpc(
