@@ -729,8 +729,6 @@ class _WebPontoPageState extends State<WebPontoPage>
                             fontSize: 12,
                           ),
                         ),
-                      ],
-                    ),
                     const SizedBox(height: 18),
                     Row(
                       children: [
@@ -816,6 +814,8 @@ class _WebPontoPageState extends State<WebPontoPage>
                         ),
                       ),
                     ],
+                  ],
+                ),
                   ),
                 ),
               ),
