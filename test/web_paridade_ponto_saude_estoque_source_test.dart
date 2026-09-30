@@ -86,4 +86,20 @@ void main() {
     expect(service, contains("'ponto_fechar_competencia_admin'"));
     expect(service, contains("'ponto_reabrir_competencia_admin'"));
   });
+
+  test('Web permite ao funcionario registrar o proprio ponto', () {
+    final page = File('lib/web/web_ponto_page.dart').readAsStringSync();
+    final service = File(
+      'lib/services/web_cloud_ponto_service.dart',
+    ).readAsStringSync();
+
+    expect(page, contains("text: 'Meu ponto'"));
+    expect(page, contains('_service.registrarMinhaBatida()'));
+    expect(page, contains('mesmas regras do aplicativo'));
+    expect(service, contains('obterMeuColaborador'));
+    expect(service, contains("eq('auth_user_id', authUserId)"));
+    expect(service, contains("'ponto_registrar_batida'"));
+    expect(service, contains('p_colaborador_id'));
+  });
+
 }
