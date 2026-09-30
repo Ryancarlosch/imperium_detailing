@@ -112,8 +112,10 @@ void main() {
     expect(page, contains("tooltip: 'Excluir lead'"));
     expect(page, contains('_service.excluirLead'));
     expect(service, contains('Future<void> excluirLead'));
-    expect(service, contains("'excluido_em': DateTime.now().toUtc().toIso8601String()"));
+    expect(
+      service,
+      contains("'excluido_em': DateTime.now().toUtc().toIso8601String()"),
+    );
     expect(service, contains('_atualizarCas'));
   });
-
 }
