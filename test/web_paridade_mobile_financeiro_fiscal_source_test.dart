@@ -81,4 +81,18 @@ void main() {
     expect(dashboard, contains("titulo: 'Notas fiscais'"));
     expect(dashboard, contains('widget.onNavigate?.call(25)'));
   });
+
+  test('Fiscal Web expoe exclusao segura equivalente ao mobile', () {
+    final page = File('lib/web/web_fiscal_page.dart').readAsStringSync();
+    final service = File(
+      'lib/services/web_fiscal_service.dart',
+    ).readAsStringSync();
+
+    expect(page, contains('Excluir nota fiscal'));
+    expect(page, contains('_service.excluirNota'));
+    expect(service, contains('Future<void> excluirNota'));
+    expect(service, contains('integração com estoque ou financeiro'));
+    expect(service, contains("'excluido_em': DateTime.now().toUtc().toIso8601String()"));
+  });
+
 }
