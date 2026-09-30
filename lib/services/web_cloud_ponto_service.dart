@@ -58,6 +58,93 @@ class WebCloudPontoService {
     return Map<String, dynamic>.from(item as Map);
   }
 
+  Future<List<Map<String, dynamic>>> listarMeusRegistros({
+    required DateTime inicio,
+    required DateTime fim,
+  }) async {
+    final colaborador = await obterMeuColaborador();
+    if (colaborador == null) return const [];
+    final empresaId = await _empresaId();
+    final dados = await _client
+        .from('ponto_registros')
+        .select(
+          'id,colaborador_id,data,situacao,entrada,intervalo_inicio,'
+          'intervalo_fim,saida,observacoes,criado_em,atualizado_em',
+        )
+        .eq('empresa_id', empresaId)
+        .eq('colaborador_id', colaborador['id'].toString())
+        .gte('data', _data(inicio))
+        .lte('data', _data(fim))
+        .order('data', ascending: false);
+    return _mapas(dados);
+  }
+
+  Future<List<Map<String, dynamic>>> listarMinhasSolicitacoesAjuste({
+    int limite = 50,
+  }) async {
+    final colaborador = await obterMeuColaborador();
+    if (colaborador == null) return const [];
+    final empresaId = await _empresaId();
+    final dados = await _client.rpc(
+      'ponto_minhas_solicitacoes_ajuste',
+      params: {
+        'p_empresa_id': empresaId,
+        'p_colaborador_id': colaborador['id'].toString(),
+        'p_limite': limite.clamp(1, 200),
+      },
+    );
+    return _mapas(dados);
+  }
+
+  Future<Map<String, dynamic>> solicitarMeuAjuste({
+    required DateTime data,
+    required String situacao,
+    String? entrada,
+    String? intervaloInicio,
+    String? intervaloFim,
+    String? saida,
+    String observacoes = '',
+    required String motivo,
+  }) async {
+    final colaborador = await obterMeuColaborador();
+    if (colaborador == null) {
+      throw StateError(
+        'Seu usuário ainda não está vinculado a um funcionário ativo.',
+      );
+    }
+    final motivoLimpo = motivo.trim();
+    if (motivoLimpo.length < 5) {
+      throw ArgumentError('Informe o motivo da correção com pelo menos 5 caracteres.');
+    }
+    final empresaId = await _empresaId();
+    final resposta = await _client.rpc(
+      'ponto_solicitar_ajuste',
+      params: {
+        'p_empresa_id': empresaId,
+        'p_colaborador_id': colaborador['id'].toString(),
+        'p_data': _data(data),
+        'p_situacao': situacao,
+        'p_entrada': _horaNula(entrada),
+        'p_intervalo_inicio': _horaNula(intervaloInicio),
+        'p_intervalo_fim': _horaNula(intervaloFim),
+        'p_saida': _horaNula(saida),
+        'p_observacoes': observacoes.trim(),
+        'p_motivo': motivoLimpo,
+      },
+    );
+    if (resposta is Map) return Map<String, dynamic>.from(resposta);
+    return const <String, dynamic>{};
+  }
+
+  Future<void> cancelarMinhaSolicitacaoAjuste(String solicitacaoId) async {
+    final id = solicitacaoId.trim();
+    if (id.isEmpty) throw ArgumentError('Solicitação inválida.');
+    await _client.rpc(
+      'ponto_cancelar_solicitacao_ajuste',
+      params: {'p_solicitacao_id': id},
+    );
+  }
+
   Future<Map<String, dynamic>> registrarMinhaBatida() async {
     final colaborador = await obterMeuColaborador();
     if (colaborador == null) {
