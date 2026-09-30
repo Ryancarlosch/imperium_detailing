@@ -729,93 +729,142 @@ class _WebPontoPageState extends State<WebPontoPage>
                             fontSize: 12,
                           ),
                         ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Histórico e correções',
-                            style: TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                        FilledButton.tonalIcon(
-                          onPressed: () => _abrirSolicitacaoMeuPonto(),
-                          icon: const Icon(Icons.edit_calendar_outlined),
-                          label: const Text('Solicitar correção'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Wrap(
-                          spacing: 24,
-                          runSpacing: 10,
+                        const SizedBox(height: 18),
+                        Row(
                           children: [
-                            Text('Registros no mês: ' + registrosMes.length.toString()),
-                            Text(
-                              'Ajustes pendentes: ' +
-                                  minhasSolicitacoes
-                                      .where((e) => (e['status'] ?? '').toString() == 'Pendente')
-                                      .length
-                                      .toString(),
+                            const Expanded(
+                              child: Text(
+                                'Histórico e correções',
+                                style: TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            FilledButton.tonalIcon(
+                              onPressed: () => _abrirSolicitacaoMeuPonto(),
+                              icon: const Icon(Icons.edit_calendar_outlined),
+                              label: const Text('Solicitar correção'),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ...registrosMes.take(12).map(
-                      (item) => Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.schedule_outlined),
-                          title: Text(_dataExibicao((item['data'] ?? '').toString())),
-                          subtitle: Text(
-                            [
-                              'Entrada ' + (_hora(item['entrada']).isEmpty ? '—' : _hora(item['entrada'])),
-                              'Intervalo ' + (_hora(item['intervalo_inicio']).isEmpty ? '—' : _hora(item['intervalo_inicio'])),
-                              'Volta ' + (_hora(item['intervalo_fim']).isEmpty ? '—' : _hora(item['intervalo_fim'])),
-                              'Saída ' + (_hora(item['saida']).isEmpty ? '—' : _hora(item['saida'])),
-                            ].join(' · '),
-                          ),
-                          trailing: Text((item['situacao'] ?? 'Trabalhado').toString()),
-                        ),
-                      ),
-                    ),
-                    if (minhasSolicitacoes.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Minhas solicitações',
-                        style: TextStyle(fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 6),
-                      ...minhasSolicitacoes.take(8).map(
-                        (item) => Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.assignment_outlined),
-                            title: Text(
-                              _dataExibicao((item['data'] ?? '').toString()) +
-                                  ' · ' +
-                                  (item['status'] ?? 'Pendente').toString(),
+                        const SizedBox(height: 10),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Wrap(
+                              spacing: 24,
+                              runSpacing: 10,
+                              children: [
+                                Text(
+                                  'Registros no mês: ' +
+                                      registrosMes.length.toString(),
+                                ),
+                                Text(
+                                  'Ajustes pendentes: ' +
+                                      minhasSolicitacoes
+                                          .where(
+                                            (e) =>
+                                                (e['status'] ?? '')
+                                                    .toString() ==
+                                                'Pendente',
+                                          )
+                                          .length
+                                          .toString(),
+                                ),
+                              ],
                             ),
-                            subtitle: Text((item['motivo'] ?? '').toString()),
-                            trailing: (item['status'] ?? '').toString() == 'Pendente'
-                                ? IconButton(
-                                    tooltip: 'Cancelar solicitação',
-                                    onPressed: () => _cancelarSolicitacaoMeuPonto(item),
-                                    icon: const Icon(Icons.cancel_outlined),
-                                  )
-                                : null,
                           ),
                         ),
-                      ),
-                    ],
-                  ],
-                ),
+                        const SizedBox(height: 10),
+                        ...registrosMes
+                            .take(12)
+                            .map(
+                              (item) => Card(
+                                child: ListTile(
+                                  leading: const Icon(Icons.schedule_outlined),
+                                  title: Text(
+                                    _dataExibicao(
+                                      (item['data'] ?? '').toString(),
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    [
+                                      'Entrada ' +
+                                          (_hora(item['entrada']).isEmpty
+                                              ? '—'
+                                              : _hora(item['entrada'])),
+                                      'Intervalo ' +
+                                          (_hora(
+                                                item['intervalo_inicio'],
+                                              ).isEmpty
+                                              ? '—'
+                                              : _hora(
+                                                  item['intervalo_inicio'],
+                                                )),
+                                      'Volta ' +
+                                          (_hora(item['intervalo_fim']).isEmpty
+                                              ? '—'
+                                              : _hora(item['intervalo_fim'])),
+                                      'Saída ' +
+                                          (_hora(item['saida']).isEmpty
+                                              ? '—'
+                                              : _hora(item['saida'])),
+                                    ].join(' · '),
+                                  ),
+                                  trailing: Text(
+                                    (item['situacao'] ?? 'Trabalhado')
+                                        .toString(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        if (minhasSolicitacoes.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Minhas solicitações',
+                            style: TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          const SizedBox(height: 6),
+                          ...minhasSolicitacoes
+                              .take(8)
+                              .map(
+                                (item) => Card(
+                                  child: ListTile(
+                                    leading: const Icon(
+                                      Icons.assignment_outlined,
+                                    ),
+                                    title: Text(
+                                      _dataExibicao(
+                                            (item['data'] ?? '').toString(),
+                                          ) +
+                                          ' · ' +
+                                          (item['status'] ?? 'Pendente')
+                                              .toString(),
+                                    ),
+                                    subtitle: Text(
+                                      (item['motivo'] ?? '').toString(),
+                                    ),
+                                    trailing:
+                                        (item['status'] ?? '').toString() ==
+                                            'Pendente'
+                                        ? IconButton(
+                                            tooltip: 'Cancelar solicitação',
+                                            onPressed: () =>
+                                                _cancelarSolicitacaoMeuPonto(
+                                                  item,
+                                                ),
+                                            icon: const Icon(
+                                              Icons.cancel_outlined,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -866,35 +915,92 @@ class _WebPontoPageState extends State<WebPontoPage>
                   DropdownButtonFormField<String>(
                     initialValue: situacao,
                     decoration: const InputDecoration(labelText: 'Situação'),
-                    items: const ['Trabalhado', 'Folga', 'Falta', 'Atestado', 'Férias']
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
+                    items:
+                        const [
+                              'Trabalhado',
+                              'Folga',
+                              'Falta',
+                              'Atestado',
+                              'Férias',
+                            ]
+                            .map(
+                              (e) => DropdownMenuItem(value: e, child: Text(e)),
+                            )
+                            .toList(),
                     onChanged: (value) {
                       if (value != null) setLocal(() => situacao = value);
                     },
                   ),
                   const SizedBox(height: 10),
-                  Row(children: [
-                    Expanded(child: TextField(controller: entrada, decoration: const InputDecoration(labelText: 'Entrada HH:mm'))),
-                    const SizedBox(width: 10),
-                    Expanded(child: TextField(controller: intervaloInicio, decoration: const InputDecoration(labelText: 'Início intervalo'))),
-                  ]),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: entrada,
+                          decoration: const InputDecoration(
+                            labelText: 'Entrada HH:mm',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: intervaloInicio,
+                          decoration: const InputDecoration(
+                            labelText: 'Início intervalo',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
-                  Row(children: [
-                    Expanded(child: TextField(controller: intervaloFim, decoration: const InputDecoration(labelText: 'Fim intervalo'))),
-                    const SizedBox(width: 10),
-                    Expanded(child: TextField(controller: saida, decoration: const InputDecoration(labelText: 'Saída HH:mm'))),
-                  ]),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: intervaloFim,
+                          decoration: const InputDecoration(
+                            labelText: 'Fim intervalo',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: saida,
+                          decoration: const InputDecoration(
+                            labelText: 'Saída HH:mm',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
-                  TextField(controller: motivo, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Motivo *', helperText: 'Mínimo de 5 caracteres.')),
+                  TextField(
+                    controller: motivo,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Motivo *',
+                      helperText: 'Mínimo de 5 caracteres.',
+                    ),
+                  ),
                   const SizedBox(height: 10),
-                  TextField(controller: observacoes, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Observações')),
+                  TextField(
+                    controller: observacoes,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(labelText: 'Observações'),
+                  ),
                 ],
               ),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
             FilledButton(
               onPressed: () {
                 if (motivo.text.trim().length < 5) return;

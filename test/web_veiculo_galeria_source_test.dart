@@ -12,6 +12,9 @@ void main() {
     expect(shell, contains('veiculoIdInicial:'));
     expect(fotos, contains('this.veiculoIdInicial'));
     expect(fotos, contains("e['veiculo_id']?.toString() != veiculoInicial"));
-    expect(fotos, contains("ordem['veiculo_id']?.toString() != veiculoInicial"));
+    expect(
+      fotos,
+      contains("ordem['veiculo_id']?.toString() != veiculoInicial"),
+    );
   });
 }
