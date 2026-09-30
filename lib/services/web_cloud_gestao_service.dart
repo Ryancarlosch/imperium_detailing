@@ -177,7 +177,7 @@ class WebCloudGestaoService {
       'forma_pagamento': _textoNulo(formaPagamento),
       'data': dataBase,
       'cliente_id': null,
-      'agendamento_id': null,
+      'agendamento_id': _textoNulo(agendamentoId),
       'ordem_servico_id': null,
       'pagamento_id': null,
       'plano_conta_id': plano?['id'],
@@ -323,6 +323,7 @@ class WebCloudGestaoService {
   Future<String> criarOrdemAberta({
     required String clienteId,
     String? veiculoId,
+    String? agendamentoId,
     required String funcionarioResponsavel,
     required String observacoes,
     required List<Map<String, Object?>> itens,
