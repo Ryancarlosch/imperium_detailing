@@ -1,0 +1,12 @@
+{
+  "assets": {},
+  "config": {
+    "build_asset_types": [],
+    "linking_enabled": true
+  },
+  "out_dir_shared": "/home/runner/work/imperium_detailing/imperium_detailing/.dart_tool/hooks_runner/shared/sqlite3/build/",
+  "out_file": "/home/runner/work/imperium_detailing/imperium_detailing/.dart_tool/hooks_runner/sqlite3/6782ff62a0/output.json",
+  "package_name": "sqlite3",
+  "package_root": "/home/runner/.pub-cache/hosted/pub.dev/sqlite3-3.5.2/",
+  "user_defines": {}
+}
