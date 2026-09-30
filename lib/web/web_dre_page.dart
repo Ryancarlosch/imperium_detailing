@@ -304,7 +304,7 @@ class _WebDrePageState extends State<WebDrePage> {
                     ? 'Reconhece a venda quando a OS é finalizada, independentemente de quando o cliente pagar.'
                     : 'Reconhece os valores conforme o dinheiro é efetivamente recebido ou pago.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFFAAB3BD),
+                  color: ImperiumWebTheme.textSecondary,
                 ),
               ),
             ],
@@ -414,7 +414,7 @@ class _WebDrePageState extends State<WebDrePage> {
                 Text(
                   'Receita líquida menos custos variáveis, despesas operacionais e resultado financeiro, com outras receitas e despesas.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFFAAB3BD),
+                    color: ImperiumWebTheme.textSecondary,
                   ),
                 ),
               ],
@@ -543,7 +543,7 @@ class _IndicadorDre extends StatelessWidget {
               Text(
                 titulo,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFFAAB3BD),
+                  color: ImperiumWebTheme.textSecondary,
                 ),
               ),
               const SizedBox(height: 4),
