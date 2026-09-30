@@ -2571,6 +2571,8 @@ Cobertura já confirmada na auditoria de ações:
 - CRM: exclusão segura de lead com CAS agora exposta no Web;
 - Ponto: fechamento e reabertura mensal de competência agora expostos no Web, com bloqueio por pendências/incompletos;
 - Marketing, Pós-venda, Serviços e Usuários/Acessos tiveram ações comparadas com o Mobile e usam os mesmos serviços compartilhados/Cloud;
+- OS: acesso pela lista operacional agora abre o editor seguro e atualiza o workspace ao retornar;
+- Operação e Relatórios receberam o mesmo limite de canvas responsivo do design system;
 - demais fluxos continuam sob revisão de navegação e contratos antes do gate final.
 
 Gates:
